@@ -137,14 +137,14 @@
     if (!area || !window.Bloqueio) return;
     Bloqueio.biometriaDisponivel().then((tem) => {
       if (!tem) {
-        area.innerHTML = `<p class="campo ajuda" style="margin:0">Este aparelho não oferece Face ID / Touch ID para aplicativos da web (ou o sistema não está aberto por um endereço https).</p>`;
+        area.innerHTML = `<p class="campo ajuda" style="margin:0">Este aparelho não oferece leitor de digital ou Face ID para aplicativos da web (ou o sistema não está aberto por um endereço https).</p>`;
         return;
       }
       area.innerHTML = Bloqueio.biometriaAtiva()
-        ? `<p style="font-size:13px;margin:0 0 8px">Face ID / Touch ID <b class="up">ativado</b> — a senha continua valendo como alternativa.</p>
-           <button class="btn perigo" data-acao="remover-biometria">Desativar Face ID / Touch ID</button>`
-        : `<p style="font-size:13px;margin:0 0 8px">Você pode desbloquear com Face ID ou Touch ID em vez de digitar a senha.</p>
-           <button class="btn primario" data-acao="ativar-biometria">Ativar Face ID / Touch ID</button>`;
+        ? `<p style="font-size:13px;margin:0 0 8px">Digital / Face ID <b class="up">ativado</b> — a senha continua valendo como alternativa.</p>
+           <button class="btn perigo" data-acao="remover-biometria">Desativar digital / Face ID</button>`
+        : `<p style="font-size:13px;margin:0 0 8px">Você pode desbloquear com a digital (Touch ID) ou com o Face ID, em vez de digitar a senha.</p>
+           <button class="btn primario" data-acao="ativar-biometria">Ativar digital / Face ID</button>`;
     });
   }
 
@@ -2362,12 +2362,12 @@
 
         case "ativar-biometria":
           Bloqueio.ativarBiometria()
-            .then(() => { toast("Face ID ativado neste aparelho."); montarAreaBiometria(); })
+            .then(() => { toast("Desbloqueio por digital/Face ID ativado neste aparelho."); montarAreaBiometria(); })
             .catch((err) => toast("Não consegui ativar: " + (err && err.name === "NotAllowedError" ? "pedido cancelado" : (err.message || "erro"))));
           break;
         case "remover-biometria":
-          confirmarExclusao("Desativar o Face ID / Touch ID neste aparelho? A senha continuará sendo pedida.", () => {
-            Bloqueio.removerBiometria(); montarAreaBiometria(); toast("Face ID desativado.");
+          confirmarExclusao("Desativar o desbloqueio por digital/Face ID neste aparelho? A senha continuará sendo pedida.", () => {
+            Bloqueio.removerBiometria(); montarAreaBiometria(); toast("Desbloqueio por digital/Face ID desativado.");
           });
           break;
         case "criar-senha":

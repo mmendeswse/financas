@@ -152,7 +152,7 @@
       '<div class="bolinhas" id="bloqueioBolinhas"></div>' +
       '<div class="teclado">' + teclas + '</div>' +
       '<p class="bloqueio-aviso" id="bloqueioAviso"></p>' +
-      (modo === "entrar" && biometriaAtiva() ? '<button class="btn-bio" id="btnBio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 3a9 9 0 0 0-9 9v3M21 15v-3a9 9 0 0 0-4.5-7.8"/><path d="M7.5 12a4.5 4.5 0 0 1 9 0v4M12 12v5M16.5 19.5a9 9 0 0 1-9 0"/></svg>Desbloquear com Face ID</button>' : "") +
+      (modo === "entrar" && biometriaAtiva() ? '<button class="btn-bio" id="btnBio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5c-2 0-3.9.7-5.4 1.9M19.4 7.6A9 9 0 0 0 17 5.1"/><path d="M3.6 10.4A8.6 8.6 0 0 1 12 6.5a8.6 8.6 0 0 1 8.4 3.9"/><path d="M5.6 14.8c.5-1 .8-2.1.8-3.3A5.6 5.6 0 0 1 12 6.5c3.1 0 5.6 2.3 5.6 5v1.8"/><path d="M9 11.2a3 3 0 0 1 6 0v5.2M12 11.5v6.2"/><path d="M17.4 16.6c-.2 1.3-.7 2.5-1.4 3.6M6.8 18.9c.7-1 1.1-2.1 1.2-3.3"/></svg>Desbloquear com digital ou Face ID</button>' : "") +
       '</div>';
   }
 
@@ -238,12 +238,12 @@
 
   function tentarBiometria() {
     if (!biometriaAtiva()) return;
-    avisar("Aguardando Face ID…");
+    avisar("Aguardando a digital ou o Face ID…");
     pedirBiometria().then(function () {
       fechar();
       if (aoDesbloquear) aoDesbloquear(true);
     }).catch(function () {
-      avisar("Não reconhecido. Use a senha ou toque para tentar de novo.", true);
+      avisar("Não reconhecido. Use a senha ou toque no botão para tentar de novo.", true);
     });
   }
 
