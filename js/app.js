@@ -148,6 +148,87 @@
     });
   }
 
+
+  // =========================================================================
+  // BACKUP NA CONTA GOOGLE (Google Drive, pasta reservada do aplicativo)
+  // =========================================================================
+  const GB = window.GoogleBackup;
+  let statusGoogle = "";
+
+  function cfgGoogle() {
+    const c = (DADOS.config && DADOS.config.google) || {};
+    return { clientId: c.clientId || "", auto: !!c.auto, ultimo: c.ultimo || null };
+  }
+  function gravarCfgGoogle(novo) {
+    DADOS.config = DADOS.config || {};
+    DADOS.config.google = Object.assign({}, DADOS.config.google || {}, novo);
+    A.salvarDados(DADOS, true, true);
+  }
+  function mostrarStatusGoogle(texto) {
+    statusGoogle = texto;
+    const el = document.getElementById("statusGoogle");
+    if (el) el.textContent = texto;
+  }
+
+  function conectarGoogle() {
+    const clientId = (document.getElementById("cfgGoogleId").value || "").trim();
+    if (!clientId) { toast("Cole o ID de cliente do Google."); return; }
+    mostrarStatusGoogle("abrindo a janela do Google…");
+    GB.autorizar(clientId, false).then(() => {
+      gravarCfgGoogle({ clientId });
+      mostrarStatusGoogle("conta conectada · enviando primeiro backup…");
+      return enviarBackupGoogle(false);
+    }).then(() => renderRota())
+      .catch((e) => { mostrarStatusGoogle("falhou: " + e.message); toast("Google: " + e.message); });
+  }
+
+  function enviarBackupGoogle(silencioso) {
+    const cfg = cfgGoogle();
+    if (!GB || !cfg.clientId || typeof fetch !== "function") return Promise.resolve();
+    return GB.autorizar(cfg.clientId, true)
+      .then(() => GB.enviar(JSON.stringify(DADOS, null, 2)))
+      .then(() => {
+        gravarCfgGoogle({ ultimo: new Date().toISOString() });
+        mostrarStatusGoogle("backup enviado · " + new Date().toLocaleString("pt-BR"));
+        if (!silencioso) toast("Backup enviado para o seu Google Drive.");
+      })
+      .catch((e) => {
+        mostrarStatusGoogle("não enviado: " + e.message);
+        if (!silencioso) toast("Google: " + e.message);
+      });
+  }
+
+  function restaurarBackupGoogle() {
+    const cfg = cfgGoogle();
+    if (!cfg.clientId) { toast("Conecte a conta Google primeiro."); return; }
+    GB.autorizar(cfg.clientId, true).then(() => GB.baixar()).then(({ dados, modificadoEm }) => {
+      const quando = modificadoEm ? new Date(modificadoEm).toLocaleString("pt-BR") : "data desconhecida";
+      if (!window.confirm(`Restaurar o backup de ${quando}? Todos os dados atuais deste aparelho serão substituídos.`)) return;
+      const meuConfig = DADOS.config || {};
+      dados.config = Object.assign({}, dados.config || {}, { google: meuConfig.google, sync: meuConfig.sync });
+      A.salvarDados(dados, true, true);
+      DADOS = A.carregarDados();
+      renderRota();
+      toast("Backup restaurado do Google Drive.");
+    }).catch((e) => toast("Google: " + e.message));
+  }
+
+  function alternarBackupAutoGoogle() {
+    const novo = !cfgGoogle().auto;
+    gravarCfgGoogle({ auto: novo });
+    renderRota();
+    toast(novo ? "Backup automático diário ligado." : "Backup automático desligado.");
+    if (novo) enviarBackupGoogle(true);
+  }
+
+  // uma vez por dia, quando o sistema abre
+  function backupDiarioGoogle() {
+    const cfg = cfgGoogle();
+    if (!cfg.auto || !cfg.clientId) return;
+    const ultimo = cfg.ultimo ? new Date(cfg.ultimo).getTime() : 0;
+    if (Date.now() - ultimo > 20 * 60 * 60 * 1000) enviarBackupGoogle(true);
+  }
+
   // =========================================================================
   // SINCRONIZAÇÃO ENTRE APARELHOS (cofre = Gist privado do GitHub)
   // =========================================================================
@@ -310,6 +391,7 @@
     setInterval(() => atualizarCotacoesAutomaticas(true), 5 * 60 * 1000);
     sincronizar(true);
     setInterval(() => sincronizar(true), 2 * 60 * 1000);
+    setTimeout(backupDiarioGoogle, 4000);
     window.addEventListener("online", () => sincronizar(true));
   }
 
@@ -2021,6 +2103,33 @@
     const temDadosReais = d.bancos.length || d.entradas.length || d.despesas.length || d.acoes.length || d.investimentos.length;
     return `
       <div class="grid g-top">
+        <div class="c12">${card("", "Backup na conta Google", "guarda uma cópia no seu Google Drive, numa pasta reservada do aplicativo", "", `
+          <div class="body pad">
+            ${cfgGoogle().clientId ? `
+              <p style="margin-top:0;font-size:13px">Conta Google <b class="up">configurada</b>. Último envio: ${cfgGoogle().ultimo ? new Date(cfgGoogle().ultimo).toLocaleString("pt-BR") : "ainda não"}.</p>
+              <label class="chk-linha"><input type="checkbox" ${cfgGoogle().auto ? "checked" : ""} data-acao="auto-google"> Enviar backup automaticamente uma vez por dia</label>
+              <div style="display:flex;gap:10px;flex-wrap:wrap">
+                <button class="btn primario" data-acao="enviar-google">Enviar backup agora</button>
+                <button class="btn" data-acao="restaurar-google">Restaurar do Google</button>
+                <button class="btn perigo" data-acao="desconectar-google">Desconectar conta</button>
+              </div>
+            ` : `
+              <p style="margin-top:0;font-size:13px">Para o Google permitir o acesso, é preciso um ID de cliente criado de graça por você — o Google não aceita um ID embutido em código publicado.</p>
+              <ol class="campo ajuda" style="padding-left:18px;line-height:1.8">
+                <li>Acesse <b>console.cloud.google.com</b> e crie um projeto.</li>
+                <li>Em <b>APIs e serviços → Biblioteca</b>, ative a <b>Google Drive API</b>.</li>
+                <li>Em <b>Credenciais → Criar credenciais → ID do cliente OAuth</b>, escolha <b>Aplicativo da Web</b>.</li>
+                <li>Em <b>Origens JavaScript autorizadas</b>, informe o endereço deste sistema: <b>${esc(location.origin)}</b></li>
+                <li>Copie o ID gerado (termina em .apps.googleusercontent.com) e cole abaixo.</li>
+              </ol>
+              <div class="campo"><label for="cfgGoogleId">ID de cliente OAuth</label><input id="cfgGoogleId" placeholder="000000-xxxx.apps.googleusercontent.com" autocomplete="off"></div>
+              <button class="btn primario" data-acao="conectar-google">Conectar conta Google</button>
+            `}
+            <p class="campo ajuda" id="statusGoogle" style="margin-top:10px">${esc(statusGoogle || (cfgGoogle().clientId ? "pronto" : "não configurado"))}</p>
+            <p class="campo ajuda">Pedimos somente a permissão da pasta do aplicativo: o sistema não consegue ver nem alterar nenhum outro arquivo do seu Drive.${A.ehDesktop ? " <b>Observação:</b> no programa instalado o Google não autoriza o acesso (ele exige um endereço https); use esta opção na versão web/iPad ou o backup em arquivo abaixo." : ""}</p>
+          </div>`)}</div>
+      </div>
+      <div class="grid g-top">
         <div class="c6">${card("", "Backup dos dados", A.ehDesktop ? "banco de dados em arquivo dentro do programa, com cópia automática (dados.bak.json)" : "tudo fica salvo só neste navegador — guarde uma cópia de vez em quando", "", `
           ${A.ehDesktop ? `<p class="campo ajuda" style="padding:8px 16px 0" id="caminhoBanco">Local do banco: carregando…</p><div style="padding:0 16px 6px"><button class="btn pequeno" data-acao="abrir-pasta-banco">Abrir pasta do banco de dados</button></div>` : ""}
           <div class="body pad" style="display:flex;gap:10px;flex-wrap:wrap">
@@ -2404,6 +2513,15 @@
         case "remover-senha":
           confirmarExclusao("Remover a senha? O sistema abrirá sem pedir nada neste aparelho.", () => {
             Bloqueio.remover(); renderRota(); toast("Senha removida.");
+          });
+          break;
+        case "conectar-google": conectarGoogle(); break;
+        case "enviar-google": toast("Enviando…"); enviarBackupGoogle(false); break;
+        case "restaurar-google": restaurarBackupGoogle(); break;
+        case "auto-google": alternarBackupAutoGoogle(); break;
+        case "desconectar-google":
+          confirmarExclusao("Desconectar a conta Google? O backup já enviado continua no seu Drive.", () => {
+            GB.desconectar(); gravarCfgGoogle({ clientId: "", auto: false }); renderRota(); toast("Conta Google desconectada.");
           });
           break;
         case "conectar-sync": conectarSync(); break;
