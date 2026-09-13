@@ -647,3 +647,26 @@ html { -webkit-text-size-adjust: 100%; }
 @media (max-width: 1024px) { .kpi-row, .strip { grid-template-columns: repeat(2, 1fr); } .rodape-app { padding-bottom: max(12px, env(safe-area-inset-bottom)); } }
 @media (max-width: 700px) { .kpi-row, .strip { grid-template-columns: 1fr; } .data-topbar, .logo-txt { display: none; } }
 .sidebar { padding-top: calc(6px + max(env(safe-area-inset-top), 8px)); }
+
+/* =======================================================================
+   iPad: sem zoom e sem "pulo" de tela ao tocar em campos
+   ======================================================================= */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; touch-action: manipulation; }
+body { touch-action: manipulation; overscroll-behavior: none; }
+
+/* campos com 16px ou mais: abaixo disso o iOS amplia a tela sozinho ao focar */
+input, select, textarea,
+.campo input, .campo select, .campo textarea,
+.filtros select, .filtros input, .filtros input[type="search"],
+.seletor-tempo select, .seletor-tempo input,
+.campo-preco, .modal input, .modal select, .modal textarea {
+  font-size: 16px !important;
+}
+
+/* teclas da senha e botões: sem seleção de texto nem realce cinza do toque */
+.tecla, .btn, .nav button, .icon-btn, .rw, .cartao-item, .abas button, .meses button {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none; user-select: none;
+  touch-action: manipulation;
+}
+.tela-bloqueio { touch-action: none; }
