@@ -757,8 +757,9 @@ input, select, textarea,
 .sidebar[data-compacta="6"] .data-topbar, .sidebar[data-compacta="6"] .logo-txt { display: none; }
 .sidebar[data-compacta="6"] .status-vivo { padding-left: 8px; padding-right: 8px; }
 
-/* nunca rolar a barra para o lado */
-.sidebar { overflow-x: hidden; }
+/* nunca rolar a barra para o lado — o recorte fica só nas guias, para
+   o painel de notificações (que cai abaixo da barra) não ser cortado */
+.sidebar { overflow: visible; }
 .nav { overflow-x: hidden !important; }
 
 /* quando os nomes estão abreviados, um respiro a mais entre as guias */
@@ -773,3 +774,15 @@ input, select, textarea,
 .sidebar[data-compacta="1"] .nav button { font-size: clamp(10.5px, 0.8vw, 14px); }
 .sidebar[data-compacta="2"] .nav button { font-size: clamp(10px, 0.76vw, 13.5px); letter-spacing: .06em; }
 .sidebar[data-compacta="2"] .nav button svg { display: block; }
+
+/* painel de notificações: sempre por cima da barra e nunca recortado */
+.nav-ferramentas { position: relative; }
+.nav-ferramentas .dropdown { position: absolute; top: calc(100% + 10px); right: 0; z-index: 300; }
+.sidebar { z-index: 70; }
+@media (max-width: 520px) { .nav-ferramentas .dropdown { width: calc(100vw - 24px); right: -8px; } }
+
+/* saldo por banco: trilhos todos do mesmo comprimento (coluna do valor fixa) */
+.barlist-linha { grid-template-columns: minmax(64px, 96px) 1fr 112px; align-items: center; }
+.barlist-valor { text-align: right; justify-self: end; }
+.barlist-trilho { width: 100%; }
+@media (max-width: 640px) { .barlist-linha { grid-template-columns: minmax(56px, 80px) 1fr 96px; } }
