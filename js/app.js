@@ -20,6 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
+  const VERSAO_APP = "1.0.2";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta corrente", "Conta poupança", "Conta digital", "Investimento", "Outro"];
@@ -783,7 +784,7 @@
 
   function atualizarRodape() {
     const el = document.getElementById("rodapeAtualizado");
-    if (el) el.textContent = "Dados atualizados: " + new Date().toLocaleString("pt-BR");
+    if (el) el.textContent = "Versão " + VERSAO_APP + " · dados atualizados: " + new Date().toLocaleString("pt-BR");
   }
 
   // =========================================================================
@@ -1970,6 +1971,22 @@
       </div>
 
       <div class="grid">
+        <div class="c12">${card("", "Senha de acesso", "protege o sistema neste aparelho", "", `
+          <div class="body pad">
+            ${window.Bloqueio && Bloqueio.ativo() ? `
+              <p style="margin-top:0;font-size:13px">Senha <b class="up">ativada</b>. Ela será pedida toda vez que o sistema abrir neste aparelho.</p>
+              <div style="display:flex;gap:10px;flex-wrap:wrap">
+                <button class="btn" data-acao="trocar-senha">Trocar senha</button>
+                <button class="btn perigo" data-acao="remover-senha">Remover senha</button>
+              </div>
+            ` : `
+              <p style="margin-top:0;font-size:13px">Nenhuma senha definida — qualquer pessoa com acesso a este aparelho abre o sistema.</p>
+              <button class="btn primario" data-acao="criar-senha">Criar senha numérica</button>
+            `}
+            <p class="campo ajuda" style="margin-top:12px">A senha vale só neste aparelho e não é sincronizada. Ela impede o acesso casual, mas não embaralha os dados guardados: quem souber mexer no navegador ainda consegue lê-los. Se esquecer a senha, será preciso limpar os dados do site e restaurar um backup.</p>
+          </div>`)}</div>
+      </div>
+      <div class="grid">
         <div class="c12">${card("", "Sincronização entre aparelhos", "mantém computador, iPad e site com os mesmos dados", "", `
           <div class="body pad">
             ${cfgSync().ligada ? `
@@ -2026,7 +2043,7 @@
       </div>
 
       <div class="grid">
-        <div class="c12">${card("", "Sobre e próximos passos", "Muller Mendes · versão 1.0 local", "", `
+        <div class="c12">${card("", "Sobre e próximos passos", "Muller Mendes · versão " + VERSAO_APP, "", `
           <div class="body pad" style="font-size:12.5px;color:var(--dim);line-height:1.8">
             Esta primeira versão funciona 100% offline, sem assinatura e sem servidor. A arquitetura já foi pensada para,
             no futuro, receber: integração com Open Finance, atualização automática de cotações, importação automática
@@ -2299,6 +2316,17 @@
           break;
         }
 
+        case "criar-senha":
+          Bloqueio.abrir({ modo: "criar", aoDesbloquear: () => { renderRota(); toast("Senha criada. Ela será pedida na próxima abertura."); } });
+          break;
+        case "trocar-senha":
+          Bloqueio.abrir({ modo: "criar", aoDesbloquear: () => { renderRota(); toast("Senha alterada."); } });
+          break;
+        case "remover-senha":
+          confirmarExclusao("Remover a senha? O sistema abrirá sem pedir nada neste aparelho.", () => {
+            Bloqueio.remover(); renderRota(); toast("Senha removida.");
+          });
+          break;
         case "conectar-sync": conectarSync(); break;
         case "sincronizar-agora": toast("Sincronizando…"); sincronizar(false); break;
         case "desligar-sync": desligarSync(); break;
