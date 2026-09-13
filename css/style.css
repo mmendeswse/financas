@@ -786,3 +786,9 @@ input, select, textarea,
 .barlist-valor { text-align: right; justify-self: end; }
 .barlist-trilho { width: 100%; }
 @media (max-width: 640px) { .barlist-linha { grid-template-columns: minmax(56px, 80px) 1fr 96px; } }
+
+/* valores alinhados à esquerda nos quadros de saldo por banco e
+   composição do patrimônio (antes ficavam encostados à direita) */
+.barlist-valor { text-align: left; justify-self: start; }
+.barlist-linha { grid-template-columns: minmax(64px, 96px) 1fr 112px; }
+.legenda-pct, .legenda-val { text-align: left; justify-self: start; }

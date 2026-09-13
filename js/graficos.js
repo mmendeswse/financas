@@ -79,8 +79,8 @@
       data: {
         labels: serie.map(function (s) { return s.rotulo; }),
         datasets: [
-          { label: "Receitas", data: serie.map(function (s) { return s.entradas; }), backgroundColor: "rgba(0,229,255,0.22)", borderColor: CORES.cy, borderWidth: 1.5, borderRadius: 2, maxBarThickness: 26 },
-          { label: "Despesas", data: serie.map(function (s) { return s.despesas; }), backgroundColor: "rgba(255,167,38,0.22)", borderColor: CORES.acc, borderWidth: 1.5, borderRadius: 2, maxBarThickness: 26 }
+          { label: "Receitas", data: serie.map(function (s) { return s.entradas; }), backgroundColor: "rgba(46,229,157,0.28)", borderColor: CORES.up, borderWidth: 1.5, borderRadius: 2, maxBarThickness: 26 },
+          { label: "Despesas", data: serie.map(function (s) { return s.despesas; }), backgroundColor: "rgba(255,92,106,0.28)", borderColor: CORES.down, borderWidth: 1.5, borderRadius: 2, maxBarThickness: 26 }
         ]
       },
       options: {
@@ -142,9 +142,9 @@
         datasets: [{
           label: "Patrimônio líquido",
           data: historico.map(function (p) { return p.valor; }),
-          borderColor: CORES.laranja, backgroundColor: gradiente(ctx, CORES.laranja, 240), fill: true, tension: 0.3,
+          borderColor: CORES.up, backgroundColor: gradiente(ctx, CORES.up, 240), fill: true, tension: 0.3,
           borderWidth: 2.5, pointRadius: historico.length <= 14 ? 4 : 0, pointHoverRadius: 5,
-          pointBackgroundColor: "#FFFFFF", pointBorderColor: CORES.laranja, pointBorderWidth: 2
+          pointBackgroundColor: "#FFFFFF", pointBorderColor: CORES.up, pointBorderWidth: 2
         }]
       },
       options: {

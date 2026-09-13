@@ -2453,13 +2453,6 @@
     iniciar();
   }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", iniciarComInputs);
-  } else {
-    iniciarComInputs();
-  }
-})();
-
   function abrirModalDeposito(id) {
     const m = achar(DADOS.metas, id);
     if (!m) return;
@@ -2475,3 +2468,10 @@
       salvarEAtualizar(`${brl(v)} adicionado à meta "${m.nome}".`);
     };
   }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", iniciarComInputs);
+  } else {
+    iniciarComInputs();
+  }
+})();
