@@ -265,7 +265,10 @@
     const nav = document.getElementById("navPrincipal");
     if (!barra || !nav) return;
     const NIVEIS = 6;
-    const cabe = () => nav.scrollWidth <= nav.clientWidth + 1 && barra.scrollWidth <= barra.clientWidth + 1;
+    // tolerância: diferenças de poucos pixels não valem encolher a barra,
+    // para o visual continuar igual ao tamanho cheio sempre que possível
+    const FOLGA = 6;
+    const cabe = () => nav.scrollWidth <= nav.clientWidth + FOLGA && barra.scrollWidth <= barra.clientWidth + FOLGA;
     aplicarRotulos(false);
     let coube = false;
     for (let n = 0; n <= NIVEIS; n++) {

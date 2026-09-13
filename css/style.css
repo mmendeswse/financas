@@ -768,3 +768,8 @@ input, select, textarea,
 .sidebar[data-compacta="7"] .nav button { padding-left: 3px; padding-right: 3px; font-size: 9px; letter-spacing: 0; }
 .sidebar[data-compacta="7"] .nav button svg, .sidebar[data-compacta="7"] .logo-txt, .sidebar[data-compacta="7"] .status-vivo { display: none; }
 .sidebar[data-compacta="7"] .nav { justify-content: space-around; }
+
+/* primeiros níveis bem sutis: mantêm a aparência do tamanho cheio */
+.sidebar[data-compacta="1"] .nav button { font-size: clamp(10.5px, 0.8vw, 14px); }
+.sidebar[data-compacta="2"] .nav button { font-size: clamp(10px, 0.76vw, 13.5px); letter-spacing: .06em; }
+.sidebar[data-compacta="2"] .nav button svg { display: block; }
