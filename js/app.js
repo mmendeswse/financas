@@ -104,6 +104,32 @@
     return html;
   }
 
+
+  // ---------------------------------------------------------------------
+  // CAMPOS DE DINHEIRO — o usuário digita só os números e o campo já
+  // aparece formatado como moeda ("R$ 1.234,56"). Na hora de salvar,
+  // numIn() converte de volta para número.
+  // ---------------------------------------------------------------------
+  function valorCampoMoeda(v) {                 // valor inicial já formatado
+    return (v === "" || v == null || isNaN(Number(v))) ? "" : brl(Number(v));
+  }
+  function campoMoeda(id, valor, placeholder) { // gera o <input> pronto
+    return `<input id="${id}" class="moeda" type="text" inputmode="decimal" autocomplete="off" value="${valorCampoMoeda(valor)}" placeholder="${placeholder || "R$ 0,00"}">`;
+  }
+  function formatarEnquantoDigita(el) {
+    const digitos = String(el.value).replace(/\D/g, "");
+    if (!digitos) { el.value = ""; return; }
+    el.value = brl(Number(digitos) / 100);
+    // mantém o cursor no fim (o texto é reescrito a cada tecla)
+    const fim = el.value.length;
+    try { el.setSelectionRange(fim, fim); } catch (e) {}
+  }
+  function ligarMascaraMoeda(raiz) {
+    raiz.addEventListener("input", (e) => {
+      if (e.target.classList && e.target.classList.contains("moeda")) formatarEnquantoDigita(e.target);
+    });
+  }
+
   // =========================================================================
   // CICLO DE VIDA
   // =========================================================================
@@ -117,6 +143,7 @@
     ligarSidebar();
     ligarModalGlobal();
     ligarDelegacaoConteudo();
+    ligarMascaraMoeda(document.getElementById("conteudo"));
     iniciarRelogio();
 
     navegarPara("dashboard");
@@ -204,6 +231,7 @@
     document.getElementById("scrim").classList.remove("on");
   }
   function ligarModalGlobal() {
+    ligarMascaraMoeda(document.getElementById("modal"));
     document.getElementById("scrim").addEventListener("click", fecharModal);
     document.addEventListener("keydown", (e) => { if (e.key === "Escape") fecharModal(); });
   }
@@ -894,7 +922,7 @@
         <div class="campo"><label for="f_cc">Conta</label><input id="f_cc" value="${b ? esc(b.conta || "") : ""}" placeholder="12345-6"></div>
       </div>
       <div class="par">
-        <div class="campo"><label for="f_saldo">Saldo inicial</label><input id="f_saldo" type="number" step="0.01" value="${b ? b.saldoInicial : ""}" placeholder="0,00"></div>
+        <div class="campo"><label for="f_saldo">Saldo inicial</label>${campoMoeda("f_saldo", b ? b.saldoInicial : "")}</div>
         <div class="campo"><label for="f_cor">Cor de identificação</label><input id="f_cor" type="color" value="${b ? b.cor || "#3FC1E0" : "#3FC1E0"}"></div>
       </div>
       <div class="campo"><label for="f_obs">Observações</label><textarea id="f_obs" placeholder="Opcional">${b ? esc(b.obs || "") : ""}</textarea></div>
@@ -962,7 +990,7 @@
       <h3>${e ? "Editar entrada" : "Nova entrada"}</h3>
       <div class="par">
         <div class="campo"><label for="f_data">Data</label><input id="f_data" type="date" value="${e ? e.data : hojeISO()}"></div>
-        <div class="campo"><label for="f_valor">Valor</label><input id="f_valor" type="number" step="0.01" value="${e ? e.valor : ""}" placeholder="0,00"></div>
+        <div class="campo"><label for="f_valor">Valor</label>${campoMoeda("f_valor", e ? e.valor : "")}</div>
       </div>
       <div class="campo"><label for="f_desc">Descrição</label><input id="f_desc" value="${e ? esc(e.descricao) : ""}" placeholder="Salário"></div>
       <div class="par">
@@ -1054,7 +1082,7 @@
       <h3>${x ? "Editar despesa" : "Nova despesa"}</h3>
       <div class="par">
         <div class="campo"><label for="f_data">Data</label><input id="f_data" type="date" value="${x ? x.data : hojeISO()}"></div>
-        <div class="campo"><label for="f_valor">Valor</label><input id="f_valor" type="number" step="0.01" value="${x ? x.valor : ""}" placeholder="0,00"></div>
+        <div class="campo"><label for="f_valor">Valor</label>${campoMoeda("f_valor", x ? x.valor : "")}</div>
       </div>
       <div class="campo"><label for="f_desc">Descrição</label><input id="f_desc" value="${x ? esc(x.descricao) : ""}" placeholder="Supermercado"></div>
       <div class="par">
@@ -1135,7 +1163,7 @@
       <h3>${c ? "Editar cartão" : "Novo cartão"}</h3>
       <div class="campo"><label for="f_nome">Nome do cartão</label><input id="f_nome" value="${c ? esc(c.nome) : ""}" placeholder="Nubank Ultravioleta"></div>
       <div class="campo"><label for="f_banco">Banco</label><select id="f_banco">${opcoesBancos(DADOS.bancos, c ? c.bancoId : "", true)}</select></div>
-      <div class="campo"><label for="f_limite">Limite total</label><input id="f_limite" type="number" step="0.01" value="${c ? c.limite : ""}" placeholder="0,00"></div>
+      <div class="campo"><label for="f_limite">Limite total</label>${campoMoeda("f_limite", c ? c.limite : "")}</div>
       <div class="par">
         <div class="campo"><label for="f_fech">Dia de fechamento</label><input id="f_fech" type="number" min="1" max="31" value="${c ? c.diaFechamento : ""}" placeholder="22"></div>
         <div class="campo"><label for="f_venc">Dia de vencimento</label><input id="f_venc" type="number" min="1" max="31" value="${c ? c.diaVencimento : ""}" placeholder="5"></div>
@@ -1228,7 +1256,7 @@
         <div class="campo"><label for="f_venc">Vencimento</label><input id="f_venc" type="date" value="${c ? c.vencimento : hojeISO()}"></div>
       </div>
       <div class="par">
-        <div class="campo"><label for="f_valor">Valor</label><input id="f_valor" type="number" step="0.01" value="${c ? c.valor : ""}" placeholder="0,00"></div>
+        <div class="campo"><label for="f_valor">Valor</label>${campoMoeda("f_valor", c ? c.valor : "")}</div>
         <div class="campo"><label for="f_status">Status</label><select id="f_status">${opcoes(["Pendente", "Pago"], c ? c.status : "Pendente")}</select></div>
       </div>
       <p class="campo ajuda">O status "Atrasado" aparece sozinho quando a data de vencimento já passou e a conta ainda não foi marcada como paga.</p>
@@ -1396,8 +1424,8 @@
         <div class="campo"><label for="f_cat">Categoria</label><select id="f_cat">${opcoes(CATS_INVESTIMENTO, inv ? inv.categoria : CATS_INVESTIMENTO[0])}</select></div>
       </div>
       <div class="par">
-        <div class="campo"><label for="f_vi">Valor investido</label><input id="f_vi" type="number" step="0.01" value="${inv ? inv.valorInvestido : ""}" placeholder="0,00"></div>
-        <div class="campo"><label for="f_va">Valor atual</label><input id="f_va" type="number" step="0.01" value="${inv ? inv.valorAtual : ""}" placeholder="0,00"></div>
+        <div class="campo"><label for="f_vi">Valor investido</label>${campoMoeda("f_vi", inv ? inv.valorInvestido : "")}</div>
+        <div class="campo"><label for="f_va">Valor atual</label>${campoMoeda("f_va", inv ? inv.valorAtual : "")}</div>
       </div>
       <div class="campo"><label for="f_data">Data de aplicação</label><input id="f_data" type="date" value="${inv ? inv.dataAplicacao : hojeISO()}"></div>
       <div class="campo"><label for="f_obs">Observações</label><textarea id="f_obs" placeholder="Opcional">${inv ? esc(inv.obs || "") : ""}</textarea></div>
@@ -1451,7 +1479,7 @@
         const m30 = I.variacaoDias(a, 30), m365 = I.variacaoDias(a, 365);
         const forte = Math.abs(v.pct) >= 2 ? (v.pct > 0 ? "cel-up" : "cel-down") : (Math.abs(v.pct) >= 1 ? "cel-neutra" : "");
         const ultima = editandoPrecos
-          ? `<input class="campo-preco" data-id="${a.id}" type="number" step="0.01" value="${a.precoAtual}" onclick="event.stopPropagation()">`
+          ? `<input class="campo-preco moeda" data-id="${a.id}" type="text" inputmode="decimal" value="${valorCampoMoeda(a.precoAtual)}" onclick="event.stopPropagation()">`
           : `<span class="${forte}">${f2(a.precoAtual)}</span>`;
         return `<tr data-acao="ir" data-secao="detalhe-acao" data-id="${a.id}">
           <td class="papel">${esc(a.ticker)}<small>${esc(a.categoria)}</small></td>
@@ -1516,11 +1544,11 @@
       <div class="campo"><label for="f_emp">Empresa / fundo</label><input id="f_emp" value="${a ? esc(a.empresa) : ""}" placeholder="Petrobras PN"></div>
       <div class="par">
         <div class="campo"><label for="f_qtd">Quantidade</label><input id="f_qtd" type="number" step="0.00000001" value="${a ? a.quantidade : ""}" placeholder="100"></div>
-        <div class="campo"><label for="f_pm">Preço médio</label><input id="f_pm" type="number" step="0.01" value="${a ? a.precoMedio : ""}" placeholder="0,00"></div>
+        <div class="campo"><label for="f_pm">Preço médio</label>${campoMoeda("f_pm", a ? a.precoMedio : "")}</div>
       </div>
       <div class="par">
-        <div class="campo"><label for="f_pa">Preço atual</label><input id="f_pa" type="number" step="0.01" value="${a ? a.precoAtual : ""}" placeholder="0,00"></div>
-        <div class="campo"><label for="f_div">Dividendos recebidos</label><input id="f_div" type="number" step="0.01" value="${a ? a.dividendos || 0 : 0}"></div>
+        <div class="campo"><label for="f_pa">Preço atual</label>${campoMoeda("f_pa", a ? a.precoAtual : "")}</div>
+        <div class="campo"><label for="f_div">Dividendos recebidos</label>${campoMoeda("f_div", a ? a.dividendos || 0 : 0)}</div>
       </div>
       <p class="campo ajuda">Com as cotações automáticas ligadas (Configurações), o preço atual é buscado na brapi.dev pelo ticker. Sem internet, vale o valor digitado aqui.</p>
       <div class="campo"><label for="f_obs">Observações</label><textarea id="f_obs" placeholder="Opcional">${a ? esc(a.obs || "") : ""}</textarea></div>
@@ -1624,7 +1652,7 @@
       <h3>Lançar novo preço — ${esc(a.ticker)}</h3>
       <div class="par">
         <div class="campo"><label for="f_data">Data</label><input id="f_data" type="date" value="${hojeISO()}"></div>
-        <div class="campo"><label for="f_preco">Preço</label><input id="f_preco" type="number" step="0.01" value="${a.precoAtual}"></div>
+        <div class="campo"><label for="f_preco">Preço</label>${campoMoeda("f_preco", a.precoAtual)}</div>
       </div>
       <p class="campo ajuda">Isso atualiza o preço atual do ativo e adiciona um ponto ao gráfico de evolução. Preço inserido manualmente — sem cotação automática nesta versão.</p>
       <div class="modal-acoes"><button class="btn primario salvar" id="btnSalvar">Salvar</button></div>`);
@@ -1713,8 +1741,8 @@
       <h3>${m ? "Editar meta" : "Nova meta"}</h3>
       <div class="campo"><label for="f_nome">Nome da meta</label><input id="f_nome" value="${m ? esc(m.nome) : ""}" placeholder="Reserva de emergência"></div>
       <div class="par">
-        <div class="campo"><label for="f_obj">Objetivo</label><input id="f_obj" type="number" step="0.01" value="${m ? m.objetivo : ""}" placeholder="30000"></div>
-        <div class="campo"><label for="f_atual">Valor atual</label><input id="f_atual" type="number" step="0.01" value="${m ? m.atual : 0}"></div>
+        <div class="campo"><label for="f_obj">Objetivo</label>${campoMoeda("f_obj", m ? m.objetivo : "", "R$ 30.000,00")}</div>
+        <div class="campo"><label for="f_atual">Valor atual</label>${campoMoeda("f_atual", m ? m.atual : 0)}</div>
       </div>
       <div class="par">
         <div class="campo"><label for="f_prazo">Prazo</label><input id="f_prazo" type="date" value="${m ? m.prazo || "" : ""}"></div>
@@ -2229,7 +2257,7 @@
     if (!m) return;
     abrirModal(`
       <h3>Adicionar valor — ${esc(m.nome)}</h3>
-      <div class="campo"><label for="f_valor">Quanto você quer adicionar?</label><input id="f_valor" type="number" step="0.01" placeholder="0,00"></div>
+      <div class="campo"><label for="f_valor">Quanto você quer adicionar?</label>${campoMoeda("f_valor", "")}</div>
       <div class="modal-acoes"><button class="btn primario salvar" id="btnSalvar">Adicionar</button></div>`);
     document.getElementById("btnSalvar").onclick = () => {
       const v = numIn(document.getElementById("f_valor").value);
