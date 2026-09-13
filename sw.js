@@ -1,11 +1,11 @@
 /* Service worker — deixa o app abrir sem internet no iPad/iPhone.
    Arquivos do app: cache primeiro. Cotações (APIs): sempre rede. */
-const CACHE = "muller-mendes-v24";
+const CACHE = "muller-mendes-v26";
 const ARQUIVOS = [
   "./", "./index.html", "./css/style.css?v=1.0.2", "./manifest.json", "./manifest.webmanifest",
   "./js/vendor/chart.umd.min.js", "./js/vendor/xlsx.full.min.js",
   "./js/bloqueio.js?v=1.0.2", "./js/armazenamento.js?v=1.0.2", "./js/financeiro.js?v=1.0.2", "./js/investimentos.js?v=1.0.2",
-  "./js/graficos.js?v=1.0.2", "./js/cotacoes.js?v=1.0.2", "./js/sincronizacao.js?v=1.0.2", "./js/google.js?v=1.0.2", "./js/app.js?v=1.0.2",
+  "./js/graficos.js?v=1.0.2", "./js/cotacoes.js?v=1.0.2", "./js/sincronizacao.js?v=1.0.2", "./js/app.js?v=1.0.2",
   "./assets/icons/icon-192.png", "./assets/icons/icon-512.png",
   "./apple-touch-icon.png", "./apple-touch-icon-180.png", "./apple-touch-icon-167.png", "./apple-touch-icon-152.png", "./apple-touch-icon-precomposed.png"
 ];
