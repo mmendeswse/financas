@@ -568,9 +568,12 @@
   // =========================================================================
   // COTAÇÕES AUTOMÁTICAS (dólar + ações) — opcional, cai no manual se falhar
   // =========================================================================
+  // token da brapi.dev já configurado de fábrica; o usuário pode trocar
+  // por outro em Configurações (o que ele digitar tem prioridade).
+  const TOKEN_BRAPI_PADRAO = "oGucoGNp2Ami56Y5x5UqBQ";
   function configCotacoes() {
     const c = DADOS.config || {};
-    return { auto: c.cotacoesAuto !== false, token: c.brapiToken || "" };
+    return { auto: c.cotacoesAuto !== false, token: (c.brapiToken || "").trim() || TOKEN_BRAPI_PADRAO };
   }
 
   function renderDolar() {
@@ -1783,23 +1786,12 @@
     });
     return Object.keys(mapa).map((c) => ({ categoria: c, valor: mapa[c] })).sort((a, b) => b.valor - a.valor);
   }
-  function despesasPorBancoPeriodo(d, inicioISO, fimISO) {
-    const mapa = {};
-    d.despesas.filter((x) => x.data >= inicioISO && x.data <= fimISO).forEach((x) => {
-      let bancoId = x.bancoId;
-      if (!bancoId && x.cartaoId) { const c = d.cartoes.find((k) => k.id === x.cartaoId); bancoId = c ? c.bancoId : ""; }
-      const nome = F.nomeBanco(d, bancoId) || "Não identificado";
-      mapa[nome] = (mapa[nome] || 0) + Number(x.valor || 0);
-    });
-    return Object.keys(mapa).map((n) => ({ nome: n, valor: mapa[n] })).sort((a, b) => b.valor - a.valor);
-  }
 
   function renderRelatorios(d) {
     const { inicio, fim } = intervaloRelatorio(periodoRelatorio);
     const entradasP = d.entradas.filter((e) => e.data >= inicio && e.data <= fim).reduce((s, e) => s + Number(e.valor), 0);
     const despesasP = d.despesas.filter((x) => x.data >= inicio && x.data <= fim).reduce((s, x) => s + Number(x.valor), 0);
     const historicoP = d.historicoPatrimonio.filter((h) => h.data >= inicio && h.data <= fim);
-    const bancosP = despesasPorBancoPeriodo(d, inicio, fim);
 
     return `
       <div class="filtros">
@@ -1824,9 +1816,6 @@
       </div>
       <div class="grid">
         <div class="c12">${card("", "Receitas x despesas", "por mês, no período", "", `<div style="padding:10px 16px;height:220px"><canvas id="graf-rel-mensal"></canvas></div>`)}</div>
-      </div>
-      <div class="grid">
-        <div class="c12">${card("", "Gastos por banco", "no período", "", bancosP.length ? `<div style="padding:10px 16px;height:${Math.max(160, bancosP.length * 40)}px"><canvas id="graf-rel-bancos"></canvas></div>` : `<div class="empty">Sem despesas no período.</div>`)}</div>
       </div>
     `;
   }
@@ -1859,8 +1848,8 @@
         <div class="c12">${card("", "Cotações automáticas", "dólar via AwesomeAPI (sem chave) · ações via brapi.dev", "", `
           <div class="body pad">
             <label class="chk-linha"><input type="checkbox" id="cfgCotacoesAuto" ${configCotacoes().auto ? "checked" : ""}> Buscar cotações automaticamente ao abrir o sistema e a cada 5 minutos</label>
-            <div class="campo"><label for="cfgBrapiToken">Token da brapi.dev (opcional, gratuito)</label><input id="cfgBrapiToken" value="${esc(configCotacoes().token)}" placeholder="cole aqui o token criado em brapi.dev">
-              <div class="ajuda">Sem token a brapi pode limitar a quantidade de consultas. O token fica salvo só neste navegador e nunca é enviado a outro lugar. Se a internet cair, o sistema mantém os últimos preços e continua funcionando.</div></div>
+            <div class="campo"><label for="cfgBrapiToken">Token da brapi.dev</label><input id="cfgBrapiToken" value="${esc(configCotacoes().token)}" placeholder="cole aqui outro token, se quiser">
+              <div class="ajuda">Já vem com um token configurado — não precisa mexer. Se um dia quiser usar outro, basta colar aqui. Se a internet cair, o sistema mantém os últimos preços e continua funcionando.</div></div>
             <button class="btn primario" data-acao="salvar-cotacoes">Salvar e buscar agora</button>
             ${dolar ? `<span class="dim" style="margin-left:12px;font-size:12px">Dólar agora: <b class="acc-laranja">R$ ${dolar.valor.toFixed(2).replace(".", ",")}</b></span>` : ""}
           </div>`)}</div>
@@ -2022,8 +2011,6 @@
     const historicoP = d.historicoPatrimonio.filter((h) => h.data >= inicio && h.data <= fim);
     if (historicoP.length >= 2) G.renderEvolucaoPatrimonio("graf-rel-evolucao", historicoP);
     G.renderReceitasDespesas("graf-rel-mensal", serieMensalPeriodo(d, inicio, fim));
-    const bancosP = despesasPorBancoPeriodo(d, inicio, fim);
-    if (bancosP.length) G.renderSaldoBancos("graf-rel-bancos", bancosP.map((b) => ({ nome: b.nome, saldoAtual: b.valor, cor: G.CORES.down })));
   }
 
   function montarGraficosDaRota() {
