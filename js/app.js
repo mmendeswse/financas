@@ -379,6 +379,8 @@
       const b = e.target.closest("button[data-secao]");
       if (b) navegarPara(b.dataset.secao);
     });
+    const logo = document.getElementById("btnLogo");
+    if (logo) logo.addEventListener("click", () => navegarPara("dashboard"));
     const sbMeta = document.getElementById("sidebarMeta");
     if (sbMeta) sbMeta.addEventListener("click", (e) => {
       const b = e.target.closest("[data-acao='ir']");

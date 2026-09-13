@@ -718,3 +718,10 @@ input, select, textarea,
 .nav { flex: 1 1 auto; min-width: 0; justify-content: space-between; }
 .nav-ferramentas { margin-left: 0; flex: none; }
 @media (max-width: 980px) { .nav { justify-content: flex-start; } .nav-ferramentas { margin-left: auto; } }
+
+/* logo clicável, com o nome sempre numa linha só */
+.logo { border: none; background: none; cursor: pointer; flex: none; }
+.logo:hover .logo-txt b { color: var(--cy); }
+.logo-txt { min-width: 0; }
+.logo-txt b { white-space: nowrap; }
+.logo-txt span { white-space: nowrap; }
