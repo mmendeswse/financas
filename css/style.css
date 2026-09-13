@@ -709,39 +709,3 @@ input, select, textarea,
   font-size: 14px; font-weight: 700; }
 .btn-bio:active { background: rgba(0,229,255,.2); }
 .btn-bio svg { width: 20px; height: 20px; }
-
-/* =======================================================================
-   BARRA DE TÍTULO — compacta o bastante para as 9 guias caberem
-   numa linha só, sem rolagem lateral, inclusive no iPad em retrato
-   ======================================================================= */
-.sidebar { gap: clamp(6px, 0.6vw, 14px); padding: 0 clamp(10px, 0.9vw, 22px); flex-wrap: nowrap; }
-.logo { padding-right: clamp(8px, 0.8vw, 16px); gap: clamp(6px, 0.55vw, 11px); flex: none; }
-.logo-mark { width: clamp(26px, 2.1vw, 36px); height: clamp(26px, 2.1vw, 36px); }
-.logo-mark svg { width: clamp(14px, 1.15vw, 19px); height: clamp(14px, 1.15vw, 19px); }
-.logo-txt b { font-size: clamp(11px, 0.95vw, 17px); letter-spacing: .06em; white-space: nowrap; }
-
-.nav { flex: 1 1 auto; min-width: 0; flex-wrap: nowrap; overflow: visible; justify-content: flex-start; gap: 0; }
-.nav button {
-  flex: 0 1 auto; min-width: 0;
-  padding: 0 clamp(5px, 0.62vw, 15px);
-  font-size: clamp(9px, 0.76vw, 14px);
-  letter-spacing: clamp(0px, 0.04vw, .06em);
-  gap: clamp(4px, 0.4vw, 8px);
-  white-space: nowrap;
-}
-.nav button svg { width: clamp(12px, 0.95vw, 17px); height: clamp(12px, 0.95vw, 17px); }
-
-.nav-ferramentas { flex: none; gap: clamp(5px, 0.5vw, 12px); }
-.status-vivo { padding: 0 clamp(7px, 0.7vw, 15px); font-size: clamp(9.5px, 0.72vw, 13px); gap: clamp(5px, 0.45vw, 9px); }
-.status-vivo #relogioTopbar { font-size: clamp(9.5px, 0.72vw, 13px); }
-.nav-ferramentas .icon-btn { width: clamp(28px, 2.2vw, 38px); height: clamp(28px, 2.2vw, 38px); }
-
-/* telas mais estreitas: primeiro somem os ícones, depois a data por extenso */
-@media (max-width: 1180px) { .nav button svg { display: none; } }
-@media (max-width: 1024px) { .data-topbar { display: none; } }
-@media (max-width: 860px)  { .logo-txt { display: none; } }
-@media (max-width: 720px)  { .nav button { letter-spacing: 0; padding: 0 4px; font-size: 9px; } }
-
-/* iPad: guias sem rolagem lateral + folga do relógio/bateria */
-.nav { overflow-x: visible; }
-.sidebar { padding-top: env(safe-area-inset-top); padding-left: max(clamp(10px,0.9vw,22px), env(safe-area-inset-left)); padding-right: max(clamp(10px,0.9vw,22px), env(safe-area-inset-right)); }
