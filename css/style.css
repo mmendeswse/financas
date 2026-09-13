@@ -644,3 +644,44 @@ html { -webkit-text-size-adjust: 100%; }
      em todos os casos — esta folga garante que nada fique por baixo dela */
   .sidebar { padding-top: calc(6px + max(env(safe-area-inset-top), 8px)); }
 }
+
+/* =======================================================================
+   BARRA SUPERIOR — proporção entre logo, guias, ícones e ferramentas
+   ======================================================================= */
+.sidebar { padding: 0 22px; gap: 16px; min-height: 56px; align-items: stretch; }
+.logo { padding: 0 18px 0 0; gap: 11px; align-items: center; }
+.logo-mark { width: 30px; height: 30px; border-width: 2px; }
+.logo-mark svg { width: 17px; height: 17px; }
+.logo-txt b { font-size: 14.5px; letter-spacing: .1em; }
+
+.nav { align-items: stretch; gap: 2px; }
+.nav button {
+  padding: 0 13px; font-size: 11.5px; letter-spacing: .06em; gap: 8px;
+  border-radius: 0; align-items: center; height: 100%;
+}
+.nav button svg { display: block; width: 15px; height: 15px; opacity: .85; }
+.nav button.ativo { background: rgba(0,229,255,.1); box-shadow: inset 0 -2px 0 var(--cy); }
+.nav button.ativo svg { opacity: 1; }
+@media (max-width: 1500px) { .nav button { padding: 0 10px; font-size: 11px; gap: 6px; } }
+@media (max-width: 1280px) { .nav button svg { display: none; } }
+
+.nav-ferramentas { gap: 10px; align-items: center; }
+.status-vivo { height: 34px; padding: 0 14px; font-size: 11.5px; letter-spacing: .03em; gap: 8px; border-radius: 18px; }
+.status-vivo #relogioTopbar { font-size: 11.5px; }
+.dot-vivo { width: 7px; height: 7px; }
+.nav-ferramentas .icon-btn { width: 34px; height: 34px; border-radius: 9px; }
+.nav-ferramentas .icon-btn svg { width: 16px; height: 16px; }
+.nav-ferramentas .icon-btn .bolinha { top: -5px; right: -5px; min-width: 17px; height: 17px; font-size: 10px; }
+.dolar-pill { height: 34px; padding: 0 14px; align-items: center; }
+
+/* faixa de cotações: um pouco mais respirada */
+.ticker-tape { padding: 9px 0; }
+.ticker-track { gap: 38px; }
+.ticker-item { font-size: 13px; gap: 9px; }
+
+@media (max-width: 980px) {
+  .sidebar { flex-wrap: wrap; padding: 8px 14px; min-height: 0; }
+  .nav { order: 3; width: 100%; }
+  .nav button { height: 38px; }
+  .nav-ferramentas { margin-left: auto; }
+}
