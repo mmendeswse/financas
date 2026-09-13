@@ -792,3 +792,49 @@ input, select, textarea,
 .barlist-valor { text-align: left; justify-self: start; }
 .barlist-linha { grid-template-columns: minmax(64px, 96px) 1fr 112px; }
 .legenda-pct, .legenda-val { text-align: left; justify-self: start; }
+
+/* composição do patrimônio: percentuais à direita, valores à esquerda */
+.legenda-pct { text-align: right; justify-self: end; }
+
+/* títulos de coluna: sem itálico e alinhados com os dados */
+.hd i, .hd b, .hd span { font-style: normal; }
+.hd i.r { text-align: right; }
+/* nas tabelas de entradas e despesas a última coluna traz os botões de
+   editar/excluir; o recuo põe o título "Valor" em cima dos números */
+.hd i.hd-valor { padding-right: 58px; }
+@media (max-width: 640px) { .hd i.hd-valor { padding-right: 50px; } }
+
+/* campos lado a lado (Data / Valor): o campo de data tem largura própria
+   grande no Safari, que empurrava a coluna vizinha e sobrepunha os campos.
+   min-width:0 faz as duas colunas dividirem o espaço igualmente. */
+.par, .par3 { align-items: start; }
+.par > *, .par3 > * { min-width: 0; }
+.campo { min-width: 0; }
+.campo input, .campo select, .campo textarea { width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; }
+.campo input[type="date"] { -webkit-appearance: none; appearance: none; }
+.modal .par { gap: 12px; }
+
+/* campo de data: no Safari ele ignora a largura e vaza para fora do
+   formulário; estas regras prendem o campo dentro da caixa */
+.campo input[type="date"] {
+  display: block; width: 100% !important; max-width: 100% !important; min-width: 0 !important;
+  box-sizing: border-box; -webkit-appearance: none; appearance: none; min-height: 42px;
+  text-align: left;
+}
+.campo input[type="date"]::-webkit-date-and-time-value { text-align: left; margin: 0; }
+.campo input[type="date"]::-webkit-calendar-picker-indicator { margin-left: auto; }
+.modal { overflow-x: hidden; }
+.modal .campo, .modal .par, .modal .par3 { max-width: 100%; }
+
+/* Prazo + Cor lado a lado: o seletor de cor tem tamanho próprio no Safari
+   e quebrava a linha; aqui ele passa a ocupar a coluna inteira, com a
+   mesma altura do campo de data ao lado */
+.campo input[type="color"] {
+  display: block; width: 100% !important; max-width: 100% !important; min-width: 0 !important;
+  height: 42px; min-height: 42px; padding: 4px; box-sizing: border-box; cursor: pointer;
+  border: 1px solid var(--linha-2); border-radius: 8px; background: var(--painel-2);
+  -webkit-appearance: none; appearance: none;
+}
+.campo input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+.campo input[type="color"]::-webkit-color-swatch { border: none; border-radius: 5px; }
+.campo input[type="color"]::-moz-color-swatch { border: none; border-radius: 5px; }

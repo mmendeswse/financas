@@ -1135,7 +1135,7 @@
     if (!lista.length) {
       corpo = `<div class="empty">Nenhuma entrada cadastrada. Use "+ Nova entrada" para lançar seu salário ou outra receita.</div>`;
     } else {
-      corpo = `<div class="hd" style="${grid}"><i>Descrição</i><i>Banco</i><i class="r">Data</i><i class="r">Valor</i></div>` +
+      corpo = `<div class="hd" style="${grid}"><i>Descrição</i><i>Banco</i><i class="r">Data</i><i class="r hd-valor">Valor</i></div>` +
         lista.map((e) => `
         <div class="rw" style="${grid}">
           <div><div class="nm">${esc(e.descricao)}${e.recorrente ? ' <span class="selo-tag selo-cat">recorrente</span>' : ""}</div><div class="sub">${esc(e.categoria)} · ${esc(e.tipo || "")}</div></div>
@@ -1212,7 +1212,7 @@
     if (!lista.length) {
       corpo = `<div class="empty">Nenhuma despesa cadastrada. Use "+ Nova despesa" para lançar um gasto.</div>`;
     } else {
-      corpo = `<div class="hd" style="${grid}"><i>Descrição</i><i>Pago com</i><i class="r">Data</i><i class="r">Valor</i></div>` +
+      corpo = `<div class="hd" style="${grid}"><i>Descrição</i><i>Pago com</i><i class="r">Data</i><i class="r hd-valor">Valor</i></div>` +
         lista.map((x) => `
         <div class="rw" style="${grid}">
           <div><div class="nm">${esc(x.descricao)}${x.recorrente ? ' <span class="selo-tag selo-cat">recorrente</span>' : ""}</div><div class="sub">${esc(x.categoria)} · ${esc(x.formaPagamento || "")}</div></div>
