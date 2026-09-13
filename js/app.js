@@ -27,6 +27,17 @@
   const FORMAS_PAGAMENTO = ["Débito", "Pix", "Dinheiro", "Cartão de crédito", "Boleto", "Transferência", "Débito automático"];
   const CATS_INVESTIMENTO = ["Renda fixa", "Tesouro Direto", "Criptomoedas", "Fundos", "Outros"];
   const CATS_ACAO = ["Ação", "FII", "ETF"];
+  const FREQUENCIAS = ["Não se repete", "Semanal", "Quinzenal", "Mensal", "Anual"];
+  // registros antigos guardavam só "recorrente: true", que equivalia a mensal
+  function freqDe(reg) {
+    if (reg && reg.recorrencia) return reg.recorrencia;
+    return reg && reg.recorrente ? "Mensal" : FREQUENCIAS[0];
+  }
+  function seloFreq(reg) {
+    const f = freqDe(reg);
+    return f === FREQUENCIAS[0] ? "" : ` <span class="selo-tag selo-cat">${esc(f.toLowerCase())}</span>`;
+  }
+
   const CORES_META = ["#22E08A", "#3FC1E0", "#FFB020", "#B487F0", "#FF6F91", "#7C9CF0"];
 
   // Estado da interface (não persistido — só a sessão atual)
@@ -1138,7 +1149,7 @@
       corpo = `<div class="hd" style="${grid}"><i>Descrição</i><i>Banco</i><i class="r">Data</i><i class="r hd-valor">Valor</i></div>` +
         lista.map((e) => `
         <div class="rw" style="${grid}">
-          <div><div class="nm">${esc(e.descricao)}${e.recorrente ? ' <span class="selo-tag selo-cat">recorrente</span>' : ""}</div><div class="sub">${esc(e.categoria)} · ${esc(e.tipo || "")}</div></div>
+          <div><div class="nm">${esc(e.descricao)}${seloFreq(e)}</div><div class="sub">${esc(e.categoria)} · ${esc(e.tipo || "")}</div></div>
           <div class="dim" style="font-size:12.5px">${esc(F.nomeBanco(d, e.bancoId))}</div>
           <div class="r dim" style="font-size:12px">${fmtDataCurta(e.data)}</div>
           <div class="cel-valor"><span class="big up">+${brl(e.valor)}</span><span class="cel-botoes">${linhaAcoes("editar-entrada", e.id, "excluir-entrada", e.id)}</span></div>
@@ -1165,7 +1176,8 @@
         <div class="campo"><label for="f_banco">Banco</label><select id="f_banco">${opcoesBancos(DADOS.bancos, e ? e.bancoId : "", true)}</select></div>
       </div>
       <div class="campo"><label for="f_tipo">Tipo</label><select id="f_tipo">${opcoes(["Fixa", "Variável"], e ? e.tipo : "Fixa")}</select></div>
-      <label class="chk-linha"><input type="checkbox" id="f_rec" ${e && e.recorrente ? "checked" : ""}> Entrada recorrente (se repete todo mês)</label>
+      <div class="campo"><label for="f_rec">Repetição</label><select id="f_rec">${opcoes(FREQUENCIAS, freqDe(e))}</select>
+        <div class="ajuda">Serve para identificar entradas que se repetem; o lançamento seguinte continua sendo feito por você.</div></div>
       <div class="campo"><label for="f_obs">Observação</label><textarea id="f_obs" placeholder="Opcional">${e ? esc(e.obs || "") : ""}</textarea></div>
       <div class="modal-acoes">
         <button class="btn primario salvar" id="btnSalvar">Salvar</button>
@@ -1185,7 +1197,8 @@
         bancoId: banco,
         valor: numIn(document.getElementById("f_valor").value),
         tipo: document.getElementById("f_tipo").value,
-        recorrente: document.getElementById("f_rec").checked,
+        recorrencia: document.getElementById("f_rec").value,
+        recorrente: document.getElementById("f_rec").value !== FREQUENCIAS[0],
         obs: document.getElementById("f_obs").value.trim()
       };
       if (e) Object.assign(e, registro); else DADOS.entradas.push(registro);
@@ -1215,7 +1228,7 @@
       corpo = `<div class="hd" style="${grid}"><i>Descrição</i><i>Pago com</i><i class="r">Data</i><i class="r hd-valor">Valor</i></div>` +
         lista.map((x) => `
         <div class="rw" style="${grid}">
-          <div><div class="nm">${esc(x.descricao)}${x.recorrente ? ' <span class="selo-tag selo-cat">recorrente</span>' : ""}</div><div class="sub">${esc(x.categoria)} · ${esc(x.formaPagamento || "")}</div></div>
+          <div><div class="nm">${esc(x.descricao)}${seloFreq(x)}</div><div class="sub">${esc(x.categoria)} · ${esc(x.formaPagamento || "")}</div></div>
           <div class="dim" style="font-size:12.5px">${x.cartaoId ? "💳 " + esc(nomeCartao(d, x.cartaoId)) : esc(F.nomeBanco(d, x.bancoId))}</div>
           <div class="r dim" style="font-size:12px">${fmtDataCurta(x.data)}</div>
           <div class="cel-valor"><span class="big down">−${brl(x.valor)}</span><span class="cel-botoes">${linhaAcoes("editar-despesa", x.id, "excluir-despesa", x.id)}</span></div>
@@ -1257,7 +1270,8 @@
         <div class="campo"><label for="f_pagarcom">Pagar com</label><select id="f_pagarcom">${opcoesPagarCom(DADOS, x ? x.bancoId : "", x ? x.cartaoId : "")}</select></div>
       </div>
       <div class="campo"><label for="f_forma">Forma de pagamento</label><select id="f_forma">${opcoes(FORMAS_PAGAMENTO, x ? x.formaPagamento : FORMAS_PAGAMENTO[0])}</select></div>
-      <label class="chk-linha"><input type="checkbox" id="f_rec" ${x && x.recorrente ? "checked" : ""}> Despesa recorrente (se repete todo mês)</label>
+      <div class="campo"><label for="f_rec">Repetição</label><select id="f_rec">${opcoes(FREQUENCIAS, freqDe(x))}</select>
+        <div class="ajuda">Serve para identificar despesas que se repetem; o lançamento seguinte continua sendo feito por você.</div></div>
       <div class="campo"><label for="f_obs">Observação</label><textarea id="f_obs" placeholder="Opcional">${x ? esc(x.obs || "") : ""}</textarea></div>
       <div class="modal-acoes">
         <button class="btn primario salvar" id="btnSalvar">Salvar</button>
@@ -1279,7 +1293,8 @@
         cartaoId: tipoPg === "cartao" ? idPg : "",
         valor: numIn(document.getElementById("f_valor").value),
         formaPagamento: document.getElementById("f_forma").value,
-        recorrente: document.getElementById("f_rec").checked,
+        recorrencia: document.getElementById("f_rec").value,
+        recorrente: document.getElementById("f_rec").value !== FREQUENCIAS[0],
         obs: document.getElementById("f_obs").value.trim()
       };
       if (x) Object.assign(x, registro); else DADOS.despesas.push(registro);
@@ -2207,8 +2222,8 @@
     let entradas = 0, despesas = 0;
     linhas.forEach((l) => {
       const base = { id: A.novoId(), data: l.data, descricao: l.descricao || "Importado da planilha", categoria: l.categoria, valor: l.valor, obs: "Importado via Excel" };
-      if (l.tipo === "entrada") { DADOS.entradas.push({ ...base, bancoId: l.bancoId, tipo: "Variável", recorrente: false }); entradas++; }
-      else { DADOS.despesas.push({ ...base, bancoId: l.bancoId, cartaoId: "", formaPagamento: "Outro", recorrente: false }); despesas++; }
+      if (l.tipo === "entrada") { DADOS.entradas.push({ ...base, bancoId: l.bancoId, tipo: "Variável", recorrencia: FREQUENCIAS[0], recorrente: false }); entradas++; }
+      else { DADOS.despesas.push({ ...base, bancoId: l.bancoId, cartaoId: "", formaPagamento: "Outro", recorrencia: FREQUENCIAS[0], recorrente: false }); despesas++; }
     });
     importacaoExcel = null;
     fecharModal();

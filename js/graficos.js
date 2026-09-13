@@ -142,9 +142,9 @@
         datasets: [{
           label: "Patrimônio líquido",
           data: historico.map(function (p) { return p.valor; }),
-          borderColor: CORES.up, backgroundColor: gradiente(ctx, CORES.up, 240), fill: true, tension: 0.3,
+          borderColor: CORES.azul, backgroundColor: gradiente(ctx, CORES.azul, 240), fill: true, tension: 0.3,
           borderWidth: 2.5, pointRadius: historico.length <= 14 ? 4 : 0, pointHoverRadius: 5,
-          pointBackgroundColor: "#FFFFFF", pointBorderColor: CORES.up, pointBorderWidth: 2
+          pointBackgroundColor: "#FFFFFF", pointBorderColor: CORES.azul, pointBorderWidth: 2
         }]
       },
       options: {
