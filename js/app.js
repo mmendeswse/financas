@@ -240,6 +240,48 @@
     });
   }
 
+
+  // =========================================================================
+  // BARRA DE GUIAS — mede a largura real e vai compactando por níveis até
+  // todas as guias caberem numa linha só (sem rolagem lateral), qualquer
+  // que seja o aparelho, a fonte do sistema ou a orientação da tela.
+  // =========================================================================
+  const ROTULOS_CURTOS = {
+    investimentos: "INVEST.", configuracoes: "CONFIG.", relatorios: "RELAT.",
+    dashboard: "PAINEL", entradas: "ENTR.", despesas: "DESP."
+  };
+  function aplicarRotulos(curto) {
+    document.querySelectorAll("#navPrincipal button[data-secao]").forEach((b) => {
+      const no = [...b.childNodes].find((n) => n.nodeType === 3 && n.textContent.trim());
+      if (!no) return;
+      if (!b.dataset.rotulo) b.dataset.rotulo = no.textContent;
+      const curtoTxt = ROTULOS_CURTOS[b.dataset.secao];
+      no.textContent = (curto && curtoTxt) ? curtoTxt : b.dataset.rotulo;
+    });
+  }
+
+  function ajustarBarraGuias() {
+    const barra = document.getElementById("sidebar");
+    const nav = document.getElementById("navPrincipal");
+    if (!barra || !nav) return;
+    const NIVEIS = 6;
+    const cabe = () => nav.scrollWidth <= nav.clientWidth + 1 && barra.scrollWidth <= barra.clientWidth + 1;
+    aplicarRotulos(false);
+    let coube = false;
+    for (let n = 0; n <= NIVEIS; n++) {
+      barra.dataset.compacta = String(n);
+      if (cabe()) { coube = true; break; }
+    }
+    // último recurso: abreviar os nomes das guias (INVESTIMENTOS → INVEST.)
+    if (!coube) {
+      aplicarRotulos(true);
+      for (let n = 3; n <= NIVEIS + 1; n++) {   // o nível extra esconde a data/hora
+        barra.dataset.compacta = String(n);
+        if (cabe()) break;
+      }
+    }
+  }
+
   // =========================================================================
   // CICLO DE VIDA
   // =========================================================================
@@ -255,6 +297,10 @@
     ligarDelegacaoConteudo();
     ligarMascaraMoeda(document.getElementById("conteudo"));
     iniciarRelogio();
+    ajustarBarraGuias();
+    window.addEventListener("resize", ajustarBarraGuias);
+    if (window.visualViewport) window.visualViewport.addEventListener("resize", ajustarBarraGuias);
+    window.addEventListener("orientationchange", () => setTimeout(ajustarBarraGuias, 300));
 
     navegarPara("dashboard");
     atualizarCotacoesAutomaticas(true);

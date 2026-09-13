@@ -725,3 +725,46 @@ input, select, textarea,
 .logo-txt { min-width: 0; }
 .logo-txt b { white-space: nowrap; }
 .logo-txt span { white-space: nowrap; }
+
+/* =======================================================================
+   NÍVEIS DE COMPACTAÇÃO DA BARRA (aplicados pelo ajustarBarraGuias)
+   0 = tamanho cheio · 6 = mínimo, para telas bem estreitas
+   ======================================================================= */
+.sidebar[data-compacta] .nav { overflow: hidden; }
+
+.sidebar[data-compacta="1"] .nav button { padding-left: clamp(7px,0.7vw,13px); padding-right: clamp(7px,0.7vw,13px); gap: 6px; }
+.sidebar[data-compacta="1"] .logo { padding-right: clamp(10px,0.9vw,16px); }
+
+.sidebar[data-compacta="2"] .nav button { padding-left: 6px; padding-right: 6px; gap: 5px; font-size: clamp(10px,0.72vw,13px); }
+.sidebar[data-compacta="2"] .logo { padding-right: 10px; }
+.sidebar[data-compacta="2"] .status-vivo { padding-left: 10px; padding-right: 10px; }
+
+.sidebar[data-compacta="3"] .nav button { padding-left: 5px; padding-right: 5px; font-size: clamp(9.5px,0.68vw,12.5px); letter-spacing: .03em; }
+.sidebar[data-compacta="3"] .nav button svg { display: none; }
+.sidebar[data-compacta="3"] .status-vivo { padding-left: 9px; padding-right: 9px; }
+
+.sidebar[data-compacta="4"] .nav button { padding-left: 5px; padding-right: 5px; font-size: 10px; letter-spacing: .02em; }
+.sidebar[data-compacta="4"] .nav button svg { display: none; }
+.sidebar[data-compacta="4"] .data-topbar { display: none; }
+
+.sidebar[data-compacta="5"] .nav button { padding-left: 4px; padding-right: 4px; font-size: 9.5px; letter-spacing: 0; }
+.sidebar[data-compacta="5"] .nav button svg { display: none; }
+.sidebar[data-compacta="5"] .data-topbar { display: none; }
+.sidebar[data-compacta="5"] .logo-txt { display: none; }
+
+.sidebar[data-compacta="6"] .nav button { padding-left: 3px; padding-right: 3px; font-size: 9px; letter-spacing: 0; }
+.sidebar[data-compacta="6"] .nav button svg { display: none; }
+.sidebar[data-compacta="6"] .data-topbar, .sidebar[data-compacta="6"] .logo-txt { display: none; }
+.sidebar[data-compacta="6"] .status-vivo { padding-left: 8px; padding-right: 8px; }
+
+/* nunca rolar a barra para o lado */
+.sidebar { overflow-x: hidden; }
+.nav { overflow-x: hidden !important; }
+
+/* quando os nomes estão abreviados, um respiro a mais entre as guias */
+.sidebar[data-compacta="6"] .nav { justify-content: space-around; }
+
+/* nível extra: em telas muito estreitas a data/hora sai e fica só o sino */
+.sidebar[data-compacta="7"] .nav button { padding-left: 3px; padding-right: 3px; font-size: 9px; letter-spacing: 0; }
+.sidebar[data-compacta="7"] .nav button svg, .sidebar[data-compacta="7"] .logo-txt, .sidebar[data-compacta="7"] .status-vivo { display: none; }
+.sidebar[data-compacta="7"] .nav { justify-content: space-around; }
