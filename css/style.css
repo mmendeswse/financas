@@ -670,3 +670,42 @@ input, select, textarea,
   touch-action: manipulation;
 }
 .tela-bloqueio { touch-action: none; }
+
+/* =======================================================================
+   BARRA DE TÍTULO — proporção acompanha a largura da tela, para ficar
+   igual em iPad (~1190px) e em monitores grandes
+   ======================================================================= */
+.sidebar { min-height: clamp(52px, 4.4vw, 72px); padding: 0 clamp(16px, 1.4vw, 28px); gap: clamp(10px, 1.1vw, 20px); align-items: stretch; }
+.logo { padding: 0 clamp(12px, 1.2vw, 22px) 0 0; gap: clamp(8px, 0.7vw, 13px); align-items: center; }
+.logo-mark { width: clamp(28px, 2.4vw, 40px); height: clamp(28px, 2.4vw, 40px); border-width: 2px; }
+.logo-mark svg { width: clamp(15px, 1.3vw, 22px); height: clamp(15px, 1.3vw, 22px); }
+.logo-txt b { font-size: clamp(13.5px, 1.15vw, 20px); letter-spacing: .1em; }
+
+.nav { align-items: stretch; gap: clamp(1px, 0.2vw, 4px); }
+.nav button { height: 100%; border-radius: 6px; align-items: center; padding: 0 clamp(9px, 0.85vw, 18px); font-size: clamp(10.5px, 0.82vw, 14.5px); letter-spacing: .07em; gap: clamp(5px, 0.5vw, 9px); }
+.nav button svg { width: clamp(13px, 1.05vw, 18px); height: clamp(13px, 1.05vw, 18px); opacity: .85; }
+.nav button.ativo { background: rgba(0,229,255,.1); box-shadow: inset 0 -2px 0 var(--cy); }
+.nav button.ativo svg { opacity: 1; }
+@media (max-width: 1280px) { .nav button svg { display: none; } }
+
+.nav-ferramentas { gap: clamp(8px, 0.7vw, 14px); align-items: center; }
+.status-vivo { height: clamp(30px, 2.5vw, 42px); padding: 0 clamp(11px, 1vw, 18px); font-size: clamp(10.5px, 0.8vw, 14px); gap: clamp(6px, 0.55vw, 10px); border-radius: 999px; }
+.status-vivo #relogioTopbar { font-size: clamp(10.5px, 0.8vw, 14px); }
+.dot-vivo { width: clamp(6px, 0.5vw, 9px); height: clamp(6px, 0.5vw, 9px); }
+.nav-ferramentas .icon-btn { width: clamp(30px, 2.5vw, 42px); height: clamp(30px, 2.5vw, 42px); border-radius: 9px; }
+.nav-ferramentas .icon-btn svg { width: clamp(15px, 1.2vw, 20px); height: clamp(15px, 1.2vw, 20px); }
+.dolar-pill { height: clamp(30px, 2.5vw, 42px); padding: 0 clamp(11px, 1vw, 18px); align-items: center; }
+
+.ticker-tape { padding: clamp(7px, 0.65vw, 12px) 0; }
+.ticker-track { gap: clamp(26px, 2.4vw, 44px); }
+.ticker-item { font-size: clamp(11.5px, 0.9vw, 16px); gap: clamp(6px, 0.6vw, 11px); }
+
+/* iPad: mantém a folga do relógio/bateria mesmo com a barra proporcional */
+.sidebar { padding-top: calc(env(safe-area-inset-top)); padding-left: max(clamp(16px,1.4vw,28px), env(safe-area-inset-left)); padding-right: max(clamp(16px,1.4vw,28px), env(safe-area-inset-right)); }
+
+/* botão de Face ID / Touch ID na tela de senha */
+.btn-bio { display: flex; align-items: center; justify-content: center; gap: 9px; width: 100%; margin-top: 16px;
+  padding: 14px; border-radius: 10px; background: rgba(0,229,255,.1); border: 1px solid var(--cy); color: var(--cy);
+  font-size: 14px; font-weight: 700; }
+.btn-bio:active { background: rgba(0,229,255,.2); }
+.btn-bio svg { width: 20px; height: 20px; }

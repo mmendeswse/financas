@@ -132,6 +132,22 @@
   }
 
 
+  function montarAreaBiometria() {
+    const area = document.getElementById("areaBiometria");
+    if (!area || !window.Bloqueio) return;
+    Bloqueio.biometriaDisponivel().then((tem) => {
+      if (!tem) {
+        area.innerHTML = `<p class="campo ajuda" style="margin:0">Este aparelho não oferece Face ID / Touch ID para aplicativos da web (ou o sistema não está aberto por um endereço https).</p>`;
+        return;
+      }
+      area.innerHTML = Bloqueio.biometriaAtiva()
+        ? `<p style="font-size:13px;margin:0 0 8px">Face ID / Touch ID <b class="up">ativado</b> — a senha continua valendo como alternativa.</p>
+           <button class="btn perigo" data-acao="remover-biometria">Desativar Face ID / Touch ID</button>`
+        : `<p style="font-size:13px;margin:0 0 8px">Você pode desbloquear com Face ID ou Touch ID em vez de digitar a senha.</p>
+           <button class="btn primario" data-acao="ativar-biometria">Ativar Face ID / Touch ID</button>`;
+    });
+  }
+
   // =========================================================================
   // SINCRONIZAÇÃO ENTRE APARELHOS (cofre = Gist privado do GitHub)
   // =========================================================================
@@ -295,6 +311,7 @@
     };
     const fn = mapa[ROTA.secao] || renderDashboard;
     document.getElementById("conteudo").innerHTML = fn(DADOS, ROTA.param);
+    if (ROTA.secao === "configuracoes") montarAreaBiometria();
     if (ROTA.secao === "configuracoes" && A.ehDesktop) A.caminhoBanco().then((c) => { const el = document.getElementById("caminhoBanco"); if (el) el.textContent = "Local do banco: " + c; });
     montarGraficosDaRota();
     atualizarBadgeNotificacoes();
@@ -1975,6 +1992,7 @@
           <div class="body pad">
             ${window.Bloqueio && Bloqueio.ativo() ? `
               <p style="margin-top:0;font-size:13px">Senha <b class="up">ativada</b>. Ela será pedida toda vez que o sistema abrir neste aparelho.</p>
+              <div id="areaBiometria" style="margin:12px 0"></div>
               <div style="display:flex;gap:10px;flex-wrap:wrap">
                 <button class="btn" data-acao="trocar-senha">Trocar senha</button>
                 <button class="btn perigo" data-acao="remover-senha">Remover senha</button>
@@ -2316,6 +2334,16 @@
           break;
         }
 
+        case "ativar-biometria":
+          Bloqueio.ativarBiometria()
+            .then(() => { toast("Face ID ativado neste aparelho."); montarAreaBiometria(); })
+            .catch((err) => toast("Não consegui ativar: " + (err && err.name === "NotAllowedError" ? "pedido cancelado" : (err.message || "erro"))));
+          break;
+        case "remover-biometria":
+          confirmarExclusao("Desativar o Face ID / Touch ID neste aparelho? A senha continuará sendo pedida.", () => {
+            Bloqueio.removerBiometria(); montarAreaBiometria(); toast("Face ID desativado.");
+          });
+          break;
         case "criar-senha":
           Bloqueio.abrir({ modo: "criar", aoDesbloquear: () => { renderRota(); toast("Senha criada. Ela será pedida na próxima abertura."); } });
           break;

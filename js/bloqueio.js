@@ -66,6 +66,76 @@
   }
   function remover() { gravar(null); }
 
+
+  // ---------------------------------------------------------------------
+  // BIOMETRIA (Face ID / Touch ID) — usa o WebAuthn do próprio aparelho.
+  // Guardamos apenas o identificador da credencial; a digital/rosto nunca
+  // sai do iPad e não é acessível pelo sistema. Como não há servidor para
+  // conferir a assinatura, isto funciona como uma tranca local, no mesmo
+  // nível da senha numérica (que continua valendo como alternativa).
+  // ---------------------------------------------------------------------
+  var CHAVE_BIO = "mullerMendes:biometria";
+
+  function bytesParaTexto(buf) {
+    var b = new Uint8Array(buf), t = "";
+    for (var i = 0; i < b.length; i++) t += String.fromCharCode(b[i]);
+    return btoa(t);
+  }
+  function textoParaBytes(txt) {
+    var bin = atob(txt), a = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i);
+    return a;
+  }
+  function lerBio() {
+    try { return JSON.parse(localStorage.getItem(CHAVE_BIO) || "null"); } catch (e) { return null; }
+  }
+  function biometriaAtiva() { var b = lerBio(); return !!(b && b.id); }
+  function removerBiometria() { try { localStorage.removeItem(CHAVE_BIO); } catch (e) {} }
+
+  function biometriaDisponivel() {
+    if (!global.PublicKeyCredential || !navigator.credentials || !global.isSecureContext) return Promise.resolve(false);
+    if (!PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable) return Promise.resolve(false);
+    return PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().catch(function () { return false; });
+  }
+
+  function aleatorio(n) {
+    var a = new Uint8Array(n);
+    (global.crypto && global.crypto.getRandomValues) ? global.crypto.getRandomValues(a) : a.forEach(function (_, i) { a[i] = Math.floor(Math.random() * 256); });
+    return a;
+  }
+
+  function ativarBiometria() {
+    return navigator.credentials.create({
+      publicKey: {
+        challenge: aleatorio(32),
+        rp: { name: "Muller Mendes Finanças", id: location.hostname },
+        user: { id: aleatorio(16), name: "usuario", displayName: "Muller Mendes" },
+        pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
+        authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required", residentKey: "preferred" },
+        timeout: 60000,
+        attestation: "none"
+      }
+    }).then(function (cred) {
+      if (!cred) throw new Error("não foi possível registrar");
+      localStorage.setItem(CHAVE_BIO, JSON.stringify({ id: bytesParaTexto(cred.rawId), criadaEm: new Date().toISOString() }));
+      return true;
+    });
+  }
+
+  function pedirBiometria() {
+    var b = lerBio();
+    if (!b) return Promise.reject(new Error("biometria não configurada"));
+    return navigator.credentials.get({
+      publicKey: {
+        challenge: aleatorio(32),
+        allowCredentials: [{ type: "public-key", id: textoParaBytes(b.id), transports: ["internal"] }],
+        userVerification: "required",
+        timeout: 60000,
+        rpId: location.hostname
+      }
+    }).then(function (r) { if (!r) throw new Error("cancelado"); return true; });
+  }
+
   // ---------------------------------------------------------------------
   // tela
   // ---------------------------------------------------------------------
@@ -82,6 +152,7 @@
       '<div class="bolinhas" id="bloqueioBolinhas"></div>' +
       '<div class="teclado">' + teclas + '</div>' +
       '<p class="bloqueio-aviso" id="bloqueioAviso"></p>' +
+      (modo === "entrar" && biometriaAtiva() ? '<button class="btn-bio" id="btnBio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 3a9 9 0 0 0-9 9v3M21 15v-3a9 9 0 0 0-4.5-7.8"/><path d="M7.5 12a4.5 4.5 0 0 1 9 0v4M12 12v5M16.5 19.5a9 9 0 0 1-9 0"/></svg>Desbloquear com Face ID</button>' : "") +
       '</div>';
   }
 
@@ -158,9 +229,22 @@
     pintarBolinhas();
     tela.addEventListener("click", function (e) {
       var b = e.target.closest("[data-tecla]");
-      if (b) tecla(b.dataset.tecla);
+      if (b) { tecla(b.dataset.tecla); return; }
+      if (e.target.closest("#btnBio")) tentarBiometria();
     });
+    if (modo === "entrar" && biometriaAtiva()) setTimeout(tentarBiometria, 250);
     document.addEventListener("keydown", pelaTeclado);
+  }
+
+  function tentarBiometria() {
+    if (!biometriaAtiva()) return;
+    avisar("Aguardando Face ID…");
+    pedirBiometria().then(function () {
+      fechar();
+      if (aoDesbloquear) aoDesbloquear(true);
+    }).catch(function () {
+      avisar("Não reconhecido. Use a senha ou toque para tentar de novo.", true);
+    });
   }
 
   function pelaTeclado(e) {
@@ -185,7 +269,12 @@
     fechar: fechar,
     definir: definir,
     conferir: conferir,
-    remover: remover,
+    remover: function () { remover(); removerBiometria(); },
+    biometriaDisponivel: biometriaDisponivel,
+    biometriaAtiva: biometriaAtiva,
+    ativarBiometria: ativarBiometria,
+    removerBiometria: removerBiometria,
+    pedirBiometria: pedirBiometria,
     protegerAoAbrir: protegerAoAbrir
   };
 
