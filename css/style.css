@@ -709,3 +709,12 @@ input, select, textarea,
   font-size: 14px; font-weight: 700; }
 .btn-bio:active { background: rgba(0,229,255,.2); }
 .btn-bio svg { width: 20px; height: 20px; }
+
+/* =======================================================================
+   BARRA DE TÍTULO — guias distribuídas por toda a largura, sem sobrar
+   um vão vazio entre a última guia e a data/hora
+   ======================================================================= */
+.sidebar { justify-content: flex-start; }
+.nav { flex: 1 1 auto; min-width: 0; justify-content: space-between; }
+.nav-ferramentas { margin-left: 0; flex: none; }
+@media (max-width: 980px) { .nav { justify-content: flex-start; } .nav-ferramentas { margin-left: auto; } }
