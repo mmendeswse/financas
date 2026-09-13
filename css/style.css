@@ -593,7 +593,7 @@ table.terminal .campo-preco { width: 88px; text-align: right; background: var(--
    iPad / iPhone (PWA): área segura, toque e rolagem
    ======================================================================= */
 html { -webkit-text-size-adjust: 100%; }
-body { padding-top: env(safe-area-inset-top); }
+
 .sidebar { padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); position: sticky; top: 0; z-index: 60; background: var(--bg); }
 .nav { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
 .nav::-webkit-scrollbar { display: none; }
@@ -636,3 +636,11 @@ body { padding-top: env(safe-area-inset-top); }
 
 /* tela Bancos: cartões em grade fluida ocupando a largura toda */
 .grade-bancos { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; padding: 14px 16px 8px; }
+
+/* barra de guias fixa no topo, sempre abaixo do relógio/bateria do iPad */
+.sidebar { padding-top: calc(6px + env(safe-area-inset-top)); }
+@supports (-webkit-touch-callout: none) {
+  /* em tela cheia (app instalado) o iOS não desconta a barra de status sozinho
+     em todos os casos — esta folga garante que nada fique por baixo dela */
+  .sidebar { padding-top: calc(6px + max(env(safe-area-inset-top), 8px)); }
+}
