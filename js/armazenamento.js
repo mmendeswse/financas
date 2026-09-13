@@ -81,6 +81,7 @@
       metas: [],
       historicoPatrimonio: [],
       notificacoesLidas: [],
+      atualizadoEm: null,
       config: { ultimoBackup: null }
     };
   }
@@ -230,7 +231,8 @@
     }
   }
 
-  function salvarDados(dados, semNotificar) {
+  function salvarDados(dados, semNotificar, semCarimbo) {
+    if (!semCarimbo) dados.atualizadoEm = new Date().toISOString();
     try {
       gravarBruto(JSON.stringify(dados));
     } catch (e) {

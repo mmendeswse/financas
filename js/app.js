@@ -130,6 +130,99 @@
     });
   }
 
+
+  // =========================================================================
+  // SINCRONIZAÇÃO ENTRE APARELHOS (cofre = Gist privado do GitHub)
+  // =========================================================================
+  const S = window.Sincronizacao;
+  let sincronizando = false, timerEnvio = null, statusSync = "";
+
+  function cfgSync() {
+    const c = (DADOS.config && DADOS.config.sync) || {};
+    return { token: c.token || "", cofre: c.cofre || "", ultima: c.ultima || null, ligada: !!c.token };
+  }
+  function gravarCfgSync(novo) {
+    DADOS.config = DADOS.config || {};
+    DADOS.config.sync = Object.assign({}, DADOS.config.sync || {}, novo);
+    A.salvarDados(DADOS, true, true);   // não muda o carimbo: isso não é dado financeiro
+  }
+  function mostrarStatusSync(texto) {
+    statusSync = texto;
+    const el = document.getElementById("statusSync");
+    if (el) el.textContent = texto;
+  }
+
+  // aplica os dados vindos do cofre, preservando a configuração deste aparelho
+  function aplicarRemoto(remoto) {
+    const meuSync = (DADOS.config && DADOS.config.sync) || {};
+    remoto.config = Object.assign({}, remoto.config || {}, { sync: meuSync });
+    A.salvarDados(remoto, true, true);
+    DADOS = A.carregarDados();
+    renderRota();
+  }
+
+  function sincronizar(silencioso) {
+    const cfg = cfgSync();
+    if (!S || !cfg.token || sincronizando || typeof fetch !== "function") return Promise.resolve();
+    sincronizando = true;
+    mostrarStatusSync("sincronizando…");
+
+    const garantirCofre = cfg.cofre
+      ? Promise.resolve(cfg.cofre)
+      : S.procurarCofre(cfg.token).then((id) => id || S.criarCofre(cfg.token, JSON.stringify(DADOS, null, 2)))
+         .then((id) => { gravarCfgSync({ cofre: id }); return id; });
+
+    return garantirCofre.then((cofre) => S.baixar(cfg.token, cofre).then((remoto) => {
+      const hrLocal = DADOS.atualizadoEm || "";
+      const hrRemoto = (remoto && remoto.atualizadoEm) || "";
+      if (hrRemoto && hrRemoto > hrLocal) {
+        aplicarRemoto(remoto);
+        gravarCfgSync({ ultima: new Date().toISOString() });
+        mostrarStatusSync("dados atualizados a partir de outro aparelho");
+        if (!silencioso) toast("Dados atualizados a partir de outro aparelho.");
+      } else if (hrLocal && hrLocal !== hrRemoto) {
+        return S.enviar(cfg.token, cofre, JSON.stringify(DADOS, null, 2)).then(() => {
+          gravarCfgSync({ ultima: new Date().toISOString() });
+          mostrarStatusSync("tudo sincronizado · " + new Date().toLocaleTimeString("pt-BR"));
+          if (!silencioso) toast("Dados enviados para o cofre.");
+        });
+      } else {
+        mostrarStatusSync("tudo sincronizado · " + new Date().toLocaleTimeString("pt-BR"));
+      }
+    })).catch((e) => {
+      mostrarStatusSync("não sincronizado: " + e.message);
+      if (!silencioso) toast("Sincronização: " + e.message);
+    }).then(() => { sincronizando = false; });
+  }
+
+  function agendarEnvioSync() {                       // chamado após cada alteração
+    if (!cfgSync().token) return;
+    clearTimeout(timerEnvio);
+    timerEnvio = setTimeout(() => sincronizar(true), 4000);
+  }
+
+  function conectarSync() {
+    const token = (document.getElementById("cfgSyncToken").value || "").trim();
+    const cofreInformado = (document.getElementById("cfgSyncCofre").value || "").trim();
+    if (!token) { toast("Cole o token do GitHub para ativar."); return; }
+    mostrarStatusSync("verificando token…");
+    S.verificarToken(token).then((login) => {
+      gravarCfgSync({ token, cofre: cofreInformado });
+      mostrarStatusSync("conectado como " + login + " · sincronizando…");
+      return sincronizar(false);
+    }).then(() => renderRota())
+      .catch((e) => { mostrarStatusSync("falhou: " + e.message); toast("Não consegui conectar: " + e.message); });
+  }
+
+  function desligarSync() {
+    confirmarExclusao("Desligar a sincronização neste aparelho? Os dados continuam aqui e no cofre.", () => {
+      gravarCfgSync({ token: "", cofre: "" });
+      mostrarStatusSync("desligada");
+      renderRota();
+      toast("Sincronização desligada neste aparelho.");
+    });
+  }
+
   // =========================================================================
   // CICLO DE VIDA
   // =========================================================================
@@ -149,11 +242,15 @@
     navegarPara("dashboard");
     atualizarCotacoesAutomaticas(true);
     setInterval(() => atualizarCotacoesAutomaticas(true), 5 * 60 * 1000);
+    sincronizar(true);
+    setInterval(() => sincronizar(true), 2 * 60 * 1000);
+    window.addEventListener("online", () => sincronizar(true));
   }
 
   function salvarEAtualizar(mensagem) {
     A.salvarDados(DADOS);
     if (mensagem) toast(mensagem);
+    agendarEnvioSync();
   }
 
   function navegarPara(secao, param) {
@@ -1873,6 +1970,32 @@
       </div>
 
       <div class="grid">
+        <div class="c12">${card("", "Sincronização entre aparelhos", "mantém computador, iPad e site com os mesmos dados", "", `
+          <div class="body pad">
+            ${cfgSync().ligada ? `
+              <p style="margin-top:0;font-size:13px">Sincronização <b class="up">ligada</b>. Os dados são enviados sozinhos após cada alteração e conferidos a cada 2 minutos.</p>
+              <div class="campo"><label>Código do cofre (use o mesmo nos outros aparelhos)</label><input value="${esc(cfgSync().cofre)}" readonly onclick="this.select()"></div>
+              <p class="campo ajuda">Última sincronização: ${cfgSync().ultima ? new Date(cfgSync().ultima).toLocaleString("pt-BR") : "ainda não"}</p>
+              <div style="display:flex;gap:10px;flex-wrap:wrap">
+                <button class="btn primario" data-acao="sincronizar-agora">Sincronizar agora</button>
+                <button class="btn perigo" data-acao="desligar-sync">Desligar neste aparelho</button>
+              </div>
+            ` : `
+              <p style="margin-top:0;font-size:13px">Guarde seus dados num cofre privado da sua conta do GitHub e mantenha todos os aparelhos iguais, automaticamente.</p>
+              <ol class="campo ajuda" style="padding-left:18px;line-height:1.8">
+                <li>Acesse <b>github.com/settings/tokens</b> → Generate new token (classic).</li>
+                <li>Marque apenas a permissão <b>gist</b>, gere e copie o token.</li>
+                <li>Cole abaixo e toque em Ativar. No outro aparelho, repita e cole também o código do cofre.</li>
+              </ol>
+              <div class="campo"><label for="cfgSyncToken">Token do GitHub</label><input id="cfgSyncToken" type="password" placeholder="ghp_..." autocomplete="off"></div>
+              <div class="campo"><label for="cfgSyncCofre">Código do cofre (deixe vazio no primeiro aparelho)</label><input id="cfgSyncCofre" placeholder="cole aqui o código mostrado no outro aparelho" autocomplete="off"></div>
+              <button class="btn primario" data-acao="conectar-sync">Ativar sincronização</button>
+            `}
+            <p class="campo ajuda" id="statusSync" style="margin-top:10px">${esc(statusSync || (cfgSync().ligada ? "pronta" : "desligada"))}</p>
+            <p class="campo ajuda">O token fica guardado só neste aparelho e nunca vai para o código do site. Vence a versão mais recente: se você alterar em dois aparelhos ao mesmo tempo, fica valendo a última gravação.</p>
+          </div>`)}</div>
+      </div>
+      <div class="grid">
         <div class="c12">${card("", "Cotações automáticas", "dólar via AwesomeAPI (sem chave) · ações via brapi.dev", "", `
           <div class="body pad">
             <label class="chk-linha"><input type="checkbox" id="cfgCotacoesAuto" ${configCotacoes().auto ? "checked" : ""}> Buscar cotações automaticamente ao abrir o sistema e a cada 5 minutos</label>
@@ -2176,6 +2299,9 @@
           break;
         }
 
+        case "conectar-sync": conectarSync(); break;
+        case "sincronizar-agora": toast("Sincronizando…"); sincronizar(false); break;
+        case "desligar-sync": desligarSync(); break;
         case "abrir-pasta-banco": A.abrirPastaBanco(); break;
         case "exportar-backup": A.exportarDados(); toast("Backup exportado — verifique seus downloads."); break;
         case "importar-backup": document.getElementById("inputImportarBackup").click(); break;
