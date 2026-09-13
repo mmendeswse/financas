@@ -2165,32 +2165,6 @@
           </div>`)}</div>
       </div>
       <div class="grid">
-        <div class="c12">${card("", "Sincronização entre aparelhos", "mantém computador, iPad e site com os mesmos dados", "", `
-          <div class="body pad">
-            ${cfgSync().ligada ? `
-              <p style="margin-top:0;font-size:13px">Sincronização <b class="up">ligada</b>. Os dados são enviados sozinhos após cada alteração e conferidos a cada 2 minutos.</p>
-              <div class="campo"><label>Código do cofre (use o mesmo nos outros aparelhos)</label><input value="${esc(cfgSync().cofre)}" readonly onclick="this.select()"></div>
-              <p class="campo ajuda">Última sincronização: ${cfgSync().ultima ? new Date(cfgSync().ultima).toLocaleString("pt-BR") : "ainda não"}</p>
-              <div style="display:flex;gap:10px;flex-wrap:wrap">
-                <button class="btn primario" data-acao="sincronizar-agora">Sincronizar agora</button>
-                <button class="btn perigo" data-acao="desligar-sync">Desligar neste aparelho</button>
-              </div>
-            ` : `
-              <p style="margin-top:0;font-size:13px">Guarde seus dados num cofre privado da sua conta do GitHub e mantenha todos os aparelhos iguais, automaticamente.</p>
-              <ol class="campo ajuda" style="padding-left:18px;line-height:1.8">
-                <li>Acesse <b>github.com/settings/tokens</b> → Generate new token (classic).</li>
-                <li>Marque apenas a permissão <b>gist</b>, gere e copie o token.</li>
-                <li>Cole abaixo e toque em Ativar. No outro aparelho, repita e cole também o código do cofre.</li>
-              </ol>
-              <div class="campo"><label for="cfgSyncToken">Token do GitHub</label><input id="cfgSyncToken" type="password" placeholder="ghp_..." autocomplete="off"></div>
-              <div class="campo"><label for="cfgSyncCofre">Código do cofre (deixe vazio no primeiro aparelho)</label><input id="cfgSyncCofre" placeholder="cole aqui o código mostrado no outro aparelho" autocomplete="off"></div>
-              <button class="btn primario" data-acao="conectar-sync">Ativar sincronização</button>
-            `}
-            <p class="campo ajuda" id="statusSync" style="margin-top:10px">${esc(statusSync || (cfgSync().ligada ? "pronta" : "desligada"))}</p>
-            <p class="campo ajuda">O token fica guardado só neste aparelho e nunca vai para o código do site. Vence a versão mais recente: se você alterar em dois aparelhos ao mesmo tempo, fica valendo a última gravação.</p>
-          </div>`)}</div>
-      </div>
-      <div class="grid">
         <div class="c12">${card("", "Cotações automáticas", "dólar via AwesomeAPI (sem chave) · ações via brapi.dev", "", `
           <div class="body pad">
             <label class="chk-linha"><input type="checkbox" id="cfgCotacoesAuto" ${configCotacoes().auto ? "checked" : ""}> Buscar cotações automaticamente ao abrir o sistema e a cada 5 minutos</label>
