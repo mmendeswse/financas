@@ -359,6 +359,7 @@
     ligarTopbar();
     ligarSidebar();
     ligarModalGlobal();
+    ligarCliqueNotificacoes();
     ligarDelegacaoConteudo();
     ligarMascaraMoeda(document.getElementById("conteudo"));
     iniciarRelogio();
@@ -480,7 +481,7 @@
     btnNotif.addEventListener("click", (e) => {
       e.stopPropagation();
       dropNotif.classList.toggle("on");
-      if (dropNotif.classList.contains("on")) { preencherNotificacoes(); marcarNotificacoesLidas(); }
+      if (dropNotif.classList.contains("on")) preencherNotificacoes();
     });
     document.addEventListener("click", (e) => {
       if (!dropNotif.contains(e.target) && e.target !== btnNotif) dropNotif.classList.remove("on");
@@ -520,14 +521,14 @@
     const atrasadas = F.contasAtrasadas(d);
     if (atrasadas.length) {
       const total = atrasadas.reduce((s, c) => s + Number(c.valor || 0), 0);
-      alertas.push({ tipo: "perigo", texto: atrasadas.length === 1
+      alertas.push({ tipo: "perigo", rota: "contas", texto: atrasadas.length === 1
         ? `A conta "${atrasadas[0].descricao}" está atrasada (${brl(atrasadas[0].valor)}).`
         : `${atrasadas.length} contas estão atrasadas, somando ${brl(total)}.` });
     }
 
     const vencendo = F.contasVencendoEm(d, 7).filter((c) => c.statusReal === "Pendente");
     if (vencendo.length) {
-      alertas.push({ tipo: "aviso", texto: `Existem ${vencendo.length} conta(s) vencendo nos próximos 7 dias.` });
+      alertas.push({ tipo: "aviso", rota: "contas", texto: `Existem ${vencendo.length} conta(s) vencendo nos próximos 7 dias.` });
     }
 
     // categorias de despesa com alta em relação à média dos últimos 3 meses
@@ -547,7 +548,7 @@
         const media = soma / meses;
         const variacao = ((c.valor - media) / media) * 100;
         if (variacao > 15) {
-          alertas.push({ tipo: "aviso", texto: `Você gastou ${variacao.toFixed(0)}% a mais com ${c.categoria} este mês, comparado à sua média.` });
+          alertas.push({ tipo: "aviso", rota: "despesas", texto: `Você gastou ${variacao.toFixed(0)}% a mais com ${c.categoria} este mês, comparado à sua média.` });
           avisosCategorias++;
         }
       }
@@ -556,7 +557,7 @@
     // cartões perto do limite
     F.listaCartoesComUso(d).forEach((c) => {
       if (c.limite > 0 && c.percentualUso >= 80) {
-        alertas.push({ tipo: c.percentualUso >= 100 ? "perigo" : "aviso", texto: `O cartão ${c.nome} já usou ${c.percentualUso.toFixed(0)}% do limite.` });
+        alertas.push({ tipo: c.percentualUso >= 100 ? "perigo" : "aviso", rota: "cartoes", texto: `O cartão ${c.nome} já usou ${c.percentualUso.toFixed(0)}% do limite.` });
       }
     });
 
@@ -575,14 +576,14 @@
       const mediaAnt = somaAnt / mesesAnt;
       const projecao = (gastoAtual / diaAtual) * diasNoMes;
       if (projecao > mediaAnt * 1.1) {
-        alertas.push({ tipo: "aviso", texto: "No ritmo atual, você deve fechar o mês gastando acima da sua média." });
+        alertas.push({ tipo: "aviso", rota: "despesas", texto: "No ritmo atual, você deve fechar o mês gastando acima da sua média." });
       }
     }
 
     // carteira de ações
     if (d.acoes.length) {
       const rent = I.rentabilidadeCarteiraAcoes(d);
-      alertas.push({ tipo: rent >= 0 ? "sucesso" : "info", texto: `Sua carteira de ações acumula ${pct(rent)} em relação ao preço médio.` });
+      alertas.push({ tipo: rent >= 0 ? "sucesso" : "info", rota: "acoes", texto: `Sua carteira de ações acumula ${pct(rent)} em relação ao preço médio.` });
     }
 
     return alertas;
@@ -601,27 +602,48 @@
     const lidas = d.notificacoesLidas || [];
     return gerarAlertas(d).filter((a) => lidas.indexOf(chaveAlerta(a)) === -1);
   }
-  function marcarNotificacoesLidas() {
-    const chaves = gerarAlertas(DADOS).map(chaveAlerta);
-    DADOS.notificacoesLidas = chaves;
-    A.salvarDados(DADOS, true);
-    atualizarBadgeNotificacoes();
-  }
+
   function preencherNotificacoes() {
     const alertas = gerarAlertas(DADOS);
+    const lidas = DADOS.notificacoesLidas || [];
     const el = document.getElementById("dropdownNotificacoes");
     if (!alertas.length) {
       el.innerHTML = '<div class="dropdown-vazio">Nenhum alerta no momento. Tudo em ordem.</div>';
       return;
     }
-    el.innerHTML = alertas.map((a) => `
-      <div class="dropdown-item">
+    // os não lidos vêm primeiro
+    const ordenados = alertas.slice().sort((a, b) => (lidas.indexOf(chaveAlerta(a)) > -1 ? 1 : 0) - (lidas.indexOf(chaveAlerta(b)) > -1 ? 1 : 0));
+    el.innerHTML = ordenados.map((a) => {
+      const chave = chaveAlerta(a);
+      const lida = lidas.indexOf(chave) > -1;
+      return `<button class="dropdown-item${lida ? " lida" : ""}" data-chave="${esc(chave)}" data-secao="${esc(a.rota || "dashboard")}">
         <span class="ic" style="background:${COR_ALERTA[a.tipo]}22;color:${COR_ALERTA[a.tipo]}">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${ICONE_ALERTA[a.tipo]}</svg>
         </span>
-        <p>${a.texto}</p>
-      </div>`).join("");
+        <p>${a.texto}${lida ? '<span class="marca-lida">lida</span>' : ""}</p>
+      </button>`;
+    }).join("");
   }
+
+  // clicar num alerta: abre a tela correspondente e marca aquele como lido
+  function ligarCliqueNotificacoes() {
+    const drop = document.getElementById("dropdownNotificacoes");
+    if (!drop) return;
+    drop.addEventListener("click", (e) => {
+      const item = e.target.closest(".dropdown-item[data-chave]");
+      if (!item) return;
+      e.stopPropagation();
+      const chave = item.dataset.chave;
+      const lidas = DADOS.notificacoesLidas || [];
+      if (lidas.indexOf(chave) === -1) {
+        DADOS.notificacoesLidas = [...lidas, chave];
+        A.salvarDados(DADOS, true);
+      }
+      drop.classList.remove("on");
+      navegarPara(item.dataset.secao || "dashboard");
+    });
+  }
+
   function atualizarBadgeNotificacoes() {
     const n = alertasNaoLidos(DADOS).length;
     const badge = document.getElementById("badgeNotificacoes");

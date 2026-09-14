@@ -894,3 +894,9 @@ table.tab-investimentos thead th:nth-last-child(-n+3),
 table.tab-investimentos tbody td:nth-last-child(-n+3),
 table.tab-investimentos tfoot td:nth-last-child(-n+3) { display: none; }
 table.tab-investimentos { min-width: 1080px; }
+
+/* alertas do sino: item clicável que leva à tela correspondente */
+.dropdown-item { width: 100%; text-align: left; cursor: pointer; background: none; border: none; align-items: flex-start; }
+.dropdown-item:hover { background: var(--painel-2); }
+.dropdown-item.lida { opacity: .55; }
+.dropdown-item .marca-lida { display: inline-block; margin-left: 8px; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); border: 1px solid var(--linha-2); border-radius: 20px; padding: 1px 7px; }
