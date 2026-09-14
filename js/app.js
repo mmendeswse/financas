@@ -302,6 +302,82 @@
     }
   }
 
+
+  // ---------------------------------------------------------------------
+  // Lista de bancos usada nos campos de nome de banco / emissor.
+  // É uma lista de sugestões: quem precisar de outro banco escolhe
+  // "Outro" e digita o nome.
+  // ---------------------------------------------------------------------
+  const BANCOS_SUGERIDOS = ["Banco do Brasil", "Nubank", "Itaú", "Mercado Pago", "Caixa Tem", "Inter"];
+
+  function campoBanco(id, valorAtual, rotuloVazio) {
+    const atual = (valorAtual || "").trim();
+    const naLista = BANCOS_SUGERIDOS.indexOf(atual) > -1;
+    const ehOutro = !!atual && !naLista;
+    const opcoesHtml = `<option value="">${rotuloVazio || "Selecione…"}</option>` +
+      BANCOS_SUGERIDOS.map((b) => `<option value="${esc(b)}" ${b === atual ? "selected" : ""}>${esc(b)}</option>`).join("") +
+      `<option value="__outro" ${ehOutro ? "selected" : ""}>Outro…</option>`;
+    return `<select id="${id}" class="sel-banco" data-alvo="${id}_outro">${opcoesHtml}</select>
+      <input id="${id}_outro" class="campo-outro" placeholder="Digite o nome do banco"
+        value="${ehOutro ? esc(atual) : ""}" style="margin-top:8px;${ehOutro ? "" : "display:none"}">`;
+  }
+
+  function lerCampoBanco(id) {
+    const sel = document.getElementById(id);
+    if (!sel) return "";
+    if (sel.value === "__outro") {
+      const outro = document.getElementById(id + "_outro");
+      return outro ? outro.value.trim() : "";
+    }
+    return sel.value;
+  }
+
+  // mostra/esconde o campo de digitação quando escolhem "Outro…"
+  function ligarCamposBanco(raiz) {
+    raiz.addEventListener("change", (e) => {
+      const sel = e.target.closest(".sel-banco");
+      if (!sel) return;
+      const outro = document.getElementById(sel.dataset.alvo);
+      if (!outro) return;
+      const mostrar = sel.value === "__outro";
+      outro.style.display = mostrar ? "" : "none";
+      if (mostrar) outro.focus();
+    });
+  }
+
+
+  // ---------------------------------------------------------------------
+  // IMPORTAR CARTEIRA (.json) — acrescenta investimentos e ações aos
+  // dados já existentes, sem apagar nada. Usado para trazer a posição de
+  // um extrato de custódia já organizado.
+  // ---------------------------------------------------------------------
+  function importarCarteira(arquivo) {
+    const leitor = new FileReader();
+    leitor.onload = () => {
+      let obj;
+      try { obj = JSON.parse(leitor.result); }
+      catch (e) { toast("Arquivo inválido: não é um JSON."); return; }
+      const invs = Array.isArray(obj.investimentos) ? obj.investimentos : [];
+      const acs = Array.isArray(obj.acoes) ? obj.acoes : [];
+      if (!invs.length && !acs.length) { toast("O arquivo não tem investimentos nem ações."); return; }
+      const resumo = `${invs.length} investimento(s) e ${acs.length} ativo(s) de bolsa serão ACRESCENTADOS aos seus dados atuais. Nada será apagado. Continuar?`;
+      if (!window.confirm(resumo)) return;
+      invs.forEach((i) => DADOS.investimentos.push(Object.assign({
+        id: A.novoId(), categoria: "Renda fixa", quantidade: 0, isentoIR: false, obs: ""
+      }, i, { id: A.novoId() })));
+      acs.forEach((a) => {
+        const preco = Number(a.precoAtual || 0);
+        DADOS.acoes.push(Object.assign({
+          id: A.novoId(), categoria: "Ação", dividendos: 0, obs: "",
+          atualizadoEm: hojeISO(), historicoPrecos: preco > 0 ? [{ data: hojeISO(), preco }] : []
+        }, a, { id: A.novoId() }));
+      });
+      salvarEAtualizar(`Carteira importada: ${invs.length} investimento(s) e ${acs.length} ativo(s).`);
+    };
+    leitor.onerror = () => toast("Não consegui ler o arquivo.");
+    leitor.readAsText(arquivo);
+  }
+
   // =========================================================================
   // CICLO DE VIDA
   // =========================================================================
@@ -413,6 +489,7 @@
   }
   function ligarModalGlobal() {
     ligarMascaraMoeda(document.getElementById("modal"));
+    ligarCamposBanco(document.getElementById("modal"));
     document.getElementById("scrim").addEventListener("click", fecharModal);
     document.addEventListener("keydown", (e) => { if (e.key === "Escape") fecharModal(); });
   }
@@ -1097,7 +1174,7 @@
     abrirModal(`
       <h3>${b ? "Editar banco" : "Novo banco"}</h3>
       <div class="par">
-        <div class="campo"><label for="f_nome">Nome do banco</label><input id="f_nome" value="${b ? esc(b.nome) : ""}" placeholder="Nubank"></div>
+        <div class="campo"><label for="f_nome">Nome do banco</label>${campoBanco("f_nome", b ? b.nome : "", "Selecione o banco…")}</div>
         <div class="campo"><label for="f_tipo">Tipo de conta</label><select id="f_tipo">${opcoes(TIPOS_CONTA_BANCO, b ? b.tipo : TIPOS_CONTA_BANCO[0])}</select></div>
       </div>
       <div class="par">
@@ -1116,8 +1193,8 @@
       </div>`);
 
     document.getElementById("btnSalvar").onclick = () => {
-      const nome = document.getElementById("f_nome").value.trim();
-      if (!nome) { toast("Informe o nome do banco."); return; }
+      const nome = lerCampoBanco("f_nome");
+      if (!nome) { toast("Escolha o banco (ou selecione \"Outro…\" e digite o nome)."); return; }
       const registro = {
         id: b ? b.id : A.novoId(),
         nome, tipo: document.getElementById("f_tipo").value,
@@ -1648,7 +1725,7 @@
         <div class="campo"><label for="f_tipo">Tipo do ativo</label><select id="f_tipo">${opcoes(TIPOS_ATIVO_RF, inv ? inv.tipoAtivo : "CDB")}</select></div>
       </div>
       <div class="par">
-        <div class="campo"><label for="f_emissor">Emissor / corretora</label><input id="f_emissor" value="${inv ? esc(inv.emissor || "") : ""}" placeholder="Banco Inter"></div>
+        <div class="campo"><label for="f_emissor">Emissor / corretora</label>${campoBanco("f_emissor", inv ? inv.emissor || "" : "", "Selecione o emissor…")}</div>
         <div class="campo"><label for="f_liq">Liquidez</label><select id="f_liq">${opcoes(LIQUIDEZ, inv ? inv.liquidez : LIQUIDEZ[0])}</select></div>
       </div>
 
@@ -1720,7 +1797,7 @@
         nome,
         categoria: document.getElementById("f_cat").value,
         tipoAtivo: document.getElementById("f_tipo").value,
-        emissor: document.getElementById("f_emissor").value.trim(),
+        emissor: lerCampoBanco("f_emissor"),
         liquidez: document.getElementById("f_liq").value,
         valorInvestido: numIn(document.getElementById("f_vi").value),
         quantidade: numIn(document.getElementById("f_qtd").value),
@@ -2151,6 +2228,13 @@
           <p class="campo ajuda" style="padding:0 16px 14px">Importar um backup substitui todos os dados atuais — o sistema pede confirmação antes de aplicar.</p>
         `)}</div>
 
+        <div class="c6">${card("", "Importar carteira (.json)", "acrescenta investimentos e ações sem apagar seus dados", "", `
+          <div class="body pad">
+            <button class="btn primario" data-acao="importar-carteira">Selecionar arquivo de carteira</button>
+            <p class="campo ajuda">Use um arquivo no formato <b>{"investimentos": [...], "acoes": [...]}</b>, como o gerado a partir de um extrato de custódia. Diferente do backup, esta opção <b>soma</b> ao que já existe.</p>
+          </div>`)}</div>
+      </div>
+      <div class="grid g-top">
         <div class="c6">${card("", "Importar planilha Excel", "traga seus lançamentos de uma planilha .xlsx", "", `
           <div class="body pad">
             <button class="btn primario" data-acao="importar-excel">Selecionar arquivo .xlsx</button>
@@ -2508,6 +2592,7 @@
         case "exportar-backup": A.exportarDados(); toast("Backup exportado — verifique seus downloads."); break;
         case "importar-backup": document.getElementById("inputImportarBackup").click(); break;
         case "importar-excel": document.getElementById("inputImportarExcel").click(); break;
+        case "importar-carteira": document.getElementById("inputImportarCarteira").click(); break;
 
         case "apagar-tudo":
           confirmarExclusao("Isso vai apagar TODOS os seus dados permanentemente. Essa ação não pode ser desfeita. Deseja continuar?", () => {
@@ -2555,6 +2640,13 @@
       A.importarDados(arquivo)
         .then(() => toast("Backup importado com sucesso."))
         .catch((err) => toast(err.message));
+    });
+
+    const inpCart = document.getElementById("inputImportarCarteira");
+    if (inpCart) inpCart.addEventListener("change", (e) => {
+      const arquivo = e.target.files[0];
+      e.target.value = "";
+      if (arquivo) importarCarteira(arquivo);
     });
 
     document.getElementById("inputImportarExcel").addEventListener("change", (e) => {
