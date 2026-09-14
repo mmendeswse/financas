@@ -712,9 +712,10 @@
   // =========================================================================
   // WIDGETS — KPI com anel, gauge semicircular, barras, alertas, ticker
   // =========================================================================
-  function kpiCard(rotulo, valor, gaugePct, cor, deltaHtml, sub) {
+  function kpiCard(rotulo, valor, gaugePct, cor, deltaHtml, sub, chave) {
+    const clicavel = chave ? ` data-acao="explicar-kpi" data-kpi="${chave}" title="Ver como este percentual é calculado"` : "";
     const gauge = gaugePct == null ? "" :
-      `<div class="kpi-gauge">${gaugeSVG(gaugePct, cor, 66)}<span class="kpi-gauge-txt">${Math.round(Math.max(0, Math.min(100, gaugePct)))}%</span></div>`;
+      `<button class="kpi-gauge${chave ? " clicavel" : ""}"${clicavel}>${gaugeSVG(gaugePct, cor, 66)}<span class="kpi-gauge-txt">${Math.round(Math.max(0, Math.min(100, gaugePct)))}%</span></button>`;
     return `<div class="kpi">
       <div class="kpi-rotulo">${rotulo}</div>
       <div class="kpi-corpo">${gauge}<div class="kpi-info">
@@ -937,6 +938,88 @@
     if (el) el.textContent = "Versão " + VERSAO_APP + " · dados atualizados: " + new Date().toLocaleString("pt-BR");
   }
 
+
+  // ---------------------------------------------------------------------
+  // Painel que explica de onde vem cada percentual do dashboard,
+  // mostrando a conta com os seus próprios números
+  // ---------------------------------------------------------------------
+  function explicarKPI(chave) {
+    const d = DADOS;
+    const p = I.patrimonio(d);
+    const mes = F.mesAtual(), mesAnt = F.mesAnterior();
+    const entradas = F.totalEntradasMes(d, mes), entradasAnt = F.totalEntradasMes(d, mesAnt);
+    const despesas = F.totalDespesasMes(d, mes), despesasAnt = F.totalDespesasMes(d, mesAnt);
+    const linha = (rot, val, cls) => `<div class="kv"><span class="dim">${rot}</span><b class="${cls || ""}">${val}</b></div>`;
+
+    const paineis = {
+      patrimonio: {
+        titulo: "Patrimônio total",
+        conta: "bancos + investimentos + ações − dívidas",
+        pct: p.bruto > 0 ? (p.liquido / p.bruto) * 100 : 0,
+        pctRotulo: "do patrimônio bruto está livre de dívidas",
+        linhas: linha("Dinheiro em bancos", brl(p.bancos)) + linha("+ Investimentos", brl(p.investimentos)) +
+          linha("+ Ações e FIIs", brl(p.acoes)) + linha("− Dívidas em aberto", brl(p.dividas), "down") +
+          linha("= Patrimônio líquido", brl(p.liquido), corSinal(p.liquido)),
+        secao: "bancos"
+      },
+      bancos: {
+        titulo: "Saldo bancário",
+        conta: "saldo de cada banco = saldo inicial + entradas − despesas",
+        pct: p.bruto > 0 ? (p.bancos / p.bruto) * 100 : 0,
+        pctRotulo: "do patrimônio bruto está em conta",
+        linhas: F.listaBancosComSaldo(d).map((b) => linha(esc(b.nome), brl(b.saldoAtual))).join("") +
+          linha("= Total em bancos", brl(p.bancos), "up"),
+        secao: "bancos"
+      },
+      investido: {
+        titulo: "Investimentos",
+        conta: "(investimentos + ações) ÷ patrimônio bruto",
+        pct: I.percentualInvestido(d),
+        pctRotulo: "do patrimônio bruto está investido",
+        linhas: linha("Renda fixa, tesouro e fundos", brl(p.investimentos)) + linha("Ações, FIIs e ETFs", brl(p.acoes)) +
+          linha("= Total investido", brl(p.investimentos + p.acoes), "up") +
+          linha("Patrimônio bruto", brl(p.bruto)) +
+          linha("Rentabilidade da carteira de ações", pct(I.rentabilidadeCarteiraAcoes(d)), corSinal(I.rentabilidadeCarteiraAcoes(d))),
+        secao: "investimentos"
+      },
+      receitas: {
+        titulo: "Receitas do mês",
+        conta: "soma das entradas lançadas no mês atual",
+        pct: F.variacaoPercentual(entradas, entradasAnt),
+        pctRotulo: "de variação em relação ao mês anterior",
+        linhas: linha("Receitas deste mês", brl(entradas), "up") + linha("Receitas do mês anterior", brl(entradasAnt)) +
+          linha("Diferença", brlSinal(entradas - entradasAnt), corSinal(entradas - entradasAnt)) +
+          linha("Lançamentos no mês", String(F.entradasNoMes(d, mes).length)),
+        secao: "entradas"
+      },
+      despesas: {
+        titulo: "Despesas do mês",
+        conta: "despesas do mês ÷ receitas do mês",
+        pct: entradas > 0 ? (despesas / entradas) * 100 : 0,
+        pctRotulo: "das receitas do mês já foram gastas",
+        linhas: linha("Despesas deste mês", brl(despesas), "down") + linha("Despesas do mês anterior", brl(despesasAnt)) +
+          linha("Receitas deste mês", brl(entradas), "up") +
+          linha("Sobra do mês", brlSinal(entradas - despesas), corSinal(entradas - despesas)) +
+          (F.maiorCategoriaDeGasto(d) ? linha("Maior categoria", esc(F.maiorCategoriaDeGasto(d).categoria) + " · " + brl(F.maiorCategoriaDeGasto(d).valor)) : ""),
+        secao: "despesas"
+      }
+    };
+
+    const x = paineis[chave];
+    if (!x) return;
+    abrirModal(`
+      <h3>${x.titulo}</h3>
+      <div class="explica-pct"><b>${Math.abs(x.pct).toFixed(1).replace(".", ",")}%</b><span>${x.pctRotulo}</span></div>
+      <p class="campo ajuda" style="margin:0 0 12px">Como é calculado: <b>${x.conta}</b></p>
+      <div class="explica-lista">${x.linhas}</div>
+      <div class="modal-acoes">
+        <button class="btn primario salvar" id="btnIrPainel">Abrir ${TITULOS[x.secao][0]}</button>
+        <button class="btn" id="btnFecharPainel">Fechar</button>
+      </div>`);
+    document.getElementById("btnIrPainel").onclick = () => { fecharModal(); navegarPara(x.secao); };
+    document.getElementById("btnFecharPainel").onclick = fecharModal;
+  }
+
   // =========================================================================
   // DASHBOARD
   // =========================================================================
@@ -985,11 +1068,11 @@
     return `
       ${faixaDemo(d)}
       <div class="kpi-row">
-        ${kpiCard("Patrimônio total", brl(p.liquido), pctLivre, "var(--laranja)", delta(F.variacaoPercentual(p.liquido, patrimonioAnt), "vs mês anterior"), `Dívidas: ${brl(p.dividas)}`)}
-        ${kpiCard("Saldo bancário", brl(p.bancos), pctBancos, "var(--azul)", delta(pctBancos, "do patrimônio"), `${bancos.length} conta(s) cadastrada(s)`)}
-        ${kpiCard("Investimentos", brl(p.investimentos + p.acoes), pctInvestido, "var(--vi)", delta(rentCarteira, "rent. carteira"), `${pctInvestido.toFixed(0)}% do patrimônio investido`)}
-        ${kpiCard("Receitas do mês", brl(entradasMes), entradasMes + despesasMes > 0 ? (entradasMes / (entradasMes + despesasMes)) * 100 : 0, "var(--up)", delta(F.variacaoPercentual(entradasMes, entradasAnt), "vs mês anterior"), `Mês anterior: ${brl(entradasAnt)}`)}
-        ${kpiCard("Despesas do mês", brl(despesasMes), pctDespesas, "var(--down)", delta(F.variacaoPercentual(despesasMes, despesasAnt), "vs mês anterior", true), `${pctDespesas.toFixed(0)}% das receitas`)}
+        ${kpiCard("Patrimônio total", brl(p.liquido), pctLivre, "var(--laranja)", delta(F.variacaoPercentual(p.liquido, patrimonioAnt), "vs mês anterior"), `Dívidas: ${brl(p.dividas)}`, "patrimonio")}
+        ${kpiCard("Saldo bancário", brl(p.bancos), pctBancos, "var(--azul)", delta(pctBancos, "do patrimônio"), `${bancos.length} conta(s) cadastrada(s)`, "bancos")}
+        ${kpiCard("Investimentos", brl(p.investimentos + p.acoes), pctInvestido, "var(--vi)", delta(rentCarteira, "rent. carteira"), `${pctInvestido.toFixed(0)}% do patrimônio investido`, "investido")}
+        ${kpiCard("Receitas do mês", brl(entradasMes), entradasMes + despesasMes > 0 ? (entradasMes / (entradasMes + despesasMes)) * 100 : 0, "var(--up)", delta(F.variacaoPercentual(entradasMes, entradasAnt), "vs mês anterior"), `Mês anterior: ${brl(entradasAnt)}`, "receitas")}
+        ${kpiCard("Despesas do mês", brl(despesasMes), pctDespesas, "var(--down)", delta(F.variacaoPercentual(despesasMes, despesasAnt), "vs mês anterior", true), `${pctDespesas.toFixed(0)}% das receitas`, "despesas")}
       </div>
 
       <div class="grid">
@@ -1647,7 +1730,7 @@
       const linhas = lista.map((inv) => `
         <tr data-acao="ir" data-secao="detalhe-investimento" data-id="${inv.id}">
           <td class="papel">${esc(inv.nome)}<small>${esc(inv.tipoAtivo || inv.categoria)}</small></td>
-          <td>${esc(inv.indexador || "—")}${inv.taxaContratada ? " " + f2(inv.taxaContratada) + "%" : ""}</td>
+          <td class="col-contratada">${esc(inv.indexador || "—")}${inv.taxaContratada ? " " + f2(inv.taxaContratada) + "%" : ""}</td>
           <td class="r">${fmtDataCurta(inv.dataAplicacao)}</td>
           <td class="r">${inv.dataVencimento ? fmtDataCurta(inv.dataVencimento) : "—"}</td>
           <td class="r ${inv.diasVenc !== null && inv.diasVenc <= 30 ? "acc" : "dim"}">${inv.diasVenc === null ? "—" : inv.diasVenc + "d"}</td>
@@ -1664,14 +1747,14 @@
         </tr>`).join("");
       corpo = `<div class="terminal-scroll"><table class="terminal tab-investimentos">
         <thead><tr>
-          <th>Ativo</th><th>Rentab. contratada</th><th class="r">Aplicação</th><th class="r">Vencimento</th><th class="r">Faltam</th>
+          <th>Ativo</th><th class="col-contratada">Rentab. contratada</th><th class="r">Aplicação</th><th class="r">Vencimento</th><th class="r">Faltam</th>
           <th class="r">Cotas</th><th class="r">Valor aplicado</th><th class="r">Resultado</th><th class="r">Bruto atual</th>
           <th class="r col-ir">IR</th><th class="r">Imposto</th><th class="r">Total líquido</th>
           <th class="r">Rent. bruta</th><th class="r">Rent. líquida</th><th class="r">Ao ano</th>
         </tr></thead>
         <tbody>${linhas}</tbody>
         <tfoot><tr>
-          <td>TOTAL</td><td></td><td></td><td></td><td></td><td></td>
+          <td>TOTAL</td><td class="col-contratada"></td><td></td><td></td><td></td><td></td>
           <td class="r creme">${brl(t.aplicado)}</td>
           <td class="r ${corSinal(t.resultado)}">${brlSinal(t.resultado)}</td>
           <td class="r creme">${brl(t.bruto)}</td>
@@ -2469,6 +2552,7 @@
 
         case "novo-ativo": abrirModalAcao(null); break;
         case "editar-acao": abrirModalAcao(id); break;
+        case "explicar-kpi": explicarKPI(b.dataset.kpi); break;
         case "periodo-grafico": periodoGrafico = b.dataset.periodo; renderRota(); break;
         case "novo-preco-acao": abrirModalNovoPreco(id); break;
         case "novo-valor-investimento": abrirModalNovoValor(id); break;

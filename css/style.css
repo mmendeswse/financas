@@ -909,3 +909,19 @@ table.tab-investimentos th.col-ir, table.tab-investimentos td.col-ir { display: 
 .abas-periodo button { padding: 6px 10px; font-size: 11.5px; }
 .abas-periodo button.ativo { background: rgba(0,229,255,.12); color: var(--cy); }
 @media (max-width: 760px) { .abas-periodo { order: 3; width: 100%; margin: 6px 0 0; justify-content: space-between; display: flex; } }
+
+/* coluna de rentabilidade contratada oculta (continua no detalhe do ativo) */
+table.tab-investimentos th.col-contratada, table.tab-investimentos td.col-contratada { display: none; }
+
+/* percentual clicável nos indicadores do dashboard */
+.kpi-gauge.clicavel { border: none; background: none; padding: 0; cursor: pointer; border-radius: 50%; }
+.kpi-gauge.clicavel:hover { filter: brightness(1.15); }
+.kpi-gauge.clicavel::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; border: 1px dashed transparent; }
+.kpi-gauge.clicavel:hover::after { border-color: var(--linha-2); }
+
+/* painel explicativo do percentual */
+.explica-pct { display: flex; align-items: baseline; gap: 10px; background: var(--painel-2); border: 1px solid var(--linha-2); border-radius: 8px; padding: 12px 14px; margin-bottom: 12px; }
+.explica-pct b { font-size: 26px; font-family: var(--mono); font-weight: 800; color: var(--cy); }
+.explica-pct span { font-size: 12.5px; color: var(--dim); }
+.explica-lista { border: 1px solid var(--linha); border-radius: 8px; overflow: hidden; }
+.explica-lista .kv { padding: 9px 14px; font-size: 12.5px; }
