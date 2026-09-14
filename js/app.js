@@ -1612,7 +1612,9 @@
   function renderInvestimentos(d) {
     const lista = I.listaInvestimentosComCalculo(d);
     const t = I.totaisInvestimentos(d);
-    const vencendo = I.investimentosVencendoEm(d, 60);
+    const dispensados = (d.config && d.config.vencDispensados) || [];
+    const vencendo = I.investimentosVencendoEm(d, 60)
+      .filter((v) => dispensados.indexOf(v.id + ":" + (v.dataVencimento || "")) === -1);
     const f2 = (v) => Number(v || 0).toFixed(2).replace(".", ",");
 
     let corpo;
@@ -1661,7 +1663,10 @@
     }
 
     const aviso = vencendo.length
-      ? `<div class="faixa-demo" style="border-color:rgba(255,194,51,.3)"><div><b class="acc">${vencendo.length} investimento(s) vencendo nos próximos 60 dias:</b> ${vencendo.map((v) => esc(v.nome) + " (" + fmtData(v.dataVencimento) + ")").join(" · ")}</div></div>`
+      ? `<div class="faixa-demo" style="border-color:rgba(255,194,51,.3)">
+          <div><b class="acc">${vencendo.length} investimento(s) vencendo nos próximos 60 dias:</b> ${vencendo.map((v) => esc(v.nome) + " (" + fmtData(v.dataVencimento) + ")").join(" · ")}</div>
+          <button class="fechar" data-acao="dispensar-vencimentos" title="Não avisar mais sobre estes vencimentos" aria-label="Dispensar aviso">×</button>
+        </div>`
       : "";
 
     return `
@@ -1670,7 +1675,7 @@
         <div class="c12">${card("", "Investimentos", "renda fixa, tesouro, fundos e cripto · clique numa linha para ver o detalhe",
           `<button class="btn primario" data-acao="novo-investimento"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>Novo investimento</button>`,
           corpo,
-          `<span class="dim">Imposto calculado pela tabela regressiva; LCI, LCA, CRI, CRA e poupança entram como isentos. O IOF dos primeiros 30 dias não é considerado.</span>`)}</div>
+          `<span class="dim">Valor total dos investimentos</span><span class="creme" style="font-size:14px">${brl(t.bruto)} <span class="dim" style="font-size:12px">· líquido ${brl(t.liquido)}</span></span>`)}</div>
       </div>
     `;
   }
@@ -1831,20 +1836,16 @@
             : `<div class="empty">Ainda não há histórico suficiente para o gráfico.<br>Use "Lançar novo valor" sempre que consultar o saldo — cada lançamento vira um ponto na linha.</div>`)}</div>
         <div class="c4">${card("", "Resumo da aplicação", "", "", `
           <div class="kv"><span class="dim">Quantidade de cotas</span><b>${inv.quantidade ? f2(inv.quantidade) : "—"}</b></div>
+          <div class="kv"><span class="dim">Preço por cota (aplicação)</span><b>${inv.quantidade ? brl(aplicado / inv.quantidade) : "—"}</b></div>
+          <div class="kv"><span class="dim">Preço por cota (hoje)</span><b>${inv.quantidade ? brl(bruto / inv.quantidade) : "—"}</b></div>
           <div class="kv"><span class="dim">Valor aplicado</span><b>${brl(aplicado)}</b></div>
           <div class="kv"><span class="dim">Valor bruto atual</span><b>${brl(bruto)}</b></div>
           <div class="kv"><span class="dim">Lucro / prejuízo</span><b class="${corSinal(resultado)}">${brlSinal(resultado)}</b></div>
-          <div class="kv"><span class="dim">Alíquota de IR</span><b>${aliq === 0 ? "isento" : f2(aliq) + "%"}</b></div>
-          <div class="kv"><span class="dim">Imposto estimado</span><b class="down">${imposto > 0 ? "−" + brl(imposto) : brl(0)}</b></div>
-          <div class="kv"><span class="dim">Total líquido</span><b class="up">${brl(liquido)}</b></div>
-          <div class="kv"><span class="dim">Rentabilidade bruta</span><b class="${corSinal(rentBruta)}">${pct(rentBruta)}</b></div>
           <div class="kv"><span class="dim">Rentabilidade líquida</span><b class="${corSinal(rentLiq)}">${pct(rentLiq)}</b></div>
-          <div class="kv"><span class="dim">Equivalente ao ano</span><b class="${rentAno === null ? "dim" : corSinal(rentAno)}">${rentAno === null ? "—" : pct(rentAno)}</b></div>
+          <div class="kv"><span class="dim">Imposto estimado (${aliq === 0 ? "isento" : f2(aliq) + "%"})</span><b class="down">${imposto > 0 ? "−" + brl(imposto) : brl(0)}</b></div>
           <div class="kv"><span class="dim">Menor valor (histórico)</span><b>${brl(min)}</b></div>
           <div class="kv"><span class="dim">Maior valor (histórico)</span><b>${brl(max)}</b></div>
-          <div class="kv"><span class="dim">Data da aplicação</span><b>${inv.dataAplicacao ? fmtData(inv.dataAplicacao) : "—"}</b></div>
-          <div class="kv"><span class="dim">Vencimento</span><b>${inv.dataVencimento ? fmtData(inv.dataVencimento) + (diasVenc !== null ? " (" + diasVenc + "d)" : "") : "—"}</b></div>
-          <div class="kv"><span class="dim">Dias corridos</span><b>${dias}</b></div>
+          <div class="kv"><span class="dim">Vencimento</span><b>${inv.dataVencimento ? fmtData(inv.dataVencimento) : "—"}</b></div>
         `)}</div>
       </div>
       ${inv.obs ? card("c12", "Observações", "", "", `<div style="padding:12px 16px;font-size:13px;color:var(--dim)">${esc(inv.obs)}</div>`) : ""}
@@ -2462,6 +2463,15 @@
         case "editar-acao": abrirModalAcao(id); break;
         case "novo-preco-acao": abrirModalNovoPreco(id); break;
         case "novo-valor-investimento": abrirModalNovoValor(id); break;
+        case "dispensar-vencimentos": {
+          // guarda o par ativo+vencimento; se a data mudar, o aviso volta
+          DADOS.config = DADOS.config || {};
+          const jaDispensados = DADOS.config.vencDispensados || [];
+          const novos = I.investimentosVencendoEm(DADOS, 60).map((v) => v.id + ":" + (v.dataVencimento || ""));
+          DADOS.config.vencDispensados = [...new Set([...jaDispensados, ...novos])];
+          salvarEAtualizar("Aviso dispensado. Ele volta se a data de vencimento mudar.");
+          break;
+        }
         case "buscar-cotacoes":
           if (!configCotacoes().auto) { toast("Ative as cotações automáticas em Configurações."); break; }
           toast("Buscando cotações…"); atualizarCotacoesAutomaticas(false); break;

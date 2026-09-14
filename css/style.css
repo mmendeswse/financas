@@ -872,3 +872,17 @@ input, select, textarea,
   .grid-detalhe { grid-template-columns: 1fr; }
   .grid-detalhe > .c8, .grid-detalhe > .c4 { grid-column: auto; }
 }
+
+/* cores de positivo/negativo nas grades (a regra geral de cor das células
+   estava se sobrepondo às classes up/down) */
+table.terminal td.up, table.terminal td .up { color: var(--up) !important; }
+table.terminal td.down, table.terminal td .down { color: var(--down) !important; }
+table.terminal td.acc, table.terminal td .acc { color: var(--acc) !important; }
+table.terminal td.dim, table.terminal td .dim { color: var(--dim) !important; }
+table.terminal td.creme { color: var(--creme) !important; }
+/* os selos coloridos (fundo sólido) mantêm o texto branco */
+table.terminal td .cel-up, table.terminal td .cel-down { color: #fff !important; }
+
+/* aviso de vencimento com botão de dispensar */
+.faixa-demo .fechar { background: none; border: none; color: var(--dim); font-size: 18px; line-height: 1; padding: 4px 8px; border-radius: 6px; flex: none; }
+.faixa-demo .fechar:hover { color: var(--texto); background: rgba(255,255,255,.06); }
