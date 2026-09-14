@@ -863,3 +863,12 @@ input, select, textarea,
 
 /* iPad: a barra fixa começa abaixo do relógio/bateria */
 .sidebar { top: 0; padding-top: env(safe-area-inset-top); }
+
+/* telas de detalhe (ação e aplicação): o resumo fica ao lado do gráfico
+   também em telas médias, como no iPad — só empilha em telas estreitas */
+.grid-detalhe { grid-template-columns: minmax(0, 1fr) minmax(280px, 340px); gap: 16px; }
+.grid-detalhe > .c8, .grid-detalhe > .c4 { grid-column: auto; min-width: 0; }
+@media (max-width: 900px) {
+  .grid-detalhe { grid-template-columns: 1fr; }
+  .grid-detalhe > .c8, .grid-detalhe > .c4 { grid-column: auto; }
+}

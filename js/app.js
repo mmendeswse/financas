@@ -1828,7 +1828,7 @@
 
     return `
       <button class="voltar" data-acao="ir" data-secao="investimentos"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONES.voltar}</svg>Voltar para Investimentos</button>
-      <div class="grid g-top">
+      <div class="grid g-top grid-detalhe">
         <div class="c8">${card("", `${esc(inv.nome)} <span class="selo-tag selo-acao">${esc(inv.tipoAtivo || inv.categoria)}</span>`,
           `${esc(inv.emissor || "emissor não informado")}${inv.indexador ? " · " + esc(inv.indexador) + (inv.taxaContratada ? " " + f2(inv.taxaContratada) + "%" : "") : ""}`,
           `<button class="btn primario" data-acao="novo-valor-investimento" data-id="${inv.id}">Lançar novo valor</button><button class="btn" data-acao="editar-investimento" data-id="${inv.id}">Editar</button>`,
@@ -2048,7 +2048,7 @@
 
     return `
       <button class="voltar" data-acao="ir" data-secao="acoes"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONES.voltar}</svg>Voltar para Ações</button>
-      <div class="grid g-top">
+      <div class="grid g-top grid-detalhe">
         <div class="c8">${card("", `${esc(a.ticker)} <span class="selo-tag selo-${a.categoria.toLowerCase()}">${a.categoria}</span>`, esc(a.empresa),
           `<button class="btn primario" data-acao="novo-preco-acao" data-id="${a.id}">Lançar novo preço</button><button class="btn" data-acao="editar-acao" data-id="${a.id}">Editar</button>`,
           `<div style="padding:10px 16px;height:260px"><canvas id="graf-preco-acao"></canvas></div>`)}</div>
