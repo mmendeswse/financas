@@ -1809,54 +1809,48 @@
     const inv = achar(d.investimentos, id);
     if (!inv) return `<div class="empty">Aplicação não encontrada. <button class="link-acao" data-acao="ir" data-secao="investimentos">Voltar para Investimentos</button></div>`;
 
+    const aplicado = Number(inv.valorInvestido || 0);
+    const bruto = Number(inv.valorAtual || 0);
+    const resultado = bruto - aplicado;
     const dias = I.diasCorridos(inv);
     const diasVenc = I.diasAteVencimento(inv);
     const aliq = I.aliquotaIR(inv);
     const imposto = I.impostoInvestimento(inv);
     const liquido = I.valorLiquidoInvestimento(inv);
-    const resultado = Number(inv.valorAtual || 0) - Number(inv.valorInvestido || 0);
     const rentBruta = I.rentabilidadeInvestimento(inv);
     const rentLiq = I.rentabilidadeLiquida(inv);
     const rentAno = I.rentabilidadeAnualizada(inv, true);
     const hist = inv.historicoValores || [];
     const valores = hist.map((p) => p.valor);
-    const min = valores.length ? Math.min(...valores) : Number(inv.valorAtual || 0);
-    const max = valores.length ? Math.max(...valores) : Number(inv.valorAtual || 0);
+    const min = valores.length ? Math.min(...valores) : bruto;
+    const max = valores.length ? Math.max(...valores) : bruto;
     const f2 = (v) => Number(v || 0).toFixed(2).replace(".", ",");
-
-    const mini = `<div class="mini-paineis">
-      <div class="mini-painel"><small>VALOR APLICADO</small><b class="creme">${brl(inv.valorInvestido)}</b><span class="dim">${inv.quantidade ? f2(inv.quantidade) + " cotas" : "sem cotas"}</span></div>
-      <div class="mini-painel"><small>BRUTO ATUAL</small><b class="creme">${brl(inv.valorAtual)}</b><span class="${corSinal(resultado)}">${brlSinal(resultado)}</span></div>
-      <div class="mini-painel"><small>IMPOSTO (${aliq === 0 ? "isento" : f2(aliq) + "%"})</small><b class="down">${imposto > 0 ? "−" + brl(imposto) : brl(0)}</b><span class="dim">${dias} dias corridos</span></div>
-      <div class="mini-painel"><small>TOTAL LÍQUIDO</small><b class="up">${brl(liquido)}</b><span class="${corSinal(rentLiq)}">${pct(rentLiq)}</span></div>
-      <div class="mini-painel"><small>VENCIMENTO</small><b class="creme">${inv.dataVencimento ? fmtData(inv.dataVencimento) : "—"}</b><span class="${diasVenc !== null && diasVenc <= 30 ? "acc" : "dim"}">${diasVenc === null ? "sem vencimento" : diasVenc + " dias"}</span></div>
-    </div>`;
 
     return `
       <button class="voltar" data-acao="ir" data-secao="investimentos"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONES.voltar}</svg>Voltar para Investimentos</button>
-      ${mini}
       <div class="grid g-top">
         <div class="c8">${card("", `${esc(inv.nome)} <span class="selo-tag selo-acao">${esc(inv.tipoAtivo || inv.categoria)}</span>`,
-          `${esc(inv.emissor || "emissor não informado")} · ${esc(inv.liquidez || "liquidez não informada")}`,
+          `${esc(inv.emissor || "emissor não informado")}${inv.indexador ? " · " + esc(inv.indexador) + (inv.taxaContratada ? " " + f2(inv.taxaContratada) + "%" : "") : ""}`,
           `<button class="btn primario" data-acao="novo-valor-investimento" data-id="${inv.id}">Lançar novo valor</button><button class="btn" data-acao="editar-investimento" data-id="${inv.id}">Editar</button>`,
           hist.length >= 2
-            ? `<div style="padding:10px 16px;height:280px"><canvas id="graf-valor-investimento"></canvas></div>`
+            ? `<div style="padding:10px 16px;height:260px"><canvas id="graf-valor-investimento"></canvas></div>`
             : `<div class="empty">Ainda não há histórico suficiente para o gráfico.<br>Use "Lançar novo valor" sempre que consultar o saldo — cada lançamento vira um ponto na linha.</div>`)}</div>
         <div class="c4">${card("", "Resumo da aplicação", "", "", `
-          <div class="kv"><span class="dim">Tipo do ativo</span><b>${esc(inv.tipoAtivo || "—")}</b></div>
-          <div class="kv"><span class="dim">Emissor</span><b>${esc(inv.emissor || "—")}</b></div>
-          <div class="kv"><span class="dim">Indexador</span><b>${esc(inv.indexador || "—")}${inv.taxaContratada ? " " + f2(inv.taxaContratada) + "%" : ""}</b></div>
-          <div class="kv"><span class="dim">Data da aplicação</span><b>${inv.dataAplicacao ? fmtData(inv.dataAplicacao) : "—"}</b></div>
-          <div class="kv"><span class="dim">Vencimento</span><b>${inv.dataVencimento ? fmtData(inv.dataVencimento) : "—"}</b></div>
-          <div class="kv"><span class="dim">Liquidez</span><b>${esc(inv.liquidez || "—")}</b></div>
           <div class="kv"><span class="dim">Quantidade de cotas</span><b>${inv.quantidade ? f2(inv.quantidade) : "—"}</b></div>
-          <div class="kv"><span class="dim">Preço por cota (aplicação)</span><b>${inv.quantidade ? brl(inv.valorInvestido / inv.quantidade) : "—"}</b></div>
-          <div class="kv"><span class="dim">Preço por cota (hoje)</span><b>${inv.quantidade ? brl(inv.valorAtual / inv.quantidade) : "—"}</b></div>
+          <div class="kv"><span class="dim">Valor aplicado</span><b>${brl(aplicado)}</b></div>
+          <div class="kv"><span class="dim">Valor bruto atual</span><b>${brl(bruto)}</b></div>
+          <div class="kv"><span class="dim">Lucro / prejuízo</span><b class="${corSinal(resultado)}">${brlSinal(resultado)}</b></div>
+          <div class="kv"><span class="dim">Alíquota de IR</span><b>${aliq === 0 ? "isento" : f2(aliq) + "%"}</b></div>
+          <div class="kv"><span class="dim">Imposto estimado</span><b class="down">${imposto > 0 ? "−" + brl(imposto) : brl(0)}</b></div>
+          <div class="kv"><span class="dim">Total líquido</span><b class="up">${brl(liquido)}</b></div>
           <div class="kv"><span class="dim">Rentabilidade bruta</span><b class="${corSinal(rentBruta)}">${pct(rentBruta)}</b></div>
           <div class="kv"><span class="dim">Rentabilidade líquida</span><b class="${corSinal(rentLiq)}">${pct(rentLiq)}</b></div>
           <div class="kv"><span class="dim">Equivalente ao ano</span><b class="${rentAno === null ? "dim" : corSinal(rentAno)}">${rentAno === null ? "—" : pct(rentAno)}</b></div>
-          <div class="kv"><span class="dim">Menor valor registrado</span><b>${brl(min)}</b></div>
-          <div class="kv"><span class="dim">Maior valor registrado</span><b>${brl(max)}</b></div>
+          <div class="kv"><span class="dim">Menor valor (histórico)</span><b>${brl(min)}</b></div>
+          <div class="kv"><span class="dim">Maior valor (histórico)</span><b>${brl(max)}</b></div>
+          <div class="kv"><span class="dim">Data da aplicação</span><b>${inv.dataAplicacao ? fmtData(inv.dataAplicacao) : "—"}</b></div>
+          <div class="kv"><span class="dim">Vencimento</span><b>${inv.dataVencimento ? fmtData(inv.dataVencimento) + (diasVenc !== null ? " (" + diasVenc + "d)" : "") : "—"}</b></div>
+          <div class="kv"><span class="dim">Dias corridos</span><b>${dias}</b></div>
         `)}</div>
       </div>
       ${inv.obs ? card("c12", "Observações", "", "", `<div style="padding:12px 16px;font-size:13px;color:var(--dim)">${esc(inv.obs)}</div>`) : ""}
