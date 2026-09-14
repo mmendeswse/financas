@@ -397,9 +397,9 @@
     financas: ["Finanças", "Resumo patrimonial e composição do seu patrimônio"],
     bancos: ["Meus Bancos", "Contas cadastradas e saldo calculado automaticamente"],
     entradas: ["Entradas", "Receitas, salário e outras entradas de dinheiro"],
-    despesas: ["Despesas", "Gastos por categoria, banco e cartão"],
+    despesas: ["Despesas", "Gastos lançados e contas a pagar"],
     cartoes: ["Cartões de crédito", "Limite, uso e disponibilidade de cada cartão"],
-    contas: ["Contas a pagar", "Boletos e contas com vencimento"],
+    contas: ["Despesas", "Gastos lançados e contas a pagar"],
     historico: ["Histórico financeiro", "Todas as movimentações em um só lugar"],
     investimentos: ["Investimentos", "Renda fixa, tesouro, fundos e criptomoedas"],
     acoes: ["Ações", "Ações, FIIs e ETFs — preços atualizados manualmente"],
@@ -419,7 +419,7 @@
     const mapa = {
       dashboard: renderDashboard, financas: renderFinancas, bancos: renderBancos,
       entradas: renderEntradas, despesas: renderDespesas, cartoes: renderCartoes,
-      contas: renderContasPagar, historico: renderHistorico, investimentos: renderInvestimentos,
+      contas: renderDespesas, historico: renderHistorico, investimentos: renderInvestimentos,
       acoes: renderAcoes, "detalhe-acao": renderDetalheAcao, "detalhe-investimento": renderDetalheInvestimento, carteira: renderCarteira,
       relatorios: renderRelatorios, metas: renderMetas, configuracoes: renderConfiguracoes
     };
@@ -522,14 +522,14 @@
     const atrasadas = F.contasAtrasadas(d);
     if (atrasadas.length) {
       const total = atrasadas.reduce((s, c) => s + Number(c.valor || 0), 0);
-      alertas.push({ tipo: "perigo", rota: "contas", texto: atrasadas.length === 1
+      alertas.push({ tipo: "perigo", rota: "despesas", texto: atrasadas.length === 1
         ? `A conta "${atrasadas[0].descricao}" está atrasada (${brl(atrasadas[0].valor)}).`
         : `${atrasadas.length} contas estão atrasadas, somando ${brl(total)}.` });
     }
 
     const vencendo = F.contasVencendoEm(d, 7).filter((c) => c.statusReal === "Pendente");
     if (vencendo.length) {
-      alertas.push({ tipo: "aviso", rota: "contas", texto: `Existem ${vencendo.length} conta(s) vencendo nos próximos 7 dias.` });
+      alertas.push({ tipo: "aviso", rota: "despesas", texto: `Existem ${vencendo.length} conta(s) vencendo nos próximos 7 dias.` });
     }
 
     // categorias de despesa com alta em relação à média dos últimos 3 meses
@@ -760,11 +760,12 @@
     const max = Math.max(...itens.map((i) => Math.abs(i.valor)), 1);
     return `<div class="barlist">` + itens.map((i) => {
       const p = Math.max(0, (i.valor / max) * 100);
-      return `<div class="barlist-linha">
+      const clic = i.id ? ` data-acao="explicar-banco" data-id="${i.id}" title="Ver detalhes deste banco"` : "";
+      return `<${i.id ? "button" : "div"} class="barlist-linha${i.id ? " clicavel" : ""}"${clic}>
         <span class="barlist-nome">${esc(i.nome)}</span>
         <span class="barlist-trilho"><i style="width:${p.toFixed(1)}%;background:${i.cor || cor || "var(--azul)"}">${p >= 22 ? Math.round(p) + "%" : ""}</i></span>
         <b class="barlist-valor ${i.valor < 0 ? "down" : ""}">${brl(i.valor)}</b>
-      </div>`;
+      </${i.id ? "button" : "div"}>`;
     }).join("") + `</div>`;
   }
 
@@ -812,10 +813,10 @@
     if (!d.metas.length) return `<div class="empty" style="padding:14px">Nenhuma meta cadastrada.</div>`;
     return `<div class="mix-lista">` + d.metas.slice(0, 4).map((m) => {
       const p = m.objetivo > 0 ? Math.min(100, (m.atual / m.objetivo) * 100) : 0;
-      return `<div class="mix-item">
+      return `<button class="mix-item clicavel" data-acao="explicar-meta" data-id="${m.id}" title="Ver detalhes da meta">
         <div class="mix-topo"><span>${esc(m.nome)}</span><b style="color:${m.cor || "var(--laranja)"}">${p.toFixed(0)}% (${brl(m.atual)})</b></div>
         <div class="progresso fina"><i style="width:${p}%;background:${m.cor || "var(--laranja)"}"></i></div>
-      </div>`;
+      </button>`;
     }).join("") + `</div>`;
   }
 
@@ -1020,6 +1021,79 @@
     document.getElementById("btnFecharPainel").onclick = fecharModal;
   }
 
+
+  function painelSimples(titulo, pctValor, pctRotulo, comoCalcula, linhasHtml, secao) {
+    abrirModal(`
+      <h3>${titulo}</h3>
+      <div class="explica-pct"><b>${Math.abs(pctValor).toFixed(1).replace(".", ",")}%</b><span>${pctRotulo}</span></div>
+      ${comoCalcula ? `<p class="campo ajuda" style="margin:0 0 12px">Como é calculado: <b>${comoCalcula}</b></p>` : ""}
+      <div class="explica-lista">${linhasHtml}</div>
+      <div class="modal-acoes">
+        <button class="btn primario salvar" id="btnIrPainel">Abrir ${TITULOS[secao][0]}</button>
+        <button class="btn" id="btnFecharPainel">Fechar</button>
+      </div>`);
+    document.getElementById("btnIrPainel").onclick = () => { fecharModal(); navegarPara(secao); };
+    document.getElementById("btnFecharPainel").onclick = fecharModal;
+  }
+
+  function explicarBanco(id) {
+    const d = DADOS;
+    const b = achar(d.bancos, id);
+    if (!b) return;
+    const entradas = d.entradas.filter((e) => e.bancoId === id).reduce((s, e) => s + Number(e.valor || 0), 0);
+    const saidas = d.despesas.filter((x) => x.bancoId === id && !x.cartaoId).reduce((s, x) => s + Number(x.valor || 0), 0);
+    const saldo = F.saldoBanco(d, b);
+    const total = F.totalBancos(d);
+    const linha = (r, v, c) => `<div class="kv"><span class="dim">${r}</span><b class="${c || ""}">${v}</b></div>`;
+    painelSimples(esc(b.nome), total > 0 ? (saldo / total) * 100 : 0, "do seu dinheiro em bancos está aqui",
+      "saldo inicial + entradas − despesas",
+      linha("Saldo inicial", brl(b.saldoInicial)) + linha("+ Entradas recebidas", brl(entradas), "up") +
+      linha("− Despesas pagas por aqui", brl(saidas), "down") + linha("= Saldo atual", brl(saldo), corSinal(saldo)) +
+      linha("Tipo de conta", esc(b.tipo || "—")), "bancos");
+  }
+
+  function explicarClasse(rotulo) {
+    const d = DADOS;
+    const itens = itensPatrimonio(d);
+    const item = itens.find((i) => i.rotulo === rotulo);
+    if (!item) return;
+    const total = itens.reduce((s, i) => s + i.valor, 0);
+    const linha = (r, v, c) => `<div class="kv"><span class="dim">${r}</span><b class="${c || ""}">${v}</b></div>`;
+    let detalhe = "";
+    let secao = "investimentos";
+    if (rotulo === "Bancos") {
+      detalhe = F.listaBancosComSaldo(d).map((b) => linha(esc(b.nome), brl(b.saldoAtual))).join("");
+      secao = "bancos";
+    } else if (["Ações", "FIIs", "ETFs"].indexOf(rotulo) > -1) {
+      const cat = rotulo === "Ações" ? "Ação" : rotulo === "FIIs" ? "FII" : "ETF";
+      detalhe = I.listaAcoesComCalculo(d).filter((a) => a.categoria === cat)
+        .map((a) => linha(esc(a.ticker) + " · " + a.quantidade + " un.", brl(a.valorAtual))).join("");
+      secao = "acoes";
+    } else {
+      detalhe = d.investimentos.filter((i) => i.categoria === rotulo)
+        .map((i) => linha(esc(i.nome), brl(i.valorAtual))).join("");
+    }
+    painelSimples(rotulo, total > 0 ? (item.valor / total) * 100 : 0, "do seu patrimônio bruto",
+      "valor deste grupo ÷ patrimônio bruto",
+      detalhe + linha("= Total do grupo", brl(item.valor), "up") + linha("Patrimônio bruto", brl(total)), secao);
+  }
+
+  function explicarMeta(id) {
+    const m = achar(DADOS.metas, id);
+    if (!m) return;
+    const progresso = m.objetivo > 0 ? (m.atual / m.objetivo) * 100 : 0;
+    const falta = Math.max(0, Number(m.objetivo || 0) - Number(m.atual || 0));
+    const dias = m.prazo ? F.diasEntre(m.prazo) : null;
+    const linha = (r, v, c) => `<div class="kv"><span class="dim">${r}</span><b class="${c || ""}">${v}</b></div>`;
+    painelSimples(esc(m.nome), progresso, "do objetivo já foi guardado", "valor atual ÷ objetivo",
+      linha("Objetivo", brl(m.objetivo)) + linha("Já guardado", brl(m.atual), "up") +
+      linha("Falta", brl(falta), falta > 0 ? "down" : "up") +
+      linha("Prazo", m.prazo ? fmtData(m.prazo) : "sem prazo") +
+      (dias !== null ? linha("Dias restantes", dias >= 0 ? String(dias) : "prazo vencido", dias >= 0 ? "" : "down") : "") +
+      (dias !== null && dias > 0 && falta > 0 ? linha("Guardando por mês", brl(falta / Math.max(1, dias / 30))) : ""),
+      "metas");
+  }
+
   // =========================================================================
   // DASHBOARD
   // =========================================================================
@@ -1044,10 +1118,10 @@
     const pctBancos = p.bruto > 0 ? (p.bancos / p.bruto) * 100 : 0;
     const rentCarteira = I.rentabilidadeCarteiraAcoes(d);
 
-    const bancos = F.listaBancosComSaldo(d).sort((a, b) => b.saldoAtual - a.saldoAtual).map((b) => ({ nome: b.nome, valor: b.saldoAtual, cor: b.cor }));
+    const bancos = F.listaBancosComSaldo(d).sort((a, b) => b.saldoAtual - a.saldoAtual).map((b) => ({ id: b.id, nome: b.nome, valor: b.saldoAtual, cor: b.cor }));
     const composicao = itensPatrimonio(d);
     const totalComp = composicao.reduce((s, i) => s + i.valor, 0);
-    const legendaComp = composicao.length ? composicao.map((i) => `<div class="legenda-linha"><span class="legenda-nome"><span class="legenda-ponto" style="background:${i.cor}"></span>${esc(i.rotulo)}</span><span class="legenda-pct" style="color:${i.cor}">${(totalComp > 0 ? (i.valor / totalComp) * 100 : 0).toFixed(1).replace(".", ",")}%</span><span class="legenda-val">${brl(i.valor)}</span></div>`).join("") : `<div class="empty">Sem ativos ainda.</div>`;
+    const legendaComp = composicao.length ? composicao.map((i) => `<button class="legenda-linha clicavel" data-acao="explicar-classe" data-rotulo="${esc(i.rotulo)}" title="Ver detalhes"><span class="legenda-nome"><span class="legenda-ponto" style="background:${i.cor}"></span>${esc(i.rotulo)}</span><span class="legenda-pct" style="color:${i.cor}">${(totalComp > 0 ? (i.valor / totalComp) * 100 : 0).toFixed(1).replace(".", ",")}%</span><span class="legenda-val">${brl(i.valor)}</span></button>`).join("") : `<div class="empty">Sem ativos ainda.</div>`;
 
     const histRecente = d.historicoPatrimonio.slice(-30);
     const pico = histRecente.length ? Math.max(...histRecente.map((h) => h.valor)) : 0;
@@ -1371,25 +1445,50 @@
   // DESPESAS
   // =========================================================================
   function renderDespesas(d) {
-    const lista = [...d.despesas].sort((a, b) => (b.data || "").localeCompare(a.data || ""));
+    // a tela reúne o que já saiu (despesas lançadas) e o que ainda vai
+    // sair (contas a pagar), com o status de cada linha
+    const lancadas = d.despesas.map((x) => ({
+      origem: "despesa", id: x.id, descricao: x.descricao, categoria: x.categoria,
+      pagoCom: x.cartaoId ? "💳 " + nomeCartao(d, x.cartaoId) : F.nomeBanco(d, x.bancoId),
+      data: x.data, status: "Pago", valor: Number(x.valor || 0), recorrencia: freqDe(x)
+    }));
+    const previstas = F.listaContasPagarComStatus(d).map((c) => ({
+      origem: "conta", id: c.id, descricao: c.descricao, categoria: c.categoria,
+      pagoCom: "—", data: c.vencimento, status: c.statusReal, valor: Number(c.valor || 0), recorrencia: ""
+    }));
+    const lista = [...lancadas, ...previstas].sort((a, b) => (b.data || "").localeCompare(a.data || ""));
+
     const totalMes = F.totalDespesasMes(d);
-    const grid = "grid-template-columns:minmax(0,1fr) 130px 90px 150px";
+    const aPagar = F.totalAPagar(d);
+    const grid = "grid-template-columns:minmax(0,1fr) 150px 110px 112px 168px";
+
     let corpo;
     if (!lista.length) {
-      corpo = `<div class="empty">Nenhuma despesa cadastrada. Use "+ Nova despesa" para lançar um gasto.</div>`;
+      corpo = `<div class="empty">Nada lançado ainda. Use "+ Nova despesa" para um gasto já feito, ou "+ Conta a pagar" para algo que ainda vai vencer.</div>`;
     } else {
-      corpo = `<div class="hd" style="${grid}"><i>Descrição</i><i>Pago com</i><i class="r">Data</i><i class="r hd-valor">Valor</i></div>` +
+      corpo = `<div class="hd" style="${grid}"><i>Descrição</i><i>Pago com</i><i class="r">Data</i><i class="r">Status</i><i class="r hd-valor">Valor</i></div>` +
         lista.map((x) => `
         <div class="rw" style="${grid}">
-          <div><div class="nm">${esc(x.descricao)}${seloFreq(x)}</div><div class="sub">${esc(x.categoria)} · ${esc(x.formaPagamento || "")}</div></div>
-          <div class="dim" style="font-size:12.5px">${x.cartaoId ? "💳 " + esc(nomeCartao(d, x.cartaoId)) : esc(F.nomeBanco(d, x.bancoId))}</div>
-          <div class="r dim" style="font-size:12px">${fmtDataCurta(x.data)}</div>
-          <div class="cel-valor"><span class="big down">−${brl(x.valor)}</span><span class="cel-botoes">${linhaAcoes("editar-despesa", x.id, "excluir-despesa", x.id)}</span></div>
+          <div><div class="nm">${esc(x.descricao)}${x.recorrencia && x.recorrencia !== FREQUENCIAS[0] ? ` <span class="selo-tag selo-cat">${esc(x.recorrencia.toLowerCase())}</span>` : ""}</div><div class="sub">${esc(x.categoria || "—")}</div></div>
+          <div class="dim celula-texto">${esc(x.pagoCom)}</div>
+          <div class="r dim" style="font-size:12px">${fmtData(x.data)}</div>
+          <div class="r">${x.origem === "conta"
+            ? `<button class="selo-tag selo-${x.status.toLowerCase()} selo-botao" data-acao="alternar-pago" data-id="${x.id}" title="Marcar como paga">${x.status}</button>`
+            : `<span class="selo-tag selo-pago">${x.status}</span>`}</div>
+          <div class="cel-valor"><span class="big down">−${brl(x.valor)}</span><span class="cel-botoes">${
+            x.origem === "despesa"
+              ? linhaAcoes("editar-despesa", x.id, "excluir-despesa", x.id)
+              : linhaAcoes("editar-conta", x.id, "excluir-conta", x.id)
+          }</span></div>
         </div>`).join("");
     }
+
     return `
       <div class="grid g-top">
-        <div class="c12">${card("c12", "Despesas", `total do mês atual: ${brl(totalMes)}`, `<button class="btn primario" data-acao="nova-despesa"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>Nova despesa</button>`, corpo)}</div>
+        <div class="c12">${card("c12", "Despesas e contas a pagar", `pagas no mês: ${brl(totalMes)} · em aberto: ${brl(aPagar)}`,
+          `<button class="btn" data-acao="nova-conta"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>Conta a pagar</button>
+           <button class="btn primario" data-acao="nova-despesa"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>Nova despesa</button>`,
+          corpo)}</div>
       </div>
     `;
   }
@@ -2374,6 +2473,7 @@
 
     return `
       <div class="filtros">
+        <div class="seletor-direita">
         <select id="filtroPeriodoRel">
           <option value="este-mes" ${periodoRelatorio === "este-mes" ? "selected" : ""}>Este mês</option>
           <option value="mes-anterior" ${periodoRelatorio === "mes-anterior" ? "selected" : ""}>Mês anterior</option>
@@ -2383,6 +2483,7 @@
           <option value="personalizado" ${periodoRelatorio === "personalizado" ? "selected" : ""}>Personalizado</option>
         </select>
         ${periodoRelatorio === "personalizado" ? `<input type="date" id="relIni" value="${inicio}"><span class="dim">até</span><input type="date" id="relFim" value="${fim}">` : ""}
+        </div>
       </div>
       <div class="grid g-top">
         <div class="c3">${metricCard("Receitas no período", brl(entradasP), ICONES.entrada, "var(--up)")}</div>
@@ -2439,7 +2540,11 @@
           </div>`)}</div>
         <div class="c6"><div class="card" style="border-color:rgba(255,84,104,.3)">
           <header><div><h2 class="down">Zona de risco</h2><div class="sub">esta ação não pode ser desfeita</div></div></header>
-          <div class="body pad"><button class="btn perigo" data-acao="apagar-tudo">Apagar todos os dados</button></div>
+          <div class="body pad">
+            <p style="margin-top:0;font-size:13px">Apaga de uma vez bancos, entradas, despesas, contas, investimentos, ações e metas deste aparelho, deixando o sistema como recém-instalado.</p>
+            <button class="btn perigo" data-acao="apagar-tudo">Apagar todos os dados</button>
+            <p class="campo ajuda" style="margin-top:12px">Não há como desfazer: os dados não vão para nenhuma lixeira. Exporte um backup antes, em "Backup dos dados", se houver algo que você queira guardar. A senha de acesso e o token de cotações não são apagados aqui.</p>
+          </div>
         </div></div>
       </div>
     `;
@@ -2553,6 +2658,9 @@
         case "novo-ativo": abrirModalAcao(null); break;
         case "editar-acao": abrirModalAcao(id); break;
         case "explicar-kpi": explicarKPI(b.dataset.kpi); break;
+        case "explicar-banco": explicarBanco(id); break;
+        case "explicar-classe": explicarClasse(b.dataset.rotulo); break;
+        case "explicar-meta": explicarMeta(id); break;
         case "periodo-grafico": periodoGrafico = b.dataset.periodo; renderRota(); break;
         case "novo-preco-acao": abrirModalNovoPreco(id); break;
         case "novo-valor-investimento": abrirModalNovoValor(id); break;
