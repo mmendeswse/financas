@@ -26,6 +26,11 @@
   const TIPOS_CONTA_BANCO = ["Conta corrente", "Conta poupança", "Conta digital", "Investimento", "Outro"];
   const FORMAS_PAGAMENTO = ["Débito", "Pix", "Dinheiro", "Cartão de crédito", "Boleto", "Transferência", "Débito automático"];
   const CATS_INVESTIMENTO = ["Renda fixa", "Tesouro Direto", "Criptomoedas", "Fundos", "Outros"];
+  const TIPOS_ATIVO_RF = ["CDB", "LCI", "LCA", "LC", "RDB", "CRI", "CRA", "Debênture", "Debênture incentivada",
+    "Tesouro Selic", "Tesouro Prefixado", "Tesouro IPCA+", "Poupança", "Fundo DI", "Fundo multimercado",
+    "Fundo imobiliário", "Criptomoeda", "Outro"];
+  const INDEXADORES = ["Prefixado", "% do CDI", "CDI +", "IPCA +", "Selic +", "Poupança", "Não se aplica"];
+  const LIQUIDEZ = ["Liquidez diária", "Sem liquidez diária", "No vencimento"];
   const CATS_ACAO = ["Ação", "FII", "ETF"];
   const FREQUENCIAS = ["Não se repete", "Semanal", "Quinzenal", "Mensal", "Anual"];
   // registros antigos guardavam só "recorrente: true", que equivalia a mensal
@@ -1560,39 +1565,73 @@
   // INVESTIMENTOS (renda fixa, tesouro, fundos, cripto...)
   // =========================================================================
   function renderInvestimentos(d) {
-    const investido = I.totalInvestidoOutros(d);
-    const atual = I.totalAtualOutros(d);
-    const resultado = atual - investido;
-    const rent = investido > 0 ? (resultado / investido) * 100 : 0;
-    const grid = "grid-template-columns:1fr 110px 110px 90px 90px";
+    const lista = I.listaInvestimentosComCalculo(d);
+    const t = I.totaisInvestimentos(d);
+    const vencendo = I.investimentosVencendoEm(d, 60);
+    const f2 = (v) => Number(v || 0).toFixed(2).replace(".", ",");
 
     let corpo;
-    if (!d.investimentos.length) {
+    if (!lista.length) {
       corpo = `<div class="empty">Nenhum investimento cadastrado ainda. Ações, FIIs e ETFs têm sua própria área — use aqui para renda fixa, tesouro, fundos e cripto.</div>`;
     } else {
-      corpo = `<div class="hd" style="${grid}"><i>Nome</i><i class="r">Investido</i><i class="r">Atual</i><i class="r">Result.</i><i class="r">Rent.</i></div>` +
-        d.investimentos.map((inv) => {
-          const res = I.resultadoInvestimento(inv);
-          const rt = I.rentabilidadeInvestimento(inv);
-          return `<button class="rw" style="${grid}" data-acao="editar-investimento" data-id="${inv.id}">
-            <div><div class="nm">${esc(inv.nome)}</div><div class="sub">${esc(inv.categoria)}</div></div>
-            <div class="r big">${brl(inv.valorInvestido)}</div>
-            <div class="r big">${brl(inv.valorAtual)}</div>
-            <div class="r big ${corSinal(res)}">${brlSinal(res)}</div>
-            <div class="r big ${corSinal(rt)}">${pct(rt)}</div>
-          </button>`;
-        }).join("");
+      const linhas = lista.map((inv) => `
+        <tr data-acao="editar-investimento" data-id="${inv.id}">
+          <td class="papel">${esc(inv.nome)}<small>${esc(inv.tipoAtivo || inv.categoria)}${inv.emissor ? " · " + esc(inv.emissor) : ""}</small></td>
+          <td>${esc(inv.indexador || "—")}${inv.taxaContratada ? " " + f2(inv.taxaContratada) + "%" : ""}</td>
+          <td class="r">${fmtDataCurta(inv.dataAplicacao)}</td>
+          <td class="r">${inv.dataVencimento ? fmtDataCurta(inv.dataVencimento) : "—"}</td>
+          <td class="r ${inv.diasVenc !== null && inv.diasVenc <= 30 ? "acc" : "dim"}">${inv.diasVenc === null ? "—" : inv.diasVenc + "d"}</td>
+          <td class="r">${inv.quantidade ? f2(inv.quantidade) : "—"}</td>
+          <td class="r creme">${brl(inv.valorInvestido)}</td>
+          <td class="r creme">${brl(inv.valorAtual)}</td>
+          <td class="r ${corSinal(inv.resultado)}">${brlSinal(inv.resultado)}</td>
+          <td class="r dim">${inv.aliquota === 0 ? "isento" : f2(inv.aliquota) + "%"}</td>
+          <td class="r down">${inv.imposto > 0 ? "−" + brl(inv.imposto) : "—"}</td>
+          <td class="r up">${brl(inv.liquido)}</td>
+          <td class="r ${corSinal(inv.rentBruta)}">${pct(inv.rentBruta)}</td>
+          <td class="r ${corSinal(inv.rentLiquida)}">${pct(inv.rentLiquida)}</td>
+          <td class="r ${inv.rentAno === null ? "dim" : corSinal(inv.rentAno)}">${inv.rentAno === null ? "—" : pct(inv.rentAno)}</td>
+        </tr>`).join("");
+      corpo = `<div class="terminal-scroll"><table class="terminal">
+        <thead><tr>
+          <th>Ativo</th><th>Rentab. contratada</th><th class="r">Aplicação</th><th class="r">Vencimento</th><th class="r">Faltam</th>
+          <th class="r">Cotas</th><th class="r">Valor aplicado</th><th class="r">Bruto atual</th><th class="r">Resultado</th>
+          <th class="r">IR</th><th class="r">Imposto</th><th class="r">Total líquido</th>
+          <th class="r">Rent. bruta</th><th class="r">Rent. líquida</th><th class="r">Ao ano</th>
+        </tr></thead>
+        <tbody>${linhas}</tbody>
+        <tfoot><tr>
+          <td>TOTAL</td><td></td><td></td><td></td><td></td><td></td>
+          <td class="r creme">${brl(t.aplicado)}</td>
+          <td class="r creme">${brl(t.bruto)}</td>
+          <td class="r ${corSinal(t.resultado)}">${brlSinal(t.resultado)}</td>
+          <td></td>
+          <td class="r down">${t.imposto > 0 ? "−" + brl(t.imposto) : "—"}</td>
+          <td class="r up">${brl(t.liquido)}</td>
+          <td class="r ${corSinal(t.rentBruta)}">${pct(t.rentBruta)}</td>
+          <td class="r ${corSinal(t.rentLiquida)}">${pct(t.rentLiquida)}</td>
+          <td></td>
+        </tr></tfoot>
+      </table></div>`;
     }
 
+    const aviso = vencendo.length
+      ? `<div class="faixa-demo" style="border-color:rgba(255,194,51,.3)"><div><b class="acc">${vencendo.length} investimento(s) vencendo nos próximos 60 dias:</b> ${vencendo.map((v) => esc(v.nome) + " (" + fmtData(v.dataVencimento) + ")").join(" · ")}</div></div>`
+      : "";
+
     return `
+      ${aviso}
       <div class="grid g-top">
-        <div class="c3">${metricCard("Valor investido", brl(investido), ICONES.investimento, "var(--cy)")}</div>
-        <div class="c3">${metricCard("Valor atual", brl(atual), ICONES.investimento, "var(--vi)")}</div>
-        <div class="c3">${metricCard("Resultado", brlSinal(resultado), ICONES.resultado, corSinal(resultado) === "up" ? "var(--up)" : "var(--down)")}</div>
-        <div class="c3">${metricCard("Rentabilidade", pct(rent), ICONES.resultado, corSinal(rent) === "up" ? "var(--up)" : "var(--down)")}</div>
+        <div class="c3">${metricCard("Valor aplicado", brl(t.aplicado), ICONES.investimento, "var(--cy)", "", `${lista.length} aplicação(ões)`)}</div>
+        <div class="c3">${metricCard("Bruto atual", brl(t.bruto), ICONES.investimento, "var(--vi)", "", `resultado ${brlSinal(t.resultado)}`)}</div>
+        <div class="c3">${metricCard("Imposto estimado", brl(t.imposto), ICONES.saida, "var(--down)", "", "tabela regressiva do IR")}</div>
+        <div class="c3">${metricCard("Total líquido", brl(t.liquido), ICONES.resultado, "var(--up)", "", `${pct(t.rentLiquida)} líquido sobre o aplicado`)}</div>
       </div>
       <div class="grid">
-        <div class="c12">${card("c12", "Investimentos", "renda fixa, tesouro, fundos e cripto", `<button class="btn primario" data-acao="novo-investimento"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>Novo investimento</button>`, corpo)}</div>
+        <div class="c12">${card("", "Investimentos", "renda fixa, tesouro, fundos e cripto · clique numa linha para editar",
+          `<button class="btn primario" data-acao="novo-investimento"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>Novo investimento</button>`,
+          corpo,
+          `<span class="dim">Imposto calculado pela tabela regressiva; LCI, LCA, CRI, CRA e poupança entram como isentos. O IOF dos primeiros 30 dias não é considerado.</span>`)}</div>
       </div>
     `;
   }
@@ -1601,30 +1640,96 @@
     const inv = id ? achar(DADOS.investimentos, id) : null;
     abrirModal(`
       <h3>${inv ? "Editar investimento" : "Novo investimento"}</h3>
+
+      <div class="sechead">IDENTIFICAÇÃO</div>
+      <div class="campo"><label for="f_nome">Nome do ativo</label><input id="f_nome" value="${inv ? esc(inv.nome) : ""}" placeholder="CDB Banco Inter 110% CDI"></div>
       <div class="par">
-        <div class="campo"><label for="f_nome">Nome</label><input id="f_nome" value="${inv ? esc(inv.nome) : ""}" placeholder="Tesouro Selic 2029"></div>
         <div class="campo"><label for="f_cat">Categoria</label><select id="f_cat">${opcoes(CATS_INVESTIMENTO, inv ? inv.categoria : CATS_INVESTIMENTO[0])}</select></div>
+        <div class="campo"><label for="f_tipo">Tipo do ativo</label><select id="f_tipo">${opcoes(TIPOS_ATIVO_RF, inv ? inv.tipoAtivo : "CDB")}</select></div>
       </div>
       <div class="par">
-        <div class="campo"><label for="f_vi">Valor investido</label>${campoMoeda("f_vi", inv ? inv.valorInvestido : "")}</div>
-        <div class="campo"><label for="f_va">Valor atual</label>${campoMoeda("f_va", inv ? inv.valorAtual : "")}</div>
+        <div class="campo"><label for="f_emissor">Emissor / corretora</label><input id="f_emissor" value="${inv ? esc(inv.emissor || "") : ""}" placeholder="Banco Inter"></div>
+        <div class="campo"><label for="f_liq">Liquidez</label><select id="f_liq">${opcoes(LIQUIDEZ, inv ? inv.liquidez : LIQUIDEZ[0])}</select></div>
       </div>
-      <div class="campo"><label for="f_data">Data de aplicação</label><input id="f_data" type="date" value="${inv ? inv.dataAplicacao : hojeISO()}"></div>
+
+      <div class="sechead">APLICAÇÃO</div>
+      <div class="par">
+        <div class="campo"><label for="f_vi">Valor aplicado</label>${campoMoeda("f_vi", inv ? inv.valorInvestido : "")}</div>
+        <div class="campo"><label for="f_qtd">Quantidade de cotas</label><input id="f_qtd" type="number" step="0.00000001" value="${inv ? inv.quantidade || "" : ""}" placeholder="opcional"></div>
+      </div>
+      <div class="par">
+        <div class="campo"><label for="f_data">Data da aplicação</label><input id="f_data" type="date" value="${inv ? inv.dataAplicacao : hojeISO()}"></div>
+        <div class="campo"><label for="f_venc">Data de vencimento</label><input id="f_venc" type="date" value="${inv ? inv.dataVencimento || "" : ""}"></div>
+      </div>
+
+      <div class="sechead">RENTABILIDADE CONTRATADA</div>
+      <div class="par">
+        <div class="campo"><label for="f_idx">Indexador</label><select id="f_idx">${opcoes(INDEXADORES, inv ? inv.indexador : INDEXADORES[1])}</select></div>
+        <div class="campo"><label for="f_taxa">Taxa contratada (%)</label><input id="f_taxa" type="number" step="0.01" value="${inv ? inv.taxaContratada || "" : ""}" placeholder="110">
+          <div class="ajuda">Ex.: 110 para 110% do CDI, ou 6,5 para IPCA + 6,5% ao ano.</div></div>
+      </div>
+
+      <div class="sechead">SITUAÇÃO ATUAL</div>
+      <div class="campo"><label for="f_va">Valor bruto atual</label>${campoMoeda("f_va", inv ? inv.valorAtual : "")}
+        <div class="ajuda">Valor que aparece hoje no extrato, antes do imposto.</div></div>
+      <label class="chk-linha"><input type="checkbox" id="f_isento" ${inv && inv.isentoIR ? "checked" : ""}> Isento de imposto de renda (LCI, LCA, CRI, CRA, poupança…)</label>
+      <div id="previaIR" class="previa-ir"></div>
+
       <div class="campo"><label for="f_obs">Observações</label><textarea id="f_obs" placeholder="Opcional">${inv ? esc(inv.obs || "") : ""}</textarea></div>
       <div class="modal-acoes">
         <button class="btn primario salvar" id="btnSalvar">Salvar</button>
         ${inv ? `<button class="btn perigo" id="btnExcluir">Excluir</button>` : ""}
-      </div>`);
+      </div>`, true);
+
+    // prévia do imposto, recalculada enquanto o usuário digita
+    const atualizarPrevia = () => {
+      const simulado = {
+        valorInvestido: numIn(document.getElementById("f_vi").value),
+        valorAtual: numIn(document.getElementById("f_va").value),
+        dataAplicacao: document.getElementById("f_data").value || hojeISO(),
+        tipoAtivo: document.getElementById("f_tipo").value,
+        isentoIR: document.getElementById("f_isento").checked
+      };
+      const el = document.getElementById("previaIR");
+      if (!el) return;
+      if (!(simulado.valorInvestido > 0) || !(simulado.valorAtual > 0)) { el.innerHTML = ""; return; }
+      const dias = I.diasCorridos(simulado);
+      const aliq = I.aliquotaIR(simulado);
+      const imp = I.impostoInvestimento(simulado);
+      const liq = I.valorLiquidoInvestimento(simulado);
+      const rl = I.rentabilidadeLiquida(simulado);
+      const ra = I.rentabilidadeAnualizada(simulado, true);
+      el.innerHTML = `
+        <div class="kv"><span class="dim">Dias corridos</span><b>${dias}</b></div>
+        <div class="kv"><span class="dim">Alíquota de IR</span><b>${aliq === 0 ? "isento" : aliq.toFixed(1).replace(".", ",") + "%"}</b></div>
+        <div class="kv"><span class="dim">Imposto estimado</span><b class="down">${brl(imp)}</b></div>
+        <div class="kv"><span class="dim">Total líquido</span><b class="up">${brl(liq)}</b></div>
+        <div class="kv"><span class="dim">Rentabilidade líquida</span><b class="${corSinal(rl)}">${pct(rl)}${ra !== null ? ` · ${pct(ra)} ao ano` : ""}</b></div>`;
+    };
+    ["f_vi", "f_va", "f_data", "f_tipo", "f_isento"].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) { el.addEventListener("input", atualizarPrevia); el.addEventListener("change", atualizarPrevia); }
+    });
+    atualizarPrevia();
 
     document.getElementById("btnSalvar").onclick = () => {
       const nome = document.getElementById("f_nome").value.trim();
       if (!nome) { toast("Informe o nome do investimento."); return; }
       const registro = {
         id: inv ? inv.id : A.novoId(),
-        nome, categoria: document.getElementById("f_cat").value,
+        nome,
+        categoria: document.getElementById("f_cat").value,
+        tipoAtivo: document.getElementById("f_tipo").value,
+        emissor: document.getElementById("f_emissor").value.trim(),
+        liquidez: document.getElementById("f_liq").value,
         valorInvestido: numIn(document.getElementById("f_vi").value),
-        valorAtual: numIn(document.getElementById("f_va").value),
+        quantidade: numIn(document.getElementById("f_qtd").value),
         dataAplicacao: document.getElementById("f_data").value || hojeISO(),
+        dataVencimento: document.getElementById("f_venc").value,
+        indexador: document.getElementById("f_idx").value,
+        taxaContratada: numIn(document.getElementById("f_taxa").value),
+        valorAtual: numIn(document.getElementById("f_va").value),
+        isentoIR: document.getElementById("f_isento").checked,
         obs: document.getElementById("f_obs").value.trim()
       };
       if (inv) Object.assign(inv, registro); else DADOS.investimentos.push(registro);

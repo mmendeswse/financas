@@ -838,3 +838,10 @@ input, select, textarea,
 .campo input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
 .campo input[type="color"]::-webkit-color-swatch { border: none; border-radius: 5px; }
 .campo input[type="color"]::-moz-color-swatch { border: none; border-radius: 5px; }
+
+/* prévia do imposto dentro do formulário de investimento */
+.previa-ir { border: 1px solid var(--linha-2); border-radius: 8px; background: var(--painel-2); margin: 4px 0 14px; overflow: hidden; }
+.previa-ir:empty { display: none; }
+.previa-ir .kv { padding: 8px 14px; font-size: 12.5px; }
+.modal .sechead { margin: 18px 0 10px; }
+.modal .sechead:first-of-type { margin-top: 4px; }

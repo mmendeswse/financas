@@ -132,9 +132,18 @@
     ];
 
     d.investimentos = [
-      { id: novoId(), categoria: "Tesouro Direto", nome: "Tesouro Selic 2029", valorInvestido: 15000, valorAtual: 15980, dataAplicacao: hoje(-200), obs: "" },
-      { id: novoId(), categoria: "Renda fixa", nome: "CDB 110% CDI - Inter", valorInvestido: 10000, valorAtual: 10540, dataAplicacao: hoje(-160), obs: "" },
-      { id: novoId(), categoria: "Fundos", nome: "Fundo Multimercado XP", valorInvestido: 5000, valorAtual: 5210, dataAplicacao: hoje(-90), obs: "" }
+      { id: novoId(), categoria: "Tesouro Direto", nome: "Tesouro Selic 2029", tipoAtivo: "Tesouro Selic", emissor: "Tesouro Nacional",
+        liquidez: "Liquidez diária", valorInvestido: 15000, valorAtual: 15980, quantidade: 1.02, dataAplicacao: hoje(-200),
+        dataVencimento: hoje(1200), indexador: "Selic +", taxaContratada: 0.1, isentoIR: false, obs: "" },
+      { id: novoId(), categoria: "Renda fixa", nome: "CDB 110% CDI", tipoAtivo: "CDB", emissor: "Banco Inter",
+        liquidez: "Liquidez diária", valorInvestido: 10000, valorAtual: 10540, quantidade: 0, dataAplicacao: hoje(-160),
+        dataVencimento: hoje(560), indexador: "% do CDI", taxaContratada: 110, isentoIR: false, obs: "" },
+      { id: novoId(), categoria: "Renda fixa", nome: "LCI 95% CDI", tipoAtivo: "LCI", emissor: "Banco do Brasil",
+        liquidez: "No vencimento", valorInvestido: 8000, valorAtual: 8380, quantidade: 0, dataAplicacao: hoje(-300),
+        dataVencimento: hoje(45), indexador: "% do CDI", taxaContratada: 95, isentoIR: true, obs: "isento de IR" },
+      { id: novoId(), categoria: "Fundos", nome: "Fundo Multimercado XP", tipoAtivo: "Fundo multimercado", emissor: "XP",
+        liquidez: "Sem liquidez diária", valorInvestido: 5000, valorAtual: 5210, quantidade: 3210.55, dataAplicacao: hoje(-90),
+        dataVencimento: "", indexador: "Não se aplica", taxaContratada: 0, isentoIR: false, obs: "" }
     ];
 
     d.acoes = [

@@ -46,6 +46,127 @@
       .sort(function (a, b) { return b.valor - a.valor; });
   }
 
+
+  // ---------------------------------------------------------------------
+  // RENDA FIXA — campos detalhados e imposto de renda
+  //
+  // Tabela regressiva do IR sobre o lucro (CDB, Tesouro, fundos comuns):
+  //   até 180 dias .......... 22,5%
+  //   de 181 a 360 dias ..... 20,0%
+  //   de 361 a 720 dias ..... 17,5%
+  //   acima de 720 dias ..... 15,0%
+  // LCI, LCA, CRI, CRA, debênture incentivada e poupança são isentos.
+  // (O IOF dos primeiros 30 dias não é calculado aqui.)
+  // ---------------------------------------------------------------------
+  var ISENTOS = ["LCI", "LCA", "CRI", "CRA", "Debênture incentivada", "Poupança"];
+
+  function diasCorridos(inv) {
+    if (!inv || !inv.dataAplicacao) return 0;
+    var ini = new Date(inv.dataAplicacao + "T00:00:00");
+    var fim = new Date();
+    return Math.max(0, Math.round((fim - ini) / 86400000));
+  }
+
+  function diasAteVencimento(inv) {
+    if (!inv || !inv.dataVencimento) return null;
+    var venc = new Date(inv.dataVencimento + "T00:00:00");
+    var hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+    return Math.round((venc - hoje) / 86400000);
+  }
+
+  function ehIsento(inv) {
+    if (!inv) return false;
+    if (inv.isentoIR) return true;
+    return ISENTOS.indexOf(inv.tipoAtivo) > -1;
+  }
+
+  function aliquotaIR(inv) {
+    if (ehIsento(inv)) return 0;
+    var d = diasCorridos(inv);
+    if (d <= 180) return 22.5;
+    if (d <= 360) return 20;
+    if (d <= 720) return 17.5;
+    return 15;
+  }
+
+  function lucroInvestimento(inv) {
+    return Math.max(0, Number(inv.valorAtual || 0) - Number(inv.valorInvestido || 0));
+  }
+
+  function impostoInvestimento(inv) {
+    return lucroInvestimento(inv) * (aliquotaIR(inv) / 100);
+  }
+
+  function valorLiquidoInvestimento(inv) {
+    return Number(inv.valorAtual || 0) - impostoInvestimento(inv);
+  }
+
+  function rentabilidadeLiquida(inv) {
+    var aplicado = Number(inv.valorInvestido || 0);
+    if (aplicado <= 0) return 0;
+    return (valorLiquidoInvestimento(inv) / aplicado - 1) * 100;
+  }
+
+  // rentabilidade equivalente ao ano, útil para comparar aplicações de
+  // prazos diferentes
+  function rentabilidadeAnualizada(inv, liquida) {
+    var aplicado = Number(inv.valorInvestido || 0);
+    var d = diasCorridos(inv);
+    if (aplicado <= 0 || d < 30) return null;
+    var final = liquida ? valorLiquidoInvestimento(inv) : Number(inv.valorAtual || 0);
+    return (Math.pow(final / aplicado, 365 / d) - 1) * 100;
+  }
+
+  function precoUnitarioInvestimento(inv) {
+    var q = Number(inv.quantidade || 0);
+    return q > 0 ? Number(inv.valorInvestido || 0) / q : 0;
+  }
+  function precoAtualCota(inv) {
+    var q = Number(inv.quantidade || 0);
+    return q > 0 ? Number(inv.valorAtual || 0) / q : 0;
+  }
+
+  function listaInvestimentosComCalculo(d) {
+    return d.investimentos.map(function (inv) {
+      return Object.assign({}, inv, {
+        dias: diasCorridos(inv),
+        diasVenc: diasAteVencimento(inv),
+        aliquota: aliquotaIR(inv),
+        imposto: impostoInvestimento(inv),
+        liquido: valorLiquidoInvestimento(inv),
+        resultado: Number(inv.valorAtual || 0) - Number(inv.valorInvestido || 0),
+        rentBruta: rentabilidadeInvestimento(inv),
+        rentLiquida: rentabilidadeLiquida(inv),
+        rentAno: rentabilidadeAnualizada(inv, true),
+        pu: precoUnitarioInvestimento(inv),
+        puAtual: precoAtualCota(inv)
+      });
+    }).sort(function (a, b) { return b.valorAtual - a.valorAtual; });
+  }
+
+  function totaisInvestimentos(d) {
+    var t = { aplicado: 0, bruto: 0, imposto: 0, liquido: 0, resultado: 0 };
+    d.investimentos.forEach(function (inv) {
+      t.aplicado += Number(inv.valorInvestido || 0);
+      t.bruto += Number(inv.valorAtual || 0);
+      t.imposto += impostoInvestimento(inv);
+    });
+    t.liquido = t.bruto - t.imposto;
+    t.resultado = t.bruto - t.aplicado;
+    t.resultadoLiquido = t.liquido - t.aplicado;
+    t.rentBruta = t.aplicado > 0 ? (t.resultado / t.aplicado) * 100 : 0;
+    t.rentLiquida = t.aplicado > 0 ? (t.resultadoLiquido / t.aplicado) * 100 : 0;
+    return t;
+  }
+
+  // vencimentos próximos (para avisar o usuário)
+  function investimentosVencendoEm(d, dias) {
+    return d.investimentos.filter(function (inv) {
+      var v = diasAteVencimento(inv);
+      return v !== null && v >= 0 && v <= dias;
+    });
+  }
+
   // ---------------------------------------------------------------------
   // AÇÕES / FIIs / ETFs
   // ---------------------------------------------------------------------
@@ -178,6 +299,18 @@
   global.Investimentos = {
     resultadoInvestimento: resultadoInvestimento,
     rentabilidadeInvestimento: rentabilidadeInvestimento,
+    diasCorridos: diasCorridos,
+    diasAteVencimento: diasAteVencimento,
+    aliquotaIR: aliquotaIR,
+    ehIsento: ehIsento,
+    impostoInvestimento: impostoInvestimento,
+    valorLiquidoInvestimento: valorLiquidoInvestimento,
+    rentabilidadeLiquida: rentabilidadeLiquida,
+    rentabilidadeAnualizada: rentabilidadeAnualizada,
+    listaInvestimentosComCalculo: listaInvestimentosComCalculo,
+    totaisInvestimentos: totaisInvestimentos,
+    investimentosVencendoEm: investimentosVencendoEm,
+    ISENTOS: ISENTOS,
     totalInvestidoOutros: totalInvestidoOutros,
     totalAtualOutros: totalAtualOutros,
     investimentosPorCategoria: investimentosPorCategoria,
