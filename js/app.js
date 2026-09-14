@@ -2308,31 +2308,6 @@
             <button class="btn primario" data-acao="salvar-cotacoes">Salvar e buscar agora</button>
             ${dolar ? `<span class="dim" style="margin-left:12px;font-size:12px">Dólar agora: <b class="acc-laranja">R$ ${dolar.valor.toFixed(2).replace(".", ",")}</b></span>` : ""}
           </div>`)}</div>
-        <div class="c6">${card("", "Dados de demonstração", "", "", d.demo ? `
-          <div class="body pad">
-            <p style="font-size:13px;color:var(--dim);margin-top:0">Você ainda está vendo os dados fictícios de exemplo.</p>
-            <button class="btn perigo" data-acao="remover-demo">Apagar exemplo e começar do zero</button>
-          </div>` : `
-          <div class="body pad">
-            <p style="font-size:13px;color:var(--dim);margin-top:0">Você já está usando seus próprios dados.</p>
-            <button class="btn" data-acao="recarregar-demo">Recarregar dados de exemplo${temDadosReais ? " (substitui os atuais)" : ""}</button>
-          </div>`)}</div>
-
-        <div class="c6">${card("", "Segurança e privacidade", "", "", `
-          <div class="body pad" style="font-size:12.5px;color:var(--dim);line-height:1.7">
-            Este programa nunca pede nem armazena senha bancária, senha de cartão, token de acesso, código de autenticação
-            ou número completo de cartão. Todos os dados ficam salvos apenas no armazenamento local do seu navegador —
-            nada é enviado para nenhum servidor.
-          </div>
-        `)}</div>
-        <div class="c6">${card("", "Sobre e próximos passos", "Muller Mendes · versão " + VERSAO_APP, "", `
-          <div class="body pad" style="font-size:12.5px;color:var(--dim);line-height:1.8">
-            Esta primeira versão funciona 100% offline, sem assinatura e sem servidor. A arquitetura já foi pensada para,
-            no futuro, receber: integração com Open Finance, atualização automática de cotações, importação automática
-            de extratos bancários, análise inteligente das suas finanças, recomendações financeiras, aplicativo desktop,
-            banco de dados local mais robusto e autenticação local.
-          </div>
-        `)}</div>
         <div class="c6"><div class="card" style="border-color:rgba(255,84,104,.3)">
           <header><div><h2 class="down">Zona de risco</h2><div class="sub">esta ação não pode ser desfeita</div></div></header>
           <div class="body pad"><button class="btn perigo" data-acao="apagar-tudo">Apagar todos os dados</button></div>
