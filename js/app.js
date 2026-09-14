@@ -1667,12 +1667,6 @@
     return `
       ${aviso}
       <div class="grid g-top">
-        <div class="c3">${metricCard("Valor aplicado", brl(t.aplicado), ICONES.investimento, "var(--cy)", "", `${lista.length} aplicação(ões)`)}</div>
-        <div class="c3">${metricCard("Bruto atual", brl(t.bruto), ICONES.investimento, "var(--vi)", "", `resultado ${brlSinal(t.resultado)}`)}</div>
-        <div class="c3">${metricCard("Imposto estimado", brl(t.imposto), ICONES.saida, "var(--down)", "", "tabela regressiva do IR")}</div>
-        <div class="c3">${metricCard("Total líquido", brl(t.liquido), ICONES.resultado, "var(--up)", "", `${pct(t.rentLiquida)} líquido sobre o aplicado`)}</div>
-      </div>
-      <div class="grid">
         <div class="c12">${card("", "Investimentos", "renda fixa, tesouro, fundos e cripto · clique numa linha para ver o detalhe",
           `<button class="btn primario" data-acao="novo-investimento"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>Novo investimento</button>`,
           corpo,
