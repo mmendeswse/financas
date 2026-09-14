@@ -138,7 +138,7 @@
     instancias[canvasId] = new Chart(ctx, {
       type: "line",
       data: {
-        labels: historico.map(function (p) { return new Date(p.data + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }).replace(".", ""); }),
+        labels: historico.map(function (p) { return new Date(p.data + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }); }),
         datasets: [{
           label: "Patrimônio líquido",
           data: historico.map(function (p) { return p.valor; }),
@@ -192,7 +192,7 @@
     }
     instancias[canvasId] = new Chart(ctx, {
       type: "line",
-      data: { labels: historicoPrecos.map(function (p) { return new Date(p.data + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }).replace(".", ""); }), datasets: datasets },
+      data: { labels: historicoPrecos.map(function (p) { return new Date(p.data + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }); }), datasets: datasets },
       options: {
         responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
         scales: { x: eixoX({ ticks: { color: CORES.texto, font: fonte(10.5), maxTicksLimit: 6 } }), y: eixoY({ ticks: { color: CORES.texto, font: fonte(10.5), callback: function (v) { return "R$ " + v.toFixed(2); } } }) },
@@ -267,7 +267,7 @@
     var rot = [], val = [];
     for (var i = 1; i < historicoPrecos.length; i++) {
       var ant = historicoPrecos[i - 1].preco, at = historicoPrecos[i].preco;
-      rot.push(new Date(historicoPrecos[i].data + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }).replace(".", ""));
+      rot.push(new Date(historicoPrecos[i].data + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }));
       val.push(ant > 0 ? ((at / ant) - 1) * 100 : 0);
     }
     instancias[canvasId] = new Chart(ctx, {
@@ -303,7 +303,7 @@
     }
     instancias[canvasId] = new Chart(ctx, {
       type: "line",
-      data: { labels: historico.map(function (p) { return new Date(p.data + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }).replace(".", ""); }), datasets: datasets },
+      data: { labels: historico.map(function (p) { return new Date(p.data + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }); }), datasets: datasets },
       options: {
         responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
         scales: { x: eixoX({ ticks: { color: CORES.texto, font: fonte(10.5), maxTicksLimit: 6 } }), y: eixoY() },

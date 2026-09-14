@@ -63,8 +63,10 @@
   const brlSinal = (v) => { const n = Number(v) || 0; return (n > 0 ? "+" : n < 0 ? "−" : "") + fmtBRL.format(Math.abs(n)); };
   const pct = (v) => { const n = Number(v) || 0; return (n > 0 ? "+" : n < 0 ? "−" : "") + Math.abs(n).toFixed(1).replace(".", ",") + "%"; };
   const corSinal = (v) => (Number(v) >= 0 ? "up" : "down");
-  const fmtData = (iso) => !iso ? "—" : new Date(iso + "T00:00:00").toLocaleDateString("pt-BR");
-  const fmtDataCurta = (iso) => !iso ? "—" : new Date(iso + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+  // todas as datas do sistema no formato dia/mês/ano (ex.: 03/04/2026)
+  const OPCOES_DATA = { day: "2-digit", month: "2-digit", year: "numeric" };
+  const fmtData = (iso) => !iso ? "—" : new Date(iso + "T00:00:00").toLocaleDateString("pt-BR", OPCOES_DATA);
+  const fmtDataCurta = fmtData;
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   function numIn(v) {
     if (typeof v === "number") return v;
@@ -885,7 +887,7 @@
     const tick = () => {
       const agora = new Date();
       if (rel) rel.textContent = agora.toLocaleTimeString("pt-BR");
-      if (dataEl) dataEl.textContent = agora.toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "short", year: "numeric" }).replace(/\./g, "");
+      if (dataEl) dataEl.textContent = agora.toLocaleDateString("pt-BR", OPCOES_DATA);
     };
     tick();
     setInterval(tick, 1000);
@@ -1672,10 +1674,10 @@
     return `
       ${aviso}
       <div class="grid g-top">
-        <div class="c12">${card("", "Investimentos", "renda fixa, tesouro, fundos e cripto · clique numa linha para ver o detalhe",
+        <div class="c12">${card("", "Investimentos", "renda fixa, tesouro, fundos e cripto",
           `<button class="btn primario" data-acao="novo-investimento"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>Novo investimento</button>`,
           corpo,
-          `<span class="dim">Valor total dos investimentos</span><span class="creme" style="font-size:14px">${brl(t.bruto)} <span class="dim" style="font-size:12px">· líquido ${brl(t.liquido)}</span></span>`)}</div>
+          `<span class="dim">Valor total líquido</span><span class="creme" style="font-size:14px">${brl(t.liquido)}</span>`)}</div>
       </div>
     `;
   }
@@ -1942,7 +1944,7 @@
 
     return `
       <div class="grid g-top">
-        <div class="c12">${card("", "Painel de ativos", (configCotacoes().auto ? '<span class="selo-tag selo-acao">cotação automática · brapi.dev</span>' : '<span class="selo-tag selo-cat">preço atualizado manualmente</span>') + ' · clique em uma linha para ver o detalhe',
+        <div class="c12">${card("", "Painel de ativos", (configCotacoes().auto ? '<span class="selo-tag selo-acao">cotação automática · brapi.dev</span>' : '<span class="selo-tag selo-cat">preço atualizado manualmente</span>'),
           `<div class="dolar-pill" id="dolarTopbar" title="Dólar comercial (AwesomeAPI)" style="display:none"></div>
            <button class="btn" data-acao="buscar-cotacoes" title="Buscar cotações na internet agora">↻ Buscar cotações</button>
            <button class="btn ${editandoPrecos ? "primario" : ""}" data-acao="alternar-edicao-precos">${editandoPrecos ? "Concluir edição" : "Editar manualmente"}</button>
