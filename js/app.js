@@ -54,7 +54,6 @@
   let relPersonalizadoIni = null;
   let relPersonalizadoFim = null;
   let demoBannerOculto = false;
-  let importacaoExcel = null; // { linhas, colunas, mapeamento }
 
   // =========================================================================
   // FORMATAÇÃO
@@ -345,38 +344,6 @@
     });
   }
 
-
-  // ---------------------------------------------------------------------
-  // IMPORTAR CARTEIRA (.json) — acrescenta investimentos e ações aos
-  // dados já existentes, sem apagar nada. Usado para trazer a posição de
-  // um extrato de custódia já organizado.
-  // ---------------------------------------------------------------------
-  function importarCarteira(arquivo) {
-    const leitor = new FileReader();
-    leitor.onload = () => {
-      let obj;
-      try { obj = JSON.parse(leitor.result); }
-      catch (e) { toast("Arquivo inválido: não é um JSON."); return; }
-      const invs = Array.isArray(obj.investimentos) ? obj.investimentos : [];
-      const acs = Array.isArray(obj.acoes) ? obj.acoes : [];
-      if (!invs.length && !acs.length) { toast("O arquivo não tem investimentos nem ações."); return; }
-      const resumo = `${invs.length} investimento(s) e ${acs.length} ativo(s) de bolsa serão ACRESCENTADOS aos seus dados atuais. Nada será apagado. Continuar?`;
-      if (!window.confirm(resumo)) return;
-      invs.forEach((i) => DADOS.investimentos.push(Object.assign({
-        id: A.novoId(), categoria: "Renda fixa", quantidade: 0, isentoIR: false, obs: ""
-      }, i, { id: A.novoId() })));
-      acs.forEach((a) => {
-        const preco = Number(a.precoAtual || 0);
-        DADOS.acoes.push(Object.assign({
-          id: A.novoId(), categoria: "Ação", dividendos: 0, obs: "",
-          atualizadoEm: hojeISO(), historicoPrecos: preco > 0 ? [{ data: hojeISO(), preco }] : []
-        }, a, { id: A.novoId() }));
-      });
-      salvarEAtualizar(`Carteira importada: ${invs.length} investimento(s) e ${acs.length} ativo(s).`);
-    };
-    leitor.onerror = () => toast("Não consegui ler o arquivo.");
-    leitor.readAsText(arquivo);
-  }
 
   // =========================================================================
   // CICLO DE VIDA
@@ -2227,20 +2194,8 @@
           </div>
           <p class="campo ajuda" style="padding:0 16px 14px">Importar um backup substitui todos os dados atuais — o sistema pede confirmação antes de aplicar.</p>
         `)}</div>
-
-        <div class="c6">${card("", "Importar carteira (.json)", "acrescenta investimentos e ações sem apagar seus dados", "", `
-          <div class="body pad">
-            <button class="btn primario" data-acao="importar-carteira">Selecionar arquivo de carteira</button>
-            <p class="campo ajuda">Use um arquivo no formato <b>{"investimentos": [...], "acoes": [...]}</b>, como o gerado a partir de um extrato de custódia. Diferente do backup, esta opção <b>soma</b> ao que já existe.</p>
-          </div>`)}</div>
       </div>
       <div class="grid g-top">
-        <div class="c6">${card("", "Importar planilha Excel", "traga seus lançamentos de uma planilha .xlsx", "", `
-          <div class="body pad">
-            <button class="btn primario" data-acao="importar-excel">Selecionar arquivo .xlsx</button>
-            <p class="campo ajuda">Depois de escolher o arquivo, você vai indicar qual coluna da planilha corresponde a Data, Descrição, Categoria, Banco, Tipo e Valor. Nada é importado sem sua confirmação, e os dados que já existem no sistema não são apagados.</p>
-          </div>
-        `)}</div>
       </div>
 
       <div class="grid">
@@ -2308,115 +2263,6 @@
         </div></div>
       </div>
     `;
-  }
-
-  // ---------------------------------------------------------------------
-  // Importação de planilha Excel (SheetJS) — fluxo de 2 passos em modal
-  // ---------------------------------------------------------------------
-  function processarArquivoExcel(arquivo) {
-    const leitor = new FileReader();
-    leitor.onload = (e) => {
-      try {
-        const wb = XLSX.read(new Uint8Array(e.target.result), { type: "array" });
-        const primeira = wb.SheetNames[0];
-        const linhas = XLSX.utils.sheet_to_json(wb.Sheets[primeira], { header: 1, raw: false, defval: "" });
-        if (!linhas.length) { toast("Essa planilha parece estar vazia."); return; }
-        const cabecalho = linhas[0].map((c) => String(c || "").trim());
-        const dadosLinhas = linhas.slice(1).filter((l) => l.some((c) => String(c || "").trim() !== ""));
-        importacaoExcel = { cabecalho, linhas: dadosLinhas };
-        abrirModalMapeamentoExcel();
-      } catch (err) {
-        toast("Não consegui ler esse arquivo. Verifique se é um .xlsx válido.");
-      }
-    };
-    leitor.readAsArrayBuffer(arquivo);
-  }
-
-  function abrirModalMapeamentoExcel() {
-    const campos = [
-      { chave: "data", rotulo: "Data" }, { chave: "descricao", rotulo: "Descrição" },
-      { chave: "categoria", rotulo: "Categoria" }, { chave: "banco", rotulo: "Banco" },
-      { chave: "tipo", rotulo: "Tipo (entrada/despesa)" }, { chave: "valor", rotulo: "Valor" }
-    ];
-    const opcoesColuna = (i) => `<option value="">Não usar</option>` + importacaoExcel.cabecalho.map((c, idx) => `<option value="${idx}" ${idx === i ? "selected" : ""}>${esc(c || "Coluna " + (idx + 1))}</option>`).join("");
-    const chuteInicial = (chave) => importacaoExcel.cabecalho.findIndex((c) => c.toLowerCase().includes(chave));
-
-    abrirModal(`
-      <h3>Mapear colunas da planilha</h3>
-      <p class="campo ajuda">${importacaoExcel.linhas.length} linha(s) encontrada(s). Diga qual coluna da sua planilha corresponde a cada campo.</p>
-      ${campos.map((c) => `
-        <div class="campo"><label for="map_${c.chave}">${c.rotulo}</label>
-          <select id="map_${c.chave}">${opcoesColuna(chuteInicial(c.chave.slice(0, 4)))}</select>
-        </div>`).join("")}
-      <div class="modal-acoes"><button class="btn primario salvar" id="btnPrever">Pré-visualizar</button></div>
-      <div id="previaImportacao"></div>
-    `, true);
-
-    document.getElementById("btnPrever").onclick = () => {
-      const mapeamento = {};
-      ["data", "descricao", "categoria", "banco", "tipo", "valor"].forEach((k) => {
-        const v = document.getElementById("map_" + k).value;
-        mapeamento[k] = v === "" ? -1 : Number(v);
-      });
-      if (mapeamento.descricao === -1 || mapeamento.valor === -1) { toast("Pelo menos Descrição e Valor precisam de uma coluna."); return; }
-      importacaoExcel.mapeamento = mapeamento;
-      const previa = montarPreviaImportacao();
-      document.getElementById("previaImportacao").innerHTML = `
-        <div class="sechead">PRÉ-VISUALIZAÇÃO (5 primeiras)</div>
-        <div class="tabela-scroll">${previa.tabela}</div>
-        <p class="campo ajuda">${previa.entradas} serão importadas como entrada e ${previa.despesas} como despesa, de um total de ${importacaoExcel.linhas.length} linha(s).</p>
-        <div class="modal-acoes"><button class="btn primario salvar" id="btnConfirmarImportacao">Importar ${importacaoExcel.linhas.length} lançamento(s)</button></div>
-      `;
-      document.getElementById("btnConfirmarImportacao").onclick = confirmarImportacaoExcel;
-    };
-  }
-
-  function interpretarLinhaExcel(linha, mapeamento) {
-    const pega = (chave) => (mapeamento[chave] >= 0 ? linha[mapeamento[chave]] : "");
-    const descricao = String(pega("descricao") || "").trim();
-    let valor = numIn(pega("valor"));
-    const tipoTxt = String(pega("tipo") || "").toLowerCase();
-    let tipo = "entrada";
-    if (/despesa|sa[íi]da|d[ée]bito/.test(tipoTxt)) tipo = "despesa";
-    else if (/entrada|receita|cr[ée]dito/.test(tipoTxt)) tipo = "entrada";
-    else tipo = valor < 0 ? "despesa" : "entrada";
-    valor = Math.abs(valor);
-    let dataTxt = String(pega("data") || "").trim();
-    let data = hojeISO();
-    const m1 = dataTxt.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
-    const m2 = dataTxt.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
-    if (m2) data = `${m2[1]}-${m2[2].padStart(2, "0")}-${m2[3].padStart(2, "0")}`;
-    else if (m1) { let ano = m1[3].length === 2 ? "20" + m1[3] : m1[3]; data = `${ano}-${m1[2].padStart(2, "0")}-${m1[1].padStart(2, "0")}`; }
-    const categoria = String(pega("categoria") || "Outros").trim() || "Outros";
-    const nomeBancoTxt = String(pega("banco") || "").trim();
-    const bancoAchado = DADOS.bancos.find((b) => b.nome.toLowerCase() === nomeBancoTxt.toLowerCase());
-    return { data, descricao, categoria, valor, tipo, bancoId: bancoAchado ? bancoAchado.id : "", bancoTexto: nomeBancoTxt };
-  }
-
-  function montarPreviaImportacao() {
-    const linhas = importacaoExcel.linhas.map((l) => interpretarLinhaExcel(l, importacaoExcel.mapeamento));
-    const entradas = linhas.filter((l) => l.tipo === "entrada").length;
-    const despesas = linhas.length - entradas;
-    const amostra = linhas.slice(0, 5);
-    const grid = "grid-template-columns:90px 1fr 100px 90px 90px";
-    let tabela = `<div style="min-width:520px"><div class="hd" style="${grid}"><i>Data</i><i>Descrição</i><i>Categoria</i><i class="r">Tipo</i><i class="r">Valor</i></div>`;
-    tabela += amostra.map((l) => `<div class="rw" style="${grid}"><div class="dim" style="font-size:12px">${fmtDataCurta(l.data)}</div><div class="nm">${esc(l.descricao)}${l.bancoTexto && !l.bancoId ? ` <span class="dim" style="font-size:11px">(banco "${esc(l.bancoTexto)}" não encontrado)</span>` : ""}</div><div class="dim" style="font-size:12px">${esc(l.categoria)}</div><div class="r"><span class="selo-tag ${l.tipo === "entrada" ? "selo-pago" : "selo-cat"}">${l.tipo}</span></div><div class="r big ${l.tipo === "entrada" ? "up" : "down"}">${brl(l.valor)}</div></div>`).join("");
-    tabela += `</div>`;
-    return { tabela, entradas, despesas };
-  }
-
-  function confirmarImportacaoExcel() {
-    const linhas = importacaoExcel.linhas.map((l) => interpretarLinhaExcel(l, importacaoExcel.mapeamento));
-    if (!window.confirm(`Isso vai adicionar ${linhas.length} lançamento(s) aos seus dados atuais, sem apagar nada. Deseja continuar?`)) return;
-    let entradas = 0, despesas = 0;
-    linhas.forEach((l) => {
-      const base = { id: A.novoId(), data: l.data, descricao: l.descricao || "Importado da planilha", categoria: l.categoria, valor: l.valor, obs: "Importado via Excel" };
-      if (l.tipo === "entrada") { DADOS.entradas.push({ ...base, bancoId: l.bancoId, tipo: "Variável", recorrencia: FREQUENCIAS[0], recorrente: false }); entradas++; }
-      else { DADOS.despesas.push({ ...base, bancoId: l.bancoId, cartaoId: "", formaPagamento: "Outro", recorrencia: FREQUENCIAS[0], recorrente: false }); despesas++; }
-    });
-    importacaoExcel = null;
-    fecharModal();
-    salvarEAtualizar(`Importação concluída: ${entradas} entrada(s) e ${despesas} despesa(s).`);
   }
 
   // =========================================================================
@@ -2591,8 +2437,6 @@
         case "abrir-pasta-banco": A.abrirPastaBanco(); break;
         case "exportar-backup": A.exportarDados(); toast("Backup exportado — verifique seus downloads."); break;
         case "importar-backup": document.getElementById("inputImportarBackup").click(); break;
-        case "importar-excel": document.getElementById("inputImportarExcel").click(); break;
-        case "importar-carteira": document.getElementById("inputImportarCarteira").click(); break;
 
         case "apagar-tudo":
           confirmarExclusao("Isso vai apagar TODOS os seus dados permanentemente. Essa ação não pode ser desfeita. Deseja continuar?", () => {
@@ -2642,19 +2486,6 @@
         .catch((err) => toast(err.message));
     });
 
-    const inpCart = document.getElementById("inputImportarCarteira");
-    if (inpCart) inpCart.addEventListener("change", (e) => {
-      const arquivo = e.target.files[0];
-      e.target.value = "";
-      if (arquivo) importarCarteira(arquivo);
-    });
-
-    document.getElementById("inputImportarExcel").addEventListener("change", (e) => {
-      const arquivo = e.target.files[0];
-      e.target.value = "";
-      if (!arquivo) return;
-      processarArquivoExcel(arquivo);
-    });
   }
 
   // =========================================================================
