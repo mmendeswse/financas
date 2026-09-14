@@ -49,7 +49,9 @@
   let DADOS = null;
   let ROTA = { secao: "dashboard", param: null };
   let editandoPrecos = false;
-  let periodoGrafico = "tudo";   // período mostrado no gráfico do ativo
+  let periodoGrafico = "tudo";
+  let mesesRD = 6;        // meses no gráfico receitas x despesas
+  let mesesEvo = 12;      // meses no gráfico de evolução patrimonial   // período mostrado no gráfico do ativo
   let filtrosHistorico = { periodo: "3m", banco: "", categoria: "", tipo: "todos", busca: "", ordenarPor: "data", ordemAsc: false };
   let periodoRelatorio = "este-mes";
   let relPersonalizadoIni = null;
@@ -821,10 +823,10 @@
   }
 
   function stripKpis(itens) {
-    return `<div class="strip">` + itens.map((i) => `<div class="strip-item">
+    return `<div class="strip">` + itens.map((i) => `<${i.chave ? "button" : "div"} class="strip-item${i.chave ? " clicavel" : ""}"${i.chave ? ` data-acao="explicar-strip" data-chave="${i.chave}" title="Ver detalhes"` : ""}>
       <span class="strip-ic" style="color:${i.cor};background:${i.cor}1F"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${i.icone}</svg></span>
       <div><div class="strip-rotulo">${i.rotulo}</div><div class="strip-valor">${i.valor}</div><div class="strip-sub">${i.sub || ""}</div></div>
-    </div>`).join("") + `</div>`;
+    </${i.chave ? "button" : "div"}>`).join("") + `</div>`;
   }
 
   // ticker de cotações (faixa persistente abaixo da topbar)
@@ -1094,6 +1096,78 @@
       "metas");
   }
 
+
+  function explicarStrip(chave) {
+    const d = DADOS;
+    const mes = F.mesAtual();
+    const entradas = F.totalEntradasMes(d, mes), despesas = F.totalDespesasMes(d, mes);
+    const hoje = new Date(), dia = hoje.getDate();
+    const diasNoMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).getDate();
+    const linha = (r, v, c) => `<div class="kv"><span class="dim">${r}</span><b class="${c || ""}">${v}</b></div>`;
+
+    if (chave === "poupanca") {
+      const sobra = entradas - despesas;
+      const taxa = entradas > 0 ? (sobra / entradas) * 100 : 0;
+      painelSimples("Taxa de poupança", taxa, "das receitas do mês sobraram", "(receitas − despesas) ÷ receitas",
+        linha("Receitas do mês", brl(entradas), "up") + linha("− Despesas do mês", brl(despesas), "down") +
+        linha("= Sobra", brlSinal(sobra), corSinal(sobra)) +
+        linha("Referência saudável", "20% ou mais"), "entradas");
+      return;
+    }
+    if (chave === "projecao") {
+      const mediaDia = dia > 0 ? despesas / dia : 0;
+      const projecao = mediaDia * diasNoMes;
+      let soma = 0, meses = 0;
+      for (let i = 1; i <= 3; i++) {
+        const dt = new Date(); dt.setMonth(dt.getMonth() - i);
+        const t = F.totalDespesasMes(d, dt.toISOString().slice(0, 7));
+        if (t > 0) { soma += t; meses++; }
+      }
+      const media3 = meses ? soma / meses : 0;
+      const dif = media3 > 0 ? ((projecao - media3) / media3) * 100 : 0;
+      painelSimples("Projeção de despesas", dif, "acima (ou abaixo) da sua média dos últimos meses",
+        "(gasto até hoje ÷ dias corridos) × dias do mês",
+        linha("Gasto até hoje", brl(despesas), "down") + linha("Dias corridos do mês", `${dia} de ${diasNoMes}`) +
+        linha("Média por dia", brl(mediaDia)) + linha("= Projeção para o mês", brl(projecao), "down") +
+        linha("Média dos últimos 3 meses", media3 > 0 ? brl(media3) : "sem histórico"), "despesas");
+      return;
+    }
+    if (chave === "maiorgasto") {
+      const maior = F.maiorDespesa(d, mes);
+      if (!maior) { toast("Nenhuma despesa lançada neste mês."); return; }
+      painelSimples("Maior gasto do mês", despesas > 0 ? (Number(maior.valor) / despesas) * 100 : 0,
+        "do total gasto no mês veio deste lançamento", "maior valor entre as despesas do mês",
+        linha("Descrição", esc(maior.descricao)) + linha("Valor", brl(maior.valor), "down") +
+        linha("Categoria", esc(maior.categoria || "—")) + linha("Data", fmtData(maior.data)) +
+        linha("Total gasto no mês", brl(despesas)), "despesas");
+      return;
+    }
+    if (chave === "melhorativo") {
+      const lista = I.listaAcoesComCalculo(d);
+      if (!lista.length) { toast("Nenhum ativo cadastrado."); return; }
+      const a = lista.reduce((x, y) => (x.rentabilidade >= y.rentabilidade ? x : y));
+      painelSimples(`${esc(a.ticker)} · melhor ativo`, a.rentabilidade, "de rentabilidade sobre o preço médio",
+        "(preço atual ÷ preço médio − 1) × 100",
+        linha("Empresa", esc(a.empresa || "—")) + linha("Quantidade", String(a.quantidade)) +
+        linha("Preço médio", brl(a.precoMedio)) + linha("Preço atual", brl(a.precoAtual)) +
+        linha("Valor investido", brl(a.valorInvestido)) + linha("Valor atual", brl(a.valorAtual)) +
+        linha("Resultado", brlSinal(a.resultado), corSinal(a.resultado)), "acoes");
+      return;
+    }
+    if (chave === "avencer") {
+      const vencendo = F.contasVencendoEm(d, 7).filter((c) => c.statusReal !== "Pago");
+      const total = vencendo.reduce((sm, c) => sm + Number(c.valor || 0), 0);
+      const saldo = F.totalBancos(d);
+      painelSimples("Contas a vencer em 7 dias", saldo > 0 ? (total / saldo) * 100 : 0,
+        "do seu saldo em bancos está comprometido", "soma das contas com vencimento nos próximos 7 dias",
+        (vencendo.length
+          ? vencendo.map((c) => linha(esc(c.descricao) + " · " + fmtData(c.vencimento), brl(c.valor), c.statusReal === "Atrasado" ? "down" : "")).join("")
+          : linha("Nenhuma conta nos próximos 7 dias", "—")) +
+        linha("= Total a pagar", brl(total), "down") + linha("Saldo em bancos", brl(saldo), "up"), "despesas");
+      return;
+    }
+  }
+
   // =========================================================================
   // DASHBOARD
   // =========================================================================
@@ -1158,20 +1232,20 @@
             </div>
             <div class="legenda">${legendaComp}</div>
           </div>`)}</div>
-        <div class="c3">${card("", "Receitas x despesas", "últimos 6 meses", "", `<div style="padding:8px 14px 12px;height:236px"><canvas id="graf-receitas-despesas"></canvas></div>`)}</div>
+        <div class="c3">${card("", "Receitas x despesas", `últimos ${mesesRD} meses`, abasMeses("periodo-rd", mesesRD, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }]), `<div style="padding:8px 14px 12px;height:236px"><canvas id="graf-receitas-despesas"></canvas></div>`)}</div>
         <div class="c3">${card("", "Metas", "progresso dos seus objetivos", `<button class="btn pequeno" data-acao="ir" data-secao="metas">ver todas →</button>`, metasMini(d))}</div>
       </div>
 
       <div class="grid">
-        <div class="c12">${card("", "Evolução patrimonial", "patrimônio líquido por mês", pico ? `<span class="pill-pico">PICO ${brl(pico)}</span>` : "", `<div style="padding:8px 14px 12px;height:236px"><canvas id="graf-evolucao"></canvas></div>`)}</div>
+        <div class="c12">${card("", "Evolução patrimonial", "patrimônio líquido por mês", abasMeses("periodo-evo", mesesEvo, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }, { meses: 0, rotulo: "Tudo" }]) + (pico ? `<span class="pill-pico">PICO ${brl(pico)}</span>` : ""), `<div style="padding:8px 14px 12px;height:236px"><canvas id="graf-evolucao"></canvas></div>`)}</div>
       </div>
 
       ${stripKpis([
-        { rotulo: "TAXA DE POUPANÇA", valor: taxaPoupanca.toFixed(1).replace(".", ",") + "%", sub: `Resultado: ${brlSinal(resultadoMes)}`, cor: "#22E39A", icone: ICONES.resultado },
-        { rotulo: "PROJEÇÃO DE DESPESAS", valor: brl(projecao), sub: `no ritmo atual, até o fim do mês`, cor: "#FF7A1A", icone: ICONES.saida },
-        { rotulo: "MAIOR GASTO DO MÊS", valor: maiorDesp ? brl(maiorDesp.valor) : "—", sub: maiorDesp ? esc(maiorDesp.descricao) : "sem despesas", cor: "#FF4D7A", icone: ICONES.saida },
-        { rotulo: "MELHOR ATIVO", valor: melhor ? esc(melhor.ticker) : "—", sub: melhor ? `<b class="${corSinal(melhor.rentabilidade)}">${pct(melhor.rentabilidade)}</b> desde o preço médio` : "sem ativos", cor: "#FFC233", icone: ICONES.investimento },
-        { rotulo: "CONTAS A VENCER (7 DIAS)", valor: brl(totalVencendo), sub: `${vencendo.length} conta(s) pendente(s)`, cor: "#2F8BFF", icone: ICONES.banco }
+        { rotulo: "TAXA DE POUPANÇA", valor: taxaPoupanca.toFixed(1).replace(".", ",") + "%", sub: `Resultado: ${brlSinal(resultadoMes)}`, cor: "#22E39A", icone: ICONES.resultado, chave: "poupanca" },
+        { rotulo: "PROJEÇÃO DE DESPESAS", valor: brl(projecao), sub: `no ritmo atual, até o fim do mês`, cor: "#FF7A1A", icone: ICONES.saida, chave: "projecao" },
+        { rotulo: "MAIOR GASTO DO MÊS", valor: maiorDesp ? brl(maiorDesp.valor) : "—", sub: maiorDesp ? esc(maiorDesp.descricao) : "sem despesas", cor: "#FF4D7A", icone: ICONES.saida, chave: "maiorgasto" },
+        { rotulo: "MELHOR ATIVO", valor: melhor ? esc(melhor.ticker) : "—", sub: melhor ? `<b class="${corSinal(melhor.rentabilidade)}">${pct(melhor.rentabilidade)}</b> desde o preço médio` : "sem ativos", cor: "#FFC233", icone: ICONES.investimento, chave: "melhorativo" },
+        { rotulo: "CONTAS A VENCER (7 DIAS)", valor: brl(totalVencendo), sub: `${vencendo.length} conta(s) pendente(s)`, cor: "#2F8BFF", icone: ICONES.banco, chave: "avencer" }
       ])}
 
     `;
@@ -1449,28 +1523,26 @@
     // sair (contas a pagar), com o status de cada linha
     const lancadas = d.despesas.map((x) => ({
       origem: "despesa", id: x.id, descricao: x.descricao, categoria: x.categoria,
-      pagoCom: x.cartaoId ? "💳 " + nomeCartao(d, x.cartaoId) : F.nomeBanco(d, x.bancoId),
       data: x.data, status: "Pago", valor: Number(x.valor || 0), recorrencia: freqDe(x)
     }));
     const previstas = F.listaContasPagarComStatus(d).map((c) => ({
       origem: "conta", id: c.id, descricao: c.descricao, categoria: c.categoria,
-      pagoCom: "—", data: c.vencimento, status: c.statusReal, valor: Number(c.valor || 0), recorrencia: ""
+      data: c.vencimento, status: c.statusReal, valor: Number(c.valor || 0), recorrencia: ""
     }));
     const lista = [...lancadas, ...previstas].sort((a, b) => (b.data || "").localeCompare(a.data || ""));
 
     const totalMes = F.totalDespesasMes(d);
     const aPagar = F.totalAPagar(d);
-    const grid = "grid-template-columns:minmax(0,1fr) 150px 110px 112px 168px";
+    const grid = "grid-template-columns:minmax(0,1fr) 120px 112px 168px";
 
     let corpo;
     if (!lista.length) {
       corpo = `<div class="empty">Nada lançado ainda. Use "+ Nova despesa" para um gasto já feito, ou "+ Conta a pagar" para algo que ainda vai vencer.</div>`;
     } else {
-      corpo = `<div class="hd" style="${grid}"><i>Descrição</i><i>Pago com</i><i class="r">Data</i><i class="r">Status</i><i class="r hd-valor">Valor</i></div>` +
+      corpo = `<div class="hd" style="${grid}"><i>Descrição</i><i class="r">Data</i><i class="r">Status</i><i class="r hd-valor">Valor</i></div>` +
         lista.map((x) => `
         <div class="rw" style="${grid}">
           <div><div class="nm">${esc(x.descricao)}${x.recorrencia && x.recorrencia !== FREQUENCIAS[0] ? ` <span class="selo-tag selo-cat">${esc(x.recorrencia.toLowerCase())}</span>` : ""}</div><div class="sub">${esc(x.categoria || "—")}</div></div>
-          <div class="dim celula-texto">${esc(x.pagoCom)}</div>
           <div class="r dim" style="font-size:12px">${fmtData(x.data)}</div>
           <div class="r">${x.origem === "conta"
             ? `<button class="selo-tag selo-${x.status.toLowerCase()} selo-botao" data-acao="alternar-pago" data-id="${x.id}" title="Marcar como paga">${x.status}</button>`
@@ -1485,9 +1557,8 @@
 
     return `
       <div class="grid g-top">
-        <div class="c12">${card("c12", "Despesas e contas a pagar", `pagas no mês: ${brl(totalMes)} · em aberto: ${brl(aPagar)}`,
-          `<button class="btn" data-acao="nova-conta"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>Conta a pagar</button>
-           <button class="btn primario" data-acao="nova-despesa"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>Nova despesa</button>`,
+        <div class="c12">${card("c12", "Despesas", `pagas no mês: ${brl(totalMes)} · em aberto: ${brl(aPagar)}`,
+          `<button class="btn primario" data-acao="nova-despesa"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>Nova despesa</button>`,
           corpo)}</div>
       </div>
     `;
@@ -2259,6 +2330,11 @@
     return filtrado.length >= 2 ? filtrado : (historico || []);
   }
 
+  function abasMeses(acao, atual, opcoes) {
+    return `<div class="abas abas-periodo">${opcoes.map((op) =>
+      `<button class="${atual === op.meses ? "ativo" : ""}" data-acao="${acao}" data-meses="${op.meses}">${op.rotulo}</button>`).join("")}</div>`;
+  }
+
   function abasPeriodo() {
     return `<div class="abas abas-periodo">${PERIODOS_GRAFICO.map((op) =>
       `<button class="${periodoGrafico === op.chave ? "ativo" : ""}" data-acao="periodo-grafico" data-periodo="${op.chave}">${op.rotulo}</button>`).join("")}</div>`;
@@ -2564,10 +2640,16 @@
     const d = DADOS;
     switch (ROTA.secao) {
       case "dashboard": {
-        const hist = d.historicoPatrimonio;
+        let hist = d.historicoPatrimonio;
+        if (mesesEvo > 0) {
+          const corte = new Date(); corte.setMonth(corte.getMonth() - mesesEvo);
+          const limite = corte.toISOString().slice(0, 10);
+          const filtrado = hist.filter((h) => h.data >= limite);
+          if (filtrado.length >= 2) hist = filtrado;
+        }
         if (hist.length >= 2) G.renderEvolucaoPatrimonio("graf-evolucao", hist);
         else G.destruir("graf-evolucao");
-        G.renderReceitasDespesas("graf-receitas-despesas", F.serieMensal(d, 6));
+        G.renderReceitasDespesas("graf-receitas-despesas", F.serieMensal(d, mesesRD));
         if (itensPatrimonio(d).length) G.renderDoughnutGenerico("graf-dash-composicao", itensPatrimonio(d), { semLegenda: true });
         break;
       }
@@ -2661,6 +2743,9 @@
         case "explicar-banco": explicarBanco(id); break;
         case "explicar-classe": explicarClasse(b.dataset.rotulo); break;
         case "explicar-meta": explicarMeta(id); break;
+        case "explicar-strip": explicarStrip(b.dataset.chave); break;
+        case "periodo-rd": mesesRD = Number(b.dataset.meses); renderRota(); break;
+        case "periodo-evo": mesesEvo = Number(b.dataset.meses); renderRota(); break;
         case "periodo-grafico": periodoGrafico = b.dataset.periodo; renderRota(); break;
         case "novo-preco-acao": abrirModalNovoPreco(id); break;
         case "novo-valor-investimento": abrirModalNovoValor(id); break;

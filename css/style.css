@@ -945,3 +945,14 @@ table.tab-investimentos th.col-contratada, table.tab-investimentos td.col-contra
 .seletor-titulo { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); font-weight: 700; }
 .seletor-direita { margin-left: auto; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 @media (max-width: 760px) { .seletor-direita { margin-left: 0; width: 100%; justify-content: flex-start; } }
+
+/* linhas do resumo com a mesma altura (a última ficava maior) */
+.card > .body > .kv, .card .kv { min-height: 38px; align-items: center; box-sizing: border-box; }
+.card > .body { align-self: stretch; }
+
+/* faixa de indicadores clicável */
+.strip-item.clicavel { cursor: pointer; font: inherit; color: inherit; text-align: left; background: none; }
+.strip-item.clicavel:hover { background: var(--painel-2); }
+
+/* abas de período dentro do cabeçalho dos gráficos */
+.card header .abas-periodo { margin-right: 0; }
