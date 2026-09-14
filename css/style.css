@@ -886,3 +886,11 @@ table.terminal td .cel-up, table.terminal td .cel-down { color: #fff !important;
 /* aviso de vencimento com botão de dispensar */
 .faixa-demo .fechar { background: none; border: none; color: var(--dim); font-size: 18px; line-height: 1; padding: 4px 8px; border-radius: 6px; flex: none; }
 .faixa-demo .fechar:hover { color: var(--texto); background: rgba(255,255,255,.06); }
+
+/* tabela de investimentos: as três últimas colunas (rentabilidade bruta,
+   líquida e equivalente ao ano) ficam ocultas — os dados continuam no
+   sistema e aparecem no detalhe de cada aplicação */
+table.tab-investimentos thead th:nth-last-child(-n+3),
+table.tab-investimentos tbody td:nth-last-child(-n+3),
+table.tab-investimentos tfoot td:nth-last-child(-n+3) { display: none; }
+table.tab-investimentos { min-width: 1080px; }

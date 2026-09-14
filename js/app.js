@@ -887,7 +887,7 @@
     const tick = () => {
       const agora = new Date();
       if (rel) rel.textContent = agora.toLocaleTimeString("pt-BR");
-      if (dataEl) dataEl.textContent = agora.toLocaleDateString("pt-BR", OPCOES_DATA);
+      if (dataEl) dataEl.textContent = agora.toLocaleDateString("pt-BR", { weekday: "short", day: "numeric", month: "short", year: "numeric" }).replace(/\./g, "");
     };
     tick();
     setInterval(tick, 1000);
@@ -988,7 +988,7 @@
       </div>
 
       <div class="grid">
-        <div class="c12">${card("", "Evolução patrimonial", "patrimônio líquido, últimos 30 registros", pico ? `<span class="pill-pico">PICO ${brl(pico)}</span>` : "", `<div style="padding:8px 14px 12px;height:236px"><canvas id="graf-evolucao"></canvas></div>`)}</div>
+        <div class="c12">${card("", "Evolução patrimonial", "patrimônio líquido por mês", pico ? `<span class="pill-pico">PICO ${brl(pico)}</span>` : "", `<div style="padding:8px 14px 12px;height:236px"><canvas id="graf-evolucao"></canvas></div>`)}</div>
       </div>
 
       ${stripKpis([
@@ -1625,7 +1625,7 @@
     } else {
       const linhas = lista.map((inv) => `
         <tr data-acao="ir" data-secao="detalhe-investimento" data-id="${inv.id}">
-          <td class="papel">${esc(inv.nome)}<small>${esc(inv.tipoAtivo || inv.categoria)}${inv.emissor ? " · " + esc(inv.emissor) : ""}</small></td>
+          <td class="papel">${esc(inv.nome)}<small>${esc(inv.tipoAtivo || inv.categoria)}</small></td>
           <td>${esc(inv.indexador || "—")}${inv.taxaContratada ? " " + f2(inv.taxaContratada) + "%" : ""}</td>
           <td class="r">${fmtDataCurta(inv.dataAplicacao)}</td>
           <td class="r">${inv.dataVencimento ? fmtDataCurta(inv.dataVencimento) : "—"}</td>
@@ -1641,7 +1641,7 @@
           <td class="r ${corSinal(inv.rentLiquida)}">${pct(inv.rentLiquida)}</td>
           <td class="r ${inv.rentAno === null ? "dim" : corSinal(inv.rentAno)}">${inv.rentAno === null ? "—" : pct(inv.rentAno)}</td>
         </tr>`).join("");
-      corpo = `<div class="terminal-scroll"><table class="terminal">
+      corpo = `<div class="terminal-scroll"><table class="terminal tab-investimentos">
         <thead><tr>
           <th>Ativo</th><th>Rentab. contratada</th><th class="r">Aplicação</th><th class="r">Vencimento</th><th class="r">Faltam</th>
           <th class="r">Cotas</th><th class="r">Valor aplicado</th><th class="r">Bruto atual</th><th class="r">Resultado</th>
@@ -1677,7 +1677,7 @@
         <div class="c12">${card("", "Investimentos", "renda fixa, tesouro, fundos e cripto",
           `<button class="btn primario" data-acao="novo-investimento"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>Novo investimento</button>`,
           corpo,
-          `<span class="dim">Valor total líquido</span><span class="creme" style="font-size:14px">${brl(t.liquido)}</span>`)}</div>
+          `<span class="dim">Valor total líquido</span><b class="creme" style="font-size:14px;font-weight:800">${brl(t.liquido)}</b>`)}</div>
       </div>
     `;
   }
@@ -1950,7 +1950,7 @@
            <button class="btn ${editandoPrecos ? "primario" : ""}" data-acao="alternar-edicao-precos">${editandoPrecos ? "Concluir edição" : "Editar manualmente"}</button>
            <button class="btn primario" data-acao="novo-ativo"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>Novo ativo</button>`,
           corpo,
-          `<span class="dim">Valor total da carteira</span><span style="font-size:14px" class="creme">${brl(I.totalCarteiraAcoes(d))}</span>`)}</div>
+          `<span class="dim">Valor total da carteira</span><b class="creme" style="font-size:14px;font-weight:800">${brl(I.totalCarteiraAcoes(d))}</b>`)}</div>
       </div>
     `;
   }
@@ -2262,10 +2262,10 @@
         <div class="c3">${metricCard("Rentabilidade da carteira", pct(I.rentabilidadeCarteiraAcoes(d)), ICONES.investimento, "var(--vi)", "", "acumulada, desde o preço médio")}</div>
       </div>
       <div class="grid">
-        <div class="c12">${card("", "Evolução patrimonial", "no período selecionado", "", historicoP.length >= 2 ? `<div style="padding:10px 16px;height:220px"><canvas id="graf-rel-evolucao"></canvas></div>` : `<div class="empty">Ainda não há histórico suficiente para este período.</div>`)}</div>
+        <div class="c12">${card("", "Receitas x despesas", "por mês, no período", "", `<div style="padding:10px 16px;height:220px"><canvas id="graf-rel-mensal"></canvas></div>`)}</div>
       </div>
       <div class="grid">
-        <div class="c12">${card("", "Receitas x despesas", "por mês, no período", "", `<div style="padding:10px 16px;height:220px"><canvas id="graf-rel-mensal"></canvas></div>`)}</div>
+        <div class="c12">${card("", "Evolução patrimonial", "no período selecionado", "", historicoP.length >= 2 ? `<div style="padding:10px 16px;height:220px"><canvas id="graf-rel-evolucao"></canvas></div>` : `<div class="empty">Ainda não há histórico suficiente para este período.</div>`)}</div>
       </div>
     `;
   }
@@ -2285,11 +2285,6 @@
           </div>
           <p class="campo ajuda" style="padding:0 16px 14px">Importar um backup substitui todos os dados atuais — o sistema pede confirmação antes de aplicar.</p>
         `)}</div>
-      </div>
-      <div class="grid g-top">
-      </div>
-
-      <div class="grid">
         <div class="c6">${card("", "Senha de acesso", "protege o sistema neste aparelho", "", `
           <div class="body pad">
             ${window.Bloqueio && Bloqueio.ativo() ? `
@@ -2305,8 +2300,6 @@
             `}
             <p class="campo ajuda" style="margin-top:12px">A senha vale só neste aparelho e não é sincronizada. Ela impede o acesso casual, mas não embaralha os dados guardados: quem souber mexer no navegador ainda consegue lê-los. Se esquecer a senha, será preciso limpar os dados do site e restaurar um backup.</p>
           </div>`)}</div>
-      </div>
-      <div class="grid">
         <div class="c6">${card("", "Cotações automáticas", "dólar via AwesomeAPI (sem chave) · ações via brapi.dev", "", `
           <div class="body pad">
             <label class="chk-linha"><input type="checkbox" id="cfgCotacoesAuto" ${configCotacoes().auto ? "checked" : ""}> Buscar cotações automaticamente ao abrir o sistema e a cada 5 minutos</label>
@@ -2315,8 +2308,6 @@
             <button class="btn primario" data-acao="salvar-cotacoes">Salvar e buscar agora</button>
             ${dolar ? `<span class="dim" style="margin-left:12px;font-size:12px">Dólar agora: <b class="acc-laranja">R$ ${dolar.valor.toFixed(2).replace(".", ",")}</b></span>` : ""}
           </div>`)}</div>
-      </div>
-      <div class="grid">
         <div class="c6">${card("", "Dados de demonstração", "", "", d.demo ? `
           <div class="body pad">
             <p style="font-size:13px;color:var(--dim);margin-top:0">Você ainda está vendo os dados fictícios de exemplo.</p>
@@ -2334,9 +2325,6 @@
             nada é enviado para nenhum servidor.
           </div>
         `)}</div>
-      </div>
-
-      <div class="grid">
         <div class="c6">${card("", "Sobre e próximos passos", "Muller Mendes · versão " + VERSAO_APP, "", `
           <div class="body pad" style="font-size:12.5px;color:var(--dim);line-height:1.8">
             Esta primeira versão funciona 100% offline, sem assinatura e sem servidor. A arquitetura já foi pensada para,
@@ -2345,9 +2333,6 @@
             banco de dados local mais robusto e autenticação local.
           </div>
         `)}</div>
-      </div>
-
-      <div class="grid">
         <div class="c6"><div class="card" style="border-color:rgba(255,84,104,.3)">
           <header><div><h2 class="down">Zona de risco</h2><div class="sub">esta ação não pode ser desfeita</div></div></header>
           <div class="body pad"><button class="btn perigo" data-acao="apagar-tudo">Apagar todos os dados</button></div>
@@ -2370,7 +2355,7 @@
     const d = DADOS;
     switch (ROTA.secao) {
       case "dashboard": {
-        const hist = d.historicoPatrimonio.slice(-30);
+        const hist = d.historicoPatrimonio;
         if (hist.length >= 2) G.renderEvolucaoPatrimonio("graf-evolucao", hist);
         else G.destruir("graf-evolucao");
         G.renderReceitasDespesas("graf-receitas-despesas", F.serieMensal(d, 6));

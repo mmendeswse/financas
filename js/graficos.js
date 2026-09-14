@@ -130,27 +130,49 @@
   // ---------------------------------------------------------------------
   // Evolução do patrimônio (linha laranja com área e pontos brancos)
   // ---------------------------------------------------------------------
+  // agrupa a série por mês, ficando com o último valor de cada mês, para
+  // o eixo mostrar "abr, mai, jun…" como no gráfico de receitas x despesas
+  function porMes(historico) {
+    var mapa = {};
+    historico.forEach(function (p) {
+      var chave = String(p.data).slice(0, 7);
+      if (!mapa[chave] || p.data >= mapa[chave].data) mapa[chave] = p;
+    });
+    return Object.keys(mapa).sort().map(function (k) { return mapa[k]; });
+  }
+
+  function rotuloMes(dataISO) {
+    var d = new Date(dataISO + "T00:00:00");
+    return d.toLocaleDateString("pt-BR", { month: "short" }).replace(".", "");
+  }
+
   function renderEvolucaoPatrimonio(canvasId, historico) {
     destruir(canvasId);
     var ctx = ctxOf(canvasId); if (!ctx) return;
-    var maxIdx = 0;
-    historico.forEach(function (p, i) { if (p.valor > historico[maxIdx].valor) maxIdx = i; });
+    var serie = porMes(historico);
+    // com menos de dois meses de registro, mantém os pontos originais
+    var porData = serie.length < 2;
+    if (porData) serie = historico;
     instancias[canvasId] = new Chart(ctx, {
       type: "line",
       data: {
-        labels: historico.map(function (p) { return new Date(p.data + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }); }),
+        labels: serie.map(function (p) {
+          return porData
+            ? new Date(p.data + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" })
+            : rotuloMes(p.data);
+        }),
         datasets: [{
           label: "Patrimônio líquido",
-          data: historico.map(function (p) { return p.valor; }),
+          data: serie.map(function (p) { return p.valor; }),
           borderColor: CORES.azul, backgroundColor: gradiente(ctx, CORES.azul, 240), fill: true, tension: 0.3,
-          borderWidth: 2.5, pointRadius: historico.length <= 14 ? 4 : 0, pointHoverRadius: 5,
+          borderWidth: 2.5, pointRadius: serie.length <= 14 ? 4 : 0, pointHoverRadius: 5,
           pointBackgroundColor: "#FFFFFF", pointBorderColor: CORES.azul, pointBorderWidth: 2
         }]
       },
       options: {
         responsive: true, maintainAspectRatio: false,
         interaction: { mode: "index", intersect: false },
-        scales: { x: eixoX({ ticks: { color: CORES.texto, font: fonte(10.5), maxTicksLimit: 8 } }), y: eixoY() },
+        scales: { x: eixoX({ ticks: { color: CORES.texto, font: fonte(10.5), maxTicksLimit: 12 } }), y: eixoY() },
         plugins: { legend: { display: false }, tooltip: tooltipPadrao({ callbacks: { label: function (c) { return " " + moeda(c.parsed.y); } } }) }
       }
     });
