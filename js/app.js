@@ -399,6 +399,7 @@
     historico: ["Histórico financeiro", "Todas as movimentações em um só lugar"],
     investimentos: ["Investimentos", "Renda fixa, tesouro, fundos e criptomoedas"],
     acoes: ["Ações", "Ações, FIIs e ETFs — preços atualizados manualmente"],
+    "detalhe-investimento": ["Detalhe da aplicação", "Histórico, imposto e rentabilidade"],
     "detalhe-acao": ["Detalhe do ativo", "Histórico e composição da posição"],
     carteira: ["Carteira de ações", "Composição e rentabilidade da carteira"],
     relatorios: ["Relatórios", "Análises por período"],
@@ -415,7 +416,7 @@
       dashboard: renderDashboard, financas: renderFinancas, bancos: renderBancos,
       entradas: renderEntradas, despesas: renderDespesas, cartoes: renderCartoes,
       contas: renderContasPagar, historico: renderHistorico, investimentos: renderInvestimentos,
-      acoes: renderAcoes, "detalhe-acao": renderDetalheAcao, carteira: renderCarteira,
+      acoes: renderAcoes, "detalhe-acao": renderDetalheAcao, "detalhe-investimento": renderDetalheInvestimento, carteira: renderCarteira,
       relatorios: renderRelatorios, metas: renderMetas, configuracoes: renderConfiguracoes
     };
     const fn = mapa[ROTA.secao] || renderDashboard;
@@ -1619,7 +1620,7 @@
       corpo = `<div class="empty">Nenhum investimento cadastrado ainda. Ações, FIIs e ETFs têm sua própria área — use aqui para renda fixa, tesouro, fundos e cripto.</div>`;
     } else {
       const linhas = lista.map((inv) => `
-        <tr data-acao="editar-investimento" data-id="${inv.id}">
+        <tr data-acao="ir" data-secao="detalhe-investimento" data-id="${inv.id}">
           <td class="papel">${esc(inv.nome)}<small>${esc(inv.tipoAtivo || inv.categoria)}${inv.emissor ? " · " + esc(inv.emissor) : ""}</small></td>
           <td>${esc(inv.indexador || "—")}${inv.taxaContratada ? " " + f2(inv.taxaContratada) + "%" : ""}</td>
           <td class="r">${fmtDataCurta(inv.dataAplicacao)}</td>
@@ -1672,7 +1673,7 @@
         <div class="c3">${metricCard("Total líquido", brl(t.liquido), ICONES.resultado, "var(--up)", "", `${pct(t.rentLiquida)} líquido sobre o aplicado`)}</div>
       </div>
       <div class="grid">
-        <div class="c12">${card("", "Investimentos", "renda fixa, tesouro, fundos e cripto · clique numa linha para editar",
+        <div class="c12">${card("", "Investimentos", "renda fixa, tesouro, fundos e cripto · clique numa linha para ver o detalhe",
           `<button class="btn primario" data-acao="novo-investimento"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>Novo investimento</button>`,
           corpo,
           `<span class="dim">Imposto calculado pela tabela regressiva; LCI, LCA, CRI, CRA e poupança entram como isentos. O IOF dos primeiros 30 dias não é considerado.</span>`)}</div>
@@ -1774,6 +1775,7 @@
         taxaContratada: numIn(document.getElementById("f_taxa").value),
         valorAtual: numIn(document.getElementById("f_va").value),
         isentoIR: document.getElementById("f_isento").checked,
+        historicoValores: adicionarPontoValor(inv ? inv.historicoValores : [], numIn(document.getElementById("f_va").value)),
         obs: document.getElementById("f_obs").value.trim()
       };
       if (inv) Object.assign(inv, registro); else DADOS.investimentos.push(registro);
@@ -1786,6 +1788,104 @@
         DADOS.investimentos = DADOS.investimentos.filter((r) => r.id !== inv.id);
         salvarEAtualizar("Investimento excluído.");
       });
+    };
+  }
+
+
+  // =========================================================================
+  // DETALHE DA APLICAÇÃO (mesma lógica da tela de detalhe das ações)
+  // =========================================================================
+  function adicionarPontoValor(historico, valor) {
+    const hist = (historico || []).slice();
+    const hj = hojeISO();
+    if (!(valor > 0)) return hist;
+    if (hist.length && hist[hist.length - 1].data === hj) hist[hist.length - 1].valor = valor;
+    else hist.push({ data: hj, valor });
+    if (hist.length > 400) hist.shift();
+    return hist;
+  }
+
+  function renderDetalheInvestimento(d, id) {
+    const inv = achar(d.investimentos, id);
+    if (!inv) return `<div class="empty">Aplicação não encontrada. <button class="link-acao" data-acao="ir" data-secao="investimentos">Voltar para Investimentos</button></div>`;
+
+    const dias = I.diasCorridos(inv);
+    const diasVenc = I.diasAteVencimento(inv);
+    const aliq = I.aliquotaIR(inv);
+    const imposto = I.impostoInvestimento(inv);
+    const liquido = I.valorLiquidoInvestimento(inv);
+    const resultado = Number(inv.valorAtual || 0) - Number(inv.valorInvestido || 0);
+    const rentBruta = I.rentabilidadeInvestimento(inv);
+    const rentLiq = I.rentabilidadeLiquida(inv);
+    const rentAno = I.rentabilidadeAnualizada(inv, true);
+    const hist = inv.historicoValores || [];
+    const valores = hist.map((p) => p.valor);
+    const min = valores.length ? Math.min(...valores) : Number(inv.valorAtual || 0);
+    const max = valores.length ? Math.max(...valores) : Number(inv.valorAtual || 0);
+    const f2 = (v) => Number(v || 0).toFixed(2).replace(".", ",");
+
+    const mini = `<div class="mini-paineis">
+      <div class="mini-painel"><small>VALOR APLICADO</small><b class="creme">${brl(inv.valorInvestido)}</b><span class="dim">${inv.quantidade ? f2(inv.quantidade) + " cotas" : "sem cotas"}</span></div>
+      <div class="mini-painel"><small>BRUTO ATUAL</small><b class="creme">${brl(inv.valorAtual)}</b><span class="${corSinal(resultado)}">${brlSinal(resultado)}</span></div>
+      <div class="mini-painel"><small>IMPOSTO (${aliq === 0 ? "isento" : f2(aliq) + "%"})</small><b class="down">${imposto > 0 ? "−" + brl(imposto) : brl(0)}</b><span class="dim">${dias} dias corridos</span></div>
+      <div class="mini-painel"><small>TOTAL LÍQUIDO</small><b class="up">${brl(liquido)}</b><span class="${corSinal(rentLiq)}">${pct(rentLiq)}</span></div>
+      <div class="mini-painel"><small>VENCIMENTO</small><b class="creme">${inv.dataVencimento ? fmtData(inv.dataVencimento) : "—"}</b><span class="${diasVenc !== null && diasVenc <= 30 ? "acc" : "dim"}">${diasVenc === null ? "sem vencimento" : diasVenc + " dias"}</span></div>
+    </div>`;
+
+    return `
+      <button class="voltar" data-acao="ir" data-secao="investimentos"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONES.voltar}</svg>Voltar para Investimentos</button>
+      ${mini}
+      <div class="grid g-top">
+        <div class="c8">${card("", `${esc(inv.nome)} <span class="selo-tag selo-acao">${esc(inv.tipoAtivo || inv.categoria)}</span>`,
+          `${esc(inv.emissor || "emissor não informado")} · ${esc(inv.liquidez || "liquidez não informada")}`,
+          `<button class="btn primario" data-acao="novo-valor-investimento" data-id="${inv.id}">Lançar novo valor</button><button class="btn" data-acao="editar-investimento" data-id="${inv.id}">Editar</button>`,
+          hist.length >= 2
+            ? `<div style="padding:10px 16px;height:280px"><canvas id="graf-valor-investimento"></canvas></div>`
+            : `<div class="empty">Ainda não há histórico suficiente para o gráfico.<br>Use "Lançar novo valor" sempre que consultar o saldo — cada lançamento vira um ponto na linha.</div>`)}</div>
+        <div class="c4">${card("", "Resumo da aplicação", "", "", `
+          <div class="kv"><span class="dim">Tipo do ativo</span><b>${esc(inv.tipoAtivo || "—")}</b></div>
+          <div class="kv"><span class="dim">Emissor</span><b>${esc(inv.emissor || "—")}</b></div>
+          <div class="kv"><span class="dim">Indexador</span><b>${esc(inv.indexador || "—")}${inv.taxaContratada ? " " + f2(inv.taxaContratada) + "%" : ""}</b></div>
+          <div class="kv"><span class="dim">Data da aplicação</span><b>${inv.dataAplicacao ? fmtData(inv.dataAplicacao) : "—"}</b></div>
+          <div class="kv"><span class="dim">Vencimento</span><b>${inv.dataVencimento ? fmtData(inv.dataVencimento) : "—"}</b></div>
+          <div class="kv"><span class="dim">Liquidez</span><b>${esc(inv.liquidez || "—")}</b></div>
+          <div class="kv"><span class="dim">Quantidade de cotas</span><b>${inv.quantidade ? f2(inv.quantidade) : "—"}</b></div>
+          <div class="kv"><span class="dim">Preço por cota (aplicação)</span><b>${inv.quantidade ? brl(inv.valorInvestido / inv.quantidade) : "—"}</b></div>
+          <div class="kv"><span class="dim">Preço por cota (hoje)</span><b>${inv.quantidade ? brl(inv.valorAtual / inv.quantidade) : "—"}</b></div>
+          <div class="kv"><span class="dim">Rentabilidade bruta</span><b class="${corSinal(rentBruta)}">${pct(rentBruta)}</b></div>
+          <div class="kv"><span class="dim">Rentabilidade líquida</span><b class="${corSinal(rentLiq)}">${pct(rentLiq)}</b></div>
+          <div class="kv"><span class="dim">Equivalente ao ano</span><b class="${rentAno === null ? "dim" : corSinal(rentAno)}">${rentAno === null ? "—" : pct(rentAno)}</b></div>
+          <div class="kv"><span class="dim">Menor valor registrado</span><b>${brl(min)}</b></div>
+          <div class="kv"><span class="dim">Maior valor registrado</span><b>${brl(max)}</b></div>
+        `)}</div>
+      </div>
+      ${inv.obs ? card("c12", "Observações", "", "", `<div style="padding:12px 16px;font-size:13px;color:var(--dim)">${esc(inv.obs)}</div>`) : ""}
+    `;
+  }
+
+  function abrirModalNovoValor(id) {
+    const inv = achar(DADOS.investimentos, id);
+    if (!inv) return;
+    abrirModal(`
+      <h3>Lançar novo valor — ${esc(inv.nome)}</h3>
+      <div class="par">
+        <div class="campo"><label for="f_data">Data</label><input id="f_data" type="date" value="${hojeISO()}"></div>
+        <div class="campo"><label for="f_valor">Valor bruto</label>${campoMoeda("f_valor", inv.valorAtual)}</div>
+      </div>
+      <p class="campo ajuda">Informe o saldo bruto que aparece hoje no extrato. O imposto e o valor líquido são recalculados automaticamente.</p>
+      <div class="modal-acoes"><button class="btn primario salvar" id="btnSalvar">Salvar</button></div>`);
+    document.getElementById("btnSalvar").onclick = () => {
+      const valor = numIn(document.getElementById("f_valor").value);
+      if (!(valor > 0)) { toast("Informe um valor maior que zero."); return; }
+      const data = document.getElementById("f_data").value || hojeISO();
+      const hist = (inv.historicoValores || []).slice();
+      const existente = hist.find((p) => p.data === data);
+      if (existente) existente.valor = valor; else hist.push({ data, valor });
+      hist.sort((a, b) => a.data.localeCompare(b.data));
+      inv.historicoValores = hist;
+      inv.valorAtual = valor;
+      fecharModal();
+      salvarEAtualizar("Valor lançado.");
     };
   }
 
@@ -2199,7 +2299,7 @@
       </div>
 
       <div class="grid">
-        <div class="c12">${card("", "Senha de acesso", "protege o sistema neste aparelho", "", `
+        <div class="c6">${card("", "Senha de acesso", "protege o sistema neste aparelho", "", `
           <div class="body pad">
             ${window.Bloqueio && Bloqueio.ativo() ? `
               <p style="margin-top:0;font-size:13px">Senha <b class="up">ativada</b>. Ela será pedida toda vez que o sistema abrir neste aparelho.</p>
@@ -2216,7 +2316,7 @@
           </div>`)}</div>
       </div>
       <div class="grid">
-        <div class="c12">${card("", "Cotações automáticas", "dólar via AwesomeAPI (sem chave) · ações via brapi.dev", "", `
+        <div class="c6">${card("", "Cotações automáticas", "dólar via AwesomeAPI (sem chave) · ações via brapi.dev", "", `
           <div class="body pad">
             <label class="chk-linha"><input type="checkbox" id="cfgCotacoesAuto" ${configCotacoes().auto ? "checked" : ""}> Buscar cotações automaticamente ao abrir o sistema e a cada 5 minutos</label>
             <div class="campo"><label for="cfgBrapiToken">Token da brapi.dev</label><input id="cfgBrapiToken" value="${esc(configCotacoes().token)}" placeholder="cole aqui outro token, se quiser">
@@ -2246,7 +2346,7 @@
       </div>
 
       <div class="grid">
-        <div class="c12">${card("", "Sobre e próximos passos", "Muller Mendes · versão " + VERSAO_APP, "", `
+        <div class="c6">${card("", "Sobre e próximos passos", "Muller Mendes · versão " + VERSAO_APP, "", `
           <div class="body pad" style="font-size:12.5px;color:var(--dim);line-height:1.8">
             Esta primeira versão funciona 100% offline, sem assinatura e sem servidor. A arquitetura já foi pensada para,
             no futuro, receber: integração com Open Finance, atualização automática de cotações, importação automática
@@ -2257,7 +2357,7 @@
       </div>
 
       <div class="grid">
-        <div class="c12"><div class="card" style="border-color:rgba(255,84,104,.3)">
+        <div class="c6"><div class="card" style="border-color:rgba(255,84,104,.3)">
           <header><div><h2 class="down">Zona de risco</h2><div class="sub">esta ação não pode ser desfeita</div></div></header>
           <div class="body pad"><button class="btn perigo" data-acao="apagar-tudo">Apagar todos os dados</button></div>
         </div></div>
@@ -2301,6 +2401,12 @@
         break;
       case "despesas": break;
       case "investimentos": break;
+      case "detalhe-investimento": {
+        const inv = achar(d.investimentos, ROTA.param);
+        const h = inv && inv.historicoValores ? inv.historicoValores : [];
+        if (h.length >= 2) G.renderEvolucaoValor("graf-valor-investimento", h, Number(inv.valorInvestido || 0), "Valor aplicado");
+        break;
+      }
       case "detalhe-acao": {
         const a = achar(d.acoes, ROTA.param);
         if (a && a.historicoPrecos.length) G.renderPrecoAcao("graf-preco-acao", a.historicoPrecos, a.precoMedio);
@@ -2367,6 +2473,7 @@
         case "novo-ativo": abrirModalAcao(null); break;
         case "editar-acao": abrirModalAcao(id); break;
         case "novo-preco-acao": abrirModalNovoPreco(id); break;
+        case "novo-valor-investimento": abrirModalNovoValor(id); break;
         case "buscar-cotacoes":
           if (!configCotacoes().auto) { toast("Ative as cotações automáticas em Configurações."); break; }
           toast("Buscando cotações…"); atualizarCotacoesAutomaticas(false); break;

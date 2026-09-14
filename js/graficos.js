@@ -257,6 +257,64 @@
     });
   }
 
+
+  // ---------------------------------------------------------------------
+  // Variação diária em barras verdes/vermelhas (detalhe da ação)
+  // ---------------------------------------------------------------------
+  function renderVariacaoDiaria(canvasId, historicoPrecos) {
+    destruir(canvasId);
+    var ctx = ctxOf(canvasId); if (!ctx) return;
+    var rot = [], val = [];
+    for (var i = 1; i < historicoPrecos.length; i++) {
+      var ant = historicoPrecos[i - 1].preco, at = historicoPrecos[i].preco;
+      rot.push(new Date(historicoPrecos[i].data + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }).replace(".", ""));
+      val.push(ant > 0 ? ((at / ant) - 1) * 100 : 0);
+    }
+    instancias[canvasId] = new Chart(ctx, {
+      type: "bar",
+      data: { labels: rot, datasets: [{ data: val, backgroundColor: val.map(function (v) { return v >= 0 ? CORES.up : CORES.down; }), borderRadius: 2, maxBarThickness: 14 }] },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        scales: { x: eixoX({ ticks: { color: CORES.texto, font: fonte(10), maxTicksLimit: 8 } }), y: eixoY({ ticks: { color: CORES.texto, font: fonte(10), callback: function (v) { return v.toFixed(1) + "%"; } } }) },
+        plugins: { legend: { display: false }, tooltip: tooltipPadrao({ callbacks: { label: function (c) { return " " + c.parsed.y.toFixed(2).replace(".", ",") + "%"; } } }) }
+      }
+    });
+  }
+
+  // ---------------------------------------------------------------------
+  // Evolução do valor de um investimento (detalhe da aplicação), com
+  // linha de referência no valor aplicado
+  // ---------------------------------------------------------------------
+  function renderEvolucaoValor(canvasId, historico, referencia, rotuloRef) {
+    destruir(canvasId);
+    var ctx = ctxOf(canvasId); if (!ctx) return;
+    var datasets = [{
+      label: "Valor bruto", data: historico.map(function (p) { return p.valor; }),
+      borderColor: CORES.azul, backgroundColor: gradiente(ctx, CORES.azul, 260), fill: true,
+      tension: 0.25, pointRadius: historico.length <= 14 ? 4 : 0, pointHoverRadius: 5,
+      pointBackgroundColor: "#FFFFFF", pointBorderColor: CORES.azul, pointBorderWidth: 2, borderWidth: 2
+    }];
+    if (referencia > 0) {
+      datasets.push({
+        label: rotuloRef || "Valor aplicado",
+        data: historico.map(function () { return referencia; }),
+        borderColor: CORES.laranja, borderDash: [5, 4], borderWidth: 1.5, pointRadius: 0, fill: false
+      });
+    }
+    instancias[canvasId] = new Chart(ctx, {
+      type: "line",
+      data: { labels: historico.map(function (p) { return new Date(p.data + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }).replace(".", ""); }), datasets: datasets },
+      options: {
+        responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
+        scales: { x: eixoX({ ticks: { color: CORES.texto, font: fonte(10.5), maxTicksLimit: 6 } }), y: eixoY() },
+        plugins: {
+          legend: { position: "top", align: "end", labels: { color: CORES.texto, font: fonte(10.5), boxWidth: 8, usePointStyle: true, pointStyle: "circle" } },
+          tooltip: tooltipPadrao({ callbacks: { label: function (c) { return " " + c.dataset.label + ": " + moeda(c.parsed.y); } } })
+        }
+      }
+    });
+  }
+
   global.Graficos = {
     CORES: CORES,
     PALETA_CATEGORIAS: PALETA_CATEGORIAS,
@@ -267,6 +325,8 @@
     renderSaldoBancos: renderSaldoBancos,
     renderPrecoAcao: renderPrecoAcao,
     renderLinhaMultipla: renderLinhaMultipla,
-    renderBarrasObjetivo: renderBarrasObjetivo
+    renderBarrasObjetivo: renderBarrasObjetivo,
+    renderVariacaoDiaria: renderVariacaoDiaria,
+    renderEvolucaoValor: renderEvolucaoValor
   };
 })(window);

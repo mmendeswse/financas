@@ -167,8 +167,25 @@
       { id: novoId(), nome: "Entrada do apartamento", objetivo: 60000, atual: 21000, prazo: hoje(540), cor: "#FFB020" }
     ];
 
+    d.investimentos.forEach(function (inv) {
+      inv.historicoValores = gerarHistoricoValor(inv.valorAtual, inv.valorInvestido, 6);
+    });
+
     d.historicoPatrimonio = gerarHistoricoPatrimonio(d);
     return d;
+  }
+
+  // série mensal do valor de um investimento, terminando no valor atual
+  function gerarHistoricoValor(valorAtual, valorAplicado, meses) {
+    var pontos = [];
+    for (var m = meses; m >= 0; m--) {
+      var t = 1 - m / meses;
+      var dt = new Date();
+      dt.setMonth(dt.getMonth() - m);
+      pontos.push({ data: dt.toISOString().slice(0, 10), valor: Number((valorAplicado + (valorAtual - valorAplicado) * t).toFixed(2)) });
+    }
+    pontos[pontos.length - 1].valor = valorAtual;
+    return pontos;
   }
 
   // gera uma série de preços com leve ruído terminando no preço atual —
