@@ -845,3 +845,21 @@ input, select, textarea,
 .previa-ir .kv { padding: 8px 14px; font-size: 12.5px; }
 .modal .sechead { margin: 18px 0 10px; }
 .modal .sechead:first-of-type { margin-top: 4px; }
+
+/* =======================================================================
+   BARRA DE GUIAS E FAIXA DE COTAÇÕES FIXAS NO TOPO AO ROLAR A PÁGINA
+   ======================================================================= */
+:root { --alt-barra: clamp(52px, 4.4vw, 72px); }
+.sidebar {
+  position: sticky; top: 0; z-index: 70;
+  min-height: var(--alt-barra); background: var(--bg);
+}
+.ticker-tape {
+  position: sticky; z-index: 66;
+  top: calc(var(--alt-barra) + env(safe-area-inset-top, 0px));
+}
+/* o conteúdo rola por baixo das duas faixas */
+.main, .scroll { overflow: visible; }
+
+/* iPad: a barra fixa começa abaixo do relógio/bateria */
+.sidebar { top: 0; padding-top: env(safe-area-inset-top); }
