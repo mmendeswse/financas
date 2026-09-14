@@ -49,6 +49,7 @@
   let DADOS = null;
   let ROTA = { secao: "dashboard", param: null };
   let editandoPrecos = false;
+  let periodoGrafico = "tudo";   // período mostrado no gráfico do ativo
   let filtrosHistorico = { periodo: "3m", banco: "", categoria: "", tipo: "todos", busca: "", ordenarPor: "data", ordemAsc: false };
   let periodoRelatorio = "este-mes";
   let relPersonalizadoIni = null;
@@ -604,25 +605,19 @@
   }
 
   function preencherNotificacoes() {
-    const alertas = gerarAlertas(DADOS);
-    const lidas = DADOS.notificacoesLidas || [];
+    const pendentes = alertasNaoLidos(DADOS);
     const el = document.getElementById("dropdownNotificacoes");
-    if (!alertas.length) {
-      el.innerHTML = '<div class="dropdown-vazio">Nenhum alerta no momento. Tudo em ordem.</div>';
+    if (!pendentes.length) {
+      el.innerHTML = '<div class="dropdown-vazio">Nenhum alerta pendente. Tudo em ordem.</div>';
       return;
     }
-    // os não lidos vêm primeiro
-    const ordenados = alertas.slice().sort((a, b) => (lidas.indexOf(chaveAlerta(a)) > -1 ? 1 : 0) - (lidas.indexOf(chaveAlerta(b)) > -1 ? 1 : 0));
-    el.innerHTML = ordenados.map((a) => {
-      const chave = chaveAlerta(a);
-      const lida = lidas.indexOf(chave) > -1;
-      return `<button class="dropdown-item${lida ? " lida" : ""}" data-chave="${esc(chave)}" data-secao="${esc(a.rota || "dashboard")}">
+    el.innerHTML = pendentes.map((a) => `
+      <button class="dropdown-item" data-chave="${esc(chaveAlerta(a))}" data-secao="${esc(a.rota || "dashboard")}">
         <span class="ic" style="background:${COR_ALERTA[a.tipo]}22;color:${COR_ALERTA[a.tipo]}">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${ICONE_ALERTA[a.tipo]}</svg>
         </span>
-        <p>${a.texto}${lida ? '<span class="marca-lida">lida</span>' : ""}</p>
-      </button>`;
-    }).join("");
+        <p>${a.texto}</p>
+      </button>`).join("");
   }
 
   // clicar num alerta: abre a tela correspondente e marca aquele como lido
@@ -710,6 +705,7 @@
         <button class="btn pequeno" data-acao="manter-demo">Continuar explorando</button>
         <button class="btn pequeno perigo" data-acao="remover-demo">Apagar exemplo e começar do zero</button>
       </div>
+      <button class="fechar" data-acao="manter-demo" title="Fechar este aviso" aria-label="Fechar aviso">×</button>
     </div>`;
   }
 
@@ -1464,8 +1460,10 @@
   function renderContasPagar(d) {
     const lista = F.listaContasPagarComStatus(d).sort((a, b) => (a.vencimento || "").localeCompare(b.vencimento || ""));
     const totalAberto = F.totalAPagar(d);
-    const atrasadas = F.contasAtrasadas(d);
-    const vencendo = F.contasVencendoEm(d, 7).filter((c) => c.statusReal === "Pendente");
+    const dispensadasAviso = (d.config && d.config.contasDispensadas) || [];
+    const chaveConta = (c) => c.id + ":" + (c.vencimento || "") + ":" + c.statusReal;
+    const atrasadas = F.contasAtrasadas(d).filter((c) => dispensadasAviso.indexOf(chaveConta(c)) === -1);
+    const vencendo = F.contasVencendoEm(d, 7).filter((c) => c.statusReal === "Pendente" && dispensadasAviso.indexOf(chaveConta(c)) === -1);
     const grid = "grid-template-columns:26px 1fr 120px 110px 100px";
 
     let corpo;
@@ -1491,6 +1489,7 @@
     if (atrasadas.length || vencendo.length) {
       avisos = `<div class="faixa-demo" style="border-color:rgba(255,176,32,.3)">
         <div>${atrasadas.length ? `<b class="down">${atrasadas.length} conta(s) atrasada(s)</b>` : ""}${atrasadas.length && vencendo.length ? " · " : ""}${vencendo.length ? `<b class="acc">${vencendo.length} vencendo nos próximos 7 dias</b>` : ""}</div>
+        <button class="fechar" data-acao="dispensar-contas" title="Não avisar mais sobre estas contas" aria-label="Dispensar aviso">×</button>
       </div>`;
     }
 
@@ -1654,9 +1653,9 @@
           <td class="r ${inv.diasVenc !== null && inv.diasVenc <= 30 ? "acc" : "dim"}">${inv.diasVenc === null ? "—" : inv.diasVenc + "d"}</td>
           <td class="r">${inv.quantidade ? f2(inv.quantidade) : "—"}</td>
           <td class="r creme">${brl(inv.valorInvestido)}</td>
-          <td class="r creme">${brl(inv.valorAtual)}</td>
           <td class="r ${corSinal(inv.resultado)}">${brlSinal(inv.resultado)}</td>
-          <td class="r dim">${inv.aliquota === 0 ? "isento" : f2(inv.aliquota) + "%"}</td>
+          <td class="r creme">${brl(inv.valorAtual)}</td>
+          <td class="r dim col-ir">${inv.aliquota === 0 ? "isento" : f2(inv.aliquota) + "%"}</td>
           <td class="r down">${inv.imposto > 0 ? "−" + brl(inv.imposto) : "—"}</td>
           <td class="r up">${brl(inv.liquido)}</td>
           <td class="r ${corSinal(inv.rentBruta)}">${pct(inv.rentBruta)}</td>
@@ -1666,17 +1665,17 @@
       corpo = `<div class="terminal-scroll"><table class="terminal tab-investimentos">
         <thead><tr>
           <th>Ativo</th><th>Rentab. contratada</th><th class="r">Aplicação</th><th class="r">Vencimento</th><th class="r">Faltam</th>
-          <th class="r">Cotas</th><th class="r">Valor aplicado</th><th class="r">Bruto atual</th><th class="r">Resultado</th>
-          <th class="r">IR</th><th class="r">Imposto</th><th class="r">Total líquido</th>
+          <th class="r">Cotas</th><th class="r">Valor aplicado</th><th class="r">Resultado</th><th class="r">Bruto atual</th>
+          <th class="r col-ir">IR</th><th class="r">Imposto</th><th class="r">Total líquido</th>
           <th class="r">Rent. bruta</th><th class="r">Rent. líquida</th><th class="r">Ao ano</th>
         </tr></thead>
         <tbody>${linhas}</tbody>
         <tfoot><tr>
           <td>TOTAL</td><td></td><td></td><td></td><td></td><td></td>
           <td class="r creme">${brl(t.aplicado)}</td>
-          <td class="r creme">${brl(t.bruto)}</td>
           <td class="r ${corSinal(t.resultado)}">${brlSinal(t.resultado)}</td>
-          <td></td>
+          <td class="r creme">${brl(t.bruto)}</td>
+          <td class="col-ir"></td>
           <td class="r down">${t.imposto > 0 ? "−" + brl(t.imposto) : "—"}</td>
           <td class="r up">${brl(t.liquido)}</td>
           <td class="r ${corSinal(t.rentBruta)}">${pct(t.rentBruta)}</td>
@@ -1854,7 +1853,7 @@
       <div class="grid g-top grid-detalhe">
         <div class="c8">${card("", `${esc(inv.nome)} <span class="selo-tag selo-acao">${esc(inv.tipoAtivo || inv.categoria)}</span>`,
           `${esc(inv.emissor || "emissor não informado")}${inv.indexador ? " · " + esc(inv.indexador) + (inv.taxaContratada ? " " + f2(inv.taxaContratada) + "%" : "") : ""}`,
-          `<button class="btn primario" data-acao="novo-valor-investimento" data-id="${inv.id}">Lançar novo valor</button><button class="btn" data-acao="editar-investimento" data-id="${inv.id}">Editar</button>`,
+          `${abasPeriodo()}<button class="btn primario" data-acao="novo-valor-investimento" data-id="${inv.id}">Lançar novo valor</button><button class="btn" data-acao="editar-investimento" data-id="${inv.id}">Editar</button>`,
           hist.length >= 2
             ? `<div style="padding:10px 16px;height:260px"><canvas id="graf-valor-investimento"></canvas></div>`
             : `<div class="empty">Ainda não há histórico suficiente para o gráfico.<br>Use "Lançar novo valor" sempre que consultar o saldo — cada lançamento vira um ponto na linha.</div>`)}</div>
@@ -2058,6 +2057,31 @@
   // =========================================================================
   // DETALHE DO ATIVO
   // =========================================================================
+  const PERIODOS_GRAFICO = [
+    { chave: "7d", rotulo: "7 dias", dias: 7 },
+    { chave: "30d", rotulo: "30 dias", dias: 30 },
+    { chave: "90d", rotulo: "3 meses", dias: 90 },
+    { chave: "180d", rotulo: "6 meses", dias: 180 },
+    { chave: "365d", rotulo: "1 ano", dias: 365 },
+    { chave: "tudo", rotulo: "Tudo", dias: null }
+  ];
+
+  function filtrarPeriodo(historico, chave) {
+    const op = PERIODOS_GRAFICO.find((x) => x.chave === chave);
+    if (!op || !op.dias) return historico || [];
+    const limite = new Date();
+    limite.setDate(limite.getDate() - op.dias);
+    const corte = limite.toISOString().slice(0, 10);
+    const filtrado = (historico || []).filter((p) => p.data >= corte);
+    // se o período escolhido não tiver pontos, mostra tudo em vez de um gráfico vazio
+    return filtrado.length >= 2 ? filtrado : (historico || []);
+  }
+
+  function abasPeriodo() {
+    return `<div class="abas abas-periodo">${PERIODOS_GRAFICO.map((op) =>
+      `<button class="${periodoGrafico === op.chave ? "ativo" : ""}" data-acao="periodo-grafico" data-periodo="${op.chave}">${op.rotulo}</button>`).join("")}</div>`;
+  }
+
   function renderDetalheAcao(d, id) {
     const a = achar(d.acoes, id);
     if (!a) return `<div class="empty">Ativo não encontrado. <button class="link-acao" data-acao="ir" data-secao="acoes">Voltar para Ações</button></div>`;
@@ -2069,7 +2093,7 @@
       <button class="voltar" data-acao="ir" data-secao="acoes"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONES.voltar}</svg>Voltar para Ações</button>
       <div class="grid g-top grid-detalhe">
         <div class="c8">${card("", `${esc(a.ticker)} <span class="selo-tag selo-${a.categoria.toLowerCase()}">${a.categoria}</span>`, esc(a.empresa),
-          `<button class="btn primario" data-acao="novo-preco-acao" data-id="${a.id}">Lançar novo preço</button><button class="btn" data-acao="editar-acao" data-id="${a.id}">Editar</button>`,
+          `${abasPeriodo()}<button class="btn primario" data-acao="novo-preco-acao" data-id="${a.id}">Lançar novo preço</button><button class="btn" data-acao="editar-acao" data-id="${a.id}">Editar</button>`,
           `<div style="padding:10px 16px;height:260px"><canvas id="graf-preco-acao"></canvas></div>`)}</div>
         <div class="c4">${card("", "Resumo da posição", "", "", `
           <div class="kv"><span class="dim">Quantidade</span><b>${a.quantidade}</b></div>
@@ -2377,12 +2401,12 @@
       case "detalhe-investimento": {
         const inv = achar(d.investimentos, ROTA.param);
         const h = inv && inv.historicoValores ? inv.historicoValores : [];
-        if (h.length >= 2) G.renderEvolucaoValor("graf-valor-investimento", h, Number(inv.valorInvestido || 0), "Valor aplicado");
+        if (h.length >= 2) G.renderEvolucaoValor("graf-valor-investimento", filtrarPeriodo(h, periodoGrafico), Number(inv.valorInvestido || 0), "Valor aplicado");
         break;
       }
       case "detalhe-acao": {
         const a = achar(d.acoes, ROTA.param);
-        if (a && a.historicoPrecos.length) G.renderPrecoAcao("graf-preco-acao", a.historicoPrecos, a.precoMedio);
+        if (a && a.historicoPrecos.length) G.renderPrecoAcao("graf-preco-acao", filtrarPeriodo(a.historicoPrecos, periodoGrafico), a.precoMedio);
         break;
       }
       case "carteira": {
@@ -2445,8 +2469,19 @@
 
         case "novo-ativo": abrirModalAcao(null); break;
         case "editar-acao": abrirModalAcao(id); break;
+        case "periodo-grafico": periodoGrafico = b.dataset.periodo; renderRota(); break;
         case "novo-preco-acao": abrirModalNovoPreco(id); break;
         case "novo-valor-investimento": abrirModalNovoValor(id); break;
+        case "dispensar-contas": {
+          DADOS.config = DADOS.config || {};
+          const jaDisp = DADOS.config.contasDispensadas || [];
+          const chaves = F.listaContasPagarComStatus(DADOS)
+            .filter((c) => c.statusReal !== "Pago")
+            .map((c) => c.id + ":" + (c.vencimento || "") + ":" + c.statusReal);
+          DADOS.config.contasDispensadas = [...new Set([...jaDisp, ...chaves])];
+          salvarEAtualizar("Aviso dispensado. Ele volta se o vencimento ou o status mudar.");
+          break;
+        }
         case "dispensar-vencimentos": {
           // guarda o par ativo+vencimento; se a data mudar, o aviso volta
           DADOS.config = DADOS.config || {};

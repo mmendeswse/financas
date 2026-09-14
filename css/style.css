@@ -900,3 +900,12 @@ table.tab-investimentos { min-width: 1080px; }
 .dropdown-item:hover { background: var(--painel-2); }
 .dropdown-item.lida { opacity: .55; }
 .dropdown-item .marca-lida { display: inline-block; margin-left: 8px; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); border: 1px solid var(--linha-2); border-radius: 20px; padding: 1px 7px; }
+
+/* coluna de alíquota de IR oculta (o valor do imposto continua visível) */
+table.tab-investimentos th.col-ir, table.tab-investimentos td.col-ir { display: none; }
+
+/* seletor de período do gráfico (7 dias, 30 dias, 3 meses…) */
+.abas-periodo { margin-right: 8px; }
+.abas-periodo button { padding: 6px 10px; font-size: 11.5px; }
+.abas-periodo button.ativo { background: rgba(0,229,255,.12); color: var(--cy); }
+@media (max-width: 760px) { .abas-periodo { order: 3; width: 100%; margin: 6px 0 0; justify-content: space-between; display: flex; } }
