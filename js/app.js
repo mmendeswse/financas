@@ -1296,7 +1296,7 @@
       </div>
 
       <div class="grid">
-        <div class="c3">${card("", "Saldo banco", "mapa alocação de ativos hoje", `<span class="acc-laranja" style="font-size:12px;font-weight:700">Total: ${brl(p.bancos)}</span>`, `<div class="body pad">${barList(bancos)}</div>`)}</div>
+        <div class="c3">${card("", "Saldo banco", "mapa ativos", `<span class="acc-laranja" style="font-size:12px;font-weight:700">Total: ${brl(p.bancos)}</span>`, `<div class="body pad">${barList(bancos)}</div>`)}</div>
         <div class="c3">${card("", "Composição patrimônio", "ativos brutos, antes das dívidas", `<span class="acc-laranja" style="font-size:12px;font-weight:700">Total: ${brl(totalComp)}</span>`, `
           <div class="donut-wrap">
             <div class="donut-centro"><canvas id="graf-dash-composicao" width="150" height="150" style="width:150px;height:150px"></canvas>
@@ -1305,11 +1305,11 @@
             <div class="legenda">${legendaComp}</div>
           </div>`)}</div>
         <div class="c3">${card("", "Receitas x despesas", `últimos ${mesesRD} meses`, abasMeses("periodo-rd", mesesRD, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }]), `<div style="padding:8px 14px 12px;height:236px"><canvas id="graf-receitas-despesas"></canvas></div>`)}</div>
-        <div class="c3">${card("", "Metas", "progressos objetivos", `<button class="btn pequeno" data-acao="ir" data-secao="metas">ver todas →</button>`, metasMini(d))}</div>
+        <div class="c3">${card("", "Metas", "progressos", `<button class="btn pequeno" data-acao="ir" data-secao="metas">ver todas →</button>`, metasMini(d))}</div>
       </div>
 
       <div class="grid">
-        <div class="c12">${card("", "Evolução patrimonial", "patrimônio líquido por mês", abasMeses("periodo-evo", mesesEvo, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }, { meses: 0, rotulo: "Tudo" }]) + (pico ? `<span class="pill-pico">PICO ${brl(pico)}</span>` : ""), `<div style="padding:8px 14px 12px;height:236px"><canvas id="graf-evolucao"></canvas></div>`)}</div>
+        <div class="c12">${card("", "Evolução patrimonial", "patrimônio líquido", (pico ? `<span class="pill-pico">PICO ${brl(pico)}</span>` : "") + abasMeses("periodo-evo", mesesEvo, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }, { meses: 0, rotulo: "Tudo" }]), `<div style="padding:8px 14px 12px;height:236px"><canvas id="graf-evolucao"></canvas></div>`)}</div>
       </div>
 
       ${stripKpis([
