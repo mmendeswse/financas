@@ -54,13 +54,14 @@
   let mesesEvo = 12;      // meses no gráfico de evolução patrimonial   // período mostrado no gráfico do ativo
   let filtrosHistorico = { periodo: "3m", banco: "", categoria: "", tipo: "todos", busca: "", ordenarPor: "data", ordemAsc: false };
   // cada quadro de relatório tem o seu próprio intervalo de datas
-  let mesesRel = 12;   // período dos dois quadros de relatório (sincronizado)
+  let mesesRelA = 12;   // período do quadro Receitas x despesas
+  let mesesRelB = 12;   // período do quadro Evolução patrimonial
 
   // intervalo correspondente ao período escolhido; 0 = todo o histórico
-  function intervaloRel() {
+  function intervaloRel(meses) {
     const fim = new Date().toISOString().slice(0, 10);
-    if (!mesesRel) return { ini: "0000-01-01", fim };
-    const d = new Date(); d.setMonth(d.getMonth() - (mesesRel - 1)); d.setDate(1);
+    if (!meses) return { ini: "0000-01-01", fim };
+    const d = new Date(); d.setMonth(d.getMonth() - (meses - 1)); d.setDate(1);
     return { ini: d.toISOString().slice(0, 10), fim };
   }
   let demoBannerOculto = false;
@@ -684,6 +685,22 @@
     return `<span class="variacao ${boa ? "pos" : "neg"}">${boa ? "▲" : "▼"} ${Math.abs(v).toFixed(1).replace(".", ",")}%</span> <span class="dim" style="font-size:11px">${rotulo || ""}</span>`;
   }
 
+
+  // ícones próprios dos indicadores do rodapé do dashboard, desenhados
+  // no mesmo traço (1.6) e na mesma caixa de 24x24 para ficarem uniformes
+  const ICONES_STRIP = {
+    // cofrinho: taxa de poupança
+    poupanca: '<path d="M3.5 12.5c0-3.6 3.4-6.5 7.5-6.5 1 0 2 .2 2.9.5l2.6-1.8v2.9c1.2.9 2.1 2 2.6 3.4h1.4v3.4h-1.7c-.4.7-1 1.4-1.7 1.9V19h-2.6v-1.3c-.5.1-1 .2-1.5.2H11c-.5 0-1-.1-1.5-.2V19H6.9v-2.7c-2-1-3.4-2.8-3.4-3.8z"/><circle cx="14.6" cy="11" r=".9" fill="currentColor" stroke="none"/><path d="M8 7.2c.3-1.4 1.6-2.4 3-2.2"/>',
+    // gráfico com seta de tendência: projeção de despesas
+    projecao: '<path d="M3.5 19.5h17"/><path d="M4 16.5l4.5-4.5 3.5 3 6-7"/><path d="M14.5 8h3.5v3.5"/><path d="M4 12.5v4M8.5 14v2.5M12 13v3.5M18 9.5v7" opacity=".45"/>',
+    // etiqueta de preço: maior gasto
+    maiorgasto: '<path d="M11.4 3.5H19a1.5 1.5 0 0 1 1.5 1.5v7.6c0 .4-.2.8-.4 1.1l-6.4 6.4a1.5 1.5 0 0 1-2.1 0l-7.2-7.2a1.5 1.5 0 0 1 0-2.1l6.4-6.4c.3-.3.7-.4 1.1-.4z"/><circle cx="16.2" cy="7.8" r="1.4"/>',
+    // troféu: melhor ativo
+    melhorativo: '<path d="M8 4h8v4.5a4 4 0 0 1-8 0V4z"/><path d="M8 5.5H5.5v1.2A3.3 3.3 0 0 0 8 9.8M16 5.5h2.5v1.2a3.3 3.3 0 0 1-2.5 3.1"/><path d="M12 12.5V16"/><path d="M8.5 20h7"/><path d="M9.8 20c0-1.3.9-2.3 2.2-2.3s2.2 1 2.2 2.3"/>',
+    // calendário com alerta: contas a vencer
+    avencer: '<rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 9.5h17"/><path d="M8 3.5v3M16 3.5v3"/><path d="M12 12.5V16"/><circle cx="12" cy="18.2" r=".8" fill="currentColor" stroke="none"/>'
+  };
+
   const ICONES = {
     patrimonio: '<path d="M3 6.2A2.2 2.2 0 0 1 5.2 4h8.6A2.2 2.2 0 0 1 16 6.2v1H6a2 2 0 0 0 0 4h10v2.6A2.2 2.2 0 0 1 13.8 16H5.2A2.2 2.2 0 0 1 3 13.8V6.2z"/><circle cx="12.6" cy="9.2" r=".9" fill="currentColor" stroke="none"/>',
     banco: '<path d="M3 8l7-4 7 4"/><path d="M4 8h12v1H4z"/><path d="M5 9v6M9 9v6M13 9v6"/><path d="M3 16h14"/>',
@@ -831,7 +848,7 @@
 
   function stripKpis(itens) {
     return `<div class="strip">` + itens.map((i) => `<${i.chave ? "button" : "div"} class="strip-item${i.chave ? " clicavel" : ""}"${i.chave ? ` data-acao="explicar-strip" data-chave="${i.chave}" title="Ver detalhes"` : ""}>
-      <span class="strip-ic" style="color:${i.cor};background:${i.cor}1F"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${i.icone}</svg></span>
+      <span class="strip-ic" style="color:${i.cor};background:${i.cor}1F"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${i.icone}</svg></span>
       <div><div class="strip-rotulo">${i.rotulo}</div><div class="strip-valor">${i.valor}</div><div class="strip-sub">${i.sub || ""}</div></div>
     </${i.chave ? "button" : "div"}>`).join("") + `</div>`;
   }
@@ -1223,11 +1240,11 @@
     return `
       ${faixaDemo(d)}
       <div class="kpi-row">
-        ${kpiCard("Patrimônio total", brl(p.liquido), pctLivre, "var(--laranja)", delta(F.variacaoPercentual(p.liquido, patrimonioAnt), "vs mês anterior"), `Dívidas: ${brl(p.dividas)}`, "patrimonio")}
+        ${kpiCard("Patrimônio líquido", brl(p.liquido), pctLivre, "var(--laranja)", delta(F.variacaoPercentual(p.liquido, patrimonioAnt), "vs mês anterior"), `Dívidas: ${brl(p.dividas)}`, "patrimonio")}
         ${kpiCard("Saldo bancário", brl(p.bancos), pctBancos, "var(--azul)", delta(pctBancos, "do patrimônio"), `${bancos.length} conta(s) cadastrada(s)`, "bancos")}
         ${kpiCard("Investimentos", brl(p.investimentos + p.acoes), pctInvestido, "var(--vi)", delta(rentCarteira, "rent. carteira"), `${pctInvestido.toFixed(0)}% do patrimônio investido`, "investido")}
-        ${kpiCard("Receitas do mês", brl(entradasMes), entradasMes + despesasMes > 0 ? (entradasMes / (entradasMes + despesasMes)) * 100 : 0, "var(--up)", delta(F.variacaoPercentual(entradasMes, entradasAnt), "vs mês anterior"), `Mês anterior: ${brl(entradasAnt)}`, "receitas")}
-        ${kpiCard("Despesas do mês", brl(despesasMes), pctDespesas, "var(--down)", delta(F.variacaoPercentual(despesasMes, despesasAnt), "vs mês anterior", true), `${pctDespesas.toFixed(0)}% das receitas`, "despesas")}
+        ${kpiCard("Receitas mês", brl(entradasMes), entradasMes + despesasMes > 0 ? (entradasMes / (entradasMes + despesasMes)) * 100 : 0, "var(--up)", delta(F.variacaoPercentual(entradasMes, entradasAnt), "vs mês anterior"), `Mês anterior: ${brl(entradasAnt)}`, "receitas")}
+        ${kpiCard("Despesas mês", brl(despesasMes), pctDespesas, "var(--down)", delta(F.variacaoPercentual(despesasMes, despesasAnt), "vs mês anterior", true), `${pctDespesas.toFixed(0)}% das receitas`, "despesas")}
       </div>
 
       <div class="grid">
@@ -1248,11 +1265,11 @@
       </div>
 
       ${stripKpis([
-        { rotulo: "TAXA DE POUPANÇA", valor: taxaPoupanca.toFixed(1).replace(".", ",") + "%", sub: `Resultado: ${brlSinal(resultadoMes)}`, cor: "#22E39A", icone: ICONES.resultado, chave: "poupanca" },
-        { rotulo: "PROJEÇÃO DE DESPESAS", valor: brl(projecao), sub: `no ritmo atual, até o fim do mês`, cor: "#FF7A1A", icone: ICONES.saida, chave: "projecao" },
-        { rotulo: "MAIOR GASTO DO MÊS", valor: maiorDesp ? brl(maiorDesp.valor) : "—", sub: maiorDesp ? esc(maiorDesp.descricao) : "sem despesas", cor: "#FF4D7A", icone: ICONES.saida, chave: "maiorgasto" },
-        { rotulo: "MELHOR ATIVO", valor: melhor ? esc(melhor.ticker) : "—", sub: melhor ? `<b class="${corSinal(melhor.rentabilidade)}">${pct(melhor.rentabilidade)}</b> desde o preço médio` : "sem ativos", cor: "#FFC233", icone: ICONES.investimento, chave: "melhorativo" },
-        { rotulo: "CONTAS A VENCER (7 DIAS)", valor: brl(totalVencendo), sub: `${vencendo.length} conta(s) pendente(s)`, cor: "#2F8BFF", icone: ICONES.banco, chave: "avencer" }
+        { rotulo: "TAXA DE POUPANÇA", valor: taxaPoupanca.toFixed(1).replace(".", ",") + "%", sub: `Resultado: ${brlSinal(resultadoMes)}`, cor: "#22E39A", icone: ICONES_STRIP.poupanca, chave: "poupanca" },
+        { rotulo: "PROJEÇÃO DESPESAS", valor: brl(projecao), sub: `no ritmo atual, até o fim do mês`, cor: "#FF7A1A", icone: ICONES_STRIP.projecao, chave: "projecao" },
+        { rotulo: "MAIOR GASTO", valor: maiorDesp ? brl(maiorDesp.valor) : "—", sub: maiorDesp ? esc(maiorDesp.descricao) : "sem despesas", cor: "#FF4D7A", icone: ICONES_STRIP.maiorgasto, chave: "maiorgasto" },
+        { rotulo: "MELHOR ATIVO", valor: melhor ? esc(melhor.ticker) : "—", sub: melhor ? `<b class="${corSinal(melhor.rentabilidade)}">${pct(melhor.rentabilidade)}</b> desde o preço médio` : "sem ativos", cor: "#FFC233", icone: ICONES_STRIP.melhorativo, chave: "melhorativo" },
+        { rotulo: "CONTAS A VENCER", valor: brl(totalVencendo), sub: `${vencendo.length} conta(s) nos próximos 7 dias`, cor: "#2F8BFF", icone: ICONES_STRIP.avencer, chave: "avencer" }
       ])}
 
     `;
@@ -2574,12 +2591,14 @@
   }
 
   function renderRelatorios(d) {
-    const { ini, fim } = intervaloRel();
-    const entradasP = d.entradas.filter((e) => e.data >= ini && e.data <= fim).reduce((s, e) => s + Number(e.valor), 0);
-    const despesasP = d.despesas.filter((x) => x.data >= ini && x.data <= fim).reduce((s, x) => s + Number(x.valor), 0);
-    const historicoP = d.historicoPatrimonio.filter((h) => h.data >= ini && h.data <= fim);
+    const fxA = intervaloRel(mesesRelA);   // quadro receitas x despesas
+    const fxB = intervaloRel(mesesRelB);   // quadro evolução patrimonial
+    const entradasP = d.entradas.filter((e) => e.data >= fxA.ini && e.data <= fxA.fim).reduce((s, e) => s + Number(e.valor), 0);
+    const despesasP = d.despesas.filter((x) => x.data >= fxA.ini && x.data <= fxA.fim).reduce((s, x) => s + Number(x.valor), 0);
+    const historicoP = d.historicoPatrimonio.filter((h) => h.data >= fxB.ini && h.data <= fxB.fim);
     const OPC = [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }, { meses: 0, rotulo: "Tudo" }];
-    const rotuloPeriodo = mesesRel ? `últimos ${mesesRel} meses` : "todo o histórico";
+    const rotulo = (m) => (m ? `últimos ${m} meses` : "todo o histórico");
+    const rotuloPeriodo = rotulo(mesesRelA);
 
     return `
       <div class="grid g-top">
@@ -2589,10 +2608,10 @@
         <div class="c3">${metricCard("Rentabilidade da carteira", pct(I.rentabilidadeCarteiraAcoes(d)), ICONES.investimento, "var(--vi)", "", "acumulada, desde o preço médio")}</div>
       </div>
       <div class="grid">
-        <div class="c12">${card("", "Receitas x despesas", `por mês · ${rotuloPeriodo}`, abasMeses("periodo-rel", mesesRel, OPC), `<div style="padding:10px 16px;height:220px"><canvas id="graf-rel-mensal"></canvas></div>`)}</div>
+        <div class="c12">${card("", "Receitas x despesas", `por mês · ${rotulo(mesesRelA)}`, abasMeses("periodo-rel-a", mesesRelA, OPC), `<div style="padding:10px 16px;height:220px"><canvas id="graf-rel-mensal"></canvas></div>`)}</div>
       </div>
       <div class="grid">
-        <div class="c12">${card("", "Evolução patrimonial", `por mês · ${rotuloPeriodo}`, abasMeses("periodo-rel", mesesRel, OPC), historicoP.length >= 2 ? `<div style="padding:10px 16px;height:220px"><canvas id="graf-rel-evolucao"></canvas></div>` : `<div class="empty">Ainda não há histórico suficiente para este período.</div>`)}</div>
+        <div class="c12">${card("", "Evolução patrimonial", `por mês · ${rotulo(mesesRelB)}`, abasMeses("periodo-rel-b", mesesRelB, OPC), historicoP.length >= 2 ? `<div style="padding:10px 16px;height:220px"><canvas id="graf-rel-evolucao"></canvas></div>` : `<div class="empty">Ainda não há histórico suficiente para este período.</div>`)}</div>
       </div>
     `;
   }
@@ -2627,7 +2646,7 @@
             ` : `
               <button class="btn primario" data-acao="criar-senha">Criar senha numérica</button>
             `}
-            <p class="campo ajuda" style="margin-top:12px">Vale só neste aparelho. Se esquecer a senha, será preciso apagar os dados e restaurar um backup.</p>
+            <p class="campo ajuda" style="margin-top:26px">Vale só neste aparelho. Se esquecer a senha, será preciso apagar os dados e restaurar um backup.</p>
           </div>`)}</div>
         <div class="c6">${card("", "Cotações automáticas", "dólar via AwesomeAPI (sem chave) · ações via brapi.dev", "", `
           <div class="body pad">
@@ -2641,7 +2660,7 @@
           <header><div><h2 class="down">Zona de risco</h2><div class="sub">esta ação não pode ser desfeita</div></div></header>
           <div class="body pad">
             <button class="btn perigo" data-acao="apagar-tudo">Apagar todos os dados</button>
-            <p class="campo ajuda" style="margin-top:12px">Não há como desfazer. Exporte um backup antes, se houver algo que você queira guardar.</p>
+            <p class="campo ajuda" style="margin-top:26px">Não há como desfazer. Exporte um backup antes, se houver algo que você queira guardar.</p>
           </div>
         </div></div>
       </div>
@@ -2652,11 +2671,11 @@
   // GRÁFICOS — montados depois que o HTML da rota já está no DOM
   // =========================================================================
   function montarGraficosRelatorio(d) {
-    const { ini, fim } = intervaloRel();
-    const historicoP = d.historicoPatrimonio.filter((h) => h.data >= ini && h.data <= fim);
+    const fxA = intervaloRel(mesesRelA), fxB = intervaloRel(mesesRelB);
+    const historicoP = d.historicoPatrimonio.filter((h) => h.data >= fxB.ini && h.data <= fxB.fim);
     if (historicoP.length >= 2) G.renderEvolucaoPatrimonio("graf-rel-evolucao", historicoP);
-    const primeiro = d.historicoPatrimonio.length ? d.historicoPatrimonio[0].data : ini;
-    G.renderReceitasDespesas("graf-rel-mensal", serieMensalPeriodo(d, mesesRel ? ini : primeiro, fim));
+    const primeiro = d.historicoPatrimonio.length ? d.historicoPatrimonio[0].data : fxA.ini;
+    G.renderReceitasDespesas("graf-rel-mensal", serieMensalPeriodo(d, mesesRelA ? fxA.ini : primeiro, fxA.fim));
   }
 
 
@@ -2771,7 +2790,8 @@
         case "explicar-classe": explicarClasse(b.dataset.rotulo); break;
         case "explicar-meta": explicarMeta(id); break;
         case "explicar-strip": explicarStrip(b.dataset.chave); break;
-        case "periodo-rel": mesesRel = Number(b.dataset.meses); renderRota(); break;
+        case "periodo-rel-a": mesesRelA = Number(b.dataset.meses); renderRota(); break;
+        case "periodo-rel-b": mesesRelB = Number(b.dataset.meses); renderRota(); break;
         case "periodo-rd": mesesRD = Number(b.dataset.meses); renderRota(); break;
         case "periodo-evo": mesesEvo = Number(b.dataset.meses); renderRota(); break;
         case "periodo-grafico": periodoGrafico = b.dataset.periodo; renderRota(); break;

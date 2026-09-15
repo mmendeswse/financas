@@ -962,3 +962,6 @@ table.tab-investimentos th.col-contratada, table.tab-investimentos td.col-contra
 .range-datas input[type="date"] { background: var(--painel-2); border: 1px solid var(--linha-2); border-radius: 7px; color: var(--texto); padding: 7px 10px; font-size: 12.5px; width: auto !important; min-width: 0; }
 .range-datas .dim { font-size: 12px; }
 @media (max-width: 640px) { .range-datas { width: 100%; justify-content: space-between; } }
+
+/* ícones dos indicadores: traço uniforme e cantos suaves */
+.strip-ic svg { width: 22px; height: 22px; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; fill: none; }
