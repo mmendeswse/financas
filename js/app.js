@@ -54,6 +54,7 @@
   let mesesEvo = 12;      // meses no gráfico de evolução patrimonial   // período mostrado no gráfico do ativo
   let filtrosHistorico = { periodo: "3m", banco: "", categoria: "", tipo: "todos", busca: "", ordenarPor: "data", ordemAsc: false };
   // cada quadro de relatório tem o seu próprio intervalo de datas
+  let mesesBancos = 0;   // período do gráfico da guia Bancos (0 = saldo atual)
   let mesesRelA = 12;   // período do quadro Receitas x despesas
   let mesesRelB = 12;   // período do quadro Evolução patrimonial
 
@@ -398,8 +399,12 @@
     document.querySelectorAll("#navPrincipal button").forEach((b) => b.classList.toggle("ativo", b.dataset.secao === secao));
     fecharSidebarMobile();
     renderRota();
+    // toda troca de guia começa no topo da página
     const area = document.querySelector(".scroll");
     if (area) area.scrollTop = 0;
+    if (typeof window.scrollTo === "function") window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
   }
 
   const TITULOS = {
@@ -667,12 +672,12 @@
       ${footHtml ? `<div class="foot">${footHtml}</div>` : ""}
     </section>`;
   }
-  function metricCard(rotulo, valor, iconePath, corVar, variacaoHtml, legenda, sparklineValores) {
+  function metricCard(rotulo, valor, iconePath, corVar, variacaoHtml, legenda, sparklineValores, viewBox) {
     const spark = sparklineValores && sparklineValores.length > 1
       ? `<div class="sparkline">${sparklineSVG(sparklineValores, corVar)}</div>` : "";
     return `<div class="metric">
       <div class="topo"><span class="selo" style="background:${corVar}22;color:${corVar}">
-        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${iconePath}</svg>
+        <svg viewBox="${viewBox || "0 0 20 20"}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${iconePath}</svg>
       </span><span class="rotulo">${rotulo}</span></div>
       <div class="valor">${valor}</div>
       ${variacaoHtml || ""}
@@ -688,6 +693,49 @@
 
   // ícones próprios dos indicadores do rodapé do dashboard, desenhados
   // no mesmo traço (1.6) e na mesma caixa de 24x24 para ficarem uniformes
+
+  // ---------------------------------------------------------------------
+  // Marcas dos bancos — desenhadas como SVG (não são os logotipos oficiais,
+  // e sim marcas próprias com a cor e a inicial de cada banco). Assim não
+  // há imagem para pixelar nem distorcer, e o sistema segue funcionando
+  // offline, sem depender de arquivos externos.
+  // ---------------------------------------------------------------------
+  const MARCAS_BANCO = {
+    "nubank":          { cor: "#820AD1", letra: "N" },
+    "banco do brasil": { cor: "#FCEE26", letra: "BB", texto: "#0038A8" },
+    "bb":              { cor: "#FCEE26", letra: "BB", texto: "#0038A8" },
+    "itaú":            { cor: "#EC7000", letra: "I" },
+    "itau":            { cor: "#EC7000", letra: "I" },
+    "inter":           { cor: "#FF7A00", letra: "I" },
+    "mercado pago":    { cor: "#00B1EA", letra: "MP" },
+    "caixa tem":       { cor: "#1C60AB", letra: "C" },
+    "caixa":           { cor: "#1C60AB", letra: "C" },
+    "bradesco":        { cor: "#CC092F", letra: "B" },
+    "santander":       { cor: "#EC0000", letra: "S" },
+    "c6 bank":         { cor: "#242424", letra: "C6" },
+    "picpay":          { cor: "#21C25E", letra: "P" },
+    "xp":              { cor: "#0F0F0F", letra: "XP" },
+    "banco digimais":  { cor: "#0B7A3B", letra: "D" }
+  };
+
+  function marcaBanco(nome, tamanho) {
+    const t = tamanho || 22;
+    const chave = String(nome || "").trim().toLowerCase();
+    const m = MARCAS_BANCO[chave] || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
+    const fonte = m.letra.length > 1 ? t * 0.42 : t * 0.52;
+    return `<span class="marca-banco" style="width:${t}px;height:${t}px;background:${m.cor};color:${m.texto || "#fff"};font-size:${fonte}px" aria-hidden="true">${esc(m.letra)}</span>`;
+  }
+
+
+  // ícones dos indicadores de Relatórios, no mesmo padrão dos do Dashboard
+  // (caixa 24x24, traço 1.6, cantos arredondados)
+  const ICONES_REL = {
+    receitas: '<path d="M3.5 19.5h17"/><path d="M12 16.5V4.5"/><path d="M7.5 9l4.5-4.5L16.5 9"/><path d="M6 19.5v-3M18 19.5v-5"/>',
+    despesas: '<path d="M3.5 19.5h17"/><path d="M12 4.5v12"/><path d="M7.5 12l4.5 4.5L16.5 12"/><path d="M6 19.5v-5M18 19.5v-3"/>',
+    resultado: '<path d="M4 18.5h16"/><path d="M4 14.5l4.5-4.5 3.5 3L20 5.5"/><path d="M15.5 5.5H20v4.5"/><circle cx="8.5" cy="10" r="1.3"/>',
+    rentabilidade: '<circle cx="12" cy="12" r="8.5"/><path d="M9 15l6-6"/><circle cx="9.6" cy="9.6" r="1.4"/><circle cx="14.4" cy="14.4" r="1.4"/>'
+  };
+
   const ICONES_STRIP = {
     // cofrinho: taxa de poupança
     poupanca: '<path d="M3.5 12.5c0-3.6 3.4-6.5 7.5-6.5 1 0 2 .2 2.9.5l2.6-1.8v2.9c1.2.9 2.1 2 2.6 3.4h1.4v3.4h-1.7c-.4.7-1 1.4-1.7 1.9V19h-2.6v-1.3c-.5.1-1 .2-1.5.2H11c-.5 0-1-.1-1.5-.2V19H6.9v-2.7c-2-1-3.4-2.8-3.4-3.8z"/><circle cx="14.6" cy="11" r=".9" fill="currentColor" stroke="none"/><path d="M8 7.2c.3-1.4 1.6-2.4 3-2.2"/>',
@@ -788,7 +836,7 @@
       const p = Math.max(0, (i.valor / soma) * 100);   // quanto este item representa do total
       const clic = i.id ? ` data-acao="explicar-banco" data-id="${i.id}" title="Ver detalhes deste banco"` : "";
       return `<${i.id ? "button" : "div"} class="barlist-linha${i.id ? " clicavel" : ""}"${clic}>
-        <span class="barlist-nome">${esc(i.nome)}</span>
+        <span class="barlist-nome">${i.id ? marcaBanco(i.nome, 18) : ""}${esc(i.nome)}</span>
         <span class="barlist-trilho"><i style="width:${p.toFixed(1)}%;background:${i.cor || cor || "var(--azul)"}">${p >= 22 ? Math.round(p) + "%" : ""}</i></span>
         <b class="barlist-valor ${i.valor < 0 ? "down" : ""}">${brl(i.valor)}</b>
       </${i.id ? "button" : "div"}>`;
@@ -1132,7 +1180,7 @@
     if (chave === "poupanca") {
       const sobra = entradas - despesas;
       const taxa = entradas > 0 ? (sobra / entradas) * 100 : 0;
-      painelSimples("Taxa de poupança", taxa, "das receitas do mês sobraram", "(receitas − despesas) ÷ receitas",
+      painelSimples("Taxa Poupança", taxa, "das receitas do mês sobraram", "(receitas − despesas) ÷ receitas",
         linha("Receitas do mês", brl(entradas), "up") + linha("− Despesas do mês", brl(despesas), "down") +
         linha("= Sobra", brlSinal(sobra), corSinal(sobra)) +
         linha("Referência saudável", "20% ou mais"), "entradas");
@@ -1182,7 +1230,7 @@
       const vencendo = F.contasVencendoEm(d, 7).filter((c) => c.statusReal !== "Pago");
       const total = vencendo.reduce((sm, c) => sm + Number(c.valor || 0), 0);
       const saldo = F.totalBancos(d);
-      painelSimples("Contas a vencer em 7 dias", saldo > 0 ? (total / saldo) * 100 : 0,
+      painelSimples("Contas Vencer", saldo > 0 ? (total / saldo) * 100 : 0,
         "do seu saldo em bancos está comprometido", "soma das contas com vencimento nos próximos 7 dias",
         (vencendo.length
           ? vencendo.map((c) => linha(esc(c.descricao) + " · " + fmtData(c.vencimento), brl(c.valor), c.statusReal === "Atrasado" ? "down" : "")).join("")
@@ -1248,8 +1296,8 @@
       </div>
 
       <div class="grid">
-        <div class="c3">${card("", "Saldo por banco", "onde está o seu dinheiro hoje", `<span class="acc-laranja" style="font-size:12px;font-weight:700">Total: ${brl(p.bancos)}</span>`, `<div class="body pad">${barList(bancos)}</div>`)}</div>
-        <div class="c3">${card("", "Composição do patrimônio", "ativos brutos, antes das dívidas", `<span class="acc-laranja" style="font-size:12px;font-weight:700">Total: ${brl(totalComp)}</span>`, `
+        <div class="c3">${card("", "Saldo banco", "mapa alocação de ativos hoje", `<span class="acc-laranja" style="font-size:12px;font-weight:700">Total: ${brl(p.bancos)}</span>`, `<div class="body pad">${barList(bancos)}</div>`)}</div>
+        <div class="c3">${card("", "Composição patrimônio", "ativos brutos, antes das dívidas", `<span class="acc-laranja" style="font-size:12px;font-weight:700">Total: ${brl(totalComp)}</span>`, `
           <div class="donut-wrap">
             <div class="donut-centro"><canvas id="graf-dash-composicao" width="150" height="150" style="width:150px;height:150px"></canvas>
               <div class="donut-rotulo"><b>${pctInvestido.toFixed(1).replace(".", ",")}%</b><span class="acc-laranja">INVESTIDO</span></div>
@@ -1257,7 +1305,7 @@
             <div class="legenda">${legendaComp}</div>
           </div>`)}</div>
         <div class="c3">${card("", "Receitas x despesas", `últimos ${mesesRD} meses`, abasMeses("periodo-rd", mesesRD, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }]), `<div style="padding:8px 14px 12px;height:236px"><canvas id="graf-receitas-despesas"></canvas></div>`)}</div>
-        <div class="c3">${card("", "Metas", "progresso dos seus objetivos", `<button class="btn pequeno" data-acao="ir" data-secao="metas">ver todas →</button>`, metasMini(d))}</div>
+        <div class="c3">${card("", "Metas", "progressos objetivos", `<button class="btn pequeno" data-acao="ir" data-secao="metas">ver todas →</button>`, metasMini(d))}</div>
       </div>
 
       <div class="grid">
@@ -1265,11 +1313,11 @@
       </div>
 
       ${stripKpis([
-        { rotulo: "TAXA DE POUPANÇA", valor: taxaPoupanca.toFixed(1).replace(".", ",") + "%", sub: `Resultado: ${brlSinal(resultadoMes)}`, cor: "#22E39A", icone: ICONES_STRIP.poupanca, chave: "poupanca" },
-        { rotulo: "PROJEÇÃO DESPESAS", valor: brl(projecao), sub: `no ritmo atual, até o fim do mês`, cor: "#FF7A1A", icone: ICONES_STRIP.projecao, chave: "projecao" },
+        { rotulo: "TAXA POUPANÇA", valor: taxaPoupanca.toFixed(1).replace(".", ",") + "%", sub: `Resultado: ${brlSinal(resultadoMes)}`, cor: "#22E39A", icone: ICONES_STRIP.poupanca, chave: "poupanca" },
+        { rotulo: "PROJEÇÃO DESPESAS", valor: brl(projecao), sub: `Ritmo Atual`, cor: "#FF7A1A", icone: ICONES_STRIP.projecao, chave: "projecao" },
         { rotulo: "MAIOR GASTO", valor: maiorDesp ? brl(maiorDesp.valor) : "—", sub: maiorDesp ? esc(maiorDesp.descricao) : "sem despesas", cor: "#FF4D7A", icone: ICONES_STRIP.maiorgasto, chave: "maiorgasto" },
-        { rotulo: "MELHOR ATIVO", valor: melhor ? esc(melhor.ticker) : "—", sub: melhor ? `<b class="${corSinal(melhor.rentabilidade)}">${pct(melhor.rentabilidade)}</b> desde o preço médio` : "sem ativos", cor: "#FFC233", icone: ICONES_STRIP.melhorativo, chave: "melhorativo" },
-        { rotulo: "CONTAS A VENCER", valor: brl(totalVencendo), sub: `${vencendo.length} conta(s) nos próximos 7 dias`, cor: "#2F8BFF", icone: ICONES_STRIP.avencer, chave: "avencer" }
+        { rotulo: "MELHOR ATIVO", valor: melhor ? esc(melhor.ticker) : "—", sub: melhor ? `<b class="${corSinal(melhor.rentabilidade)}">${pct(melhor.rentabilidade)}</b> Preço Médio` : "sem ativos", cor: "#FFC233", icone: ICONES_STRIP.melhorativo, chave: "melhorativo" },
+        { rotulo: "CONTAS VENCER", valor: brl(totalVencendo), sub: `${vencendo.length} ${vencendo.length === 1 ? "Conta" : "Contas"}`, cor: "#2F8BFF", icone: ICONES_STRIP.avencer, chave: "avencer" }
       ])}
 
     `;
@@ -1373,7 +1421,7 @@
       </div>
 
       <div class="grid">
-        <div class="c6">${card("", "Composição do patrimônio", "ativos brutos, antes das dívidas", `<span class="acc-laranja" style="font-size:12px;font-weight:700">Total: ${brl(totalComp)}</span>`, `<div class="donut-wrap"><div class="donut-centro"><canvas id="graf-patrimonio-divisao" width="150" height="150" style="width:150px;height:150px"></canvas><div class="donut-rotulo"><b>${brl(p.bruto).replace("R$", "").trim()}</b><span class="acc-laranja">BRUTO</span></div></div><div class="legenda">${legendaHtml}</div></div>`)}</div>
+        <div class="c6">${card("", "Composição patrimônio", "ativos brutos, antes das dívidas", `<span class="acc-laranja" style="font-size:12px;font-weight:700">Total: ${brl(totalComp)}</span>`, `<div class="donut-wrap"><div class="donut-centro"><canvas id="graf-patrimonio-divisao" width="150" height="150" style="width:150px;height:150px"></canvas><div class="donut-rotulo"><b>${brl(p.bruto).replace("R$", "").trim()}</b><span class="acc-laranja">BRUTO</span></div></div><div class="legenda">${legendaHtml}</div></div>`)}</div>
         <div class="c6">${card("", "Resumo patrimonial", "", "", `
           <div class="kv"><span class="dim">Dinheiro em bancos</span><b>${brl(p.bancos)}</b></div>
           <div class="kv"><span class="dim">+ Ações e FIIs</span><b>${brl(p.acoes)}</b></div>
@@ -1396,7 +1444,7 @@
     } else {
       listaHtml = `<div class="grade-bancos">` + bancos.map((b) => `
           <div class="cartao-item" style="border-left-color:${esc(b.cor || "#3FC1E0")}" data-acao="editar-banco" data-id="${b.id}">
-            <div class="linha1"><div><div class="nome">${esc(b.nome)}</div><div class="tipo">${esc(b.tipo || "—")}${b.agencia ? " · Ag " + esc(b.agencia) : ""}${b.conta ? " · Cc " + esc(b.conta) : ""}</div></div></div>
+            <div class="linha1"><div class="nome-com-marca">${marcaBanco(b.nome, 26)}<div><div class="nome">${esc(b.nome)}</div><div class="tipo">${esc(b.tipo || "—")}${b.agencia ? " · Ag " + esc(b.agencia) : ""}${b.conta ? " · Cc " + esc(b.conta) : ""}</div></div></div></div>
             <div class="saldo ${corSinal(b.saldoAtual)}">${brl(b.saldoAtual)}</div>
             <div class="rodape">saldo inicial ${brl(b.saldoInicial)}</div>
           </div>`).join("") + `</div>`;
@@ -1404,10 +1452,12 @@
     return `
       ${faixaDemo(d)}
       <div class="grid g-top">
-        <div class="c12">${card("c12", "Meus bancos", `${bancos.length} conta(s) cadastrada(s)`, `<button class="btn primario" data-acao="nova-banco"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>Novo banco</button>`, listaHtml, `<span class="dim">Saldo total em bancos</span><span class="${corSinal(total)}" style="font-size:14px">${brl(total)}</span>`)}</div>
+        <div class="c12">${card("c12", "Meus bancos", `${bancos.length} conta(s) cadastrada(s)`, `<button class="btn primario" data-acao="nova-banco"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>Novo</button>`, listaHtml, `<span class="dim">Total</span><b class="${corSinal(total)}" style="font-size:14px;font-weight:800">${brl(total)}</b>`)}</div>
       </div>
       <div class="grid">
-        <div class="c12">${card("", "Saldo por banco", "comparação entre as contas", "", `<div style="padding:12px 18px 16px;height:${Math.max(190, bancos.length * 52)}px"><canvas id="graf-saldo-bancos"></canvas></div>`)}</div>
+        <div class="c12">${card("", "Saldo banco", mesesBancos ? `movimentação dos últimos ${mesesBancos} meses` : "comparação entre contas",
+          abasMeses("periodo-bancos", mesesBancos, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }, { meses: 0, rotulo: "Tudo" }]),
+          `<div style="padding:12px 18px 16px;height:${Math.max(190, bancos.length * 52)}px"><canvas id="graf-saldo-bancos"></canvas></div>`)}</div>
       </div>
     `;
   }
@@ -1482,7 +1532,7 @@
     }
     return `
       <div class="grid g-top">
-        <div class="c12">${card("c12", "Entradas", `total do mês atual: ${brl(totalMes)}`, `<button class="btn primario" data-acao="nova-entrada"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>Nova entrada</button>`, corpo)}</div>
+        <div class="c12">${card("c12", "Entradas", `Total mês atual: ${brl(totalMes)}`, `<button class="btn primario" data-acao="nova-entrada"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>Novo</button>`, corpo)}</div>
       </div>
     `;
   }
@@ -1581,8 +1631,8 @@
 
     return `
       <div class="grid g-top">
-        <div class="c12">${card("c12", "Despesas", `pagas no mês: ${brl(totalMes)} · em aberto: ${brl(aPagar)}`,
-          `<button class="btn primario" data-acao="nova-despesa"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>Nova despesa</button>`,
+        <div class="c12">${card("c12", "Despesas", `Pagas mês: ${brl(totalMes)} · em aberto: ${brl(aPagar)}`,
+          `<button class="btn primario" data-acao="nova-despesa"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>Novo</button>`,
           corpo)}</div>
       </div>
     `;
@@ -1963,9 +2013,7 @@
         <tr data-acao="ir" data-secao="detalhe-investimento" data-id="${inv.id}">
           <td class="papel">${esc(inv.nome)}<small>${esc(inv.tipoAtivo || inv.categoria)}</small></td>
           <td class="col-contratada">${esc(inv.indexador || "—")}${inv.taxaContratada ? " " + f2(inv.taxaContratada) + "%" : ""}</td>
-          <td class="r">${fmtDataCurta(inv.dataAplicacao)}</td>
-          <td class="r">${inv.dataVencimento ? fmtDataCurta(inv.dataVencimento) : "—"}</td>
-          <td class="r ${inv.diasVenc !== null && inv.diasVenc <= 30 ? "acc" : "dim"}">${inv.diasVenc === null ? "—" : inv.diasVenc + "d"}</td>
+          <td class="r">${fmtData(inv.dataAplicacao)}</td>
           <td class="r">${inv.quantidade ? f2(inv.quantidade) : "—"}</td>
           <td class="r creme">${brl(inv.valorInvestido)}</td>
           <td class="r ${corSinal(inv.resultado)}">${brlSinal(inv.resultado)}</td>
@@ -1973,26 +2021,29 @@
           <td class="r dim col-ir">${inv.aliquota === 0 ? "isento" : f2(inv.aliquota) + "%"}</td>
           <td class="r down">${inv.imposto > 0 ? "−" + brl(inv.imposto) : "—"}</td>
           <td class="r up">${brl(inv.liquido)}</td>
+          <td class="r ${inv.diasVenc !== null && inv.diasVenc <= 30 ? "acc" : "dim"}">${inv.diasVenc === null ? "—" : inv.diasVenc + "d"}</td>
+          <td class="r">${inv.dataVencimento ? fmtData(inv.dataVencimento) : "—"}</td>
           <td class="r ${corSinal(inv.rentBruta)}">${pct(inv.rentBruta)}</td>
           <td class="r ${corSinal(inv.rentLiquida)}">${pct(inv.rentLiquida)}</td>
           <td class="r ${inv.rentAno === null ? "dim" : corSinal(inv.rentAno)}">${inv.rentAno === null ? "—" : pct(inv.rentAno)}</td>
         </tr>`).join("");
       corpo = `<div class="terminal-scroll"><table class="terminal tab-investimentos">
         <thead><tr>
-          <th>Ativo</th><th class="col-contratada">Rentab. contratada</th><th class="r">Aplicação</th><th class="r">Vencimento</th><th class="r">Faltam</th>
+          <th>Ativo</th><th class="col-contratada">Rentab. contratada</th><th class="r">Aplicação</th>
           <th class="r">Cotas</th><th class="r">Aplicado</th><th class="r">Resultado</th><th class="r">Bruto</th>
-          <th class="r col-ir">IR</th><th class="r">Imposto</th><th class="r">Líquido</th>
+          <th class="r col-ir">IR</th><th class="r">Imposto</th><th class="r">Líquido</th><th class="r">Faltam</th><th class="r">Vencimento</th>
           <th class="r">Rent. bruta</th><th class="r">Rent. líquida</th><th class="r">Ao ano</th>
         </tr></thead>
         <tbody>${linhas}</tbody>
         <tfoot><tr>
-          <td>TOTAL</td><td class="col-contratada"></td><td></td><td></td><td></td><td></td>
+          <td>TOTAL</td><td class="col-contratada"></td><td></td><td></td>
           <td class="r creme">${brl(t.aplicado)}</td>
           <td class="r ${corSinal(t.resultado)}">${brlSinal(t.resultado)}</td>
           <td class="r creme">${brl(t.bruto)}</td>
           <td class="col-ir"></td>
           <td class="r down">${t.imposto > 0 ? "−" + brl(t.imposto) : "—"}</td>
           <td class="r up">${brl(t.liquido)}</td>
+          <td></td><td></td>
           <td class="r ${corSinal(t.rentBruta)}">${pct(t.rentBruta)}</td>
           <td class="r ${corSinal(t.rentLiquida)}">${pct(t.rentLiquida)}</td>
           <td></td>
@@ -2011,9 +2062,9 @@
       ${aviso}
       <div class="grid g-top">
         <div class="c12">${card("", "Investimentos", "renda fixa, tesouro, fundos e cripto",
-          `<button class="btn primario" data-acao="novo-investimento"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>Novo investimento</button>`,
+          `<button class="btn primario" data-acao="novo-investimento"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>Novo</button>`,
           corpo,
-          `<span class="dim">Valor total líquido</span><b class="creme" style="font-size:14px;font-weight:800">${brl(t.liquido)}</b>`)}</div>
+          `<span class="dim">Total líquido</span><b class="creme" style="font-size:14px;font-weight:800">${brl(t.liquido)}</b>`)}</div>
       </div>
     `;
   }
@@ -2280,13 +2331,13 @@
 
     return `
       <div class="grid g-top">
-        <div class="c12">${card("", "Painel de ativos", (configCotacoes().auto ? '<span class="selo-tag selo-acao">cotação automática · brapi.dev</span>' : '<span class="selo-tag selo-cat">preço atualizado manualmente</span>'),
+        <div class="c12">${card("", "Painel ativos", (configCotacoes().auto ? '<span class="selo-tag selo-acao">cotação automática · brapi.dev</span>' : '<span class="selo-tag selo-cat">preço atualizado manualmente</span>'),
           `<div class="dolar-pill" id="dolarTopbar" title="Dólar comercial (AwesomeAPI)" style="display:none"></div>
-           <button class="btn" data-acao="buscar-cotacoes" title="Buscar cotações na internet agora">↻ Buscar cotações</button>
-           <button class="btn ${editandoPrecos ? "primario" : ""}" data-acao="alternar-edicao-precos">${editandoPrecos ? "Concluir edição" : "Editar manualmente"}</button>
-           <button class="btn primario" data-acao="novo-ativo"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>Novo ativo</button>`,
+           <button class="btn" data-acao="buscar-cotacoes" title="Buscar cotações na internet agora">↻ Buscar</button>
+           <button class="btn ${editandoPrecos ? "primario" : ""}" data-acao="alternar-edicao-precos">${editandoPrecos ? "Concluir" : "Editar"}</button>
+           <button class="btn primario" data-acao="novo-ativo"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>Novo</button>`,
           corpo,
-          `<span class="dim">Valor total da carteira</span><b class="creme" style="font-size:14px;font-weight:800">${brl(I.totalCarteiraAcoes(d))}</b>`)}</div>
+          `<span class="dim">Total Carteira</span><b class="creme" style="font-size:14px;font-weight:800">${brl(I.totalCarteiraAcoes(d))}</b>`)}</div>
       </div>
     `;
   }
@@ -2602,10 +2653,10 @@
 
     return `
       <div class="grid g-top">
-        <div class="c3">${metricCard("Receitas no período", brl(entradasP), ICONES.entrada, "var(--up)", "", rotuloPeriodo)}</div>
-        <div class="c3">${metricCard("Despesas no período", brl(despesasP), ICONES.saida, "var(--down)", "", rotuloPeriodo)}</div>
-        <div class="c3">${metricCard("Resultado do período", brlSinal(entradasP - despesasP), ICONES.resultado, corSinal(entradasP - despesasP) === "up" ? "var(--up)" : "var(--down)")}</div>
-        <div class="c3">${metricCard("Rentabilidade da carteira", pct(I.rentabilidadeCarteiraAcoes(d)), ICONES.investimento, "var(--vi)", "", "acumulada, desde o preço médio")}</div>
+        <div class="c3">${metricCard("Receitas", brl(entradasP), ICONES_REL.receitas, "var(--up)", "", rotuloPeriodo, null, "0 0 24 24")}</div>
+        <div class="c3">${metricCard("Despesas", brl(despesasP), ICONES_REL.despesas, "var(--down)", "", rotuloPeriodo, null, "0 0 24 24")}</div>
+        <div class="c3">${metricCard("Resultado", brlSinal(entradasP - despesasP), ICONES_REL.resultado, corSinal(entradasP - despesasP) === "up" ? "var(--up)" : "var(--down)", "", "", null, "0 0 24 24")}</div>
+        <div class="c3">${metricCard("Rentabilidade", pct(I.rentabilidadeCarteiraAcoes(d)), ICONES_REL.rentabilidade, "var(--vi)", "", "acumulada · Preço Médio", null, "0 0 24 24")}</div>
       </div>
       <div class="grid">
         <div class="c12">${card("", "Receitas x despesas", `por mês · ${rotulo(mesesRelA)}`, abasMeses("periodo-rel-a", mesesRelA, OPC), `<div style="padding:10px 16px;height:220px"><canvas id="graf-rel-mensal"></canvas></div>`)}</div>
@@ -2709,9 +2760,22 @@
         ]);
         break;
       }
-      case "bancos":
-        if (d.bancos.length) G.renderSaldoBancos("graf-saldo-bancos", F.listaBancosComSaldo(d));
+      case "bancos": {
+        if (!d.bancos.length) break;
+        let lista = F.listaBancosComSaldo(d);
+        if (mesesBancos) {
+          // saldo inicial + o que entrou e saiu dentro do período escolhido
+          const corte = new Date(); corte.setMonth(corte.getMonth() - (mesesBancos - 1)); corte.setDate(1);
+          const ini = corte.toISOString().slice(0, 10);
+          lista = d.bancos.map((b) => {
+            const ent = d.entradas.filter((e) => e.bancoId === b.id && e.data >= ini).reduce((t, e) => t + Number(e.valor || 0), 0);
+            const sai = d.despesas.filter((x) => x.bancoId === b.id && !x.cartaoId && x.data >= ini).reduce((t, x) => t + Number(x.valor || 0), 0);
+            return { ...b, saldoAtual: Number(b.saldoInicial || 0) + ent - sai };
+          });
+        }
+        G.renderSaldoBancos("graf-saldo-bancos", lista);
         break;
+      }
       case "despesas": break;
       case "investimentos": break;
       case "detalhe-investimento": {
@@ -2790,6 +2854,7 @@
         case "explicar-classe": explicarClasse(b.dataset.rotulo); break;
         case "explicar-meta": explicarMeta(id); break;
         case "explicar-strip": explicarStrip(b.dataset.chave); break;
+        case "periodo-bancos": mesesBancos = Number(b.dataset.meses); renderRota(); break;
         case "periodo-rel-a": mesesRelA = Number(b.dataset.meses); renderRota(); break;
         case "periodo-rel-b": mesesRelB = Number(b.dataset.meses); renderRota(); break;
         case "periodo-rd": mesesRD = Number(b.dataset.meses); renderRota(); break;

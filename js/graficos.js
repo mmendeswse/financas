@@ -190,16 +190,21 @@
   function renderSaldoBancos(canvasId, bancos) {
     destruir(canvasId);
     var ctx = ctxOf(canvasId); if (!ctx) return;
+    // cada barra mostra o nome e quanto representa do total
+    var total = bancos.reduce(function (t, b) { return t + Math.abs(Number(b.saldoAtual || 0)); }, 0) || 1;
     instancias[canvasId] = new Chart(ctx, {
       type: "bar",
       data: {
-        labels: bancos.map(function (b) { return b.nome; }),
-        datasets: [{ data: bancos.map(function (b) { return b.saldoAtual; }), backgroundColor: "rgba(0,229,255,0.22)", borderColor: bancos.map(function (b) { return b.cor || CORES.cy; }), borderWidth: 1.5, borderRadius: 2, maxBarThickness: 22 }]
+        labels: bancos.map(function (b) { return b.nome + "  " + ((b.saldoAtual / total) * 100).toFixed(1).replace(".", ",") + "%"; }),
+        datasets: [{ data: bancos.map(function (b) { return b.saldoAtual; }), backgroundColor: bancos.map(function (b) { return b.cor || CORES.cy; }), borderColor: bancos.map(function (b) { return b.cor || CORES.cy; }), borderWidth: 1, borderRadius: 3, maxBarThickness: 26 }]
       },
       options: {
         indexAxis: "y", responsive: true, maintainAspectRatio: false,
         scales: { x: eixoY({ grid: { color: CORES.grade } }), y: eixoX() },
-        plugins: { legend: { display: false }, tooltip: tooltipPadrao({ callbacks: { label: function (c) { return " " + moeda(c.parsed.x); } } }) }
+        plugins: {
+          legend: { display: false },
+          tooltip: tooltipPadrao({ callbacks: { label: function (c) { return " " + moeda(c.parsed.x) + " · " + ((c.parsed.x / total) * 100).toFixed(1).replace(".", ",") + "%"; } } })
+        }
       }
     });
   }

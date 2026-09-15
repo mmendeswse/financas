@@ -965,3 +965,8 @@ table.tab-investimentos th.col-contratada, table.tab-investimentos td.col-contra
 
 /* ícones dos indicadores: traço uniforme e cantos suaves */
 .strip-ic svg { width: 22px; height: 22px; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+
+/* marca de cada banco (círculo com a cor e a inicial), antes do nome */
+.marca-banco { display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: 800; letter-spacing: -.02em; flex: none; line-height: 1; }
+.nome-com-marca { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.barlist-nome { display: flex; align-items: center; gap: 8px; }
