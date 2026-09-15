@@ -1980,8 +1980,8 @@
       corpo = `<div class="terminal-scroll"><table class="terminal tab-investimentos">
         <thead><tr>
           <th>Ativo</th><th class="col-contratada">Rentab. contratada</th><th class="r">Aplicação</th><th class="r">Vencimento</th><th class="r">Faltam</th>
-          <th class="r">Cotas</th><th class="r">Valor aplicado</th><th class="r">Resultado</th><th class="r">Bruto atual</th>
-          <th class="r col-ir">IR</th><th class="r">Imposto</th><th class="r">Total líquido</th>
+          <th class="r">Cotas</th><th class="r">Aplicado</th><th class="r">Resultado</th><th class="r">Bruto</th>
+          <th class="r col-ir">IR</th><th class="r">Imposto</th><th class="r">Líquido</th>
           <th class="r">Rent. bruta</th><th class="r">Rent. líquida</th><th class="r">Ao ano</th>
         </tr></thead>
         <tbody>${linhas}</tbody>
