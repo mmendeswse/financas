@@ -1579,56 +1579,95 @@
     return html;
   }
 
-  function abrirModalDespesa(id) {
-    const x = id ? achar(DADOS.despesas, id) : null;
+  // Formulário único de despesa: o campo Status decide onde o registro
+  // fica guardado — "Pago" vira uma despesa lançada, "Pendente" vira uma
+  // conta a pagar com a data informada como vencimento.
+  function abrirModalDespesa(id, origem) {
+    origem = origem || "despesa";
+    const x = id ? achar(origem === "conta" ? DADOS.contasPagar : DADOS.despesas, id) : null;
+    const ehConta = origem === "conta";
+    const statusAtual = x ? (ehConta ? (F.statusReal(x) === "Pago" ? "Pago" : "Pendente") : "Pago") : "Pago";
+    const dataAtual = x ? (ehConta ? x.vencimento : x.data) : hojeISO();
+
     abrirModal(`
-      <h3>${x ? "Editar despesa" : "Nova despesa"}</h3>
+      <h3>${x ? "Editar lançamento" : "Nova despesa"}</h3>
       <div class="par">
-        <div class="campo"><label for="f_data">Data</label><input id="f_data" type="date" value="${x ? x.data : hojeISO()}"></div>
+        <div class="campo"><label for="f_data"><span id="rotuloData">${statusAtual === "Pago" ? "Data do pagamento" : "Data de vencimento"}</span></label><input id="f_data" type="date" value="${dataAtual}"></div>
         <div class="campo"><label for="f_valor">Valor</label>${campoMoeda("f_valor", x ? x.valor : "")}</div>
       </div>
       <div class="campo"><label for="f_desc">Descrição</label><input id="f_desc" value="${x ? esc(x.descricao) : ""}" placeholder="Supermercado"></div>
       <div class="par">
         <div class="campo"><label for="f_cat">Categoria</label><select id="f_cat">${opcoes(CATS_DESPESA, x ? x.categoria : CATS_DESPESA[0])}</select></div>
-        <div class="campo"><label for="f_pagarcom">Pagar com</label><select id="f_pagarcom">${opcoesPagarCom(DADOS, x ? x.bancoId : "", x ? x.cartaoId : "")}</select></div>
+        <div class="campo"><label for="f_status">Status</label><select id="f_status">${opcoes(["Pago", "Pendente"], statusAtual)}</select>
+          <div class="ajuda">"Pendente" guarda como conta a vencer; ela aparece na lista com a data de vencimento.</div></div>
       </div>
-      <div class="campo"><label for="f_forma">Forma de pagamento</label><select id="f_forma">${opcoes(FORMAS_PAGAMENTO, x ? x.formaPagamento : FORMAS_PAGAMENTO[0])}</select></div>
-      <div class="campo"><label for="f_rec">Repetição</label><select id="f_rec">${opcoes(FREQUENCIAS, freqDe(x))}</select>
-        <div class="ajuda">Serve para identificar despesas que se repetem; o lançamento seguinte continua sendo feito por você.</div></div>
+      <div id="camposPagamento" style="${statusAtual === "Pago" ? "" : "display:none"}">
+        <div class="par">
+          <div class="campo"><label for="f_pagarcom">Pago com</label><select id="f_pagarcom">${opcoesPagarCom(DADOS, x && !ehConta ? x.bancoId : "", x && !ehConta ? x.cartaoId : "")}</select></div>
+          <div class="campo"><label for="f_forma">Forma de pagamento</label><select id="f_forma">${opcoes(FORMAS_PAGAMENTO, x && !ehConta ? x.formaPagamento : FORMAS_PAGAMENTO[0])}</select></div>
+        </div>
+        <div class="campo"><label for="f_rec">Repetição</label><select id="f_rec">${opcoes(FREQUENCIAS, freqDe(ehConta ? null : x))}</select></div>
+      </div>
       <div class="campo"><label for="f_obs">Observação</label><textarea id="f_obs" placeholder="Opcional">${x ? esc(x.obs || "") : ""}</textarea></div>
       <div class="modal-acoes">
         <button class="btn primario salvar" id="btnSalvar">Salvar</button>
         ${x ? `<button class="btn perigo" id="btnExcluir">Excluir</button>` : ""}
       </div>`);
 
+    // mostra ou esconde os campos de pagamento conforme o status
+    const selStatus = document.getElementById("f_status");
+    selStatus.addEventListener("change", () => {
+      const pago = selStatus.value === "Pago";
+      document.getElementById("camposPagamento").style.display = pago ? "" : "none";
+      document.getElementById("rotuloData").textContent = pago ? "Data do pagamento" : "Data de vencimento";
+    });
+
     document.getElementById("btnSalvar").onclick = () => {
-      const pagarCom = document.getElementById("f_pagarcom").value;
-      if (!pagarCom) { toast("Selecione com o que essa despesa foi paga."); return; }
-      const [tipoPg, idPg] = pagarCom.split(":");
+      const status = selStatus.value;
       const desc = document.getElementById("f_desc").value.trim();
-      if (!desc) { toast("Descreva a despesa."); return; }
-      const registro = {
-        id: x ? x.id : A.novoId(),
-        data: document.getElementById("f_data").value || hojeISO(),
-        descricao: desc,
-        categoria: document.getElementById("f_cat").value,
-        bancoId: tipoPg === "banco" ? idPg : "",
-        cartaoId: tipoPg === "cartao" ? idPg : "",
-        valor: numIn(document.getElementById("f_valor").value),
-        formaPagamento: document.getElementById("f_forma").value,
-        recorrencia: document.getElementById("f_rec").value,
-        recorrente: document.getElementById("f_rec").value !== FREQUENCIAS[0],
-        obs: document.getElementById("f_obs").value.trim()
-      };
-      if (x) Object.assign(x, registro); else DADOS.despesas.push(registro);
+      if (!desc) { toast("Descreva o lançamento."); return; }
+      const data = document.getElementById("f_data").value || hojeISO();
+      const valor = numIn(document.getElementById("f_valor").value);
+      const categoria = document.getElementById("f_cat").value;
+      const obs = document.getElementById("f_obs").value.trim();
+
+      if (status === "Pago") {
+        const pagarCom = document.getElementById("f_pagarcom").value;
+        if (!pagarCom) { toast("Selecione com o que essa despesa foi paga."); return; }
+        const [tipoPg, idPg] = pagarCom.split(":");
+        const registro = {
+          id: (x && !ehConta) ? x.id : A.novoId(), data, descricao: desc, categoria,
+          bancoId: tipoPg === "banco" ? idPg : "", cartaoId: tipoPg === "cartao" ? idPg : "",
+          valor, formaPagamento: document.getElementById("f_forma").value,
+          recorrencia: document.getElementById("f_rec").value,
+          recorrente: document.getElementById("f_rec").value !== FREQUENCIAS[0], obs
+        };
+        if (x && !ehConta) Object.assign(x, registro);
+        else {
+          DADOS.despesas.push(registro);
+          if (x && ehConta) DADOS.contasPagar = DADOS.contasPagar.filter((r) => r.id !== x.id); // deixou de ser conta
+        }
+      } else {
+        const registro = {
+          id: (x && ehConta) ? x.id : A.novoId(), descricao: desc, categoria,
+          vencimento: data, valor, status: "Pendente", obs
+        };
+        if (x && ehConta) Object.assign(x, registro);
+        else {
+          DADOS.contasPagar.push(registro);
+          if (x && !ehConta) DADOS.despesas = DADOS.despesas.filter((r) => r.id !== x.id); // virou conta a pagar
+        }
+      }
       fecharModal();
-      salvarEAtualizar(x ? "Despesa atualizada." : "Despesa cadastrada.");
+      salvarEAtualizar(x ? "Lançamento atualizado." : (status === "Pago" ? "Despesa cadastrada." : "Conta a pagar cadastrada."));
     };
+
     if (x) document.getElementById("btnExcluir").onclick = () => {
       fecharModal();
-      confirmarExclusao("Excluir esta despesa?", () => {
-        DADOS.despesas = DADOS.despesas.filter((r) => r.id !== x.id);
-        salvarEAtualizar("Despesa excluída.");
+      confirmarExclusao("Excluir este lançamento?", () => {
+        if (ehConta) DADOS.contasPagar = DADOS.contasPagar.filter((r) => r.id !== x.id);
+        else DADOS.despesas = DADOS.despesas.filter((r) => r.id !== x.id);
+        salvarEAtualizar("Lançamento excluído.");
       });
     };
   }
@@ -2723,8 +2762,8 @@
         case "novo-cartao": abrirModalCartao(null); break;
         case "editar-cartao": abrirModalCartao(id); break;
 
-        case "nova-conta": abrirModalContaPagar(null); break;
-        case "editar-conta": abrirModalContaPagar(id); break;
+        case "nova-conta": abrirModalDespesa(null); break;
+        case "editar-conta": abrirModalDespesa(id, "conta"); break;
         case "excluir-conta":
           confirmarExclusao("Excluir esta conta?", () => { DADOS.contasPagar = DADOS.contasPagar.filter((x) => x.id !== id); salvarEAtualizar("Conta excluída."); });
           break;
