@@ -54,16 +54,14 @@
   let mesesEvo = 12;      // meses no gráfico de evolução patrimonial   // período mostrado no gráfico do ativo
   let filtrosHistorico = { periodo: "3m", banco: "", categoria: "", tipo: "todos", busca: "", ordenarPor: "data", ordemAsc: false };
   // cada quadro de relatório tem o seu próprio intervalo de datas
-  function seisMesesAtras() {
-    const d = new Date(); d.setMonth(d.getMonth() - 5); d.setDate(1);
-    return d.toISOString().slice(0, 10);
-  }
-  let rangeA = null;   // receitas x despesas
-  let rangeB = null;   // evolução patrimonial
-  function garantirRanges() {
-    const padrao = () => ({ ini: seisMesesAtras(), fim: new Date().toISOString().slice(0, 10) });
-    if (!rangeA) rangeA = padrao();
-    if (!rangeB) rangeB = padrao();
+  let mesesRel = 12;   // período dos dois quadros de relatório (sincronizado)
+
+  // intervalo correspondente ao período escolhido; 0 = todo o histórico
+  function intervaloRel() {
+    const fim = new Date().toISOString().slice(0, 10);
+    if (!mesesRel) return { ini: "0000-01-01", fim };
+    const d = new Date(); d.setMonth(d.getMonth() - (mesesRel - 1)); d.setDate(1);
+    return { ini: d.toISOString().slice(0, 10), fim };
   }
   let demoBannerOculto = false;
 
@@ -768,9 +766,9 @@
   // lista de barras horizontais com % dentro (estilo "Regional Sales")
   function barList(itens, cor) {
     if (!itens.length) return `<div class="empty">Sem dados ainda.</div>`;
-    const max = Math.max(...itens.map((i) => Math.abs(i.valor)), 1);
+    const soma = itens.reduce((t, i) => t + Math.abs(i.valor), 0) || 1;
     return `<div class="barlist">` + itens.map((i) => {
-      const p = Math.max(0, (i.valor / max) * 100);
+      const p = Math.max(0, (i.valor / soma) * 100);   // quanto este item representa do total
       const clic = i.id ? ` data-acao="explicar-banco" data-id="${i.id}" title="Ver detalhes deste banco"` : "";
       return `<${i.id ? "button" : "div"} class="barlist-linha${i.id ? " clicavel" : ""}"${clic}>
         <span class="barlist-nome">${esc(i.nome)}</span>
@@ -1234,7 +1232,7 @@
 
       <div class="grid">
         <div class="c3">${card("", "Saldo por banco", "onde está o seu dinheiro hoje", `<span class="acc-laranja" style="font-size:12px;font-weight:700">Total: ${brl(p.bancos)}</span>`, `<div class="body pad">${barList(bancos)}</div>`)}</div>
-        <div class="c3">${card("", "Composição do patrimônio", "ativos brutos, antes das dívidas", "", `
+        <div class="c3">${card("", "Composição do patrimônio", "ativos brutos, antes das dívidas", `<span class="acc-laranja" style="font-size:12px;font-weight:700">Total: ${brl(totalComp)}</span>`, `
           <div class="donut-wrap">
             <div class="donut-centro"><canvas id="graf-dash-composicao" width="150" height="150" style="width:150px;height:150px"></canvas>
               <div class="donut-rotulo"><b>${pctInvestido.toFixed(1).replace(".", ",")}%</b><span class="acc-laranja">INVESTIDO</span></div>
@@ -1358,7 +1356,7 @@
       </div>
 
       <div class="grid">
-        <div class="c6">${card("", "Composição do patrimônio", "ativos brutos, antes das dívidas", "", `<div class="donut-wrap"><div class="donut-centro"><canvas id="graf-patrimonio-divisao" width="150" height="150" style="width:150px;height:150px"></canvas><div class="donut-rotulo"><b>${brl(p.bruto).replace("R$", "").trim()}</b><span class="acc-laranja">BRUTO</span></div></div><div class="legenda">${legendaHtml}</div></div>`)}</div>
+        <div class="c6">${card("", "Composição do patrimônio", "ativos brutos, antes das dívidas", `<span class="acc-laranja" style="font-size:12px;font-weight:700">Total: ${brl(totalComp)}</span>`, `<div class="donut-wrap"><div class="donut-centro"><canvas id="graf-patrimonio-divisao" width="150" height="150" style="width:150px;height:150px"></canvas><div class="donut-rotulo"><b>${brl(p.bruto).replace("R$", "").trim()}</b><span class="acc-laranja">BRUTO</span></div></div><div class="legenda">${legendaHtml}</div></div>`)}</div>
         <div class="c6">${card("", "Resumo patrimonial", "", "", `
           <div class="kv"><span class="dim">Dinheiro em bancos</span><b>${brl(p.bancos)}</b></div>
           <div class="kv"><span class="dim">+ Ações e FIIs</span><b>${brl(p.acoes)}</b></div>
@@ -1607,8 +1605,7 @@
       <div class="campo"><label for="f_desc">Descrição</label><input id="f_desc" value="${x ? esc(x.descricao) : ""}" placeholder="Supermercado"></div>
       <div class="par">
         <div class="campo"><label for="f_cat">Categoria</label><select id="f_cat">${opcoes(CATS_DESPESA, x ? x.categoria : CATS_DESPESA[0])}</select></div>
-        <div class="campo"><label for="f_status">Status</label><select id="f_status">${opcoes(["Pago", "Pendente"], statusAtual)}</select>
-          <div class="ajuda">"Pendente" guarda como conta a vencer; ela aparece na lista com a data de vencimento.</div></div>
+        <div class="campo"><label for="f_status">Status</label><select id="f_status">${opcoes(["Pago", "Pendente"], statusAtual)}</select></div>
       </div>
       <div id="camposPagamento" style="${statusAtual === "Pago" ? "" : "display:none"}">
         <div class="par">
@@ -2577,32 +2574,30 @@
   }
 
   function renderRelatorios(d) {
-    garantirRanges();
-    const entradasP = d.entradas.filter((e) => e.data >= rangeA.ini && e.data <= rangeA.fim).reduce((s, e) => s + Number(e.valor), 0);
-    const despesasP = d.despesas.filter((x) => x.data >= rangeA.ini && x.data <= rangeA.fim).reduce((s, x) => s + Number(x.valor), 0);
-    const historicoP = d.historicoPatrimonio.filter((h) => h.data >= rangeB.ini && h.data <= rangeB.fim);
-
-    const seletor = (quadro, r) => `<div class="range-datas">
-      <input type="date" id="${quadro}_ini" value="${r.ini}" max="${r.fim}" title="Data inicial">
-      <span class="dim">até</span>
-      <input type="date" id="${quadro}_fim" value="${r.fim}" min="${r.ini}" title="Data final">
-    </div>`;
+    const { ini, fim } = intervaloRel();
+    const entradasP = d.entradas.filter((e) => e.data >= ini && e.data <= fim).reduce((s, e) => s + Number(e.valor), 0);
+    const despesasP = d.despesas.filter((x) => x.data >= ini && x.data <= fim).reduce((s, x) => s + Number(x.valor), 0);
+    const historicoP = d.historicoPatrimonio.filter((h) => h.data >= ini && h.data <= fim);
+    const OPC = [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }, { meses: 0, rotulo: "Tudo" }];
+    const rotuloPeriodo = mesesRel ? `últimos ${mesesRel} meses` : "todo o histórico";
 
     return `
       <div class="grid g-top">
-        <div class="c3">${metricCard("Receitas no período", brl(entradasP), ICONES.entrada, "var(--up)", "", `${fmtData(rangeA.ini)} a ${fmtData(rangeA.fim)}`)}</div>
-        <div class="c3">${metricCard("Despesas no período", brl(despesasP), ICONES.saida, "var(--down)", "", `${fmtData(rangeA.ini)} a ${fmtData(rangeA.fim)}`)}</div>
+        <div class="c3">${metricCard("Receitas no período", brl(entradasP), ICONES.entrada, "var(--up)", "", rotuloPeriodo)}</div>
+        <div class="c3">${metricCard("Despesas no período", brl(despesasP), ICONES.saida, "var(--down)", "", rotuloPeriodo)}</div>
         <div class="c3">${metricCard("Resultado do período", brlSinal(entradasP - despesasP), ICONES.resultado, corSinal(entradasP - despesasP) === "up" ? "var(--up)" : "var(--down)")}</div>
         <div class="c3">${metricCard("Rentabilidade da carteira", pct(I.rentabilidadeCarteiraAcoes(d)), ICONES.investimento, "var(--vi)", "", "acumulada, desde o preço médio")}</div>
       </div>
       <div class="grid">
-        <div class="c12">${card("", "Receitas x despesas", "por mês, no intervalo escolhido", seletor("rangeA", rangeA), `<div style="padding:10px 16px;height:220px"><canvas id="graf-rel-mensal"></canvas></div>`)}</div>
+        <div class="c12">${card("", "Receitas x despesas", `por mês · ${rotuloPeriodo}`, abasMeses("periodo-rel", mesesRel, OPC), `<div style="padding:10px 16px;height:220px"><canvas id="graf-rel-mensal"></canvas></div>`)}</div>
       </div>
       <div class="grid">
-        <div class="c12">${card("", "Evolução patrimonial", "no intervalo escolhido", seletor("rangeB", rangeB), historicoP.length >= 2 ? `<div style="padding:10px 16px;height:220px"><canvas id="graf-rel-evolucao"></canvas></div>` : `<div class="empty">Ainda não há histórico suficiente para este intervalo.</div>`)}</div>
+        <div class="c12">${card("", "Evolução patrimonial", `por mês · ${rotuloPeriodo}`, abasMeses("periodo-rel", mesesRel, OPC), historicoP.length >= 2 ? `<div style="padding:10px 16px;height:220px"><canvas id="graf-rel-evolucao"></canvas></div>` : `<div class="empty">Ainda não há histórico suficiente para este período.</div>`)}</div>
       </div>
     `;
   }
+
+
 
 
 
@@ -2632,7 +2627,7 @@
             ` : `
               <button class="btn primario" data-acao="criar-senha">Criar senha numérica</button>
             `}
-            <p class="campo ajuda" style="margin-top:12px">A senha vale só neste aparelho e não é sincronizada. Ela impede o acesso casual, mas não embaralha os dados guardados: quem souber mexer no navegador ainda consegue lê-los. Se esquecer a senha, será preciso limpar os dados do site e restaurar um backup.</p>
+            <p class="campo ajuda" style="margin-top:12px">Vale só neste aparelho. Se esquecer a senha, será preciso apagar os dados e restaurar um backup.</p>
           </div>`)}</div>
         <div class="c6">${card("", "Cotações automáticas", "dólar via AwesomeAPI (sem chave) · ações via brapi.dev", "", `
           <div class="body pad">
@@ -2646,7 +2641,7 @@
           <header><div><h2 class="down">Zona de risco</h2><div class="sub">esta ação não pode ser desfeita</div></div></header>
           <div class="body pad">
             <button class="btn perigo" data-acao="apagar-tudo">Apagar todos os dados</button>
-            <p class="campo ajuda" style="margin-top:12px">Não há como desfazer: os dados não vão para nenhuma lixeira. Exporte um backup antes, em "Backup dos dados", se houver algo que você queira guardar. A senha de acesso e o token de cotações não são apagados aqui.</p>
+            <p class="campo ajuda" style="margin-top:12px">Não há como desfazer. Exporte um backup antes, se houver algo que você queira guardar.</p>
           </div>
         </div></div>
       </div>
@@ -2657,11 +2652,14 @@
   // GRÁFICOS — montados depois que o HTML da rota já está no DOM
   // =========================================================================
   function montarGraficosRelatorio(d) {
-    garantirRanges();
-    const historicoP = d.historicoPatrimonio.filter((h) => h.data >= rangeB.ini && h.data <= rangeB.fim);
+    const { ini, fim } = intervaloRel();
+    const historicoP = d.historicoPatrimonio.filter((h) => h.data >= ini && h.data <= fim);
     if (historicoP.length >= 2) G.renderEvolucaoPatrimonio("graf-rel-evolucao", historicoP);
-    G.renderReceitasDespesas("graf-rel-mensal", serieMensalPeriodo(d, rangeA.ini, rangeA.fim));
+    const primeiro = d.historicoPatrimonio.length ? d.historicoPatrimonio[0].data : ini;
+    G.renderReceitasDespesas("graf-rel-mensal", serieMensalPeriodo(d, mesesRel ? ini : primeiro, fim));
   }
+
+
 
 
 
@@ -2773,6 +2771,7 @@
         case "explicar-classe": explicarClasse(b.dataset.rotulo); break;
         case "explicar-meta": explicarMeta(id); break;
         case "explicar-strip": explicarStrip(b.dataset.chave); break;
+        case "periodo-rel": mesesRel = Number(b.dataset.meses); renderRota(); break;
         case "periodo-rd": mesesRD = Number(b.dataset.meses); renderRota(); break;
         case "periodo-evo": mesesEvo = Number(b.dataset.meses); renderRota(); break;
         case "periodo-grafico": periodoGrafico = b.dataset.periodo; renderRota(); break;
@@ -2882,10 +2881,7 @@
       else if (id === "filtroTipo") { filtrosHistorico.tipo = e.target.value; renderRota(); }
       else if (id === "filtroBanco") { filtrosHistorico.banco = e.target.value; renderRota(); }
       else if (id === "filtroCategoria") { filtrosHistorico.categoria = e.target.value; renderRota(); }
-      else if (id === "rangeA_ini") { rangeA.ini = e.target.value; renderRota(); }
-      else if (id === "rangeA_fim") { rangeA.fim = e.target.value; renderRota(); }
-      else if (id === "rangeB_ini") { rangeB.ini = e.target.value; renderRota(); }
-      else if (id === "rangeB_fim") { rangeB.fim = e.target.value; renderRota(); }
+
     });
 
     let timerBusca = null;
