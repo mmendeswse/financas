@@ -111,6 +111,12 @@
       },
       options: {
         responsive: true, maintainAspectRatio: false, cutout: "72%",
+        onClick: function (evt, elementos) {
+          if (opcoes.aoClicar && elementos && elementos.length) opcoes.aoClicar(itens[elementos[0].index]);
+        },
+        onHover: function (evt, elementos) {
+          if (evt && evt.native && evt.native.target) evt.native.target.style.cursor = (opcoes.aoClicar && elementos.length) ? "pointer" : "default";
+        },
         plugins: {
           legend: { display: false },
           tooltip: tooltipPadrao({

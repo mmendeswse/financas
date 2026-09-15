@@ -956,3 +956,9 @@ table.tab-investimentos th.col-contratada, table.tab-investimentos td.col-contra
 
 /* abas de período dentro do cabeçalho dos gráficos */
 .card header .abas-periodo { margin-right: 0; }
+
+/* intervalo de datas dentro do cabeçalho dos quadros de relatório */
+.range-datas { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; }
+.range-datas input[type="date"] { background: var(--painel-2); border: 1px solid var(--linha-2); border-radius: 7px; color: var(--texto); padding: 7px 10px; font-size: 12.5px; width: auto !important; min-width: 0; }
+.range-datas .dim { font-size: 12px; }
+@media (max-width: 640px) { .range-datas { width: 100%; justify-content: space-between; } }
