@@ -1045,7 +1045,7 @@
         pctRotulo: "do patrimônio bruto está livre de dívidas",
         linhas: linha("Dinheiro em bancos", brl(p.bancos)) + linha("+ Investimentos", brl(p.investimentos)) +
           linha("+ Ações e FIIs", brl(p.acoes)) + linha("− Dívidas em aberto", brl(p.dividas), "down") +
-          linha("= Patrimônio líquido", brl(p.liquido), corSinal(p.liquido)),
+          linha("Patrimônio líquido", brl(p.liquido), corSinal(p.liquido)),
         secao: "bancos"
       },
       bancos: {
@@ -1054,7 +1054,7 @@
         pct: p.bruto > 0 ? (p.bancos / p.bruto) * 100 : 0,
         pctRotulo: "do patrimônio bruto está em conta",
         linhas: bancosNaOrdem(F.listaBancosComSaldo(d)).map((b) => linha(esc(b.nome), brl(b.saldoAtual))).join("") +
-          linha("= Total em bancos", brl(p.bancos), "up"),
+          linha("Total em bancos", brl(p.bancos), "up"),
         secao: "bancos"
       },
       investido: {
@@ -1063,7 +1063,7 @@
         pct: I.percentualInvestido(d),
         pctRotulo: "do patrimônio bruto está investido",
         linhas: linha("Renda fixa, tesouro e fundos", brl(p.investimentos)) + linha("Ações, FIIs e ETFs", brl(p.acoes)) +
-          linha("= Total investido", brl(p.investimentos + p.acoes), "up") +
+          linha("Total investido", brl(p.investimentos + p.acoes), "up") +
           linha("Patrimônio bruto", brl(p.bruto)) +
           linha("Rentabilidade da carteira de ações", pct(I.rentabilidadeCarteiraAcoes(d)), corSinal(I.rentabilidadeCarteiraAcoes(d))),
         secao: "investimentos"
@@ -1133,7 +1133,7 @@
     painelSimples(esc(b.nome), total > 0 ? (saldo / total) * 100 : 0, "do seu dinheiro em bancos está aqui",
       "saldo inicial + entradas − despesas",
       linha("Saldo inicial", brl(b.saldoInicial)) + linha("+ Entradas recebidas", brl(entradas), "up") +
-      linha("− Despesas pagas por aqui", brl(saidas), "down") + linha("= Saldo atual", brl(saldo), corSinal(saldo)) +
+      linha("− Despesas pagas por aqui", brl(saidas), "down") + linha("Saldo atual", brl(saldo), corSinal(saldo)) +
       linha("Tipo de conta", esc(b.tipo || "—")), "bancos");
   }
 
@@ -1160,7 +1160,7 @@
     }
     painelSimples(rotulo, total > 0 ? (item.valor / total) * 100 : 0, "do seu patrimônio bruto",
       "valor deste grupo ÷ patrimônio bruto",
-      detalhe + linha("= Total do grupo", brl(item.valor), "up") + linha("Patrimônio bruto", brl(total)), secao);
+      detalhe + linha("Total do grupo", brl(item.valor), "up") + linha("Patrimônio bruto", brl(total)), secao);
   }
 
   function explicarMeta(id) {
@@ -1193,7 +1193,7 @@
       const taxa = entradas > 0 ? (sobra / entradas) * 100 : 0;
       painelSimples("Taxa Poupança", taxa, "das receitas do mês sobraram", "(receitas − despesas) ÷ receitas",
         linha("Receitas do mês", brl(entradas), "up") + linha("− Despesas do mês", brl(despesas), "down") +
-        linha("= Sobra", brlSinal(sobra), corSinal(sobra)) +
+        linha("Sobra", brlSinal(sobra), corSinal(sobra)) +
         linha("Referência saudável", "20% ou mais"), "entradas");
       return;
     }
@@ -1211,7 +1211,7 @@
       painelSimples("Projeção de despesas", dif, "acima (ou abaixo) da sua média dos últimos meses",
         "(gasto até hoje ÷ dias corridos) × dias do mês",
         linha("Gasto até hoje", brl(despesas), "down") + linha("Dias corridos do mês", `${dia} de ${diasNoMes}`) +
-        linha("Média por dia", brl(mediaDia)) + linha("= Projeção para o mês", brl(projecao), "down") +
+        linha("Média por dia", brl(mediaDia)) + linha("Projeção para o mês", brl(projecao), "down") +
         linha("Média dos últimos 3 meses", media3 > 0 ? brl(media3) : "sem histórico"), "despesas");
       return;
     }
@@ -1246,7 +1246,7 @@
         (vencendo.length
           ? vencendo.map((c) => linha(esc(c.descricao) + " · " + fmtData(c.vencimento), brl(c.valor), c.statusReal === "Atrasado" ? "down" : "")).join("")
           : linha("Nenhuma conta nos próximos 7 dias", "—")) +
-        linha("= Total a pagar", brl(total), "down") + linha("Saldo em bancos", brl(saldo), "up"), "despesas");
+        linha("Total a pagar", brl(total), "down") + linha("Saldo em bancos", brl(saldo), "up"), "despesas");
       return;
     }
   }
@@ -1280,13 +1280,13 @@
 
     if (chave === "rel-receitas") {
       painelSimples("Receitas", totE > 0 ? 100 : 0, `do que entrou no período (${periodo})`, "soma das entradas no período",
-        porCategoria(entradas) + linha("= Total recebido", brl(totE), "up") +
+        porCategoria(entradas) + linha("Total recebido", brl(totE), "up") +
         linha("Média por mês", brl(totE / meses)) + linha("Lançamentos", String(entradas.length)), "entradas");
       return;
     }
     if (chave === "rel-despesas") {
       painelSimples("Despesas", totE > 0 ? (totD / totE) * 100 : 0, "das receitas do período foram gastas", "soma das despesas ÷ receitas",
-        porCategoria(despesas) + linha("= Total gasto", brl(totD), "down") +
+        porCategoria(despesas) + linha("Total gasto", brl(totD), "down") +
         linha("Média por mês", brl(totD / meses)) + linha("Lançamentos", String(despesas.length)), "despesas");
       return;
     }
@@ -1294,7 +1294,7 @@
       const saldo = totE - totD;
       painelSimples("Resultado", totE > 0 ? (saldo / totE) * 100 : 0, "das receitas sobraram no período", "receitas − despesas",
         linha("Receitas", brl(totE), "up") + linha("− Despesas", brl(totD), "down") +
-        linha("= Resultado", brlSinal(saldo), corSinal(saldo)) +
+        linha("Resultado", brlSinal(saldo), corSinal(saldo)) +
         linha("Média por mês", brlSinal(saldo / meses), corSinal(saldo)) +
         linha("Período", periodo), "entradas");
       return;
