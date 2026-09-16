@@ -59,13 +59,26 @@
   let mesDespesas = null;
   const NOMES_MES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 
-  function abasMeses12(acao, selecionado) {
-    const ano = Number(selecionado.slice(0, 4));
+  // anos com lançamentos (mais o ano atual), para o seletor
+  function anosDisponiveis(d) {
+    const anos = new Set([String(new Date().getFullYear())]);
+    [...d.entradas, ...d.despesas].forEach((m) => { if (m.data) anos.add(String(m.data).slice(0, 4)); });
+    (d.contasPagar || []).forEach((c) => { if (c.vencimento) anos.add(String(c.vencimento).slice(0, 4)); });
+    return [...anos].sort((a, b) => b.localeCompare(a));
+  }
+
+  function abasMeses12(acao, selecionado, idAno, anos) {
+    const ano = selecionado.slice(0, 4);
     const mesSel = Number(selecionado.slice(5, 7));
-    return `<div class="abas abas-periodo abas-mes">${NOMES_MES.map((nome, i) => {
+    const lista = (anos && anos.length ? anos : [ano]).slice();
+    if (lista.indexOf(ano) === -1) lista.unshift(ano);
+    const seletorAno = `<select class="sel-ano" id="${idAno}" title="Ano">${lista.map((a) =>
+      `<option value="${a}" ${a === ano ? "selected" : ""}>${a}</option>`).join("")}</select>`;
+    const abas = `<div class="abas abas-periodo abas-mes">${NOMES_MES.map((nome, i) => {
       const chave = `${ano}-${String(i + 1).padStart(2, "0")}`;
       return `<button class="${mesSel === i + 1 ? "ativo" : ""}" data-acao="${acao}" data-mes="${chave}" title="${nome}/${ano}">${nome}</button>`;
     }).join("")}</div>`;
+    return `<div class="filtro-mes">${seletorAno}${abas}</div>`;
   }
 
   let mesesBancos = 0;   // período do gráfico da guia Bancos (0 = saldo atual)
@@ -416,6 +429,12 @@
 
   function navegarPara(secao, param) {
     ROTA = { secao, param: param || null };
+    // ao entrar na guia, o filtro volta sempre para o mês e o ano atuais
+    if (secao === "entradas") mesEntradas = F.mesAtual();
+    if (secao === "despesas") mesDespesas = F.mesAtual();
+    // ao entrar em Ações ou Investimentos (e nas telas de detalhe delas),
+    // o período dos gráficos volta ao padrão, em vez de guardar a escolha
+    if (secao === "acoes" || secao === "investimentos") periodoGrafico = "tudo";
     document.querySelectorAll("#navPrincipal button").forEach((b) => b.classList.toggle("ativo", b.dataset.secao === secao));
     fecharSidebarMobile();
     renderRota();
@@ -1650,7 +1669,7 @@
     }
     return `
       <div class="grid g-top">
-        <div class="c12">${card("c12", "Entradas", `Total ${NOMES_MES[Number(mesEntradas.slice(5, 7)) - 1]}/${mesEntradas.slice(0, 4)}: ${brl(totalMes)}`, `${abasMeses12("mes-entradas", mesEntradas)}<button class="btn primario" data-acao="nova-entrada"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`, corpo)}</div>
+        <div class="c12">${card("c12", "Entradas", `Total ${NOMES_MES[Number(mesEntradas.slice(5, 7)) - 1]}/${mesEntradas.slice(0, 4)}: ${brl(totalMes)}`, `${abasMeses12("mes-entradas", mesEntradas, "anoEntradas", anosDisponiveis(d))}<button class="btn primario" data-acao="nova-entrada"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`, corpo)}</div>
       </div>
     `;
   }
@@ -1753,7 +1772,7 @@
     return `
       <div class="grid g-top">
         <div class="c12">${card("c12", "Despesas", `Pagas ${NOMES_MES[Number(mesDespesas.slice(5, 7)) - 1]}/${mesDespesas.slice(0, 4)}: ${brl(totalMes)} · em aberto: ${brl(aPagar)}`,
-          `${abasMeses12("mes-despesas", mesDespesas)}<button class="btn primario" data-acao="nova-despesa"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`,
+          `${abasMeses12("mes-despesas", mesDespesas, "anoDespesas", anosDisponiveis(d))}<button class="btn primario" data-acao="nova-despesa"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`,
           corpo)}</div>
       </div>
     `;
@@ -3149,6 +3168,8 @@
 
     cont.addEventListener("change", (e) => {
       const id = e.target.id;
+      if (id === "anoEntradas") { mesEntradas = e.target.value + mesEntradas.slice(4); renderRota(); return; }
+      if (id === "anoDespesas") { mesDespesas = e.target.value + mesDespesas.slice(4); renderRota(); return; }
       if (id === "filtroPeriodo") { filtrosHistorico.periodo = e.target.value; renderRota(); }
       else if (id === "filtroTipo") { filtrosHistorico.tipo = e.target.value; renderRota(); }
       else if (id === "filtroBanco") { filtrosHistorico.banco = e.target.value; renderRota(); }
