@@ -1021,3 +1021,10 @@ table.tab-acoes th.col-atualiz, table.tab-acoes td.col-atualiz { display: none; 
 .sel-ano { background: var(--painel-2); border: 1px solid var(--linha-2); border-radius: 7px; color: var(--texto);
   padding: 6px 8px; font-size: 12px; font-weight: 700; font-family: var(--mono); flex: none; cursor: pointer; }
 @media (max-width: 900px) { .filtro-mes { order: 3; width: 100%; margin-top: 8px; } }
+
+/* títulos de coluna que ordenam a tabela */
+.hd .hd-ordem { background: none; border: none; padding: 0; font: inherit; color: inherit; cursor: pointer;
+  text-transform: inherit; letter-spacing: inherit; font-style: normal; text-align: left; white-space: nowrap; }
+.hd .hd-ordem.r { text-align: right; }
+.hd .hd-ordem:hover { color: var(--texto); }
+.hd .hd-ordem.ativo { color: var(--cy); }

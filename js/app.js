@@ -81,6 +81,31 @@
     return `<div class="filtro-mes">${seletorAno}${abas}</div>`;
   }
 
+  // ordenação das tabelas de Entradas e Despesas
+  const ORDEM_ENTRADAS_PADRAO = { campo: "data", dir: "desc" };       // mais recentes primeiro
+  const ORDEM_DESPESAS_PADRAO = { campo: "pendentes", dir: "asc" };   // pendentes por data
+  let ordemEntradas = { ...ORDEM_ENTRADAS_PADRAO };
+  let ordemDespesas = { ...ORDEM_DESPESAS_PADRAO };
+
+  // título de coluna que ordena ao ser clicado
+  function thOrdem(acao, campo, rotulo, ordem, classe) {
+    const ativo = ordem.campo === campo;
+    const seta = ativo ? (ordem.dir === "asc" ? " ▲" : " ▼") : "";
+    return `<button class="hd-ordem${ativo ? " ativo" : ""}${classe ? " " + classe : ""}" data-acao="${acao}" data-campo="${campo}" title="Ordenar por ${rotulo.toLowerCase()}">${rotulo}${seta}</button>`;
+  }
+
+  function comparar(a, b, campo, dir) {
+    const mult = dir === "asc" ? 1 : -1;
+    let x, y;
+    if (campo === "valor") { x = Number(a.valor || 0); y = Number(b.valor || 0); }
+    else if (campo === "data") { x = a.data || ""; y = b.data || ""; }
+    else if (campo === "status") { x = a.status || ""; y = b.status || ""; }
+    else { x = String(a.descricao || "").toLowerCase(); y = String(b.descricao || "").toLowerCase(); }
+    if (x < y) return -1 * mult;
+    if (x > y) return 1 * mult;
+    return 0;
+  }
+
   let mesesBancos = 0;   // período do gráfico da guia Bancos (0 = saldo atual)
   let mesesRelA = 12;   // período do quadro Receitas x despesas
   let mesesRelB = 12;   // período do quadro Evolução patrimonial
@@ -430,8 +455,8 @@
   function navegarPara(secao, param) {
     ROTA = { secao, param: param || null };
     // ao entrar na guia, o filtro volta sempre para o mês e o ano atuais
-    if (secao === "entradas") mesEntradas = F.mesAtual();
-    if (secao === "despesas") mesDespesas = F.mesAtual();
+    if (secao === "entradas") { mesEntradas = F.mesAtual(); ordemEntradas = { ...ORDEM_ENTRADAS_PADRAO }; }
+    if (secao === "despesas") { mesDespesas = F.mesAtual(); ordemDespesas = { ...ORDEM_DESPESAS_PADRAO }; }
     // ao entrar em Ações ou Investimentos (e nas telas de detalhe delas),
     // o período dos gráficos volta ao padrão, em vez de guardar a escolha
     if (secao === "acoes" || secao === "investimentos") periodoGrafico = "tudo";
@@ -1651,14 +1676,14 @@
   function renderEntradas(d) {
     if (!mesEntradas) mesEntradas = F.mesAtual();
     const lista = d.entradas.filter((e) => String(e.data || "").slice(0, 7) === mesEntradas)
-      .sort((a, b) => (b.data || "").localeCompare(a.data || ""));
+      .sort((a, b) => comparar(a, b, ordemEntradas.campo, ordemEntradas.dir));
     const totalMes = F.totalEntradasMes(d, mesEntradas);
     const grid = "grid-template-columns:minmax(0,1fr) 120px 90px 150px";
     let corpo;
     if (!lista.length) {
       corpo = `<div class="empty">Nenhuma entrada cadastrada. Use "+ Nova entrada" para lançar seu salário ou outra receita.</div>`;
     } else {
-      corpo = `<div class="hd" style="${grid}"><i>Descrição</i><i>Banco</i><i class="r">Data</i><i class="r hd-valor">Valor</i></div>` +
+      corpo = `<div class="hd" style="${grid}">${thOrdem("ordenar-entradas", "descricao", "Descrição", ordemEntradas)}<i>Banco</i>${thOrdem("ordenar-entradas", "data", "Data", ordemEntradas, "r")}${thOrdem("ordenar-entradas", "valor", "Valor", ordemEntradas, "r hd-valor")}</div>` +
         lista.map((e) => `
         <div class="rw" style="${grid}">
           <div><div class="nm">${esc(e.descricao)}${seloFreq(e)}</div><div class="sub">${esc(e.categoria)} · ${esc(e.tipo || "")}</div></div>
@@ -1743,7 +1768,15 @@
     if (!mesDespesas) mesDespesas = F.mesAtual();
     const lista = [...lancadas, ...previstas]
       .filter((x) => String(x.data || "").slice(0, 7) === mesDespesas)
-      .sort((a, b) => (b.data || "").localeCompare(a.data || ""));
+      .sort((a, b) => {
+        if (ordemDespesas.campo === "pendentes") {
+          // o que ainda não foi pago vem primeiro, por data de vencimento
+          const pend = (x) => (x.status === "Pago" ? 1 : 0);
+          if (pend(a) !== pend(b)) return pend(a) - pend(b);
+          return (a.data || "").localeCompare(b.data || "");
+        }
+        return comparar(a, b, ordemDespesas.campo, ordemDespesas.dir);
+      });
 
     const totalMes = F.totalDespesasMes(d, mesDespesas);
     const aPagar = F.totalAPagar(d);
@@ -1753,7 +1786,7 @@
     if (!lista.length) {
       corpo = `<div class="empty">Nenhum lançamento em ${NOMES_MES[Number(mesDespesas.slice(5, 7)) - 1]}/${mesDespesas.slice(0, 4)}. Use NOVO para lançar uma despesa ou uma conta a pagar.</div>`;
     } else {
-      corpo = `<div class="hd" style="${grid}"><i>Descrição</i><i class="r">Data</i><i class="r">Status</i><i class="r hd-valor">Valor</i></div>` +
+      corpo = `<div class="hd" style="${grid}">${thOrdem("ordenar-despesas", "descricao", "Descrição", ordemDespesas)}${thOrdem("ordenar-despesas", "data", "Data", ordemDespesas, "r")}${thOrdem("ordenar-despesas", "status", "Status", ordemDespesas, "r")}${thOrdem("ordenar-despesas", "valor", "Valor", ordemDespesas, "r hd-valor")}</div>` +
         lista.map((x) => `
         <div class="rw" style="${grid}">
           <div><div class="nm">${esc(x.descricao)}${x.recorrencia && x.recorrencia !== FREQUENCIAS[0] ? ` <span class="selo-tag selo-cat">${esc(x.recorrencia.toLowerCase())}</span>` : ""}</div><div class="sub">${esc(x.categoria || "—")}</div></div>
@@ -3055,6 +3088,16 @@
         case "explicar-banco": explicarBanco(id); break;
         case "explicar-classe": explicarClasse(b.dataset.rotulo); break;
         case "explicar-meta": explicarMeta(id); break;
+        case "ordenar-entradas": {
+          const campo = b.dataset.campo;
+          ordemEntradas = { campo, dir: ordemEntradas.campo === campo && ordemEntradas.dir === "asc" ? "desc" : "asc" };
+          renderRota(); break;
+        }
+        case "ordenar-despesas": {
+          const campo = b.dataset.campo;
+          ordemDespesas = { campo, dir: ordemDespesas.campo === campo && ordemDespesas.dir === "asc" ? "desc" : "asc" };
+          renderRota(); break;
+        }
         case "mes-entradas": mesEntradas = b.dataset.mes; renderRota(); break;
         case "mes-despesas": mesDespesas = b.dataset.mes; renderRota(); break;
         case "ir-dolar": navegarPara("detalhe-dolar"); break;
