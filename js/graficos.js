@@ -159,6 +159,9 @@
     // com menos de dois meses de registro, mantém os pontos originais
     var porData = serie.length < 2;
     if (porData) serie = historico;
+    // posição do maior valor do período (o "pico")
+    var iPico = 0;
+    serie.forEach(function (p, i) { if (p.valor > serie[iPico].valor) iPico = i; });
     instancias[canvasId] = new Chart(ctx, {
       type: "line",
       data: {
@@ -171,16 +174,43 @@
           label: "Patrimônio líquido",
           data: serie.map(function (p) { return p.valor; }),
           borderColor: CORES.azul, backgroundColor: gradiente(ctx, CORES.azul, 240), fill: true, tension: 0.3,
-          borderWidth: 2.5, pointRadius: serie.length <= 14 ? 4 : 0, pointHoverRadius: 5,
-          pointBackgroundColor: "#FFFFFF", pointBorderColor: CORES.azul, pointBorderWidth: 2
+          borderWidth: 2.5,
+          // o ponto de maior valor do período fica sempre em destaque
+          pointRadius: serie.map(function (p, i) { return i === iPico ? 6 : (serie.length <= 14 ? 4 : 0); }),
+          pointHoverRadius: 6,
+          pointBackgroundColor: serie.map(function (p, i) { return i === iPico ? CORES.up : "#FFFFFF"; }),
+          pointBorderColor: serie.map(function (p, i) { return i === iPico ? CORES.up : CORES.azul; }),
+          pointBorderWidth: 2
         }]
       },
       options: {
         responsive: true, maintainAspectRatio: false,
         interaction: { mode: "index", intersect: false },
         scales: { x: eixoX({ ticks: { color: CORES.texto, font: fonte(10.5), maxTicksLimit: 12 } }), y: eixoY() },
-        plugins: { legend: { display: false }, tooltip: tooltipPadrao({ callbacks: { label: function (c) { return " " + moeda(c.parsed.y); } } }) }
-      }
+        plugins: { legend: { display: false }, tooltip: tooltipPadrao({ callbacks: { label: function (c) { return " " + moeda(c.parsed.y) + (c.dataIndex === iPico ? "  ·  pico do período" : ""); } } }) }
+      },
+      plugins: [{
+        id: "marcaPico",
+        afterDatasetsDraw: function (grafico) {
+          var meta = grafico.getDatasetMeta(0);
+          var ponto = meta.data[iPico];
+          if (!ponto || serie.length < 2) return;
+          var c = grafico.ctx;
+          c.save();
+          c.font = "700 11px 'Segoe UI', Roboto, sans-serif";
+          var texto = "PICO " + moeda(serie[iPico].valor);
+          var larg = c.measureText(texto).width + 14;
+          var x = Math.min(Math.max(ponto.x - larg / 2, grafico.chartArea.left), grafico.chartArea.right - larg);
+          var y = Math.max(ponto.y - 30, grafico.chartArea.top + 2);
+          c.fillStyle = "rgba(34,227,154,0.16)";
+          c.strokeStyle = CORES.up; c.lineWidth = 1;
+          if (c.roundRect) { c.beginPath(); c.roundRect(x, y, larg, 20, 5); c.fill(); c.stroke(); }
+          else { c.fillRect(x, y, larg, 20); c.strokeRect(x, y, larg, 20); }
+          c.fillStyle = CORES.up; c.textBaseline = "middle"; c.textAlign = "center";
+          c.fillText(texto, x + larg / 2, y + 10);
+          c.restore();
+        }
+      }]
     });
   }
 
@@ -190,12 +220,34 @@
   function renderSaldoBancos(canvasId, bancos) {
     destruir(canvasId);
     var ctx = ctxOf(canvasId); if (!ctx) return;
-    // cada barra mostra o nome e quanto representa do total
     var total = bancos.reduce(function (t, b) { return t + Math.abs(Number(b.saldoAtual || 0)); }, 0) || 1;
+    // escreve a porcentagem dentro da barra, como nas barras do dashboard
+    var pctDentro = {
+      id: "pctDentro",
+      afterDatasetsDraw: function (grafico) {
+        var meta = grafico.getDatasetMeta(0), c = grafico.ctx;
+        c.save();
+        c.font = "800 11px 'Segoe UI', Roboto, sans-serif";
+        c.textBaseline = "middle";
+        meta.data.forEach(function (barra, i) {
+          var valor = bancos[i].saldoAtual;
+          var txt = ((valor / total) * 100).toFixed(1).replace(".", ",") + "%";
+          var largura = barra.x - grafico.chartArea.left;
+          if (largura < c.measureText(txt).width + 16) {   // barra curta: texto do lado de fora
+            c.fillStyle = CORES.texto; c.textAlign = "left";
+            c.fillText(txt, barra.x + 7, barra.y);
+          } else {
+            c.fillStyle = "#08121A"; c.textAlign = "right";
+            c.fillText(txt, barra.x - 8, barra.y);
+          }
+        });
+        c.restore();
+      }
+    };
     instancias[canvasId] = new Chart(ctx, {
       type: "bar",
       data: {
-        labels: bancos.map(function (b) { return b.nome + "  " + ((b.saldoAtual / total) * 100).toFixed(1).replace(".", ",") + "%"; }),
+        labels: bancos.map(function (b) { return b.nome; }),
         datasets: [{ data: bancos.map(function (b) { return b.saldoAtual; }), backgroundColor: bancos.map(function (b) { return b.cor || CORES.cy; }), borderColor: bancos.map(function (b) { return b.cor || CORES.cy; }), borderWidth: 1, borderRadius: 3, maxBarThickness: 26 }]
       },
       options: {
@@ -205,7 +257,8 @@
           legend: { display: false },
           tooltip: tooltipPadrao({ callbacks: { label: function (c) { return " " + moeda(c.parsed.x) + " · " + ((c.parsed.x / total) * 100).toFixed(1).replace(".", ",") + "%"; } } })
         }
-      }
+      },
+      plugins: [pctDentro]
     });
   }
 

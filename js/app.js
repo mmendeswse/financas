@@ -23,7 +23,7 @@
   const VERSAO_APP = "1.0.2";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
-  const TIPOS_CONTA_BANCO = ["Conta corrente", "Conta poupança", "Conta digital", "Investimento", "Outro"];
+  const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
   const FORMAS_PAGAMENTO = ["Débito", "Pix", "Dinheiro", "Cartão de crédito", "Boleto", "Transferência", "Débito automático"];
   const CATS_INVESTIMENTO = ["Renda fixa", "Tesouro Direto", "Criptomoedas", "Fundos", "Outros"];
   const TIPOS_ATIVO_RF = ["CDB", "LCI", "LCA", "LC", "RDB", "CRI", "CRA", "Debênture", "Debênture incentivada",
@@ -1278,8 +1278,16 @@
     const totalComp = composicao.reduce((s, i) => s + i.valor, 0);
     const legendaComp = composicao.length ? composicao.map((i) => `<button class="legenda-linha clicavel" data-acao="explicar-classe" data-rotulo="${esc(i.rotulo)}" title="Ver detalhes"><span class="legenda-nome"><span class="legenda-ponto" style="background:${i.cor}"></span>${esc(i.rotulo)}</span><span class="legenda-pct" style="color:${i.cor}">${(totalComp > 0 ? (i.valor / totalComp) * 100 : 0).toFixed(1).replace(".", ",")}%</span><span class="legenda-val">${brl(i.valor)}</span></button>`).join("") : `<div class="empty">Sem ativos ainda.</div>`;
 
-    const histRecente = d.historicoPatrimonio.slice(-30);
-    const pico = histRecente.length ? Math.max(...histRecente.map((h) => h.valor)) : 0;
+    // o pico é o maior valor dentro do período escolhido no quadro E
+    const histPeriodo = (() => {
+      const h = d.historicoPatrimonio;
+      if (!mesesEvo) return h;
+      const corte = new Date(); corte.setMonth(corte.getMonth() - mesesEvo);
+      const limite = corte.toISOString().slice(0, 10);
+      const filtrado = h.filter((x) => x.data >= limite);
+      return filtrado.length >= 2 ? filtrado : h;
+    })();
+    const pico = histPeriodo.length ? Math.max(...histPeriodo.map((h) => h.valor)) : 0;
 
     const acoes = I.listaAcoesComCalculo(d);
     const melhor = acoes.length ? acoes.reduce((a, b) => (a.rentabilidade >= b.rentabilidade ? a : b)) : null;
@@ -1453,7 +1461,7 @@
     } else {
       listaHtml = `<div class="grade-bancos">` + bancos.map((b) => `
           <div class="cartao-item" style="border-left-color:${esc(b.cor || "#3FC1E0")}" data-acao="editar-banco" data-id="${b.id}">
-            <div class="linha1"><div class="nome-com-marca">${marcaBanco(b.nome, 26)}<div><div class="nome">${esc(b.nome)}</div><div class="tipo">${esc(b.tipo || "—")}${b.agencia ? " · Ag " + esc(b.agencia) : ""}${b.conta ? " · Cc " + esc(b.conta) : ""}</div></div></div></div>
+            <div class="linha1"><div class="nome-com-marca">${marcaBanco(b.nome, 26)}<div><div class="nome">${esc(b.nome)}</div><div class="tipo">${esc(b.tipo || "—")}</div>${b.agencia || b.conta ? `<div class="tipo">${b.agencia ? "Ag " + esc(b.agencia) : ""}${b.agencia && b.conta ? " · " : ""}${b.conta ? "Cc " + esc(b.conta) : ""}</div>` : ""}</div></div></div>
             <div class="saldo ${corSinal(b.saldoAtual)}">${brl(b.saldoAtual)}</div>
             <div class="rodape">saldo inicial ${brl(b.saldoInicial)}</div>
           </div>`).join("") + `</div>`;
@@ -2298,23 +2306,23 @@
         const forte = Math.abs(v.pct) >= 2 ? (v.pct > 0 ? "cel-up" : "cel-down") : (Math.abs(v.pct) >= 1 ? "cel-neutra" : "");
         const ultima = editandoPrecos
           ? `<input class="campo-preco moeda" data-id="${a.id}" type="text" inputmode="decimal" value="${valorCampoMoeda(a.precoAtual)}" onclick="event.stopPropagation()">`
-          : `<span class="${forte}">${f2(a.precoAtual)}</span>`;
+          : `<span class="${forte}">${brl(a.precoAtual)}</span>`;
         return `<tr data-acao="ir" data-secao="detalhe-acao" data-id="${a.id}">
           <td class="papel">${esc(a.ticker)}<small>${esc(a.categoria)}</small></td>
           <td class="r">${ultima}</td>
-          <td class="r ${v.valor >= 0 ? "up" : "down"}">${v.valor >= 0 ? "+" : ""}${f2(v.valor)}</td>
+          <td class="r"><span class="${v.valor >= 0 ? "cel-up" : "cel-down"}">${v.valor >= 0 ? "+" : "−"}${brl(Math.abs(v.valor))}</span></td>
           <td class="r">${fp(v.pct)}</td>
           <td class="r">${fn(a.quantidade)}</td>
-          <td class="r">${f2(a.precoMedio)}</td>
-          <td class="r">${fn(a.valorInvestido)}</td>
-          <td class="r creme">${fn(a.valorAtual)}</td>
-          <td class="r ${corSinal(a.resultado)}">${a.resultado >= 0 ? "+" : "−"}${fn(Math.abs(a.resultado))}</td>
+          <td class="r">${brl(a.precoMedio)}</td>
+          <td class="r">${brl(a.valorInvestido)}</td>
+          <td class="r creme">${brl(a.valorAtual)}</td>
+          <td class="r ${corSinal(a.resultado)}">${a.resultado >= 0 ? "+" : "−"}${brl(Math.abs(a.resultado))}</td>
           <td class="r">${fp(a.rentabilidade)}</td>
-          <td class="r dim">${f2(mm.min)}</td>
-          <td class="r dim">${f2(mm.max)}</td>
+          <td class="r dim">${brl(mm.min)}</td>
+          <td class="r dim">${brl(mm.max)}</td>
           <td class="r">${fp(m30)}</td>
           <td class="r">${fp(m365)}</td>
-          <td class="r">${fn(a.dividendos || 0)}</td>
+          <td class="r">${brl(a.dividendos || 0)}</td>
           <td class="r">${f2(a.peso)}%</td>
           <td class="r dim">${fmtDataCurta(a.atualizadoEm)}</td>
         </tr>`;
@@ -2330,10 +2338,10 @@
         <tbody>${linhas}</tbody>
         <tfoot><tr>
           <td>CARTEIRA</td><td></td><td></td><td></td><td></td><td></td>
-          <td class="r">${fn(tInv)}</td><td class="r creme">${fn(tAt)}</td>
-          <td class="r ${corSinal(tRes)}">${tRes >= 0 ? "+" : "−"}${fn(Math.abs(tRes))}</td>
+          <td class="r">${brl(tInv)}</td><td class="r creme">${brl(tAt)}</td>
+          <td class="r ${corSinal(tRes)}">${tRes >= 0 ? "+" : "−"}${brl(Math.abs(tRes))}</td>
           <td class="r">${fp(I.rentabilidadeCarteiraAcoes(d))}</td>
-          <td></td><td></td><td></td><td></td><td class="r">${fn(I.totalDividendosAcoes(d))}</td><td class="r">100%</td><td></td>
+          <td></td><td></td><td></td><td></td><td class="r">${brl(I.totalDividendosAcoes(d))}</td><td class="r">100%</td><td></td>
         </tr></tfoot>
       </table></div>`;
     }
@@ -2577,7 +2585,7 @@
     }
     return `<div class="grid g-top">
       <div class="c12" style="display:flex;justify-content:flex-end">
-        <button class="btn primario" data-acao="nova-meta"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>Nova meta</button>
+        <button class="btn primario" data-acao="nova-meta"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>Nova</button>
       </div>
     </div>
     <div class="grid">${corpo}</div>`;
@@ -2657,7 +2665,7 @@
     const despesasP = d.despesas.filter((x) => x.data >= fxA.ini && x.data <= fxA.fim).reduce((s, x) => s + Number(x.valor), 0);
     const historicoP = d.historicoPatrimonio.filter((h) => h.data >= fxB.ini && h.data <= fxB.fim);
     const OPC = [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }, { meses: 0, rotulo: "Tudo" }];
-    const rotulo = (m) => (m ? `últimos ${m} meses` : "todo o histórico");
+    const rotulo = (m) => (m ? `Últimos ${m} meses` : "Todo o histórico");
     const rotuloPeriodo = rotulo(mesesRelA);
 
     return `
@@ -2665,13 +2673,13 @@
         <div class="c3">${metricCard("Receitas", brl(entradasP), ICONES_REL.receitas, "var(--up)", "", rotuloPeriodo, null, "0 0 24 24")}</div>
         <div class="c3">${metricCard("Despesas", brl(despesasP), ICONES_REL.despesas, "var(--down)", "", rotuloPeriodo, null, "0 0 24 24")}</div>
         <div class="c3">${metricCard("Resultado", brlSinal(entradasP - despesasP), ICONES_REL.resultado, corSinal(entradasP - despesasP) === "up" ? "var(--up)" : "var(--down)", "", "", null, "0 0 24 24")}</div>
-        <div class="c3">${metricCard("Rentabilidade", pct(I.rentabilidadeCarteiraAcoes(d)), ICONES_REL.rentabilidade, "var(--vi)", "", "acumulada · Preço Médio", null, "0 0 24 24")}</div>
+        <div class="c3">${metricCard("Rentabilidade", pct(I.rentabilidadeCarteiraAcoes(d)), ICONES_REL.rentabilidade, "var(--vi)", "", "Acumulada · Preço Médio", null, "0 0 24 24")}</div>
       </div>
       <div class="grid">
-        <div class="c12">${card("", "Receitas x despesas", `por mês · ${rotulo(mesesRelA)}`, abasMeses("periodo-rel-a", mesesRelA, OPC), `<div style="padding:10px 16px;height:220px"><canvas id="graf-rel-mensal"></canvas></div>`)}</div>
+        <div class="c12">${card("", "Receitas x despesas", `${rotulo(mesesRelA)}`, abasMeses("periodo-rel-a", mesesRelA, OPC), `<div style="padding:10px 16px;height:220px"><canvas id="graf-rel-mensal"></canvas></div>`)}</div>
       </div>
       <div class="grid">
-        <div class="c12">${card("", "Evolução patrimonial", `por mês · ${rotulo(mesesRelB)}`, abasMeses("periodo-rel-b", mesesRelB, OPC), historicoP.length >= 2 ? `<div style="padding:10px 16px;height:220px"><canvas id="graf-rel-evolucao"></canvas></div>` : `<div class="empty">Ainda não há histórico suficiente para este período.</div>`)}</div>
+        <div class="c12">${card("", "Evolução patrimonial", `${rotulo(mesesRelB)}`, abasMeses("periodo-rel-b", mesesRelB, OPC), historicoP.length >= 2 ? `<div style="padding:10px 16px;height:220px"><canvas id="graf-rel-evolucao"></canvas></div>` : `<div class="empty">Ainda não há histórico suficiente para este período.</div>`)}</div>
       </div>
     `;
   }
