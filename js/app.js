@@ -1434,6 +1434,38 @@
       "despesas");
   }
 
+
+  // Painel do quadro "Evolução patrimonial": detalha o ponto clicado —
+  // quanto o patrimônio variou desde o mês anterior e desde o começo do
+  // período, e como ele está dividido hoje.
+  function explicarPatrimonio(ponto, serie, iPico) {
+    if (!ponto) return;
+    const d = DADOS;
+    const idx = serie.indexOf(ponto);
+    const anterior = idx > 0 ? serie[idx - 1] : null;
+    const primeiro = serie[0];
+    const varMes = anterior ? ponto.valor - anterior.valor : 0;
+    const varPeriodo = ponto.valor - primeiro.valor;
+    const pctPeriodo = primeiro.valor > 0 ? (varPeriodo / primeiro.valor) * 100 : 0;
+    const p = I.patrimonio(d);
+    const linha = (r, v, c) => `<div class="kv"><span class="dim">${rotuloPainel(r)}</span><b class="${c || ""}">${v}</b></div>`;
+    const quando = new Date(ponto.data + "T00:00:00").toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+    const ehPico = idx === iPico;
+
+    painelSimples(quando.charAt(0).toUpperCase() + quando.slice(1), pctPeriodo,
+      "de variação desde o início do período", "valor do mês ÷ valor do primeiro mês",
+      linha("Patrimônio no mês", brl(ponto.valor), "creme") +
+      (ehPico ? linha("Situação", "maior valor do período", "up") : "") +
+      (anterior ? linha("Mês anterior", brl(anterior.valor)) : "") +
+      (anterior ? linha("Variação no mês", brlSinal(varMes), corSinal(varMes)) : "") +
+      linha("Início do período", brl(primeiro.valor)) +
+      linha("Variação no período", brlSinal(varPeriodo), corSinal(varPeriodo)) +
+      linha("Bancos hoje", brl(p.bancos)) +
+      linha("Investimentos hoje", brl(p.investimentos + p.acoes)) +
+      linha("Dívidas hoje", brl(p.dividas), p.dividas > 0 ? "down" : ""),
+      "bancos");
+  }
+
   // =========================================================================
   // DASHBOARD
   // =========================================================================
@@ -3012,7 +3044,7 @@
           const filtrado = hist.filter((h) => h.data >= limite);
           if (filtrado.length >= 2) hist = filtrado;
         }
-        if (hist.length >= 2) G.renderEvolucaoPatrimonio("graf-evolucao", hist);
+        if (hist.length >= 2) G.renderEvolucaoPatrimonio("graf-evolucao", hist, { aoClicar: explicarPatrimonio });
         else G.destruir("graf-evolucao");
         G.renderReceitasDespesas("graf-receitas-despesas", F.serieMensal(d, mesesRD), { aoClicar: explicarMes });
         if (itensPatrimonio(d).length) G.renderDoughnutGenerico("graf-dash-composicao", itensPatrimonio(d), { semLegenda: true, aoClicar: (item) => explicarClasse(item.rotulo) });

@@ -159,7 +159,8 @@
     return d.toLocaleDateString("pt-BR", { month: "short" }).replace(".", "");
   }
 
-  function renderEvolucaoPatrimonio(canvasId, historico) {
+  function renderEvolucaoPatrimonio(canvasId, historico, opcoes) {
+    opcoes = opcoes || {};
     destruir(canvasId);
     var ctx = ctxOf(canvasId); if (!ctx) return;
     var serie = porMes(historico);
@@ -193,6 +194,12 @@
       options: {
         responsive: true, maintainAspectRatio: false,
         interaction: { mode: "index", intersect: false },
+        onClick: function (evt, elementos) {
+          if (opcoes.aoClicar && elementos && elementos.length) opcoes.aoClicar(serie[elementos[0].index], serie, iPico);
+        },
+        onHover: function (evt, elementos) {
+          if (evt && evt.native && evt.native.target) evt.native.target.style.cursor = (opcoes.aoClicar && elementos.length) ? "pointer" : "default";
+        },
         scales: { x: eixoX({ ticks: { color: CORES.texto, font: fonte(10.5), maxTicksLimit: 12 } }), y: eixoY() },
         plugins: { legend: { display: false }, tooltip: tooltipPadrao({ callbacks: { label: function (c) { return " " + moeda(c.parsed.y) + (c.dataIndex === iPico ? "  ·  pico do período" : ""); } } }) }
       },
