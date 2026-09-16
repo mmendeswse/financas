@@ -975,3 +975,23 @@ table.tab-investimentos th.col-contratada, table.tab-investimentos td.col-contra
    tema escuro; altura fixa e largura livre, sem esticar a imagem */
 .marca-logo { display: inline-flex; align-items: center; justify-content: center; background: #FFFFFF; border-radius: 6px; padding: 3px 5px; flex: none; box-sizing: content-box; }
 .marca-logo img { height: 100%; width: auto; display: block; }
+
+/* percentual sempre visível no fim do trilho das barras (quadro A) */
+.barlist-trilho { position: relative; }
+.barlist-pct { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-family: var(--mono); font-size: 11px; font-weight: 800; color: #FFFFFF; pointer-events: none; }
+
+/* percentual no centro da rosca, clicável */
+.donut-rotulo.clicavel { pointer-events: auto; cursor: pointer; background: none; border: none; padding: 0; }
+.donut-rotulo.clicavel:hover b { color: var(--cy); }
+
+/* coluna "Atualiz." oculta na tabela de ações */
+table.tab-acoes th.col-atualiz, table.tab-acoes td.col-atualiz { display: none; }
+
+/* botão de nova meta ocupando um quadro inteiro */
+.card-novo { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 168px; height: 100%;
+  background: transparent; border: 2px dashed var(--linha-2); color: var(--dim); cursor: pointer; }
+.card-novo:hover { border-color: var(--cy); color: var(--cy); background: rgba(0,229,255,.04); }
+.card-novo svg { width: 34px; height: 34px; }
+
+/* logotipo dos bancos sem fundo */
+.marca-logo { background: transparent; padding: 0; border-radius: 0; }

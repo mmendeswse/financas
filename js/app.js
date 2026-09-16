@@ -846,7 +846,7 @@
       const clic = i.id ? ` data-acao="explicar-banco" data-id="${i.id}" title="Ver detalhes deste banco"` : "";
       return `<${i.id ? "button" : "div"} class="barlist-linha${i.id ? " clicavel" : ""}"${clic}>
         <span class="barlist-nome">${i.id ? marcaBanco(i.nome, 18) : ""}${esc(i.nome)}</span>
-        <span class="barlist-trilho"><i style="width:${p.toFixed(1)}%;background:${i.cor || cor || "var(--azul)"}">${p >= 22 ? Math.round(p) + "%" : ""}</i></span>
+        <span class="barlist-trilho"><i style="width:${p.toFixed(1)}%;background:${i.cor || cor || "var(--azul)"}"></i><b class="barlist-pct">${p.toFixed(1).replace(".", ",")}%</b></span>
         <b class="barlist-valor ${i.valor < 0 ? "down" : ""}">${brl(i.valor)}</b>
       </${i.id ? "button" : "div"}>`;
     }).join("") + `</div>`;
@@ -1051,7 +1051,7 @@
         conta: "saldo de cada banco = saldo inicial + entradas − despesas",
         pct: p.bruto > 0 ? (p.bancos / p.bruto) * 100 : 0,
         pctRotulo: "do patrimônio bruto está em conta",
-        linhas: F.listaBancosComSaldo(d).map((b) => linha(esc(b.nome), brl(b.saldoAtual))).join("") +
+        linhas: bancosNaOrdem(F.listaBancosComSaldo(d)).map((b) => linha(esc(b.nome), brl(b.saldoAtual))).join("") +
           linha("= Total em bancos", brl(p.bancos), "up"),
         secao: "bancos"
       },
@@ -1145,7 +1145,7 @@
     let detalhe = "";
     let secao = "investimentos";
     if (rotulo === "Bancos") {
-      detalhe = F.listaBancosComSaldo(d).map((b) => linha(esc(b.nome), brl(b.saldoAtual))).join("");
+      detalhe = bancosNaOrdem(F.listaBancosComSaldo(d)).map((b) => linha(esc(b.nome), brl(b.saldoAtual))).join("");
       secao = "bancos";
     } else if (["Ações", "FIIs", "ETFs"].indexOf(rotulo) > -1) {
       const cat = rotulo === "Ações" ? "Ação" : rotulo === "FIIs" ? "FII" : "ETF";
@@ -1249,6 +1249,15 @@
     }
   }
 
+
+  // ---------------------------------------------------------------------
+  // Ordem dos bancos: do maior para o menor saldo, a mesma em todas as
+  // telas (barras do dashboard, cartões e gráfico da guia Bancos).
+  // ---------------------------------------------------------------------
+  function bancosNaOrdem(lista) {
+    return lista.slice().sort((a, b) => Number(b.saldoAtual || 0) - Number(a.saldoAtual || 0));
+  }
+
   // =========================================================================
   // DASHBOARD
   // =========================================================================
@@ -1273,7 +1282,7 @@
     const pctBancos = p.bruto > 0 ? (p.bancos / p.bruto) * 100 : 0;
     const rentCarteira = I.rentabilidadeCarteiraAcoes(d);
 
-    const bancos = F.listaBancosComSaldo(d).sort((a, b) => b.saldoAtual - a.saldoAtual).map((b) => ({ id: b.id, nome: b.nome, valor: b.saldoAtual, cor: b.cor }));
+    const bancos = bancosNaOrdem(F.listaBancosComSaldo(d)).map((b) => ({ id: b.id, nome: b.nome, valor: b.saldoAtual, cor: b.cor }));
     const composicao = itensPatrimonio(d);
     const totalComp = composicao.reduce((s, i) => s + i.valor, 0);
     const legendaComp = composicao.length ? composicao.map((i) => `<button class="legenda-linha clicavel" data-acao="explicar-classe" data-rotulo="${esc(i.rotulo)}" title="Ver detalhes"><span class="legenda-nome"><span class="legenda-ponto" style="background:${i.cor}"></span>${esc(i.rotulo)}</span><span class="legenda-pct" style="color:${i.cor}">${(totalComp > 0 ? (i.valor / totalComp) * 100 : 0).toFixed(1).replace(".", ",")}%</span><span class="legenda-val">${brl(i.valor)}</span></button>`).join("") : `<div class="empty">Sem ativos ainda.</div>`;
@@ -1306,7 +1315,7 @@
       ${faixaDemo(d)}
       <div class="kpi-row">
         ${kpiCard("Patrimônio líquido", brl(p.liquido), pctLivre, "var(--laranja)", delta(F.variacaoPercentual(p.liquido, patrimonioAnt), "vs mês anterior"), `Dívidas: ${brl(p.dividas)}`, "patrimonio")}
-        ${kpiCard("Saldo bancário", brl(p.bancos), pctBancos, "var(--azul)", delta(pctBancos, "do patrimônio"), `${bancos.length} conta(s) cadastrada(s)`, "bancos")}
+        ${kpiCard("Saldo bancário", brl(p.bancos), pctBancos, "var(--azul)", delta(pctBancos, "do patrimônio"), `${bancos.length} ${bancos.length === 1 ? "Conta Cadastrada" : "Contas Cadastradas"}`, "bancos")}
         ${kpiCard("Investimentos", brl(p.investimentos + p.acoes), pctInvestido, "var(--vi)", delta(rentCarteira, "rent. carteira"), `${pctInvestido.toFixed(0)}% do patrimônio investido`, "investido")}
         ${kpiCard("Receitas mês", brl(entradasMes), entradasMes + despesasMes > 0 ? (entradasMes / (entradasMes + despesasMes)) * 100 : 0, "var(--up)", delta(F.variacaoPercentual(entradasMes, entradasAnt), "vs mês anterior"), `Mês anterior: ${brl(entradasAnt)}`, "receitas")}
         ${kpiCard("Despesas mês", brl(despesasMes), pctDespesas, "var(--down)", delta(F.variacaoPercentual(despesasMes, despesasAnt), "vs mês anterior", true), `${pctDespesas.toFixed(0)}% das receitas`, "despesas")}
@@ -1317,7 +1326,7 @@
         <div class="c3">${card("", "Composição patrimônio", "ativos brutos, antes das dívidas", `<span class="acc-laranja" style="font-size:12px;font-weight:700">Total: ${brl(totalComp)}</span>`, `
           <div class="donut-wrap">
             <div class="donut-centro"><canvas id="graf-dash-composicao" width="150" height="150" style="width:150px;height:150px"></canvas>
-              <div class="donut-rotulo"><b>${pctInvestido.toFixed(1).replace(".", ",")}%</b><span class="acc-laranja">INVESTIDO</span></div>
+              <button class="donut-rotulo clicavel" data-acao="explicar-kpi" data-kpi="investido" title="Ver como este percentual é calculado"><b>${pctInvestido.toFixed(1).replace(".", ",")}%</b><span class="acc-laranja">INVESTIDO</span></button>
             </div>
             <div class="legenda">${legendaComp}</div>
           </div>`)}</div>
@@ -1453,7 +1462,7 @@
   // BANCOS
   // =========================================================================
   function renderBancos(d) {
-    const bancos = F.listaBancosComSaldo(d);
+    const bancos = bancosNaOrdem(F.listaBancosComSaldo(d));
     const total = F.totalBancos(d);
     let listaHtml;
     if (!bancos.length) {
@@ -1463,13 +1472,13 @@
           <div class="cartao-item" style="border-left-color:${esc(b.cor || "#3FC1E0")}" data-acao="editar-banco" data-id="${b.id}">
             <div class="linha1"><div class="nome-com-marca">${marcaBanco(b.nome, 26)}<div><div class="nome">${esc(b.nome)}</div><div class="tipo">${esc(b.tipo || "—")}</div>${b.agencia || b.conta ? `<div class="tipo">${b.agencia ? "Ag " + esc(b.agencia) : ""}${b.agencia && b.conta ? " · " : ""}${b.conta ? "Cc " + esc(b.conta) : ""}</div>` : ""}</div></div></div>
             <div class="saldo ${corSinal(b.saldoAtual)}">${brl(b.saldoAtual)}</div>
-            <div class="rodape">saldo inicial ${brl(b.saldoInicial)}</div>
+            <div class="rodape">Saldo Inicial ${brl(b.saldoInicial)}</div>
           </div>`).join("") + `</div>`;
     }
     return `
       ${faixaDemo(d)}
       <div class="grid g-top">
-        <div class="c12">${card("c12", "Meus bancos", `${bancos.length} conta(s) cadastrada(s)`, `<button class="btn primario" data-acao="nova-banco"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>Novo</button>`, listaHtml, `<span class="dim">Total</span><b class="${corSinal(total)}" style="font-size:14px;font-weight:800">${brl(total)}</b>`)}</div>
+        <div class="c12">${card("c12", "Meus bancos", `${bancos.length} ${bancos.length === 1 ? "Conta Cadastrada" : "Contas Cadastradas"}`, `<button class="btn primario" data-acao="nova-banco"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`, listaHtml, `<span class="dim">Total</span><b class="${corSinal(total)}" style="font-size:14px;font-weight:800">${brl(total)}</b>`)}</div>
       </div>
       <div class="grid">
         <div class="c12">${card("", "Saldo banco", mesesBancos ? `movimentação dos últimos ${mesesBancos} meses` : "comparação entre contas",
@@ -1492,7 +1501,7 @@
         <div class="campo"><label for="f_cc">Conta</label><input id="f_cc" value="${b ? esc(b.conta || "") : ""}" placeholder="12345-6"></div>
       </div>
       <div class="par">
-        <div class="campo"><label for="f_saldo">Saldo inicial</label>${campoMoeda("f_saldo", b ? b.saldoInicial : "")}</div>
+        <div class="campo"><label for="f_saldo">Saldo Inicial</label>${campoMoeda("f_saldo", b ? b.saldoInicial : "")}</div>
         <div class="campo"><label for="f_cor">Cor de identificação</label><input id="f_cor" type="color" value="${b ? b.cor || "#3FC1E0" : "#3FC1E0"}"></div>
       </div>
       <div class="campo"><label for="f_obs">Observações</label><textarea id="f_obs" placeholder="Opcional">${b ? esc(b.obs || "") : ""}</textarea></div>
@@ -1549,7 +1558,7 @@
     }
     return `
       <div class="grid g-top">
-        <div class="c12">${card("c12", "Entradas", `Total mês atual: ${brl(totalMes)}`, `<button class="btn primario" data-acao="nova-entrada"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>Novo</button>`, corpo)}</div>
+        <div class="c12">${card("c12", "Entradas", `Total mês atual: ${brl(totalMes)}`, `<button class="btn primario" data-acao="nova-entrada"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`, corpo)}</div>
       </div>
     `;
   }
@@ -1649,7 +1658,7 @@
     return `
       <div class="grid g-top">
         <div class="c12">${card("c12", "Despesas", `Pagas mês: ${brl(totalMes)} · em aberto: ${brl(aPagar)}`,
-          `<button class="btn primario" data-acao="nova-despesa"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>Novo</button>`,
+          `<button class="btn primario" data-acao="nova-despesa"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`,
           corpo)}</div>
       </div>
     `;
@@ -2079,7 +2088,7 @@
       ${aviso}
       <div class="grid g-top">
         <div class="c12">${card("", "Investimentos", "renda fixa, tesouro, fundos e cripto",
-          `<button class="btn primario" data-acao="novo-investimento"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>Novo</button>`,
+          `<button class="btn primario" data-acao="novo-investimento"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`,
           corpo,
           `<span class="dim">Total líquido</span><b class="creme" style="font-size:14px;font-weight:800">${brl(t.liquido)}</b>`)}</div>
       </div>
@@ -2324,16 +2333,16 @@
           <td class="r">${fp(m365)}</td>
           <td class="r">${brl(a.dividendos || 0)}</td>
           <td class="r">${f2(a.peso)}%</td>
-          <td class="r dim">${fmtDataCurta(a.atualizadoEm)}</td>
+          <td class="r dim col-atualiz">${fmtDataCurta(a.atualizadoEm)}</td>
         </tr>`;
       }).join("");
       const tInv = I.totalInvestidoAcoes(d), tAt = I.totalCarteiraAcoes(d), tRes = tAt - tInv;
-      corpo = `<div class="terminal-scroll"><table class="terminal">
+      corpo = `<div class="terminal-scroll"><table class="terminal tab-acoes">
         <thead><tr>
           <th>Papel</th><th class="r">Última</th><th class="r">Var.</th><th class="r">Var. %</th><th class="r">Qtd.</th><th class="r">PM</th>
           <th class="r">Investido</th><th class="r">Atual</th><th class="r">Resultado</th><th class="r">Rent. %</th>
           <th class="r">Mínima</th><th class="r">Máxima</th><th class="r">Mensal %</th><th class="r">Anual %</th>
-          <th class="r">Divid.</th><th class="r">Peso</th><th class="r">Atualiz.</th>
+          <th class="r">Divid.</th><th class="r">Peso</th><th class="r col-atualiz">Atualiz.</th>
         </tr></thead>
         <tbody>${linhas}</tbody>
         <tfoot><tr>
@@ -2341,7 +2350,7 @@
           <td class="r">${brl(tInv)}</td><td class="r creme">${brl(tAt)}</td>
           <td class="r ${corSinal(tRes)}">${tRes >= 0 ? "+" : "−"}${brl(Math.abs(tRes))}</td>
           <td class="r">${fp(I.rentabilidadeCarteiraAcoes(d))}</td>
-          <td></td><td></td><td></td><td></td><td class="r">${brl(I.totalDividendosAcoes(d))}</td><td class="r">100%</td><td></td>
+          <td></td><td></td><td></td><td></td><td class="r">${brl(I.totalDividendosAcoes(d))}</td><td class="r">100%</td><td class="col-atualiz"></td>
         </tr></tfoot>
       </table></div>`;
     }
@@ -2352,7 +2361,7 @@
           `<div class="dolar-pill" id="dolarTopbar" title="Dólar comercial (AwesomeAPI)" style="display:none"></div>
            <button class="btn" data-acao="buscar-cotacoes" title="Buscar cotações na internet agora">↻ Buscar</button>
            <button class="btn ${editandoPrecos ? "primario" : ""}" data-acao="alternar-edicao-precos">${editandoPrecos ? "Concluir" : "Editar"}</button>
-           <button class="btn primario" data-acao="novo-ativo"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>Novo</button>`,
+           <button class="btn primario" data-acao="novo-ativo"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`,
           corpo,
           `<span class="dim">Total Carteira</span><b class="creme" style="font-size:14px;font-weight:800">${brl(I.totalCarteiraAcoes(d))}</b>`)}</div>
       </div>
@@ -2563,7 +2572,7 @@
   function renderMetas(d) {
     let corpo;
     if (!d.metas.length) {
-      corpo = `<div class="c12"><div class="empty">Nenhuma meta cadastrada. Que tal começar por uma reserva de emergência?</div></div>`;
+      corpo = `<div class="c8"><div class="card"><div class="empty">Nenhuma meta cadastrada. Que tal começar por uma reserva de emergência?</div></div></div>`;
     } else {
       corpo = d.metas.map((m) => {
         const progresso = m.objetivo > 0 ? Math.min(100, (m.atual / m.objetivo) * 100) : 0;
@@ -2583,12 +2592,11 @@
         </div></div>`;
       }).join("");
     }
-    return `<div class="grid g-top">
-      <div class="c12" style="display:flex;justify-content:flex-end">
-        <button class="btn primario" data-acao="nova-meta"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>Nova</button>
-      </div>
-    </div>
-    <div class="grid">${corpo}</div>`;
+    // o botão de nova meta ocupa o espaço de um quadro, com o sinal "+"
+    const botaoNova = `<div class="c4"><button class="card card-novo" data-acao="nova-meta" title="Nova meta" aria-label="Nova meta">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">${ICONES.mais}</svg>
+    </button></div>`;
+    return `<div class="grid g-top">${corpo}${botaoNova}</div>`;
   }
 
   function abrirModalMeta(id) {
@@ -2670,10 +2678,10 @@
 
     return `
       <div class="grid g-top">
-        <div class="c3">${metricCard("Receitas", brl(entradasP), ICONES_REL.receitas, "var(--up)", "", rotuloPeriodo, null, "0 0 24 24")}</div>
-        <div class="c3">${metricCard("Despesas", brl(despesasP), ICONES_REL.despesas, "var(--down)", "", rotuloPeriodo, null, "0 0 24 24")}</div>
-        <div class="c3">${metricCard("Resultado", brlSinal(entradasP - despesasP), ICONES_REL.resultado, corSinal(entradasP - despesasP) === "up" ? "var(--up)" : "var(--down)", "", "", null, "0 0 24 24")}</div>
-        <div class="c3">${metricCard("Rentabilidade", pct(I.rentabilidadeCarteiraAcoes(d)), ICONES_REL.rentabilidade, "var(--vi)", "", "Acumulada · Preço Médio", null, "0 0 24 24")}</div>
+        <div class="c3">${metricCard("Receitas", brl(entradasP), ICONES_STRIP.poupanca, "var(--up)", "", rotuloPeriodo, null, "0 0 24 24")}</div>
+        <div class="c3">${metricCard("Despesas", brl(despesasP), ICONES_STRIP.maiorgasto, "var(--down)", "", rotuloPeriodo, null, "0 0 24 24")}</div>
+        <div class="c3">${metricCard("Resultado", brlSinal(entradasP - despesasP), ICONES_STRIP.projecao, corSinal(entradasP - despesasP) === "up" ? "var(--up)" : "var(--down)", "", "", null, "0 0 24 24")}</div>
+        <div class="c3">${metricCard("Rentabilidade", pct(I.rentabilidadeCarteiraAcoes(d)), ICONES_STRIP.melhorativo, "var(--vi)", "", "Acumulada · Preço Médio", null, "0 0 24 24")}</div>
       </div>
       <div class="grid">
         <div class="c12">${card("", "Receitas x despesas", `${rotulo(mesesRelA)}`, abasMeses("periodo-rel-a", mesesRelA, OPC), `<div style="padding:10px 16px;height:220px"><canvas id="graf-rel-mensal"></canvas></div>`)}</div>
@@ -2779,12 +2787,12 @@
       }
       case "bancos": {
         if (!d.bancos.length) break;
-        let lista = F.listaBancosComSaldo(d);
+        let lista = bancosNaOrdem(F.listaBancosComSaldo(d));
         if (mesesBancos) {
           // saldo inicial + o que entrou e saiu dentro do período escolhido
           const corte = new Date(); corte.setMonth(corte.getMonth() - (mesesBancos - 1)); corte.setDate(1);
           const ini = corte.toISOString().slice(0, 10);
-          lista = d.bancos.map((b) => {
+          lista = bancosNaOrdem(d.bancos).map((b) => {
             const ent = d.entradas.filter((e) => e.bancoId === b.id && e.data >= ini).reduce((t, e) => t + Number(e.valor || 0), 0);
             const sai = d.despesas.filter((x) => x.bancoId === b.id && !x.cartaoId && x.data >= ini).reduce((t, x) => t + Number(x.valor || 0), 0);
             return { ...b, saldoAtual: Number(b.saldoInicial || 0) + ent - sai };

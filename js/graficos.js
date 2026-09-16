@@ -189,28 +189,6 @@
         scales: { x: eixoX({ ticks: { color: CORES.texto, font: fonte(10.5), maxTicksLimit: 12 } }), y: eixoY() },
         plugins: { legend: { display: false }, tooltip: tooltipPadrao({ callbacks: { label: function (c) { return " " + moeda(c.parsed.y) + (c.dataIndex === iPico ? "  ·  pico do período" : ""); } } }) }
       },
-      plugins: [{
-        id: "marcaPico",
-        afterDatasetsDraw: function (grafico) {
-          var meta = grafico.getDatasetMeta(0);
-          var ponto = meta.data[iPico];
-          if (!ponto || serie.length < 2) return;
-          var c = grafico.ctx;
-          c.save();
-          c.font = "700 11px 'Segoe UI', Roboto, sans-serif";
-          var texto = "PICO " + moeda(serie[iPico].valor);
-          var larg = c.measureText(texto).width + 14;
-          var x = Math.min(Math.max(ponto.x - larg / 2, grafico.chartArea.left), grafico.chartArea.right - larg);
-          var y = Math.max(ponto.y - 30, grafico.chartArea.top + 2);
-          c.fillStyle = "rgba(34,227,154,0.16)";
-          c.strokeStyle = CORES.up; c.lineWidth = 1;
-          if (c.roundRect) { c.beginPath(); c.roundRect(x, y, larg, 20, 5); c.fill(); c.stroke(); }
-          else { c.fillRect(x, y, larg, 20); c.strokeRect(x, y, larg, 20); }
-          c.fillStyle = CORES.up; c.textBaseline = "middle"; c.textAlign = "center";
-          c.fillText(texto, x + larg / 2, y + 10);
-          c.restore();
-        }
-      }]
     });
   }
 
@@ -229,17 +207,12 @@
         c.save();
         c.font = "800 11px 'Segoe UI', Roboto, sans-serif";
         c.textBaseline = "middle";
+        // o percentual fica sempre no fim da faixa da coluna, em branco,
+        // para ficar legível mesmo quando a barra é muito curta
         meta.data.forEach(function (barra, i) {
-          var valor = bancos[i].saldoAtual;
-          var txt = ((valor / total) * 100).toFixed(1).replace(".", ",") + "%";
-          var largura = barra.x - grafico.chartArea.left;
-          if (largura < c.measureText(txt).width + 16) {   // barra curta: texto do lado de fora
-            c.fillStyle = CORES.texto; c.textAlign = "left";
-            c.fillText(txt, barra.x + 7, barra.y);
-          } else {
-            c.fillStyle = "#08121A"; c.textAlign = "right";
-            c.fillText(txt, barra.x - 8, barra.y);
-          }
+          var txt = ((bancos[i].saldoAtual / total) * 100).toFixed(1).replace(".", ",") + "%";
+          c.fillStyle = "#FFFFFF"; c.textAlign = "right";
+          c.fillText(txt, grafico.chartArea.right - 6, barra.y);
         });
         c.restore();
       }
