@@ -672,10 +672,12 @@
       ${footHtml ? `<div class="foot">${footHtml}</div>` : ""}
     </section>`;
   }
-  function metricCard(rotulo, valor, iconePath, corVar, variacaoHtml, legenda, sparklineValores, viewBox) {
+  function metricCard(rotulo, valor, iconePath, corVar, variacaoHtml, legenda, sparklineValores, viewBox, chave) {
     const spark = sparklineValores && sparklineValores.length > 1
       ? `<div class="sparkline">${sparklineSVG(sparklineValores, corVar)}</div>` : "";
-    return `<div class="metric">
+    const tag = chave ? "button" : "div";
+    const clic = chave ? ` data-acao="explicar-relatorio" data-chave="${chave}" title="Ver detalhes"` : "";
+    return `<${tag} class="metric${chave ? " clicavel" : ""}"${clic}>
       <div class="topo"><span class="selo" style="background:${corVar}22;color:${corVar}">
         <svg viewBox="${viewBox || "0 0 20 20"}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${iconePath}</svg>
       </span><span class="rotulo">${rotulo}</span></div>
@@ -683,7 +685,7 @@
       ${variacaoHtml || ""}
       ${spark}
       ${legenda ? `<div class="legenda">${legenda}</div>` : ""}
-    </div>`;
+    </${tag}>`;
   }
   function variacaoPill(v, rotulo) {
     const boa = v >= 0;
@@ -1256,6 +1258,56 @@
   // ---------------------------------------------------------------------
   function bancosNaOrdem(lista) {
     return lista.slice().sort((a, b) => Number(b.saldoAtual || 0) - Number(a.saldoAtual || 0));
+  }
+
+
+  function explicarRelatorio(chave) {
+    const d = DADOS;
+    const fxA = intervaloRel(mesesRelA);
+    const entradas = d.entradas.filter((e) => e.data >= fxA.ini && e.data <= fxA.fim);
+    const despesas = d.despesas.filter((x) => x.data >= fxA.ini && x.data <= fxA.fim);
+    const totE = entradas.reduce((s, e) => s + Number(e.valor || 0), 0);
+    const totD = despesas.reduce((s, x) => s + Number(x.valor || 0), 0);
+    const meses = mesesRelA || Math.max(1, new Set(entradas.concat(despesas).map((m) => String(m.data).slice(0, 7))).size);
+    const periodo = mesesRelA ? `últimos ${mesesRelA} meses` : "todo o histórico";
+    const linha = (r, v, c) => `<div class="kv"><span class="dim">${r}</span><b class="${c || ""}">${v}</b></div>`;
+    const porCategoria = (lista) => {
+      const mapa = {};
+      lista.forEach((m) => { const k = m.categoria || "Outros"; mapa[k] = (mapa[k] || 0) + Number(m.valor || 0); });
+      return Object.keys(mapa).sort((a, b) => mapa[b] - mapa[a]).slice(0, 5)
+        .map((k) => linha(esc(k), brl(mapa[k]))).join("");
+    };
+
+    if (chave === "rel-receitas") {
+      painelSimples("Receitas", totE > 0 ? 100 : 0, `do que entrou no período (${periodo})`, "soma das entradas no período",
+        porCategoria(entradas) + linha("= Total recebido", brl(totE), "up") +
+        linha("Média por mês", brl(totE / meses)) + linha("Lançamentos", String(entradas.length)), "entradas");
+      return;
+    }
+    if (chave === "rel-despesas") {
+      painelSimples("Despesas", totE > 0 ? (totD / totE) * 100 : 0, "das receitas do período foram gastas", "soma das despesas ÷ receitas",
+        porCategoria(despesas) + linha("= Total gasto", brl(totD), "down") +
+        linha("Média por mês", brl(totD / meses)) + linha("Lançamentos", String(despesas.length)), "despesas");
+      return;
+    }
+    if (chave === "rel-resultado") {
+      const saldo = totE - totD;
+      painelSimples("Resultado", totE > 0 ? (saldo / totE) * 100 : 0, "das receitas sobraram no período", "receitas − despesas",
+        linha("Receitas", brl(totE), "up") + linha("− Despesas", brl(totD), "down") +
+        linha("= Resultado", brlSinal(saldo), corSinal(saldo)) +
+        linha("Média por mês", brlSinal(saldo / meses), corSinal(saldo)) +
+        linha("Período", periodo), "entradas");
+      return;
+    }
+    if (chave === "rel-rentabilidade") {
+      const rent = I.rentabilidadeCarteiraAcoes(d);
+      painelSimples("Rentabilidade da carteira", rent, "acumulada em relação ao preço médio", "(valor atual ÷ valor investido − 1) × 100",
+        linha("Valor investido", brl(I.totalInvestidoAcoes(d))) +
+        linha("Valor atual", brl(I.totalCarteiraAcoes(d)), "creme") +
+        linha("Resultado", brlSinal(I.resultadoCarteiraAcoes(d)), corSinal(I.resultadoCarteiraAcoes(d))) +
+        linha("Dividendos recebidos", brl(I.totalDividendosAcoes(d)), "up") +
+        linha("Ativos na carteira", String(d.acoes.length)), "acoes");
+    }
   }
 
   // =========================================================================
@@ -2595,13 +2647,8 @@
     const botaoNova = `<div class="c4"><button class="card card-novo" data-acao="nova-meta" title="Nova meta" aria-label="Nova meta">
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">${ICONES.mais}</svg>
     </button></div>`;
-    // além do quadro com "+" no fim da grade, um botão fixo no topo
-    // garante que criar uma meta esteja sempre a um clique de distância
-    return `
-      <div class="barra-acoes">
-        <button class="btn primario" data-acao="nova-meta"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVA</button>
-      </div>
-      <div class="grid g-top">${corpo}${botaoNova}</div>`;
+    // criar uma meta é feito pelo quadro com "+", sempre no fim da grade
+    return `<div class="grid g-top">${corpo}${botaoNova}</div>`;
   }
 
   function abrirModalMeta(id) {
@@ -2677,22 +2724,24 @@
     const entradasP = d.entradas.filter((e) => e.data >= fxA.ini && e.data <= fxA.fim).reduce((s, e) => s + Number(e.valor), 0);
     const despesasP = d.despesas.filter((x) => x.data >= fxA.ini && x.data <= fxA.fim).reduce((s, x) => s + Number(x.valor), 0);
     const historicoP = d.historicoPatrimonio.filter((h) => h.data >= fxB.ini && h.data <= fxB.fim);
+    const picoB = historicoP.length ? Math.max(...historicoP.map((h) => h.valor)) : 0;
     const OPC = [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }, { meses: 0, rotulo: "Tudo" }];
     const rotulo = (m) => (m ? `Últimos ${m} meses` : "Todo o histórico");
     const rotuloPeriodo = rotulo(mesesRelA);
 
     return `
       <div class="grid g-top">
-        <div class="c3">${metricCard("Receitas", brl(entradasP), ICONES_STRIP.poupanca, "var(--up)", "", rotuloPeriodo, null, "0 0 24 24")}</div>
-        <div class="c3">${metricCard("Despesas", brl(despesasP), ICONES_STRIP.maiorgasto, "var(--down)", "", rotuloPeriodo, null, "0 0 24 24")}</div>
-        <div class="c3">${metricCard("Resultado", brlSinal(entradasP - despesasP), ICONES_STRIP.projecao, corSinal(entradasP - despesasP) === "up" ? "var(--up)" : "var(--down)", "", "", null, "0 0 24 24")}</div>
-        <div class="c3">${metricCard("Rentabilidade", pct(I.rentabilidadeCarteiraAcoes(d)), ICONES_STRIP.melhorativo, "var(--vi)", "", "Acumulada · Preço Médio", null, "0 0 24 24")}</div>
+        <div class="c3">${metricCard("Receitas", brl(entradasP), ICONES_STRIP.poupanca, "var(--up)", "", rotuloPeriodo, null, "0 0 24 24", "rel-receitas")}</div>
+        <div class="c3">${metricCard("Despesas", brl(despesasP), ICONES_STRIP.maiorgasto, "var(--down)", "", rotuloPeriodo, null, "0 0 24 24", "rel-despesas")}</div>
+        <div class="c3">${metricCard("Resultado", brlSinal(entradasP - despesasP), ICONES_STRIP.projecao, corSinal(entradasP - despesasP) === "up" ? "var(--up)" : "var(--down)", "", "", null, "0 0 24 24", "rel-resultado")}</div>
+        <div class="c3">${metricCard("Rentabilidade", pct(I.rentabilidadeCarteiraAcoes(d)), ICONES_STRIP.melhorativo, "var(--vi)", "", "Acumulada · Preço Médio", null, "0 0 24 24", "rel-rentabilidade")}</div>
       </div>
       <div class="grid">
         <div class="c12">${card("", "Receitas x despesas", `${rotulo(mesesRelA)}`, abasMeses("periodo-rel-a", mesesRelA, OPC), `<div style="padding:10px 16px;height:220px"><canvas id="graf-rel-mensal"></canvas></div>`)}</div>
       </div>
       <div class="grid">
-        <div class="c12">${card("", "Evolução patrimonial", `${rotulo(mesesRelB)}`, abasMeses("periodo-rel-b", mesesRelB, OPC), historicoP.length >= 2 ? `<div style="padding:10px 16px;height:220px"><canvas id="graf-rel-evolucao"></canvas></div>` : `<div class="empty">Ainda não há histórico suficiente para este período.</div>`)}</div>
+        <div class="c12">${card("", "Evolução patrimonial", `${rotulo(mesesRelB)}`,
+          (picoB ? `<span class="pill-pico">PICO ${brl(picoB)}</span>` : "") + abasMeses("periodo-rel-b", mesesRelB, OPC), historicoP.length >= 2 ? `<div style="padding:10px 16px;height:220px"><canvas id="graf-rel-evolucao"></canvas></div>` : `<div class="empty">Ainda não há histórico suficiente para este período.</div>`)}</div>
       </div>
     `;
   }
@@ -2883,6 +2932,7 @@
         case "explicar-banco": explicarBanco(id); break;
         case "explicar-classe": explicarClasse(b.dataset.rotulo); break;
         case "explicar-meta": explicarMeta(id); break;
+        case "explicar-relatorio": explicarRelatorio(b.dataset.chave); break;
         case "explicar-strip": explicarStrip(b.dataset.chave); break;
         case "periodo-bancos": mesesBancos = Number(b.dataset.meses); renderRota(); break;
         case "periodo-rel-a": mesesRelA = Number(b.dataset.meses); renderRota(); break;
