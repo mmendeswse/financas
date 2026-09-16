@@ -54,6 +54,20 @@
   let mesesEvo = 12;      // meses no gráfico de evolução patrimonial   // período mostrado no gráfico do ativo
   let filtrosHistorico = { periodo: "3m", banco: "", categoria: "", tipo: "todos", busca: "", ordenarPor: "data", ordemAsc: false };
   // cada quadro de relatório tem o seu próprio intervalo de datas
+  // mês selecionado nas guias Entradas e Despesas (começa no mês atual)
+  let mesEntradas = null;
+  let mesDespesas = null;
+  const NOMES_MES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+
+  function abasMeses12(acao, selecionado) {
+    const ano = Number(selecionado.slice(0, 4));
+    const mesSel = Number(selecionado.slice(5, 7));
+    return `<div class="abas abas-periodo abas-mes">${NOMES_MES.map((nome, i) => {
+      const chave = `${ano}-${String(i + 1).padStart(2, "0")}`;
+      return `<button class="${mesSel === i + 1 ? "ativo" : ""}" data-acao="${acao}" data-mes="${chave}" title="${nome}/${ano}">${nome}</button>`;
+    }).join("")}</div>`;
+  }
+
   let mesesBancos = 0;   // período do gráfico da guia Bancos (0 = saldo atual)
   let mesesRelA = 12;   // período do quadro Receitas x despesas
   let mesesRelB = 12;   // período do quadro Evolução patrimonial
@@ -372,6 +386,12 @@
     ligarSidebar();
     ligarModalGlobal();
     ligarCliqueNotificacoes();
+    // a faixa de cotações e a pílula do dólar ficam fora da área principal,
+    // então precisam do seu próprio tratador de clique
+    document.addEventListener("click", (e) => {
+      const alvo = e.target.closest('[data-acao="ir-dolar"]');
+      if (alvo) { e.preventDefault(); navegarPara("detalhe-dolar"); }
+    });
     ligarDelegacaoConteudo();
     ligarMascaraMoeda(document.getElementById("conteudo"));
     iniciarRelogio();
@@ -419,6 +439,7 @@
     investimentos: ["Investimentos", "Renda fixa, tesouro, fundos e criptomoedas"],
     acoes: ["Ações", "Ações, FIIs e ETFs — preços atualizados manualmente"],
     "detalhe-investimento": ["Detalhe da aplicação", "Histórico, imposto e rentabilidade"],
+    "detalhe-dolar": ["Dólar comercial", "USD/BRL — cotação e histórico"],
     "detalhe-acao": ["Detalhe do ativo", "Histórico e composição da posição"],
     carteira: ["Carteira de ações", "Composição e rentabilidade da carteira"],
     relatorios: ["Relatórios", "Análises por período"],
@@ -435,7 +456,7 @@
       dashboard: renderDashboard, financas: renderFinancas, bancos: renderBancos,
       entradas: renderEntradas, despesas: renderDespesas, cartoes: renderCartoes,
       contas: renderDespesas, historico: renderHistorico, investimentos: renderInvestimentos,
-      acoes: renderAcoes, "detalhe-acao": renderDetalheAcao, "detalhe-investimento": renderDetalheInvestimento, carteira: renderCarteira,
+      acoes: renderAcoes, "detalhe-acao": renderDetalheAcao, "detalhe-investimento": renderDetalheInvestimento, "detalhe-dolar": renderDetalheDolar, carteira: renderCarteira,
       relatorios: renderRelatorios, metas: renderMetas, configuracoes: renderConfiguracoes
     };
     const fn = mapa[ROTA.secao] || renderDashboard;
@@ -919,7 +940,7 @@
     if (!tape || !track) return;
     const lista = I.listaAcoesComCalculo(DADOS);
     if (!lista.length && !dolar) { tape.style.display = "none"; return; }
-    const itemDolar = dolar ? `<span class="ticker-item"><b>USD/BRL</b><span class="tp">${dolar.valor.toFixed(2).replace(".", ",")}</span><span class="tv ${dolar.variacaoPct >= 0 ? "up" : "down"}">${Math.abs(dolar.variacaoPct || 0).toFixed(2).replace(".", ",")}%</span></span>` : "";
+    const itemDolar = dolar ? `<span class="ticker-item clicavel" data-acao="ir-dolar" title="Ver histórico do dólar"><b>USD/BRL</b><span class="tp">${dolar.valor.toFixed(2).replace(".", ",")}</span><span class="tv ${dolar.variacaoPct >= 0 ? "up" : "down"}">${Math.abs(dolar.variacaoPct || 0).toFixed(2).replace(".", ",")}%</span></span>` : "";
     const itens = itemDolar + lista.map((a) => {
       const p = a.fontePreco === "auto" && a.variacaoDiaPct != null ? a.variacaoDiaPct : ((a.historicoPrecos || []).length < 2 ? a.rentabilidade : I.variacaoRecente(a).pct);
       return `<span class="ticker-item"><b>${esc(a.ticker)}</b><span class="tp">${a.precoAtual.toFixed(2).replace(".", ",")}</span><span class="tv ${p >= 0 ? "up" : "down"}">${Math.abs(p).toFixed(2).replace(".", ",")}%</span></span>`;
@@ -945,6 +966,9 @@
     if (!dolar) { el.style.display = "none"; return; }
     const v = dolar.variacaoPct || 0;
     el.style.display = "";
+    el.style.cursor = "pointer";
+    el.setAttribute("data-acao", "ir-dolar");
+    el.setAttribute("title", "Ver histórico do dólar");
     el.innerHTML = `<small>USD/BRL</small><b>R$ ${dolar.valor.toFixed(2).replace(".", ",")}</b><span class="${v >= 0 ? "up" : "down"}">${v >= 0 ? "▲" : "▼"} ${Math.abs(v).toFixed(2).replace(".", ",")}%</span>`;
   }
 
@@ -1035,7 +1059,7 @@
     const mes = F.mesAtual(), mesAnt = F.mesAnterior();
     const entradas = F.totalEntradasMes(d, mes), entradasAnt = F.totalEntradasMes(d, mesAnt);
     const despesas = F.totalDespesasMes(d, mes), despesasAnt = F.totalDespesasMes(d, mesAnt);
-    const linha = (rot, val, cls) => `<div class="kv"><span class="dim">${rot}</span><b class="${cls || ""}">${val}</b></div>`;
+    const linha = (rot, val, cls) => `<div class="kv"><span class="dim">${rotuloPainel(rot)}</span><b class="${cls || ""}">${val}</b></div>`;
 
     const paineis = {
       patrimonio: {
@@ -1107,6 +1131,20 @@
   }
 
 
+
+  // Nos painéis interativos, o rótulo de cada linha da tabela mostra a
+  // segunda palavra com a inicial em maiúscula (ex.: "Valor Aplicado").
+  function rotuloPainel(texto) {
+    let palavras = 0;
+    return String(texto).split(" ").map((p) => {
+      if (!/^[\p{L}]/u.test(p)) return p;            // símbolos (+, −, parênteses) não contam
+      palavras++;
+      return palavras === 2 ? p.charAt(0).toUpperCase() + p.slice(1) : p;
+    }).join(" ");
+  }
+
+
+
   function painelSimples(titulo, pctValor, pctRotulo, comoCalcula, linhasHtml, secao) {
     abrirModal(`
       <h3>${titulo}</h3>
@@ -1129,7 +1167,7 @@
     const saidas = d.despesas.filter((x) => x.bancoId === id && !x.cartaoId).reduce((s, x) => s + Number(x.valor || 0), 0);
     const saldo = F.saldoBanco(d, b);
     const total = F.totalBancos(d);
-    const linha = (r, v, c) => `<div class="kv"><span class="dim">${r}</span><b class="${c || ""}">${v}</b></div>`;
+    const linha = (r, v, c) => `<div class="kv"><span class="dim">${rotuloPainel(r)}</span><b class="${c || ""}">${v}</b></div>`;
     painelSimples(esc(b.nome), total > 0 ? (saldo / total) * 100 : 0, "do seu dinheiro em bancos está aqui",
       "saldo inicial + entradas − despesas",
       linha("Saldo inicial", brl(b.saldoInicial)) + linha("+ Entradas recebidas", brl(entradas), "up") +
@@ -1143,7 +1181,7 @@
     const item = itens.find((i) => i.rotulo === rotulo);
     if (!item) return;
     const total = itens.reduce((s, i) => s + i.valor, 0);
-    const linha = (r, v, c) => `<div class="kv"><span class="dim">${r}</span><b class="${c || ""}">${v}</b></div>`;
+    const linha = (r, v, c) => `<div class="kv"><span class="dim">${rotuloPainel(r)}</span><b class="${c || ""}">${v}</b></div>`;
     let detalhe = "";
     let secao = "investimentos";
     if (rotulo === "Bancos") {
@@ -1169,7 +1207,7 @@
     const progresso = m.objetivo > 0 ? (m.atual / m.objetivo) * 100 : 0;
     const falta = Math.max(0, Number(m.objetivo || 0) - Number(m.atual || 0));
     const dias = m.prazo ? F.diasEntre(m.prazo) : null;
-    const linha = (r, v, c) => `<div class="kv"><span class="dim">${r}</span><b class="${c || ""}">${v}</b></div>`;
+    const linha = (r, v, c) => `<div class="kv"><span class="dim">${rotuloPainel(r)}</span><b class="${c || ""}">${v}</b></div>`;
     painelSimples(esc(m.nome), progresso, "do objetivo já foi guardado", "valor atual ÷ objetivo",
       linha("Objetivo", brl(m.objetivo)) + linha("Já guardado", brl(m.atual), "up") +
       linha("Falta", brl(falta), falta > 0 ? "down" : "up") +
@@ -1186,7 +1224,7 @@
     const entradas = F.totalEntradasMes(d, mes), despesas = F.totalDespesasMes(d, mes);
     const hoje = new Date(), dia = hoje.getDate();
     const diasNoMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).getDate();
-    const linha = (r, v, c) => `<div class="kv"><span class="dim">${r}</span><b class="${c || ""}">${v}</b></div>`;
+    const linha = (r, v, c) => `<div class="kv"><span class="dim">${rotuloPainel(r)}</span><b class="${c || ""}">${v}</b></div>`;
 
     if (chave === "poupanca") {
       const sobra = entradas - despesas;
@@ -1270,7 +1308,7 @@
     const totD = despesas.reduce((s, x) => s + Number(x.valor || 0), 0);
     const meses = mesesRelA || Math.max(1, new Set(entradas.concat(despesas).map((m) => String(m.data).slice(0, 7))).size);
     const periodo = mesesRelA ? `últimos ${mesesRelA} meses` : "todo o histórico";
-    const linha = (r, v, c) => `<div class="kv"><span class="dim">${r}</span><b class="${c || ""}">${v}</b></div>`;
+    const linha = (r, v, c) => `<div class="kv"><span class="dim">${rotuloPainel(r)}</span><b class="${c || ""}">${v}</b></div>`;
     const porCategoria = (lista) => {
       const mapa = {};
       lista.forEach((m) => { const k = m.categoria || "Outros"; mapa[k] = (mapa[k] || 0) + Number(m.valor || 0); });
@@ -1592,8 +1630,10 @@
   // ENTRADAS
   // =========================================================================
   function renderEntradas(d) {
-    const lista = [...d.entradas].sort((a, b) => (b.data || "").localeCompare(a.data || ""));
-    const totalMes = F.totalEntradasMes(d);
+    if (!mesEntradas) mesEntradas = F.mesAtual();
+    const lista = d.entradas.filter((e) => String(e.data || "").slice(0, 7) === mesEntradas)
+      .sort((a, b) => (b.data || "").localeCompare(a.data || ""));
+    const totalMes = F.totalEntradasMes(d, mesEntradas);
     const grid = "grid-template-columns:minmax(0,1fr) 120px 90px 150px";
     let corpo;
     if (!lista.length) {
@@ -1610,7 +1650,7 @@
     }
     return `
       <div class="grid g-top">
-        <div class="c12">${card("c12", "Entradas", `Total mês atual: ${brl(totalMes)}`, `<button class="btn primario" data-acao="nova-entrada"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`, corpo)}</div>
+        <div class="c12">${card("c12", "Entradas", `Total ${NOMES_MES[Number(mesEntradas.slice(5, 7)) - 1]}/${mesEntradas.slice(0, 4)}: ${brl(totalMes)}`, `${abasMeses12("mes-entradas", mesEntradas)}<button class="btn primario" data-acao="nova-entrada"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`, corpo)}</div>
       </div>
     `;
   }
@@ -1681,15 +1721,18 @@
       origem: "conta", id: c.id, descricao: c.descricao, categoria: c.categoria,
       data: c.vencimento, status: c.statusReal, valor: Number(c.valor || 0), recorrencia: ""
     }));
-    const lista = [...lancadas, ...previstas].sort((a, b) => (b.data || "").localeCompare(a.data || ""));
+    if (!mesDespesas) mesDespesas = F.mesAtual();
+    const lista = [...lancadas, ...previstas]
+      .filter((x) => String(x.data || "").slice(0, 7) === mesDespesas)
+      .sort((a, b) => (b.data || "").localeCompare(a.data || ""));
 
-    const totalMes = F.totalDespesasMes(d);
+    const totalMes = F.totalDespesasMes(d, mesDespesas);
     const aPagar = F.totalAPagar(d);
     const grid = "grid-template-columns:minmax(0,1fr) 120px 112px 168px";
 
     let corpo;
     if (!lista.length) {
-      corpo = `<div class="empty">Nada lançado ainda. Use "+ Nova despesa" para um gasto já feito, ou "+ Conta a pagar" para algo que ainda vai vencer.</div>`;
+      corpo = `<div class="empty">Nenhum lançamento em ${NOMES_MES[Number(mesDespesas.slice(5, 7)) - 1]}/${mesDespesas.slice(0, 4)}. Use NOVO para lançar uma despesa ou uma conta a pagar.</div>`;
     } else {
       corpo = `<div class="hd" style="${grid}"><i>Descrição</i><i class="r">Data</i><i class="r">Status</i><i class="r hd-valor">Valor</i></div>` +
         lista.map((x) => `
@@ -1709,8 +1752,8 @@
 
     return `
       <div class="grid g-top">
-        <div class="c12">${card("c12", "Despesas", `Pagas mês: ${brl(totalMes)} · em aberto: ${brl(aPagar)}`,
-          `<button class="btn primario" data-acao="nova-despesa"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`,
+        <div class="c12">${card("c12", "Despesas", `Pagas ${NOMES_MES[Number(mesDespesas.slice(5, 7)) - 1]}/${mesDespesas.slice(0, 4)}: ${brl(totalMes)} · em aberto: ${brl(aPagar)}`,
+          `${abasMeses12("mes-despesas", mesDespesas)}<button class="btn primario" data-acao="nova-despesa"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`,
           corpo)}</div>
       </div>
     `;
@@ -2345,6 +2388,61 @@
     };
   }
 
+
+  // =========================================================================
+  // DETALHE DO DÓLAR (USD/BRL) — mesma estrutura da tela de uma ação
+  // =========================================================================
+  let serieDolar = null;        // série diária vinda da AwesomeAPI
+  let buscandoSerieDolar = false;
+
+  function carregarSerieDolar() {
+    if (serieDolar || buscandoSerieDolar || !C || typeof fetch !== "function") return;
+    buscandoSerieDolar = true;
+    C.buscarSerieDolar(180).then((serie) => {
+      serieDolar = serie;
+      buscandoSerieDolar = false;
+      if (ROTA.secao === "detalhe-dolar") renderRota();
+    }).catch(() => { buscandoSerieDolar = false; });
+  }
+
+  function renderDetalheDolar(d) {
+    const serie = serieDolar || [];
+    const filtrada = filtrarPeriodo(serie.map((p) => ({ data: p.data, preco: p.preco })), periodoGrafico);
+    const atual = dolar ? dolar.valor : (serie.length ? serie[serie.length - 1].preco : 0);
+    const variacao = dolar ? (dolar.variacaoPct || 0) : 0;
+    const precos = filtrada.map((p) => p.preco);
+    const min = precos.length ? Math.min(...precos) : atual;
+    const max = precos.length ? Math.max(...precos) : atual;
+    const media = precos.length ? precos.reduce((a, b) => a + b, 0) / precos.length : atual;
+    const primeiro = precos.length ? precos[0] : atual;
+    const noPeriodo = primeiro > 0 ? ((atual / primeiro) - 1) * 100 : 0;
+    const emDolar = I.totalCarteiraAcoes(d) + I.patrimonio(d).investimentos;
+
+    return `
+      <button class="voltar" data-acao="ir" data-secao="acoes"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONES.voltar}</svg>Voltar para Ações</button>
+      <div class="grid g-top grid-detalhe">
+        <div class="c8">${card("", `USD/BRL <span class="selo-tag selo-acao">moeda</span>`,
+          "dólar comercial · AwesomeAPI",
+          `${abasPeriodo()}<button class="btn" data-acao="buscar-cotacoes">↻ Buscar</button>`,
+          filtrada.length >= 2
+            ? `<div style="padding:10px 16px;height:260px"><canvas id="graf-dolar"></canvas></div>`
+            : `<div class="empty">${buscandoSerieDolar ? "Carregando o histórico do dólar…" : "Não foi possível carregar o histórico agora. Verifique a internet e toque em ↻ Buscar."}</div>`)}</div>
+        <div class="c4">${card("", "Resumo da cotação", "", "", `
+          <div class="kv"><span class="dim">Cotação atual</span><b class="creme">${brl(atual)}</b></div>
+          <div class="kv"><span class="dim">Variação do dia</span><b class="${corSinal(variacao)}">${pct(variacao)}</b></div>
+          <div class="kv"><span class="dim">Variação no período</span><b class="${corSinal(noPeriodo)}">${pct(noPeriodo)}</b></div>
+          <div class="kv"><span class="dim">Mínima do período</span><b>${brl(min)}</b></div>
+          <div class="kv"><span class="dim">Máxima do período</span><b>${brl(max)}</b></div>
+          <div class="kv"><span class="dim">Média do período</span><b>${brl(media)}</b></div>
+          <div class="kv"><span class="dim">Dias no gráfico</span><b>${filtrada.length}</b></div>
+          <div class="kv"><span class="dim">Seus investimentos</span><b>${brl(emDolar)}</b></div>
+          <div class="kv"><span class="dim">Equivalente em dólar</span><b>${atual > 0 ? "US$ " + (emDolar / atual).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—"}</b></div>
+          <div class="kv"><span class="dim">Atualizado em</span><b>${dolar && dolar.atualizadoEm ? esc(String(dolar.atualizadoEm).slice(0, 16).replace("T", " ")) : "—"}</b></div>
+        `)}</div>
+      </div>
+    `;
+  }
+
   // =========================================================================
   // AÇÕES (terminal)
   // =========================================================================
@@ -2857,6 +2955,12 @@
       }
       case "despesas": break;
       case "investimentos": break;
+      case "detalhe-dolar": {
+        carregarSerieDolar();
+        const serie = filtrarPeriodo((serieDolar || []).map((p) => ({ data: p.data, preco: p.preco })), periodoGrafico);
+        if (serie.length >= 2) G.renderPrecoAcao("graf-dolar", serie, 0);
+        break;
+      }
       case "detalhe-investimento": {
         const inv = achar(d.investimentos, ROTA.param);
         const h = inv && inv.historicoValores ? inv.historicoValores : [];
@@ -2932,6 +3036,9 @@
         case "explicar-banco": explicarBanco(id); break;
         case "explicar-classe": explicarClasse(b.dataset.rotulo); break;
         case "explicar-meta": explicarMeta(id); break;
+        case "mes-entradas": mesEntradas = b.dataset.mes; renderRota(); break;
+        case "mes-despesas": mesDespesas = b.dataset.mes; renderRota(); break;
+        case "ir-dolar": navegarPara("detalhe-dolar"); break;
         case "explicar-relatorio": explicarRelatorio(b.dataset.chave); break;
         case "explicar-strip": explicarStrip(b.dataset.chave); break;
         case "periodo-bancos": mesesBancos = Number(b.dataset.meses); renderRota(); break;

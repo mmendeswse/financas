@@ -1004,3 +1004,14 @@ table.tab-acoes th.col-atualiz, table.tab-acoes td.col-atualiz { display: none; 
 /* quadros de indicador clicáveis */
 .metric.clicavel { cursor: pointer; text-align: left; font: inherit; color: inherit; width: 100%; }
 .metric.clicavel:hover { border-color: var(--cy); }
+
+/* item do dólar no ticker, clicável */
+.ticker-item.clicavel { cursor: pointer; }
+.ticker-item.clicavel:hover b { color: var(--cy); }
+.dolar-pill[data-acao] { cursor: pointer; }
+
+/* abas de mês nas guias Entradas e Despesas */
+.abas-mes { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; -webkit-overflow-scrolling: touch; }
+.abas-mes button { padding: 6px 9px; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+.abas-mes::-webkit-scrollbar { height: 0; }
+@media (max-width: 900px) { .abas-mes { order: 3; width: 100%; margin-top: 8px; } }

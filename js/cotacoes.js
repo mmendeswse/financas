@@ -18,6 +18,7 @@
   "use strict";
 
   var URL_DOLAR = "https://economia.awesomeapi.com.br/last/USD-BRL";
+  var URL_DOLAR_SERIE = "https://economia.awesomeapi.com.br/json/daily/USD-BRL/";
   var URL_BRAPI = "https://brapi.dev/api/quote/";
 
   function comTimeout(promessa, ms) {
@@ -36,6 +37,21 @@
       if (!d) throw new Error("Resposta inesperada");
       return { valor: Number(d.bid), variacaoPct: Number(d.pctChange), atualizadoEm: d.create_date || new Date().toISOString() };
     }), 8000);
+  }
+
+  // Série histórica do dólar (fechamento diário), usada no gráfico da
+  // tela de detalhe. A mesma API, sem chave; devolve do mais recente
+  // para o mais antigo, então invertemos a ordem.
+  function buscarSerieDolar(dias) {
+    return comTimeout(fetch(URL_DOLAR_SERIE + (dias || 90), { cache: "no-store" }).then(function (r) {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function (lista) {
+      if (!Array.isArray(lista)) throw new Error("Resposta inesperada");
+      return lista.map(function (d) {
+        return { data: new Date(Number(d.timestamp) * 1000).toISOString().slice(0, 10), preco: Number(d.bid) };
+      }).filter(function (p) { return p.preco > 0; }).reverse();
+    }), 10000);
   }
 
   // O plano gratuito da brapi aceita só 1 ativo por chamada, então
@@ -70,5 +86,5 @@
     return proximo();
   }
 
-  global.Cotacoes = { buscarDolar: buscarDolar, buscarCotacoes: buscarCotacoes };
+  global.Cotacoes = { buscarDolar: buscarDolar, buscarSerieDolar: buscarSerieDolar, buscarCotacoes: buscarCotacoes };
 })(window);
