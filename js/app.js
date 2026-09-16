@@ -2360,7 +2360,6 @@
         <div class="c12">${card("", "Painel ativos", (configCotacoes().auto ? '<span class="selo-tag selo-acao">cotação automática · brapi.dev</span>' : '<span class="selo-tag selo-cat">preço atualizado manualmente</span>'),
           `<div class="dolar-pill" id="dolarTopbar" title="Dólar comercial (AwesomeAPI)" style="display:none"></div>
            <button class="btn" data-acao="buscar-cotacoes" title="Buscar cotações na internet agora">↻ Buscar</button>
-           <button class="btn ${editandoPrecos ? "primario" : ""}" data-acao="alternar-edicao-precos">${editandoPrecos ? "Concluir" : "Editar"}</button>
            <button class="btn primario" data-acao="novo-ativo"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`,
           corpo,
           `<span class="dim">Total Carteira</span><b class="creme" style="font-size:14px;font-weight:800">${brl(I.totalCarteiraAcoes(d))}</b>`)}</div>
@@ -2490,7 +2489,7 @@
       <button class="voltar" data-acao="ir" data-secao="acoes"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONES.voltar}</svg>Voltar para Ações</button>
       <div class="grid g-top grid-detalhe">
         <div class="c8">${card("", `${esc(a.ticker)} <span class="selo-tag selo-${a.categoria.toLowerCase()}">${a.categoria}</span>`, esc(a.empresa),
-          `${abasPeriodo()}<button class="btn primario" data-acao="novo-preco-acao" data-id="${a.id}">Lançar novo preço</button><button class="btn" data-acao="editar-acao" data-id="${a.id}">Editar</button>`,
+          `${abasPeriodo()}<button class="btn" data-acao="editar-acao" data-id="${a.id}">Editar</button>`,
           `<div style="padding:10px 16px;height:260px"><canvas id="graf-preco-acao"></canvas></div>`)}</div>
         <div class="c4">${card("", "Resumo da posição", "", "", `
           <div class="kv"><span class="dim">Quantidade</span><b>${a.quantidade}</b></div>
@@ -2596,7 +2595,13 @@
     const botaoNova = `<div class="c4"><button class="card card-novo" data-acao="nova-meta" title="Nova meta" aria-label="Nova meta">
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">${ICONES.mais}</svg>
     </button></div>`;
-    return `<div class="grid g-top">${corpo}${botaoNova}</div>`;
+    // além do quadro com "+" no fim da grade, um botão fixo no topo
+    // garante que criar uma meta esteja sempre a um clique de distância
+    return `
+      <div class="barra-acoes">
+        <button class="btn primario" data-acao="nova-meta"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVA</button>
+      </div>
+      <div class="grid g-top">${corpo}${botaoNova}</div>`;
   }
 
   function abrirModalMeta(id) {

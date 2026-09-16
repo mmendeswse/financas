@@ -995,3 +995,11 @@ table.tab-acoes th.col-atualiz, table.tab-acoes td.col-atualiz { display: none; 
 
 /* logotipo dos bancos sem fundo */
 .marca-logo { background: transparent; padding: 0; border-radius: 0; }
+
+/* barra de ação fixa no topo da guia Metas */
+.barra-acoes { display: flex; justify-content: flex-end; margin-bottom: 14px; position: sticky; top: 0; z-index: 20; }
+
+/* ícones dos quadros de indicador um pouco maiores */
+.metric .selo { width: 42px; height: 42px; border-radius: 10px; }
+.metric .selo svg { width: 24px; height: 24px; }
+.metric .topo { gap: 11px; }
