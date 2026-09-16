@@ -1028,3 +1028,8 @@ table.tab-acoes th.col-atualiz, table.tab-acoes td.col-atualiz { display: none; 
 .hd .hd-ordem.r { text-align: right; }
 .hd .hd-ordem:hover { color: var(--texto); }
 .hd .hd-ordem.ativo { color: var(--cy); }
+
+/* linha da tabela abre a edição ao ser clicada */
+.rw.clicavel { cursor: pointer; }
+.rw.clicavel:hover { background: var(--painel-2); }
+.rw.clicavel .selo-botao { position: relative; z-index: 2; }

@@ -82,7 +82,7 @@
   }
 
   // ordenação das tabelas de Entradas e Despesas
-  const ORDEM_ENTRADAS_PADRAO = { campo: "data", dir: "desc" };       // mais recentes primeiro
+  const ORDEM_ENTRADAS_PADRAO = { campo: "recentes", dir: "desc" };   // mais recentes primeiro, sem coluna destacada
   const ORDEM_DESPESAS_PADRAO = { campo: "pendentes", dir: "asc" };   // pendentes por data
   let ordemEntradas = { ...ORDEM_ENTRADAS_PADRAO };
   let ordemDespesas = { ...ORDEM_DESPESAS_PADRAO };
@@ -100,6 +100,7 @@
     if (campo === "valor") { x = Number(a.valor || 0); y = Number(b.valor || 0); }
     else if (campo === "data") { x = a.data || ""; y = b.data || ""; }
     else if (campo === "status") { x = a.status || ""; y = b.status || ""; }
+    else if (campo === "banco") { x = String(a.banco || "").toLowerCase(); y = String(b.banco || "").toLowerCase(); }
     else { x = String(a.descricao || "").toLowerCase(); y = String(b.descricao || "").toLowerCase(); }
     if (x < y) return -1 * mult;
     if (x > y) return 1 * mult;
@@ -1676,20 +1677,23 @@
   function renderEntradas(d) {
     if (!mesEntradas) mesEntradas = F.mesAtual();
     const lista = d.entradas.filter((e) => String(e.data || "").slice(0, 7) === mesEntradas)
-      .sort((a, b) => comparar(a, b, ordemEntradas.campo, ordemEntradas.dir));
+      .map((e) => ({ ...e, banco: F.nomeBanco(d, e.bancoId) }))
+      .sort((a, b) => ordemEntradas.campo === "recentes"
+        ? (b.data || "").localeCompare(a.data || "")
+        : comparar(a, b, ordemEntradas.campo, ordemEntradas.dir));
     const totalMes = F.totalEntradasMes(d, mesEntradas);
     const grid = "grid-template-columns:minmax(0,1fr) 120px 90px 150px";
     let corpo;
     if (!lista.length) {
       corpo = `<div class="empty">Nenhuma entrada cadastrada. Use "+ Nova entrada" para lançar seu salário ou outra receita.</div>`;
     } else {
-      corpo = `<div class="hd" style="${grid}">${thOrdem("ordenar-entradas", "descricao", "Descrição", ordemEntradas)}<i>Banco</i>${thOrdem("ordenar-entradas", "data", "Data", ordemEntradas, "r")}${thOrdem("ordenar-entradas", "valor", "Valor", ordemEntradas, "r hd-valor")}</div>` +
+      corpo = `<div class="hd" style="${grid}">${thOrdem("ordenar-entradas", "descricao", "Descrição", ordemEntradas)}${thOrdem("ordenar-entradas", "banco", "Banco", ordemEntradas)}${thOrdem("ordenar-entradas", "data", "Data", ordemEntradas, "r")}${thOrdem("ordenar-entradas", "valor", "Valor", ordemEntradas, "r hd-valor")}</div>` +
         lista.map((e) => `
-        <div class="rw" style="${grid}">
+        <div class="rw clicavel" style="${grid}" data-acao="editar-entrada" data-id="${e.id}" title="Abrir para editar">
           <div><div class="nm">${esc(e.descricao)}${seloFreq(e)}</div><div class="sub">${esc(e.categoria)} · ${esc(e.tipo || "")}</div></div>
-          <div class="dim" style="font-size:12.5px">${esc(F.nomeBanco(d, e.bancoId))}</div>
+          <div class="dim" style="font-size:12.5px">${esc(e.banco)}</div>
           <div class="r dim" style="font-size:12px">${fmtDataCurta(e.data)}</div>
-          <div class="cel-valor"><span class="big up">+${brl(e.valor)}</span><span class="cel-botoes">${linhaAcoes("editar-entrada", e.id, "excluir-entrada", e.id)}</span></div>
+          <div class="cel-valor"><span class="big up">+${brl(e.valor)}</span></div>
         </div>`).join("");
     }
     return `
@@ -1788,17 +1792,13 @@
     } else {
       corpo = `<div class="hd" style="${grid}">${thOrdem("ordenar-despesas", "descricao", "Descrição", ordemDespesas)}${thOrdem("ordenar-despesas", "data", "Data", ordemDespesas, "r")}${thOrdem("ordenar-despesas", "status", "Status", ordemDespesas, "r")}${thOrdem("ordenar-despesas", "valor", "Valor", ordemDespesas, "r hd-valor")}</div>` +
         lista.map((x) => `
-        <div class="rw" style="${grid}">
+        <div class="rw clicavel" style="${grid}" data-acao="${x.origem === "despesa" ? "editar-despesa" : "editar-conta"}" data-id="${x.id}" title="Abrir para editar">
           <div><div class="nm">${esc(x.descricao)}${x.recorrencia && x.recorrencia !== FREQUENCIAS[0] ? ` <span class="selo-tag selo-cat">${esc(x.recorrencia.toLowerCase())}</span>` : ""}</div><div class="sub">${esc(x.categoria || "—")}</div></div>
           <div class="r dim" style="font-size:12px">${fmtData(x.data)}</div>
           <div class="r">${x.origem === "conta"
             ? `<button class="selo-tag selo-${x.status.toLowerCase()} selo-botao" data-acao="alternar-pago" data-id="${x.id}" title="Marcar como paga">${x.status}</button>`
             : `<span class="selo-tag selo-pago">${x.status}</span>`}</div>
-          <div class="cel-valor"><span class="big down">−${brl(x.valor)}</span><span class="cel-botoes">${
-            x.origem === "despesa"
-              ? linhaAcoes("editar-despesa", x.id, "excluir-despesa", x.id)
-              : linhaAcoes("editar-conta", x.id, "excluir-conta", x.id)
-          }</span></div>
+          <div class="cel-valor"><span class="big down">−${brl(x.valor)}</span></div>
         </div>`).join("");
     }
 
