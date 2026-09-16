@@ -99,13 +99,20 @@
     let x, y;
     if (campo === "valor") { x = Number(a.valor || 0); y = Number(b.valor || 0); }
     else if (campo === "data") { x = a.data || ""; y = b.data || ""; }
-    else if (campo === "status") { x = a.status || ""; y = b.status || ""; }
+    else if (campo === "status") {
+      const ordem = { "Atrasado": 0, "Pendente": 1, "Pago": 2 };
+      x = ordem[a.status] !== undefined ? ordem[a.status] : 9;
+      y = ordem[b.status] !== undefined ? ordem[b.status] : 9;
+    }
     else if (campo === "banco") { x = String(a.banco || "").toLowerCase(); y = String(b.banco || "").toLowerCase(); }
     else { x = String(a.descricao || "").toLowerCase(); y = String(b.descricao || "").toLowerCase(); }
     if (x < y) return -1 * mult;
     if (x > y) return 1 * mult;
     return 0;
   }
+
+  // Entradas e Despesas usam exatamente as mesmas larguras de coluna
+  const GRID_LANCAMENTOS = "grid-template-columns:minmax(0,1fr) 130px 110px 160px";
 
   let mesesBancos = 0;   // período do gráfico da guia Bancos (0 = saldo atual)
   let mesesRelA = 12;   // período do quadro Receitas x despesas
@@ -1682,7 +1689,7 @@
         ? (b.data || "").localeCompare(a.data || "")
         : comparar(a, b, ordemEntradas.campo, ordemEntradas.dir));
     const totalMes = F.totalEntradasMes(d, mesEntradas);
-    const grid = "grid-template-columns:minmax(0,1fr) 120px 90px 150px";
+    const grid = GRID_LANCAMENTOS;
     let corpo;
     if (!lista.length) {
       corpo = `<div class="empty">Nenhuma entrada cadastrada. Use "+ Nova entrada" para lançar seu salário ou outra receita.</div>`;
@@ -1784,7 +1791,7 @@
 
     const totalMes = F.totalDespesasMes(d, mesDespesas);
     const aPagar = F.totalAPagar(d);
-    const grid = "grid-template-columns:minmax(0,1fr) 120px 112px 168px";
+    const grid = GRID_LANCAMENTOS;
 
     let corpo;
     if (!lista.length) {
@@ -1795,9 +1802,7 @@
         <div class="rw clicavel" style="${grid}" data-acao="${x.origem === "despesa" ? "editar-despesa" : "editar-conta"}" data-id="${x.id}" title="Abrir para editar">
           <div><div class="nm">${esc(x.descricao)}${x.recorrencia && x.recorrencia !== FREQUENCIAS[0] ? ` <span class="selo-tag selo-cat">${esc(x.recorrencia.toLowerCase())}</span>` : ""}</div><div class="sub">${esc(x.categoria || "—")}</div></div>
           <div class="r dim" style="font-size:12px">${fmtData(x.data)}</div>
-          <div class="r">${x.origem === "conta"
-            ? `<button class="selo-tag selo-${x.status.toLowerCase()} selo-botao" data-acao="alternar-pago" data-id="${x.id}" title="Marcar como paga">${x.status}</button>`
-            : `<span class="selo-tag selo-pago">${x.status}</span>`}</div>
+          <div class="r"><button class="selo-tag selo-${x.status.toLowerCase()} selo-botao" data-acao="${x.origem === "conta" ? "alternar-pago" : "tornar-pendente"}" data-id="${x.id}" title="${x.origem === "conta" ? (x.status === "Pago" ? "Marcar como pendente" : "Marcar como paga") : "Marcar como pendente (vira conta a pagar)"}">${x.status}</button></div>
           <div class="cel-valor"><span class="big down">−${brl(x.valor)}</span></div>
         </div>`).join("");
     }
@@ -3073,6 +3078,19 @@
         case "excluir-conta":
           confirmarExclusao("Excluir esta conta?", () => { DADOS.contasPagar = DADOS.contasPagar.filter((x) => x.id !== id); salvarEAtualizar("Conta excluída."); });
           break;
+        case "tornar-pendente": {
+          const dsp = achar(DADOS.despesas, id);
+          if (dsp) {
+            DADOS.despesas = DADOS.despesas.filter((r) => r.id !== dsp.id);
+            DADOS.contasPagar.push({
+              id: dsp.id, descricao: dsp.descricao, categoria: dsp.categoria,
+              vencimento: dsp.data, valor: dsp.valor, status: "Pendente", obs: dsp.obs || ""
+            });
+            salvarEAtualizar("Marcada como pendente.");
+          }
+          break;
+        }
+
         case "alternar-pago": {
           const c = achar(DADOS.contasPagar, id);
           if (c) { c.status = c.status === "Pago" ? "Pendente" : "Pago"; salvarEAtualizar(c.status === "Pago" ? "Marcada como paga." : "Marcada como pendente."); }
