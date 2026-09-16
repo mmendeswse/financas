@@ -970,3 +970,8 @@ table.tab-investimentos th.col-contratada, table.tab-investimentos td.col-contra
 .marca-banco { display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: 800; letter-spacing: -.02em; flex: none; line-height: 1; }
 .nome-com-marca { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .barlist-nome { display: flex; align-items: center; gap: 8px; }
+
+/* logotipo do banco: fundo claro para os logos coloridos aparecerem no
+   tema escuro; altura fixa e largura livre, sem esticar a imagem */
+.marca-logo { display: inline-flex; align-items: center; justify-content: center; background: #FFFFFF; border-radius: 6px; padding: 3px 5px; flex: none; box-sizing: content-box; }
+.marca-logo img { height: 100%; width: auto; display: block; }

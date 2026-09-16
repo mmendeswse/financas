@@ -701,34 +701,43 @@
   // offline, sem depender de arquivos externos.
   // ---------------------------------------------------------------------
   const MARCAS_BANCO = {
-    "nubank":          { cor: "#820AD1", letra: "N" },
+    // bancos com logotipo próprio (arquivos em assets/icons/bancos)
+    "nubank":          { arquivo: "nubank.svg" },
+    "itaú":            { arquivo: "itau.svg" },
+    "itau":            { arquivo: "itau.svg" },
+    "inter":           { arquivo: "inter.svg" },
+    "banco inter":     { arquivo: "inter.svg" },
+    "caixa":           { arquivo: "caixa.svg" },
+    "caixa tem":       { arquivo: "caixa.svg" },
+    "caixa econômica federal": { arquivo: "caixa.svg" },
+    "mercado pago":    { arquivo: "mercado-pago.svg" },
+    // demais bancos: marca com a cor e a inicial
     "banco do brasil": { cor: "#FCEE26", letra: "BB", texto: "#0038A8" },
     "bb":              { cor: "#FCEE26", letra: "BB", texto: "#0038A8" },
-    "itaú":            { cor: "#EC7000", letra: "I" },
-    "itau":            { cor: "#EC7000", letra: "I" },
-    "inter":           { cor: "#FF7A00", letra: "I" },
-    "mercado pago":    { cor: "#00B1EA", letra: "MP" },
-    "caixa tem":       { cor: "#1C60AB", letra: "C" },
-    "caixa":           { cor: "#1C60AB", letra: "C" },
     "bradesco":        { cor: "#CC092F", letra: "B" },
     "santander":       { cor: "#EC0000", letra: "S" },
     "c6 bank":         { cor: "#242424", letra: "C6" },
     "picpay":          { cor: "#21C25E", letra: "P" },
     "xp":              { cor: "#0F0F0F", letra: "XP" },
-    "banco digimais":  { cor: "#0B7A3B", letra: "D" }
+    "banco digimais":  { cor: "#0B7A3B", letra: "D" },
+    "tesouro nacional": { cor: "#1B5E20", letra: "TN" }
   };
 
+  // Mostra o logotipo do banco quando existe o arquivo; senão, um círculo
+  // com a cor e a inicial. Os logotipos são SVG, então ficam nítidos em
+  // qualquer tamanho e não distorcem (a altura manda, a largura é livre).
   function marcaBanco(nome, tamanho) {
     const t = tamanho || 22;
     const chave = String(nome || "").trim().toLowerCase();
-    const m = MARCAS_BANCO[chave] || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
-    const fonte = m.letra.length > 1 ? t * 0.42 : t * 0.52;
-    return `<span class="marca-banco" style="width:${t}px;height:${t}px;background:${m.cor};color:${m.texto || "#fff"};font-size:${fonte}px" aria-hidden="true">${esc(m.letra)}</span>`;
+    const m = MARCAS_BANCO[chave];
+    if (m && m.arquivo) {
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.0.2" alt="" loading="lazy"></span>`;
+    }
+    const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
+    const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
+    return `<span class="marca-banco" style="width:${t}px;height:${t}px;background:${f.cor};color:${f.texto || "#fff"};font-size:${fonte}px" aria-hidden="true">${esc(f.letra)}</span>`;
   }
 
-
-  // ícones dos indicadores de Relatórios, no mesmo padrão dos do Dashboard
-  // (caixa 24x24, traço 1.6, cantos arredondados)
   const ICONES_REL = {
     receitas: '<path d="M3.5 19.5h17"/><path d="M12 16.5V4.5"/><path d="M7.5 9l4.5-4.5L16.5 9"/><path d="M6 19.5v-3M18 19.5v-5"/>',
     despesas: '<path d="M3.5 19.5h17"/><path d="M12 4.5v12"/><path d="M7.5 12l4.5 4.5L16.5 12"/><path d="M6 19.5v-5M18 19.5v-3"/>',
