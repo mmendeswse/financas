@@ -1197,17 +1197,21 @@
 
 
 
-  function painelSimples(titulo, pctValor, pctRotulo, comoCalcula, linhasHtml, secao) {
+  function painelSimples(titulo, pctValor, pctRotulo, comoCalcula, linhasHtml, secao, botao) {
     abrirModal(`
       <h3>${titulo}</h3>
       <div class="explica-pct"><b>${Math.abs(pctValor).toFixed(1).replace(".", ",")}%</b><span>${pctRotulo}</span></div>
       ${comoCalcula ? `<p class="campo ajuda" style="margin:0 0 12px">Como é calculado: <b>${comoCalcula}</b></p>` : ""}
       <div class="explica-lista">${linhasHtml}</div>
       <div class="modal-acoes">
-        <button class="btn primario salvar" id="btnIrPainel">Abrir ${TITULOS[secao][0]}</button>
+        <button class="btn primario salvar" id="btnIrPainel">${botao ? esc(botao.rotulo) : "Abrir " + TITULOS[secao][0]}</button>
         <button class="btn" id="btnFecharPainel">Fechar</button>
       </div>`);
-    document.getElementById("btnIrPainel").onclick = () => { fecharModal(); navegarPara(secao); };
+    document.getElementById("btnIrPainel").onclick = () => {
+      fecharModal();
+      if (botao && typeof botao.acao === "function") botao.acao();
+      else navegarPara(secao);
+    };
     document.getElementById("btnFecharPainel").onclick = fecharModal;
   }
 
@@ -1266,7 +1270,7 @@
       linha("Prazo", m.prazo ? fmtData(m.prazo) : "sem prazo") +
       (dias !== null ? linha("Dias restantes", dias >= 0 ? String(dias) : "prazo vencido", dias >= 0 ? "" : "down") : "") +
       (dias !== null && dias > 0 && falta > 0 ? linha("Guardando por mês", brl(falta / Math.max(1, dias / 30))) : ""),
-      "metas");
+      "metas", { rotulo: "+ Adicionar valor", acao: () => abrirModalDeposito(m.id) });
   }
 
 
@@ -1398,6 +1402,36 @@
         linha("Dividendos recebidos", brl(I.totalDividendosAcoes(d)), "up") +
         linha("Ativos na carteira", String(d.acoes.length)), "acoes");
     }
+  }
+
+
+  function explicarMes(ponto) {
+    if (!ponto || !ponto.mes) return;
+    const d = DADOS;
+    const mes = ponto.mes;
+    const entradas = d.entradas.filter((e) => String(e.data || "").slice(0, 7) === mes);
+    const despesas = d.despesas.filter((x) => String(x.data || "").slice(0, 7) === mes);
+    const totE = entradas.reduce((s, e) => s + Number(e.valor || 0), 0);
+    const totD = despesas.reduce((s, x) => s + Number(x.valor || 0), 0);
+    const saldo = totE - totD;
+    const linha = (r, v, c) => `<div class="kv"><span class="dim">${rotuloPainel(r)}</span><b class="${c || ""}">${v}</b></div>`;
+    const maiores = (lista) => {
+      const mapa = {};
+      lista.forEach((m) => { const k = m.categoria || "Outros"; mapa[k] = (mapa[k] || 0) + Number(m.valor || 0); });
+      return Object.keys(mapa).sort((a, b) => mapa[b] - mapa[a]).slice(0, 3);
+    };
+    const catE = maiores(entradas), catD = maiores(despesas);
+    const nomeMes = new Date(mes + "-01T00:00:00").toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+
+    painelSimples(nomeMes.charAt(0).toUpperCase() + nomeMes.slice(1),
+      totE > 0 ? (saldo / totE) * 100 : 0, "das receitas sobraram neste mês", "receitas − despesas",
+      linha("Receitas", brl(totE), "up") +
+      (catE.length ? linha("Maior receita", esc(catE[0])) : "") +
+      linha("Despesas", brl(totD), "down") +
+      catD.map((c, i) => linha(`${i + 1}ª categoria`, esc(c))).join("") +
+      linha("Resultado", brlSinal(saldo), corSinal(saldo)) +
+      linha("Lançamentos", `${entradas.length} entrada(s) · ${despesas.length} despesa(s)`),
+      "despesas");
   }
 
   // =========================================================================
@@ -2980,7 +3014,7 @@
         }
         if (hist.length >= 2) G.renderEvolucaoPatrimonio("graf-evolucao", hist);
         else G.destruir("graf-evolucao");
-        G.renderReceitasDespesas("graf-receitas-despesas", F.serieMensal(d, mesesRD));
+        G.renderReceitasDespesas("graf-receitas-despesas", F.serieMensal(d, mesesRD), { aoClicar: explicarMes });
         if (itensPatrimonio(d).length) G.renderDoughnutGenerico("graf-dash-composicao", itensPatrimonio(d), { semLegenda: true, aoClicar: (item) => explicarClasse(item.rotulo) });
         break;
       }

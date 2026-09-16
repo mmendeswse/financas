@@ -71,7 +71,8 @@
   // ---------------------------------------------------------------------
   // Receitas x despesas por mês (barras agrupadas — verde x rosa)
   // ---------------------------------------------------------------------
-  function renderReceitasDespesas(canvasId, serie) {
+  function renderReceitasDespesas(canvasId, serie, opcoes) {
+    opcoes = opcoes || {};
     destruir(canvasId);
     var ctx = ctxOf(canvasId); if (!ctx) return;
     instancias[canvasId] = new Chart(ctx, {
@@ -86,6 +87,12 @@
       options: {
         responsive: true, maintainAspectRatio: false,
         interaction: { mode: "index", intersect: false },
+        onClick: function (evt, elementos) {
+          if (opcoes.aoClicar && elementos && elementos.length) opcoes.aoClicar(serie[elementos[0].index]);
+        },
+        onHover: function (evt, elementos) {
+          if (evt && evt.native && evt.native.target) evt.native.target.style.cursor = (opcoes.aoClicar && elementos.length) ? "pointer" : "default";
+        },
         scales: { x: eixoX(), y: eixoY() },
         plugins: {
           legend: { position: "top", align: "end", labels: { color: CORES.texto, font: fonte(10.5), boxWidth: 8, boxHeight: 8, usePointStyle: true, pointStyle: "circle" } },
