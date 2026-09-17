@@ -437,10 +437,10 @@
 
       abrirModal(`
         <h3>Importar banco</h3>
-        <p style="margin-top:0;font-size:13px">O arquivo tem <b>${invs.length} investimento(s)</b> e <b>${acs.length} ativo(s) de bolsa</b>.</p>
+        <p style="margin-top:0;font-size:13px">O arquivo tem <b>${plural(invs.length, "investimento")}</b> e <b>${plural(acs.length, "ativo")} de bolsa</b>.</p>
         <p class="campo ajuda">Só as guias Investimentos e Ações são afetadas. Bancos, entradas, despesas, contas e metas ficam como estão.</p>
         <div class="explica-lista">
-          <div class="kv"><span class="dim">Hoje você tem</span><b>${DADOS.investimentos.length} investimento(s) · ${DADOS.acoes.length} ativo(s)</b></div>
+          <div class="kv"><span class="dim">Hoje você tem</span><b>${plural(DADOS.investimentos.length, "investimento")} · ${plural(DADOS.acoes.length, "ativo")}</b></div>
         </div>
         <div class="modal-acoes" style="margin-top:16px">
           <button class="btn primario salvar" id="btnAcrescentar">Acrescentar aos atuais</button>
@@ -459,7 +459,7 @@
         DADOS.investimentos = substituir ? novosInv : [...DADOS.investimentos, ...novosInv];
         DADOS.acoes = substituir ? novasAcoes : [...DADOS.acoes, ...novasAcoes];
         fecharModal();
-        salvarEAtualizar(`${substituir ? "Substituído" : "Importado"}: ${novosInv.length} investimento(s) e ${novasAcoes.length} ativo(s).`);
+        salvarEAtualizar(`${substituir ? "Substituído" : "Importado"}: ${plural(novosInv.length, "investimento")} e ${plural(novasAcoes.length, "ativo")}.`);
       };
       document.getElementById("btnAcrescentar").onclick = () => aplicar(false);
       document.getElementById("btnSubstituir").onclick = () => {
@@ -668,7 +668,7 @@
 
     const vencendo = F.contasVencendoEm(d, 7).filter((c) => c.statusReal === "Pendente");
     if (vencendo.length) {
-      alertas.push({ tipo: "aviso", rota: "despesas", texto: `Existem ${vencendo.length} conta(s) vencendo nos próximos 7 dias.` });
+      alertas.push({ tipo: "aviso", rota: "despesas", texto: `${vencendo.length === 1 ? "Existe 1 conta vencendo" : `Existem ${vencendo.length} contas vencendo`} nos próximos 7 dias.` });
     }
 
     // categorias de despesa com alta em relação à média dos últimos 3 meses
@@ -1102,9 +1102,9 @@
         if (!a.empresa && q.nome) a.empresa = q.nome;
       });
       const qtdErros = Object.keys(erros).length;
-      if (alterados) salvarEAtualizar(silencioso ? "" : `Cotações atualizadas (${alterados} ativo(s))${qtdErros ? ` · ${qtdErros} com erro` : ""}.`);
+      if (alterados) salvarEAtualizar(silencioso ? "" : `Cotações atualizadas (${plural(alterados, "ativo")})${qtdErros ? ` · ${qtdErros} com erro` : ""}.`);
       else if (!silencioso) {
-        if (qtdErros) { const k = Object.keys(erros)[0]; toast(`Não consegui buscar ${qtdErros} ativo(s). Ex.: ${k}: ${erros[k]}`); }
+        if (qtdErros) { const k = Object.keys(erros)[0]; toast(`Não consegui buscar ${plural(qtdErros, "ativo")}. Ex.: ${k}: ${erros[k]}`); }
         else toast("Cotações já estavam atualizadas.");
       }
       if (qtdErros) console.warn("Cotações com erro:", erros);
@@ -1202,7 +1202,7 @@
         pctRotulo: "de variação em relação ao mês anterior",
         linhas: linha("Receitas deste mês", brl(entradas), "up") + linha("Receitas do mês anterior", brl(entradasAnt)) +
           linha("Diferença", brlSinal(entradas - entradasAnt), corSinal(entradas - entradasAnt)) +
-          linha("Lançamentos no mês", String(F.entradasNoMes(d, mes).length)),
+          linha("Lançamentos no mês", plural(F.entradasNoMes(d, mes).length, "entrada")),
         secao: "entradas"
       },
       despesas: {
@@ -1237,6 +1237,12 @@
 
   // Nos painéis interativos, o rótulo de cada linha da tabela mostra a
   // segunda palavra com a inicial em maiúscula (ex.: "Valor Aplicado").
+  // "1 entrada" / "3 entradas" — escolhe singular ou plural pela quantidade
+  function plural(qtd, singular, pluralTexto) {
+    const n = Number(qtd) || 0;
+    return `${n} ${n === 1 ? singular : (pluralTexto || singular + "s")}`;
+  }
+
   function rotuloPainel(texto) {
     let palavras = 0;
     return String(texto).split(" ").map((p) => {
@@ -1279,7 +1285,8 @@
       "saldo inicial + entradas − despesas",
       linha("Saldo inicial", brl(b.saldoInicial)) + linha("+ Entradas recebidas", brl(entradas), "up") +
       linha("− Despesas pagas por aqui", brl(saidas), "down") + linha("Saldo atual", brl(saldo), corSinal(saldo)) +
-      linha("Tipo de conta", esc(b.tipo || "—")), "bancos");
+      linha("Tipo de conta", esc(b.tipo || "—")), "bancos",
+      { rotulo: "Adicionar", acao: () => abrirModalEntrada(null, b.id) });
   }
 
   function explicarClasse(rotulo) {
@@ -1426,13 +1433,13 @@
     if (chave === "rel-receitas") {
       painelSimples("Receitas", totE > 0 ? 100 : 0, `do que entrou no período (${periodo})`, "soma das entradas no período",
         porCategoria(entradas) + linha("Total recebido", brl(totE), "up") +
-        linha("Média por mês", brl(totE / meses)) + linha("Lançamentos", String(entradas.length)), "entradas");
+        linha("Média por mês", brl(totE / meses)) + linha("Lançamentos", plural(entradas.length, "entrada")), "entradas");
       return;
     }
     if (chave === "rel-despesas") {
       painelSimples("Despesas", totE > 0 ? (totD / totE) * 100 : 0, "das receitas do período foram gastas", "soma das despesas ÷ receitas",
         porCategoria(despesas) + linha("Total gasto", brl(totD), "down") +
-        linha("Média por mês", brl(totD / meses)) + linha("Lançamentos", String(despesas.length)), "despesas");
+        linha("Média por mês", brl(totD / meses)) + linha("Lançamentos", plural(despesas.length, "despesa")), "despesas");
       return;
     }
     if (chave === "rel-resultado") {
@@ -1451,7 +1458,7 @@
         linha("Valor atual", brl(I.totalCarteiraAcoes(d)), "creme") +
         linha("Resultado", brlSinal(I.resultadoCarteiraAcoes(d)), corSinal(I.resultadoCarteiraAcoes(d))) +
         linha("Dividendos recebidos", brl(I.totalDividendosAcoes(d)), "up") +
-        linha("Ativos na carteira", String(d.acoes.length)), "acoes");
+        linha("Ativos na carteira", plural(d.acoes.length, "ativo")), "acoes");
     }
   }
 
@@ -1482,7 +1489,7 @@
       linha("Despesas", brl(totD), "down") +
       catD.map((c) => linha("· " + esc(c.nome), brl(c.valor))).join("") +
       linha("Resultado", brlSinal(saldo), corSinal(saldo)) +
-      linha("Lançamentos", `${entradas.length} entrada(s) · ${despesas.length} despesa(s)`),
+      linha("Lançamentos", `${plural(entradas.length, "entrada")} · ${plural(despesas.length, "despesa")}`),
       "despesas");
   }
 
@@ -1732,7 +1739,9 @@
           <div class="cartao-item" style="border-left-color:${esc(b.cor || "#3FC1E0")}" data-acao="editar-banco" data-id="${b.id}">
             <div class="linha1"><div class="nome-com-marca">${marcaBanco(b.nome, 26)}<div><div class="nome">${esc(b.nome)}</div><div class="tipo">${esc(b.tipo || "—")}</div>${b.agencia || b.conta ? `<div class="tipo">${b.agencia ? "Ag " + esc(b.agencia) : ""}${b.agencia && b.conta ? " · " : ""}${b.conta ? "Cc " + esc(b.conta) : ""}</div>` : ""}</div></div></div>
             <div class="saldo ${corSinal(b.saldoAtual)}">${brl(b.saldoAtual)}</div>
-            <div class="rodape">Saldo Inicial ${brl(b.saldoInicial)}</div>
+            <div class="rodape">Saldo Inicial ${brl(b.saldoInicial)}
+              <button class="btn pequeno" data-acao="entrada-banco" data-id="${b.id}" title="Lançar uma entrada nesta conta">+ Adicionar</button>
+            </div>
           </div>`).join("") + `</div>`;
     }
     return `
@@ -1828,7 +1837,7 @@
     `;
   }
 
-  function abrirModalEntrada(id) {
+  function abrirModalEntrada(id, bancoIdPadrao) {
     const e = id ? achar(DADOS.entradas, id) : null;
     abrirModal(`
       <h3>${e ? "Editar entrada" : "Nova entrada"}</h3>
@@ -1839,7 +1848,7 @@
       <div class="campo"><label for="f_desc">Descrição</label><input id="f_desc" value="${e ? esc(e.descricao) : ""}" placeholder="Salário"></div>
       <div class="par">
         <div class="campo"><label for="f_cat">Categoria</label><select id="f_cat">${opcoes(CATS_ENTRADA, e ? e.categoria : CATS_ENTRADA[0])}</select></div>
-        <div class="campo"><label for="f_banco">Banco</label><select id="f_banco">${opcoesBancos(DADOS.bancos, e ? e.bancoId : "", true)}</select></div>
+        <div class="campo"><label for="f_banco">Banco</label><select id="f_banco">${opcoesBancos(DADOS.bancos, e ? e.bancoId : (bancoIdPadrao || ""), true)}</select></div>
       </div>
       <div class="campo"><label for="f_tipo">Tipo</label><select id="f_tipo">${opcoes(["Fixa", "Variável"], e ? e.tipo : "Fixa")}</select></div>
       <div class="campo"><label for="f_rec">Repetição</label><select id="f_rec">${opcoes(FREQUENCIAS, freqDe(e))}</select>
@@ -2065,7 +2074,7 @@
     }
     return `
       <div class="grid g-top">
-        <div class="c12">${card("c12", "Cartões de crédito", `${cartoes.length} cartão(ões)`, `<button class="btn primario" data-acao="novo-cartao"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>Novo cartão</button>`, corpo)}</div>
+        <div class="c12">${card("c12", "Cartões de crédito", `${plural(cartoes.length, "cartão", "cartões")}`, `<button class="btn primario" data-acao="novo-cartao"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>Novo cartão</button>`, corpo)}</div>
       </div>
     `;
   }
@@ -2149,7 +2158,7 @@
     let avisos = "";
     if (atrasadas.length || vencendo.length) {
       avisos = `<div class="faixa-demo" style="border-color:rgba(255,176,32,.3)">
-        <div>${atrasadas.length ? `<b class="down">${atrasadas.length} conta(s) atrasada(s)</b>` : ""}${atrasadas.length && vencendo.length ? " · " : ""}${vencendo.length ? `<b class="acc">${vencendo.length} vencendo nos próximos 7 dias</b>` : ""}</div>
+        <div>${atrasadas.length ? `<b class="down">${plural(atrasadas.length, "conta atrasada", "contas atrasadas")}</b>` : ""}${atrasadas.length && vencendo.length ? " · " : ""}${vencendo.length ? `<b class="acc">${vencendo.length} vencendo nos próximos 7 dias</b>` : ""}</div>
         <button class="fechar" data-acao="dispensar-contas" title="Não avisar mais sobre estas contas" aria-label="Dispensar aviso">×</button>
       </div>`;
     }
@@ -2157,7 +2166,7 @@
     return `
       ${avisos}
       <div class="grid g-top">
-        <div class="c12">${card("c12", "Contas a pagar", `${lista.length} conta(s)`, `<button class="btn primario" data-acao="nova-conta"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>Nova conta</button>`, corpo, `<span class="dim">Total em aberto</span><span class="down" style="font-size:14px">${brl(totalAberto)}</span>`)}</div>
+        <div class="c12">${card("c12", "Contas a pagar", `${plural(lista.length, "conta")}`, `<button class="btn primario" data-acao="nova-conta"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>Nova conta</button>`, corpo, `<span class="dim">Total em aberto</span><span class="down" style="font-size:14px">${brl(totalAberto)}</span>`)}</div>
       </div>
     `;
   }
@@ -2286,7 +2295,7 @@
         <select id="filtroCategoria"><option value="">Todas as categorias</option>${opcoes(todasCategorias, filtrosHistorico.categoria)}</select>
         <input type="search" id="filtroBusca" placeholder="Buscar por descrição…" value="${esc(filtrosHistorico.busca)}">
       </div>
-      ${card("c12", "Movimentações", `${lista.length} resultado(s)`, "", corpo)}
+      ${card("c12", "Movimentações", `${plural(lista.length, "resultado")}`, "", corpo)}
     `;
   }
 
@@ -2349,7 +2358,7 @@
 
     const aviso = vencendo.length
       ? `<div class="faixa-demo" style="border-color:rgba(255,194,51,.3)">
-          <div><b class="acc">${vencendo.length} investimento(s) vencendo nos próximos 60 dias:</b> ${vencendo.map((v) => esc(v.nome) + " (" + fmtData(v.dataVencimento) + ")").join(" · ")}</div>
+          <div><b class="acc">${plural(vencendo.length, "investimento")} vencendo nos próximos 60 dias:</b> ${vencendo.map((v) => esc(v.nome) + " (" + fmtData(v.dataVencimento) + ")").join(" · ")}</div>
           <button class="fechar" data-acao="dispensar-vencimentos" title="Não avisar mais sobre estes vencimentos" aria-label="Dispensar aviso">×</button>
         </div>`
       : "";
@@ -2767,7 +2776,7 @@
         alterados++;
       }
     });
-    if (alterados) salvarEAtualizar(`${alterados} preço(s) atualizado(s).`);
+    if (alterados) salvarEAtualizar(`${plural(alterados, "preço atualizado", "preços atualizados")}.`);
   }
 
   // =========================================================================

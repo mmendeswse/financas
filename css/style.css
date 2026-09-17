@@ -1033,3 +1033,7 @@ table.tab-acoes th.col-atualiz, table.tab-acoes td.col-atualiz { display: none; 
 .rw.clicavel { cursor: pointer; }
 .rw.clicavel:hover { background: var(--painel-2); }
 .rw.clicavel .selo-botao { position: relative; z-index: 2; }
+
+/* botão de lançar entrada dentro do cartão do banco */
+.cartao-item .rodape { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.cartao-item .rodape .btn { position: relative; z-index: 2; padding: 5px 10px; font-size: 11px; }
