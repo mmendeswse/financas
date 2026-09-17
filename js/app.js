@@ -1321,7 +1321,7 @@
       linha("Prazo", m.prazo ? fmtData(m.prazo) : "sem prazo") +
       (dias !== null ? linha("Dias restantes", dias >= 0 ? String(dias) : "prazo vencido", dias >= 0 ? "" : "down") : "") +
       (dias !== null && dias > 0 && falta > 0 ? linha("Guardando por mês", brl(falta / Math.max(1, dias / 30))) : ""),
-      "metas", { rotulo: "+ Adicionar valor", acao: () => abrirModalDeposito(m.id) });
+      "metas", { rotulo: "+ Adicionar Valor", acao: () => abrirModalDeposito(m.id) });
   }
 
 
@@ -1822,7 +1822,7 @@
     }
     return `
       <div class="grid g-top">
-        <div class="c12">${card("c12", "Entradas", `Total ${NOMES_MES[Number(mesEntradas.slice(5, 7)) - 1]}/${mesEntradas.slice(0, 4)}: ${brl(totalMes)}`, `${abasMeses12("mes-entradas", mesEntradas, "anoEntradas", anosDisponiveis(d))}<button class="btn primario" data-acao="nova-entrada"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`, corpo)}</div>
+        <div class="c12">${card("c12", "Entradas", `Total Mês: ${brl(totalMes)}`, `${abasMeses12("mes-entradas", mesEntradas, "anoEntradas", anosDisponiveis(d))}<button class="btn primario" data-acao="nova-entrada"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`, corpo)}</div>
       </div>
     `;
   }
@@ -1926,7 +1926,7 @@
 
     return `
       <div class="grid g-top">
-        <div class="c12">${card("c12", "Despesas", `Pagas ${NOMES_MES[Number(mesDespesas.slice(5, 7)) - 1]}/${mesDespesas.slice(0, 4)}: ${brl(totalMes)} · em aberto: ${brl(aPagar)}`,
+        <div class="c12">${card("c12", "Despesas", `Pagas Mês: ${brl(totalMes)} · em aberto: ${brl(aPagar)}`,
           `${abasMeses12("mes-despesas", mesDespesas, "anoDespesas", anosDisponiveis(d))}<button class="btn primario" data-acao="nova-despesa"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`,
           corpo)}</div>
       </div>
@@ -2910,7 +2910,7 @@
             </div>
             <div class="progresso"><i style="width:${progresso}%;background:${m.cor || "var(--up)"}"></i></div>
             <div class="progresso-legenda"><span>${progresso.toFixed(1)}%</span><span>${brl(Math.max(0, m.objetivo - m.atual))} restantes</span></div>
-            <button class="btn pequeno" style="margin-top:12px;width:100%;justify-content:center" data-acao="depositar-meta" data-id="${m.id}">+ Adicionar valor</button>
+            <button class="btn pequeno" style="margin-top:12px;width:100%;justify-content:center" data-acao="depositar-meta" data-id="${m.id}">+ Adicionar Valor</button>
           </div>
         </div></div>`;
       }).join("");
@@ -3032,7 +3032,7 @@
         <div class="c6">${card("", "Backup dos dados", A.ehDesktop ? "banco de dados em arquivo dentro do programa, com cópia automática (dados.bak.json)" : "tudo fica salvo só neste navegador — guarde uma cópia de vez em quando", "", `
           ${A.ehDesktop ? `<p class="campo ajuda" style="padding:8px 16px 0" id="caminhoBanco">Local do banco: carregando…</p><div style="padding:0 16px 6px"><button class="btn pequeno" data-acao="abrir-pasta-banco">Abrir pasta do banco de dados</button></div>` : ""}
           <div class="body pad" style="display:flex;gap:10px;flex-wrap:wrap">
-            <button class="btn primario" data-acao="exportar-backup">Exportar backup (.json)</button>
+            <button class="btn primario" data-acao="exportar-backup">Exportar Backup</button>
             <button class="btn" data-acao="importar-backup">Importar backup</button>
           </div>
           <p class="campo ajuda" style="padding:0 16px 14px">Importar um backup substitui todos os dados atuais — o sistema pede confirmação antes de aplicar.</p>
@@ -3052,7 +3052,7 @@
                 <button class="btn perigo" data-acao="remover-senha">Remover senha</button>
               </div>
             ` : `
-              <button class="btn primario" data-acao="criar-senha">Criar senha numérica</button>
+              <button class="btn primario" data-acao="criar-senha">Criar Senha</button>
             `}
             <p class="campo ajuda" style="margin-top:26px">Vale só neste aparelho. Se esquecer a senha, será preciso apagar os dados e restaurar um backup.</p>
           </div>`)}</div>
@@ -3061,13 +3061,13 @@
             <label class="chk-linha"><input type="checkbox" id="cfgCotacoesAuto" ${configCotacoes().auto ? "checked" : ""}> Buscar cotações automaticamente ao abrir o sistema e a cada 5 minutos</label>
             <div class="campo"><label for="cfgBrapiToken">Token da brapi.dev</label><input id="cfgBrapiToken" value="${esc(configCotacoes().token)}" placeholder="cole aqui outro token, se quiser">
               <div class="ajuda">Já vem com um token configurado — não precisa mexer. Se um dia quiser usar outro, basta colar aqui. Se a internet cair, o sistema mantém os últimos preços e continua funcionando.</div></div>
-            <button class="btn primario" data-acao="salvar-cotacoes">Salvar e buscar agora</button>
+            <button class="btn primario" data-acao="salvar-cotacoes">Salvar e Buscar</button>
             ${dolar ? `<span class="dim" style="margin-left:12px;font-size:12px">Dólar agora: <b class="acc-laranja">R$ ${dolar.valor.toFixed(2).replace(".", ",")}</b></span>` : ""}
           </div>`)}</div>
         <div class="c6"><div class="card" style="border-color:rgba(255,84,104,.3)">
           <header><div><h2 class="down">Zona de risco</h2><div class="sub">esta ação não pode ser desfeita</div></div></header>
           <div class="body pad">
-            <button class="btn perigo" data-acao="apagar-tudo">Apagar todos os dados</button>
+            <button class="btn perigo" data-acao="apagar-tudo">Apagar Dados</button>
             <p class="campo ajuda" style="margin-top:26px">Não há como desfazer. Exporte um backup antes, se houver algo que você queira guardar.</p>
           </div>
         </div></div>
@@ -3081,9 +3081,9 @@
   function montarGraficosRelatorio(d) {
     const fxA = intervaloRel(mesesRelA), fxB = intervaloRel(mesesRelB);
     const historicoP = d.historicoPatrimonio.filter((h) => h.data >= fxB.ini && h.data <= fxB.fim);
-    if (historicoP.length >= 2) G.renderEvolucaoPatrimonio("graf-rel-evolucao", historicoP);
+    if (historicoP.length >= 2) G.renderEvolucaoPatrimonio("graf-rel-evolucao", historicoP, { aoClicar: explicarPatrimonio });
     const primeiro = d.historicoPatrimonio.length ? d.historicoPatrimonio[0].data : fxA.ini;
-    G.renderReceitasDespesas("graf-rel-mensal", serieMensalPeriodo(d, mesesRelA ? fxA.ini : primeiro, fxA.fim));
+    G.renderReceitasDespesas("graf-rel-mensal", serieMensalPeriodo(d, mesesRelA ? fxA.ini : primeiro, fxA.fim), { aoClicar: explicarMes });
   }
 
 
