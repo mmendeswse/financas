@@ -1255,7 +1255,7 @@
       ${comoCalcula ? `<p class="campo ajuda" style="margin:0 0 12px">Como é calculado: <b>${comoCalcula}</b></p>` : ""}
       <div class="explica-lista">${linhasHtml}</div>
       <div class="modal-acoes">
-        <button class="btn primario salvar" id="btnIrPainel">${botao ? esc(botao.rotulo) : "Abrir " + TITULOS[secao][0]}</button>
+        <button class="btn primario salvar" id="btnIrPainel">${botao ? esc(botao.rotulo) : "Abrir"}</button>
         <button class="btn" id="btnFecharPainel">Fechar</button>
       </div>`);
     document.getElementById("btnIrPainel").onclick = () => {
@@ -1419,8 +1419,8 @@
     const porCategoria = (lista) => {
       const mapa = {};
       lista.forEach((m) => { const k = m.categoria || "Outros"; mapa[k] = (mapa[k] || 0) + Number(m.valor || 0); });
-      return Object.keys(mapa).sort((a, b) => mapa[b] - mapa[a]).slice(0, 5)
-        .map((k) => linha(esc(k), brl(mapa[k]))).join("");
+      return Object.keys(mapa).sort((a, b) => mapa[b] - mapa[a])
+        .map((k) => linha("· " + esc(k), brl(mapa[k]))).join("");
     };
 
     if (chave === "rel-receitas") {
@@ -1466,20 +1466,21 @@
     const totD = despesas.reduce((s, x) => s + Number(x.valor || 0), 0);
     const saldo = totE - totD;
     const linha = (r, v, c) => `<div class="kv"><span class="dim">${rotuloPainel(r)}</span><b class="${c || ""}">${v}</b></div>`;
-    const maiores = (lista) => {
+    // todas as categorias do mês, da maior para a menor, com os valores
+    const porCategoria = (lista) => {
       const mapa = {};
       lista.forEach((m) => { const k = m.categoria || "Outros"; mapa[k] = (mapa[k] || 0) + Number(m.valor || 0); });
-      return Object.keys(mapa).sort((a, b) => mapa[b] - mapa[a]).slice(0, 3);
+      return Object.keys(mapa).sort((a, b) => mapa[b] - mapa[a]).map((k) => ({ nome: k, valor: mapa[k] }));
     };
-    const catE = maiores(entradas), catD = maiores(despesas);
+    const catE = porCategoria(entradas), catD = porCategoria(despesas);
     const nomeMes = new Date(mes + "-01T00:00:00").toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 
     painelSimples(nomeMes.charAt(0).toUpperCase() + nomeMes.slice(1),
       totE > 0 ? (saldo / totE) * 100 : 0, "das receitas sobraram neste mês", "receitas − despesas",
       linha("Receitas", brl(totE), "up") +
-      (catE.length ? linha("Maior receita", esc(catE[0])) : "") +
+      catE.map((c) => linha("· " + esc(c.nome), brl(c.valor))).join("") +
       linha("Despesas", brl(totD), "down") +
-      catD.map((c, i) => linha(`${i + 1}ª categoria`, esc(c))).join("") +
+      catD.map((c) => linha("· " + esc(c.nome), brl(c.valor))).join("") +
       linha("Resultado", brlSinal(saldo), corSinal(saldo)) +
       linha("Lançamentos", `${entradas.length} entrada(s) · ${despesas.length} despesa(s)`),
       "despesas");
@@ -3029,7 +3030,7 @@
     const temDadosReais = d.bancos.length || d.entradas.length || d.despesas.length || d.acoes.length || d.investimentos.length;
     return `
       <div class="grid g-top">
-        <div class="c6">${card("", "Backup dos dados", A.ehDesktop ? "banco de dados em arquivo dentro do programa, com cópia automática (dados.bak.json)" : "tudo fica salvo só neste navegador — guarde uma cópia de vez em quando", "", `
+        <div class="c6">${card("", "Backup Dados", A.ehDesktop ? "banco de dados em arquivo dentro do programa, com cópia automática (dados.bak.json)" : "tudo fica salvo só neste navegador — guarde uma cópia de vez em quando", "", `
           ${A.ehDesktop ? `<p class="campo ajuda" style="padding:8px 16px 0" id="caminhoBanco">Local do banco: carregando…</p><div style="padding:0 16px 6px"><button class="btn pequeno" data-acao="abrir-pasta-banco">Abrir pasta do banco de dados</button></div>` : ""}
           <div class="body pad" style="display:flex;gap:10px;flex-wrap:wrap">
             <button class="btn primario" data-acao="exportar-backup">Exportar Backup</button>
@@ -3038,7 +3039,7 @@
           </div>
           <p class="campo ajuda" style="padding:0 16px 14px">Importar um backup substitui todos os dados atuais — o sistema pede confirmação antes de aplicar.</p>
         `)}</div>
-        <div class="c6">${card("", "Senha de acesso", "protege o sistema neste aparelho", "", `
+        <div class="c6">${card("", "Senha Acesso", "protege o sistema neste aparelho", "", `
           <div class="body pad">
             ${window.Bloqueio && Bloqueio.ativo() ? `
               <div id="areaBiometria" style="margin:12px 0"></div>
@@ -3047,7 +3048,7 @@
                 <button class="btn perigo" data-acao="remover-senha">Remover senha</button>
               </div>
             ` : `
-              <button class="btn primario" data-acao="criar-senha">Criar Senha</button>
+              <button class="btn primario" data-acao="criar-senha">Criar</button>
             `}
             <p class="campo ajuda" style="margin-top:26px">Vale só neste aparelho. Se esquecer a senha, será preciso apagar os dados e restaurar um backup.</p>
           </div>`)}</div>
@@ -3060,9 +3061,9 @@
             ${dolar ? `<span class="dim" style="margin-left:12px;font-size:12px">Dólar agora: <b class="acc-laranja">R$ ${dolar.valor.toFixed(2).replace(".", ",")}</b></span>` : ""}
           </div>`)}</div>
         <div class="c6"><div class="card" style="border-color:rgba(255,84,104,.3)">
-          <header><div><h2 class="down">Zona de risco</h2><div class="sub">esta ação não pode ser desfeita</div></div></header>
+          <header><div><h2 class="down">Zona Risco</h2><div class="sub">esta ação não pode ser desfeita</div></div></header>
           <div class="body pad">
-            <button class="btn perigo" data-acao="apagar-tudo">Apagar Dados</button>
+            <button class="btn perigo" data-acao="apagar-tudo">Apagar</button>
             <p class="campo ajuda" style="margin-top:26px">Não há como desfazer. Exporte um backup antes, se houver algo que você queira guardar.</p>
           </div>
         </div></div>
