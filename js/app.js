@@ -419,6 +419,57 @@
   }
 
 
+
+  // ---------------------------------------------------------------------
+  // IMPORTAR BANCO — traz investimentos e ações de um arquivo .json
+  // (aceita tanto um backup completo quanto um arquivo só com essas duas
+  // listas). Nada fora das guias Investimentos e Ações é tocado.
+  // ---------------------------------------------------------------------
+  function importarBanco(arquivo) {
+    const leitor = new FileReader();
+    leitor.onload = () => {
+      let obj;
+      try { obj = JSON.parse(leitor.result); }
+      catch (e) { toast("Arquivo inválido: não é um JSON."); return; }
+      const invs = Array.isArray(obj.investimentos) ? obj.investimentos : [];
+      const acs = Array.isArray(obj.acoes) ? obj.acoes : [];
+      if (!invs.length && !acs.length) { toast("O arquivo não tem investimentos nem ações."); return; }
+
+      abrirModal(`
+        <h3>Importar banco</h3>
+        <p style="margin-top:0;font-size:13px">O arquivo tem <b>${invs.length} investimento(s)</b> e <b>${acs.length} ativo(s) de bolsa</b>.</p>
+        <p class="campo ajuda">Só as guias Investimentos e Ações são afetadas. Bancos, entradas, despesas, contas e metas ficam como estão.</p>
+        <div class="explica-lista">
+          <div class="kv"><span class="dim">Hoje você tem</span><b>${DADOS.investimentos.length} investimento(s) · ${DADOS.acoes.length} ativo(s)</b></div>
+        </div>
+        <div class="modal-acoes" style="margin-top:16px">
+          <button class="btn primario salvar" id="btnAcrescentar">Acrescentar aos atuais</button>
+          <button class="btn perigo" id="btnSubstituir">Substituir os atuais</button>
+        </div>`);
+
+      const aplicar = (substituir) => {
+        const novosInv = invs.map((i) => Object.assign({ categoria: "Renda fixa", quantidade: 0, isentoIR: false, obs: "" }, i, { id: A.novoId() }));
+        const novasAcoes = acs.map((a) => {
+          const preco = Number(a.precoAtual || 0);
+          return Object.assign({
+            categoria: "Ação", dividendos: 0, obs: "", atualizadoEm: hojeISO(),
+            historicoPrecos: preco > 0 ? [{ data: hojeISO(), preco }] : []
+          }, a, { id: A.novoId() });
+        });
+        DADOS.investimentos = substituir ? novosInv : [...DADOS.investimentos, ...novosInv];
+        DADOS.acoes = substituir ? novasAcoes : [...DADOS.acoes, ...novasAcoes];
+        fecharModal();
+        salvarEAtualizar(`${substituir ? "Substituído" : "Importado"}: ${novosInv.length} investimento(s) e ${novasAcoes.length} ativo(s).`);
+      };
+      document.getElementById("btnAcrescentar").onclick = () => aplicar(false);
+      document.getElementById("btnSubstituir").onclick = () => {
+        confirmarExclusao("Substituir todos os investimentos e ações atuais pelos do arquivo?", () => aplicar(true));
+      };
+    };
+    leitor.onerror = () => toast("Não consegui ler o arquivo.");
+    leitor.readAsText(arquivo);
+  }
+
   // =========================================================================
   // CICLO DE VIDA
   // =========================================================================
@@ -2986,6 +3037,12 @@
           </div>
           <p class="campo ajuda" style="padding:0 16px 14px">Importar um backup substitui todos os dados atuais — o sistema pede confirmação antes de aplicar.</p>
         `)}</div>
+        <div class="c6">${card("", "Importar Banco", "traz investimentos e ações de um arquivo .json", "", `
+          <div class="body pad">
+            <button class="btn primario" data-acao="importar-banco">Importar Banco</button>
+            <p class="campo ajuda" style="margin-top:26px">Só as guias Investimentos e Ações são afetadas; o resto dos seus dados fica intacto.</p>
+          </div>`)}</div>
+
         <div class="c6">${card("", "Senha de acesso", "protege o sistema neste aparelho", "", `
           <div class="body pad">
             ${window.Bloqueio && Bloqueio.ativo() ? `
@@ -3283,6 +3340,7 @@
         case "desligar-sync": desligarSync(); break;
         case "abrir-pasta-banco": A.abrirPastaBanco(); break;
         case "exportar-backup": A.exportarDados(); toast("Backup exportado — verifique seus downloads."); break;
+        case "importar-banco": document.getElementById("inputImportarBanco").click(); break;
         case "importar-backup": document.getElementById("inputImportarBackup").click(); break;
 
         case "apagar-tudo":
@@ -3323,6 +3381,13 @@
   // ENTRADAS GLOBAIS (arquivos de importação, fora de #conteudo)
   // =========================================================================
   function ligarInputsGlobais() {
+    const inpBanco = document.getElementById("inputImportarBanco");
+    if (inpBanco) inpBanco.addEventListener("change", (e) => {
+      const arquivo = e.target.files[0];
+      e.target.value = "";
+      if (arquivo) importarBanco(arquivo);
+    });
+
     document.getElementById("inputImportarBackup").addEventListener("change", (e) => {
       const arquivo = e.target.files[0];
       e.target.value = "";
