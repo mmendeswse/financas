@@ -1067,3 +1067,12 @@ table.tab-acoes th.col-atualiz, table.tab-acoes td.col-atualiz { display: none; 
 .card-clicavel { cursor: pointer; }
 .card-clicavel:hover { border-color: var(--cy); }
 .card-clicavel .btn { position: relative; z-index: 2; }
+
+/* "Pago com" clicável, no mesmo espírito do selo de status */
+.cel-banco-botao { background: none; border: 1px solid transparent; border-radius: 7px; cursor: pointer; font: inherit;
+  padding: 3px 6px; margin: -3px -6px; display: flex; align-items: center; gap: 7px; min-width: 0; position: relative; z-index: 2; }
+.cel-banco-botao:hover { border-color: var(--linha-2); background: var(--painel-2); }
+
+/* linhas de repetição prevista */
+.linha-prevista { opacity: .78; }
+.selo-prevista { background: rgba(0,229,255,.12); color: var(--cy); border: 1px solid rgba(0,229,255,.25); }

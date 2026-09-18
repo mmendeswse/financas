@@ -102,7 +102,7 @@
     if (campo === "valor") { x = Number(a.valor || 0); y = Number(b.valor || 0); }
     else if (campo === "data") { x = a.data || ""; y = b.data || ""; }
     else if (campo === "status") {
-      const ordem = { "Atrasado": 0, "Pendente": 1, "Pago": 2 };
+      const ordem = { "Atrasado": 0, "Pendente": 1, "Prevista": 2, "Pago": 3 };
       x = ordem[a.status] !== undefined ? ordem[a.status] : 9;
       y = ordem[b.status] !== undefined ? ordem[b.status] : 9;
     }
@@ -1872,9 +1872,64 @@
   // =========================================================================
   // ENTRADAS
   // =========================================================================
+
+  // ---------------------------------------------------------------------
+  // Lançamentos recorrentes: além do registro original, o sistema mostra
+  // as repetições previstas nos meses seguintes. São itens calculados na
+  // hora (marcados como "Prevista"), não gravados no banco de dados.
+  // ---------------------------------------------------------------------
+  const PASSO_DIAS = { "Semanal": 7, "Quinzenal": 14 };
+
+  function ocorrenciasNoMes(reg, mes) {
+    const freq = freqDe(reg);
+    if (freq === FREQUENCIAS[0] || !reg.data) return [];
+    const inicio = new Date(reg.data + "T00:00:00");
+    const [ano, m] = mes.split("-").map(Number);
+    const primeiro = new Date(ano, m - 1, 1), ultimo = new Date(ano, m, 0);
+    if (ultimo < inicio) return [];
+    const datas = [];
+
+    if (freq === "Mensal" || freq === "Anual") {
+      const passoMeses = freq === "Mensal" ? 1 : 12;
+      const diff = (ano - inicio.getFullYear()) * 12 + (m - 1 - inicio.getMonth());
+      if (diff <= 0 || diff % passoMeses !== 0) return [];
+      const dia = Math.min(inicio.getDate(), ultimo.getDate());
+      datas.push(new Date(ano, m - 1, dia));
+    } else {
+      const passo = PASSO_DIAS[freq] || 7;
+      const dt = new Date(inicio);
+      while (dt <= ultimo) {
+        dt.setDate(dt.getDate() + passo);
+        if (dt >= primeiro && dt <= ultimo) datas.push(new Date(dt));
+      }
+    }
+    return datas.map((dt) => dt.toISOString().slice(0, 10));
+  }
+
+  function repeticoesPrevistas(lista, mes, monta) {
+    const saida = [];
+    const noMes = lista.filter((r) => String(r.data || "").slice(0, 7) === mes);
+    // assinatura usada para não repetir o que já foi lançado de verdade
+    const chave = (r) => `${String(r.categoria || "").toLowerCase()}|${Number(r.valor || 0)}`;
+    const jaNoMes = new Set(noMes.map(chave));
+    const nomes = new Set(noMes.map((r) => String(r.descricao || "").toLowerCase()));
+
+    lista.forEach((reg) => {
+      if (String(reg.data || "").slice(0, 7) === mes) return;      // o próprio mês já tem o registro
+      if (jaNoMes.has(chave(reg)) || nomes.has(String(reg.descricao || "").toLowerCase())) return;
+      const datas = ocorrenciasNoMes(reg, mes);
+      if (!datas.length) return;
+      datas.forEach((data) => saida.push(monta(reg, data)));
+      jaNoMes.add(chave(reg));
+      nomes.add(String(reg.descricao || "").toLowerCase());
+    });
+    return saida;
+  }
+
   function renderEntradas(d) {
     if (!mesEntradas) mesEntradas = F.mesAtual();
-    const lista = d.entradas.filter((e) => String(e.data || "").slice(0, 7) === mesEntradas)
+    const previstasEnt = repeticoesPrevistas(d.entradas, mesEntradas, (reg, data) => ({ ...reg, data, prevista: true }));
+    const lista = [...d.entradas.filter((e) => String(e.data || "").slice(0, 7) === mesEntradas), ...previstasEnt]
       .map((e) => ({ ...e, banco: F.nomeBanco(d, e.bancoId) }))
       .sort((a, b) => ordemEntradas.campo === "recentes"
         ? (b.data || "").localeCompare(a.data || "")
@@ -1887,8 +1942,8 @@
     } else {
       corpo = `<div class="hd" style="${grid}">${thOrdem("ordenar-entradas", "descricao", "Descrição", ordemEntradas)}${thOrdem("ordenar-entradas", "banco", "Banco", ordemEntradas)}${thOrdem("ordenar-entradas", "data", "Data", ordemEntradas, "r")}${thOrdem("ordenar-entradas", "valor", "Valor", ordemEntradas, "r hd-valor")}</div>` +
         lista.map((e) => `
-        <div class="rw clicavel" style="${grid}" data-acao="editar-entrada" data-id="${e.id}" title="Abrir para editar">
-          <div><div class="nm">${esc(e.descricao)}${seloFreq(e)}</div><div class="sub">${esc(e.categoria)} · ${esc(e.tipo || "")}</div></div>
+        <div class="rw clicavel${e.prevista ? " linha-prevista" : ""}" style="${grid}" data-acao="editar-entrada" data-id="${e.id}" title="${e.prevista ? "Repetição prevista — abre o lançamento original" : "Abrir para editar"}">
+          <div><div class="nm">${esc(e.descricao)}${seloFreq(e)}${e.prevista ? ' <span class="selo-tag selo-prevista">prevista</span>' : ""}</div><div class="sub">${esc(e.categoria)} · ${esc(e.tipo || "")}</div></div>
           <div class="dim" style="font-size:12.5px">${esc(e.banco)}</div>
           <div class="r dim" style="font-size:12px">${fmtDataCurta(e.data)}</div>
           <div class="cel-valor"><span class="big up">+${brl(e.valor)}</span></div>
@@ -1998,17 +2053,22 @@
       pagoCom: bancoDoLancamento(d, x),
       data: x.data, status: "Pago", valor: Number(x.valor || 0), recorrencia: freqDe(x)
     }));
+    const repeticoes = repeticoesPrevistas(d.despesas, mesDespesas, (reg, data) => ({
+      origem: "despesa", id: reg.id, descricao: reg.descricao, categoria: reg.categoria,
+      pagoCom: bancoDoLancamento(d, reg), data, valor: Number(reg.valor || 0),
+      status: "Prevista", recorrencia: freqDe(reg), prevista: true
+    }));
     const previstas = F.listaContasPagarComStatus(d).map((c) => ({
       origem: "conta", id: c.id, descricao: c.descricao, categoria: c.categoria,
       data: c.vencimento, status: c.statusReal, valor: Number(c.valor || 0), recorrencia: ""
     }));
     if (!mesDespesas) mesDespesas = F.mesAtual();
-    const lista = [...lancadas, ...previstas]
+    const lista = [...lancadas, ...previstas, ...repeticoes]
       .filter((x) => String(x.data || "").slice(0, 7) === mesDespesas)
       .sort((a, b) => {
         if (ordemDespesas.campo === "pendentes") {
           // o que ainda não foi pago vem primeiro, por data de vencimento
-          const pend = (x) => (x.status === "Pago" ? 1 : 0);
+          const pend = (x) => (x.status === "Pago" ? 2 : (x.status === "Prevista" ? 1 : 0));
           if (pend(a) !== pend(b)) return pend(a) - pend(b);
           return (a.data || "").localeCompare(b.data || "");
         }
@@ -2020,7 +2080,7 @@
     const totalMes = lista.filter((x) => x.status === "Pago").reduce((t, x) => t + Number(x.valor || 0), 0);
     const emAberto = lista.filter((x) => x.status !== "Pago").reduce((t, x) => t + Number(x.valor || 0), 0);
     const aPagar = F.totalAPagar(d);
-    const gridD = "grid-template-columns:minmax(0,1fr) 105px minmax(140px, 168px) 105px 155px";
+    const gridD = "grid-template-columns:minmax(0,1fr) 104px minmax(118px, 138px) 96px 150px";
 
     let corpo;
     if (!lista.length) {
@@ -2028,10 +2088,14 @@
     } else {
       corpo = `<div class="hd" style="${gridD}">${thOrdem("ordenar-despesas", "descricao", "Descrição", ordemDespesas)}${thOrdem("ordenar-despesas", "status", "Status", ordemDespesas)}${thOrdem("ordenar-despesas", "pagoCom", "Pago com", ordemDespesas)}${thOrdem("ordenar-despesas", "data", "Data", ordemDespesas, "r")}${thOrdem("ordenar-despesas", "valor", "Valor", ordemDespesas, "r hd-valor")}</div>` +
         lista.map((x) => `
-        <div class="rw clicavel" style="${gridD}" data-acao="${x.origem === "despesa" ? "editar-despesa" : "editar-conta"}" data-id="${x.id}" title="Abrir para editar">
+        <div class="rw clicavel${x.prevista ? " linha-prevista" : ""}" style="${gridD}" data-acao="${x.origem === "despesa" ? "editar-despesa" : "editar-conta"}" data-id="${x.id}" title="${x.prevista ? "Repetição prevista — abre o lançamento original" : "Abrir para editar"}">
           <div><div class="nm">${esc(x.descricao)}${x.recorrencia && x.recorrencia !== FREQUENCIAS[0] ? ` <span class="selo-tag selo-cat">${esc(x.recorrencia.toLowerCase())}</span>` : ""}</div><div class="sub">${esc(x.categoria || "—")}</div></div>
-          <div><button class="selo-tag selo-${x.status.toLowerCase()} selo-botao" data-acao="${x.origem === "conta" ? "alternar-pago" : "tornar-pendente"}" data-id="${x.id}" title="${x.origem === "conta" ? (x.status === "Pago" ? "Marcar como pendente" : "Marcar como paga") : "Marcar como pendente (vira conta a pagar)"}">${x.status}</button></div>
-          <div class="celula-texto cel-banco">${x.pagoCom && x.pagoCom !== "—" ? marcaBanco(x.pagoCom, 18) + `<span class="dim">${esc(x.pagoCom)}</span>` : '<span class="dim">—</span>'}</div>
+          <div>${x.prevista
+            ? `<span class="selo-tag selo-prevista">${x.status}</span>`
+            : `<button class="selo-tag selo-${x.status.toLowerCase()} selo-botao" data-acao="${x.origem === "conta" ? "alternar-pago" : "tornar-pendente"}" data-id="${x.id}" title="${x.origem === "conta" ? (x.status === "Pago" ? "Marcar como pendente" : "Marcar como paga") : "Marcar como pendente (vira conta a pagar)"}">${x.status}</button>`}</div>
+          <div>${x.origem === "despesa" && !x.prevista
+            ? `<button class="cel-banco cel-banco-botao" data-acao="trocar-banco" data-id="${x.id}" title="Trocar o banco deste lançamento">${marcaBanco(x.pagoCom, 18)}<span class="dim">${esc(x.pagoCom)}</span></button>`
+            : `<span class="cel-banco">${x.pagoCom && x.pagoCom !== "—" ? marcaBanco(x.pagoCom, 18) + `<span class="dim">${esc(x.pagoCom)}</span>` : '<span class="dim">—</span>'}</span>`}</div>
           <div class="r dim" style="font-size:12px">${fmtData(x.data)}</div>
           <div class="cel-valor"><span class="big down">−${brl(x.valor)}</span></div>
         </div>`).join("");
@@ -2054,9 +2118,6 @@
     let html = '<option value="">Selecione…</option>';
     if (d.bancos.length) {
       html += `<optgroup label="Bancos">` + d.bancos.map((b) => `<option value="banco:${b.id}" ${b.id === bancoIdAtual ? "selected" : ""}>${esc(b.nome)}</option>`).join("") + `</optgroup>`;
-    }
-    if (d.cartoes.length) {
-      html += `<optgroup label="Cartões">` + d.cartoes.map((c) => `<option value="cartao:${c.id}" ${c.id === cartaoIdAtual ? "selected" : ""}>${esc(c.nome)}</option>`).join("") + `</optgroup>`;
     }
     return html;
   }
@@ -3337,6 +3398,18 @@
         case "excluir-conta":
           confirmarExclusao("Excluir esta conta?", () => { DADOS.contasPagar = DADOS.contasPagar.filter((x) => x.id !== id); salvarEAtualizar("Conta excluída."); });
           break;
+        case "trocar-banco": {
+          const dsp2 = achar(DADOS.despesas, id);
+          if (dsp2 && DADOS.bancos.length) {
+            const ids = DADOS.bancos.map((bb) => bb.id);
+            const atual = dsp2.cartaoId ? (achar(DADOS.cartoes, dsp2.cartaoId) || {}).bancoId : dsp2.bancoId;
+            const prox = ids[(ids.indexOf(atual) + 1) % ids.length];
+            dsp2.bancoId = prox; dsp2.cartaoId = "";
+            salvarEAtualizar(`Agora pago com ${F.nomeBanco(DADOS, prox)}.`);
+          }
+          break;
+        }
+
         case "tornar-pendente": {
           const dsp = achar(DADOS.despesas, id);
           if (dsp) {
