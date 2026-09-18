@@ -118,14 +118,15 @@
 
   let mesesBancos = 0;   // período do gráfico da guia Bancos (0 = saldo atual)
   let mesesRelA = 12;   // período do quadro Receitas x despesas
-  let mesesRelB = 12;   // período do quadro Evolução patrimonial
+  let mesesRelB = 0;    // período do quadro Evolução patrimonial (0 = tudo)
+  let anoRelA = null;
+  let anoRelB = null;
 
   // intervalo correspondente ao período escolhido; 0 = todo o histórico
-  function intervaloRel(meses) {
+  function intervaloRel(meses, ano) {
     const fim = new Date().toISOString().slice(0, 10);
-    if (!meses) return { ini: "0000-01-01", fim };
-    const d = new Date(); d.setMonth(d.getMonth() - (meses - 1)); d.setDate(1);
-    return { ini: d.toISOString().slice(0, 10), fim };
+    if (!meses) return { ini: "0000-01-01", fim };   // "Tudo"
+    return intervaloAnoMeses(ano || String(new Date().getFullYear()), meses);
   }
   let demoBannerOculto = false;
 
@@ -523,6 +524,16 @@
     if (secao === "acoes" || secao === "investimentos") periodoGrafico = "tudo";
     // a guia Bancos sempre abre mostrando o saldo atual ("Tudo")
     if (secao === "bancos") mesesBancos = 0;
+    // Dashboard e Relatórios abrem sempre no ano atual: receitas x despesas
+    // em 12 meses e evolução patrimonial em "Tudo"
+    if (secao === "dashboard") {
+      anoRD = String(new Date().getFullYear()); mesesRD = 12;
+      anoEvo = String(new Date().getFullYear()); mesesEvo = 0;
+    }
+    if (secao === "relatorios") {
+      anoRelA = String(new Date().getFullYear()); mesesRelA = 12;
+      anoRelB = String(new Date().getFullYear()); mesesRelB = 0;
+    }
     document.querySelectorAll("#navPrincipal button").forEach((b) => b.classList.toggle("ativo", b.dataset.secao === secao));
     fecharSidebarMobile();
     renderRota();
@@ -1444,7 +1455,7 @@
 
   function explicarRelatorio(chave) {
     const d = DADOS;
-    const fxA = intervaloRel(mesesRelA);
+    const fxA = intervaloRel(mesesRelA, anoRelA);
     const entradas = d.entradas.filter((e) => e.data >= fxA.ini && e.data <= fxA.fim);
     const despesas = d.despesas.filter((x) => x.data >= fxA.ini && x.data <= fxA.fim);
     const totE = entradas.reduce((s, e) => s + Number(e.valor || 0), 0);
@@ -1630,7 +1641,9 @@
       <div class="grid">
         <div class="c12">${card("", "Evolução patrimonial", `patrimônio líquido · ${mesesEvo ? mesesEvo + " meses de " + anoEvo : "todo o histórico"}`,
           (pico ? `<span class="pill-pico">PICO ${brl(pico)}</span>` : "") +
-          `<div class="filtro-mes">${seletorAnoDash("anoEvo", anoEvo, anosDashboard(d))}${abasMeses("periodo-evo", mesesEvo, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }, { meses: 0, rotulo: "Tudo" }])}</div>`, `<div style="padding:8px 14px 12px;height:236px"><canvas id="graf-evolucao"></canvas></div>`)}</div>
+          `<div class="filtro-mes">${seletorAnoDash("anoEvo", anoEvo, anosDashboard(d))}${abasMeses("periodo-evo", mesesEvo, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }, { meses: 0, rotulo: "Tudo" }])}</div>`, histPeriodo.length >= 2
+            ? `<div style="padding:8px 14px 12px;height:236px"><canvas id="graf-evolucao"></canvas></div>`
+            : `<div class="empty">Sem registros de patrimônio em ${mesesEvo ? `${mesesEvo} ${mesesEvo === 1 ? "mês" : "meses"} de ${anoEvo}` : "todo o histórico"}. O patrimônio é registrado a cada dia que você abre o sistema.</div>`)}</div>
       </div>
 
       ${stripKpis([
@@ -1973,6 +1986,7 @@
     // sair (contas a pagar), com o status de cada linha
     const lancadas = d.despesas.map((x) => ({
       origem: "despesa", id: x.id, descricao: x.descricao, categoria: x.categoria,
+      pagoCom: x.cartaoId ? "💳 " + nomeCartao(d, x.cartaoId) : F.nomeBanco(d, x.bancoId),
       data: x.data, status: "Pago", valor: Number(x.valor || 0), recorrencia: freqDe(x)
     }));
     const previstas = F.listaContasPagarComStatus(d).map((c) => ({
@@ -1997,17 +2011,18 @@
     const totalMes = lista.filter((x) => x.status === "Pago").reduce((t, x) => t + Number(x.valor || 0), 0);
     const emAberto = lista.filter((x) => x.status !== "Pago").reduce((t, x) => t + Number(x.valor || 0), 0);
     const aPagar = F.totalAPagar(d);
-    const grid = GRID_LANCAMENTOS;
+    const gridD = "grid-template-columns:minmax(0,1fr) 110px 130px 110px 160px";
 
     let corpo;
     if (!lista.length) {
       corpo = `<div class="empty">Nenhum lançamento em ${NOMES_MES[Number(mesDespesas.slice(5, 7)) - 1]}/${mesDespesas.slice(0, 4)}. Use NOVO para lançar uma despesa ou uma conta a pagar.</div>`;
     } else {
-      corpo = `<div class="hd" style="${grid}">${thOrdem("ordenar-despesas", "descricao", "Descrição", ordemDespesas)}${thOrdem("ordenar-despesas", "status", "Status", ordemDespesas)}${thOrdem("ordenar-despesas", "data", "Data", ordemDespesas, "r")}${thOrdem("ordenar-despesas", "valor", "Valor", ordemDespesas, "r hd-valor")}</div>` +
+      corpo = `<div class="hd" style="${gridD}">${thOrdem("ordenar-despesas", "descricao", "Descrição", ordemDespesas)}${thOrdem("ordenar-despesas", "status", "Status", ordemDespesas)}${thOrdem("ordenar-despesas", "pagoCom", "Pago com", ordemDespesas)}${thOrdem("ordenar-despesas", "data", "Data", ordemDespesas, "r")}${thOrdem("ordenar-despesas", "valor", "Valor", ordemDespesas, "r hd-valor")}</div>` +
         lista.map((x) => `
-        <div class="rw clicavel" style="${grid}" data-acao="${x.origem === "despesa" ? "editar-despesa" : "editar-conta"}" data-id="${x.id}" title="Abrir para editar">
+        <div class="rw clicavel" style="${gridD}" data-acao="${x.origem === "despesa" ? "editar-despesa" : "editar-conta"}" data-id="${x.id}" title="Abrir para editar">
           <div><div class="nm">${esc(x.descricao)}${x.recorrencia && x.recorrencia !== FREQUENCIAS[0] ? ` <span class="selo-tag selo-cat">${esc(x.recorrencia.toLowerCase())}</span>` : ""}</div><div class="sub">${esc(x.categoria || "—")}</div></div>
           <div><button class="selo-tag selo-${x.status.toLowerCase()} selo-botao" data-acao="${x.origem === "conta" ? "alternar-pago" : "tornar-pendente"}" data-id="${x.id}" title="${x.origem === "conta" ? (x.status === "Pago" ? "Marcar como pendente" : "Marcar como paga") : "Marcar como pendente (vira conta a pagar)"}">${x.status}</button></div>
+          <div class="dim celula-texto">${esc(x.pagoCom || "—")}</div>
           <div class="r dim" style="font-size:12px">${fmtData(x.data)}</div>
           <div class="cel-valor"><span class="big down">−${brl(x.valor)}</span></div>
         </div>`).join("");
@@ -2891,8 +2906,8 @@
     const h = d.historicoPatrimonio || [];
     if (!mesesEvo) return h;
     const fx = intervaloAnoMeses(anoEvo, mesesEvo);
-    const filtrado = h.filter((x) => x.data >= fx.ini && x.data <= fx.fim);
-    return filtrado.length >= 2 ? filtrado : h;
+    // devolve só o que existe no período; se não houver, o quadro avisa
+    return h.filter((x) => x.data >= fx.ini && x.data <= fx.fim);
   }
 
   function anosDashboard(d) {
@@ -3118,15 +3133,17 @@
   }
 
   function renderRelatorios(d) {
-    const fxA = intervaloRel(mesesRelA);   // quadro receitas x despesas
-    const fxB = intervaloRel(mesesRelB);   // quadro evolução patrimonial
+    if (!anoRelA) anoRelA = String(new Date().getFullYear());
+    if (!anoRelB) anoRelB = String(new Date().getFullYear());
+    const fxA = intervaloRel(mesesRelA, anoRelA);   // quadro receitas x despesas
+    const fxB = intervaloRel(mesesRelB, anoRelB);   // quadro evolução patrimonial
     const entradasP = d.entradas.filter((e) => e.data >= fxA.ini && e.data <= fxA.fim).reduce((s, e) => s + Number(e.valor), 0);
     const despesasP = d.despesas.filter((x) => x.data >= fxA.ini && x.data <= fxA.fim).reduce((s, x) => s + Number(x.valor), 0);
     const historicoP = d.historicoPatrimonio.filter((h) => h.data >= fxB.ini && h.data <= fxB.fim);
     const picoB = historicoP.length ? Math.max(...historicoP.map((h) => h.valor)) : 0;
     const OPC = [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }, { meses: 0, rotulo: "Tudo" }];
-    const rotulo = (m) => (m ? `Últimos ${m} meses` : "Todo o histórico");
-    const rotuloPeriodo = rotulo(mesesRelA);
+    const rotulo = (m, ano) => (m ? `${m} ${m === 1 ? "mês" : "meses"} de ${ano}` : "Todo o histórico");
+    const rotuloPeriodo = rotulo(mesesRelA, anoRelA);
 
     return `
       <div class="grid g-top">
@@ -3136,11 +3153,12 @@
         <div class="c3">${metricCard("Rentabilidade", pct(I.rentabilidadeCarteiraAcoes(d)), ICONES_STRIP.melhorativo, "var(--vi)", "", "Acumulada · Preço Médio", null, "0 0 24 24", "rel-rentabilidade")}</div>
       </div>
       <div class="grid">
-        <div class="c12">${card("", "Receitas x despesas", `${rotulo(mesesRelA)}`, abasMeses("periodo-rel-a", mesesRelA, OPC), `<div style="padding:10px 16px;height:220px"><canvas id="graf-rel-mensal"></canvas></div>`)}</div>
+        <div class="c12">${card("", "Receitas x despesas", `${rotulo(mesesRelA, anoRelA)}`, `<div class="filtro-mes">${seletorAnoDash("anoRelA", anoRelA, anosDashboard(d))}${abasMeses("periodo-rel-a", mesesRelA, OPC)}</div>`, `<div style="padding:10px 16px;height:220px"><canvas id="graf-rel-mensal"></canvas></div>`)}</div>
       </div>
       <div class="grid">
-        <div class="c12">${card("", "Evolução patrimonial", `${rotulo(mesesRelB)}`,
-          (picoB ? `<span class="pill-pico">PICO ${brl(picoB)}</span>` : "") + abasMeses("periodo-rel-b", mesesRelB, OPC), historicoP.length >= 2 ? `<div style="padding:10px 16px;height:220px"><canvas id="graf-rel-evolucao"></canvas></div>` : `<div class="empty">Ainda não há histórico suficiente para este período.</div>`)}</div>
+        <div class="c12">${card("", "Evolução patrimonial", `${rotulo(mesesRelB, anoRelB)}`,
+          (picoB ? `<span class="pill-pico">PICO ${brl(picoB)}</span>` : "") +
+          `<div class="filtro-mes">${seletorAnoDash("anoRelB", anoRelB, anosDashboard(d))}${abasMeses("periodo-rel-b", mesesRelB, OPC)}</div>`, historicoP.length >= 2 ? `<div style="padding:10px 16px;height:220px"><canvas id="graf-rel-evolucao"></canvas></div>` : `<div class="empty">Ainda não há histórico suficiente para este período.</div>`)}</div>
       </div>
     `;
   }
@@ -3201,7 +3219,7 @@
   // GRÁFICOS — montados depois que o HTML da rota já está no DOM
   // =========================================================================
   function montarGraficosRelatorio(d) {
-    const fxA = intervaloRel(mesesRelA), fxB = intervaloRel(mesesRelB);
+    const fxA = intervaloRel(mesesRelA, anoRelA), fxB = intervaloRel(mesesRelB, anoRelB);
     const historicoP = d.historicoPatrimonio.filter((h) => h.data >= fxB.ini && h.data <= fxB.fim);
     if (historicoP.length >= 2) G.renderEvolucaoPatrimonio("graf-rel-evolucao", historicoP, { aoClicar: explicarPatrimonio });
     const primeiro = d.historicoPatrimonio.length ? d.historicoPatrimonio[0].data : fxA.ini;
@@ -3219,6 +3237,7 @@
         if (!anoRD) anoRD = String(new Date().getFullYear());
         if (!anoEvo) anoEvo = String(new Date().getFullYear());
         const hist = historicoEvo(d);
+        if (hist.length < 2) break;
         if (hist.length >= 2) G.renderEvolucaoPatrimonio("graf-evolucao", hist, { aoClicar: explicarPatrimonio });
         else G.destruir("graf-evolucao");
         G.renderReceitasDespesas("graf-receitas-despesas", serieRD(d), { aoClicar: explicarMes });
@@ -3462,6 +3481,8 @@
 
     cont.addEventListener("change", (e) => {
       const id = e.target.id;
+      if (id === "anoRelA") { anoRelA = e.target.value; renderRota(); return; }
+      if (id === "anoRelB") { anoRelB = e.target.value; renderRota(); return; }
       if (id === "anoRD") { anoRD = e.target.value; renderRota(); return; }
       if (id === "anoEvo") { anoEvo = e.target.value; renderRota(); return; }
       if (id === "anoEntradas") { mesEntradas = e.target.value + mesEntradas.slice(4); renderRota(); return; }
