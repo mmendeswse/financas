@@ -519,6 +519,8 @@
     // ao entrar em Ações ou Investimentos (e nas telas de detalhe delas),
     // o período dos gráficos volta ao padrão, em vez de guardar a escolha
     if (secao === "acoes" || secao === "investimentos") periodoGrafico = "tudo";
+    // a guia Bancos sempre abre mostrando o saldo atual ("Tudo")
+    if (secao === "bancos") mesesBancos = 0;
     document.querySelectorAll("#navPrincipal button").forEach((b) => b.classList.toggle("ativo", b.dataset.secao === secao));
     fecharSidebarMobile();
     renderRota();

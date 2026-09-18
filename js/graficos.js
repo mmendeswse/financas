@@ -225,9 +225,11 @@
         // o percentual fica sempre no fim da faixa da coluna, em branco,
         // para ficar legível mesmo quando a barra é muito curta
         meta.data.forEach(function (barra, i) {
-          var txt = ((bancos[i].saldoAtual / total) * 100).toFixed(1).replace(".", ",") + "%";
-          c.fillStyle = "#FFFFFF"; c.textAlign = "right";
-          c.fillText(txt, grafico.chartArea.right - 6, barra.y);
+          var v = Number(bancos[i].saldoAtual) || 0;
+          var txt = ((Math.abs(v) / total) * 100).toFixed(1).replace(".", ",") + "%";
+          c.fillStyle = "#FFFFFF";
+          if (v < 0) { c.textAlign = "left"; c.fillText(txt, grafico.chartArea.left + 6, barra.y); }
+          else { c.textAlign = "right"; c.fillText(txt, grafico.chartArea.right - 6, barra.y); }
         });
         c.restore();
       }
@@ -236,7 +238,12 @@
       type: "bar",
       data: {
         labels: bancos.map(function (b) { return b.nome; }),
-        datasets: [{ data: bancos.map(function (b) { return b.saldoAtual; }), backgroundColor: bancos.map(function (b) { return b.cor || CORES.cy; }), borderColor: bancos.map(function (b) { return b.cor || CORES.cy; }), borderWidth: 1, borderRadius: 3, maxBarThickness: 26 }]
+        datasets: [{
+          data: bancos.map(function (b) { return b.saldoAtual; }),
+          backgroundColor: bancos.map(function (b) { return Number(b.saldoAtual) < 0 ? CORES.down : (b.cor || CORES.cy); }),
+          borderColor: bancos.map(function (b) { return Number(b.saldoAtual) < 0 ? CORES.down : (b.cor || CORES.cy); }),
+          borderWidth: 1, borderRadius: 3, maxBarThickness: 26
+        }]
       },
       options: {
         indexAxis: "y",
@@ -246,7 +253,15 @@
         onHover: function (evt, elementos) {
           if (evt && evt.native && evt.native.target) evt.native.target.style.cursor = (opcoes.aoClicar && elementos.length) ? "pointer" : "default";
         }, responsive: true, maintainAspectRatio: false,
-        scales: { x: eixoY({ grid: { color: CORES.grade } }), y: eixoX() },
+        scales: {
+          x: eixoY({
+            beginAtZero: true,
+            // linha do zero destacada, para a barra negativa ficar clara
+            grid: { color: function (c) { return c.tick && c.tick.value === 0 ? CORES.texto : CORES.grade; },
+                    lineWidth: function (c) { return c.tick && c.tick.value === 0 ? 1.5 : 1; } }
+          }),
+          y: eixoX()
+        },
         plugins: {
           legend: { display: false },
           tooltip: tooltipPadrao({ callbacks: { label: function (c) { return " " + moeda(c.parsed.x) + " · " + ((c.parsed.x / total) * 100).toFixed(1).replace(".", ",") + "%"; } } })
