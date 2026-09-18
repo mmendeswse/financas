@@ -1761,7 +1761,7 @@
         <div class="c12">${card("c12", "Meus bancos", `${bancos.length} ${bancos.length === 1 ? "Conta Cadastrada" : "Contas Cadastradas"}`, `<button class="btn primario" data-acao="nova-banco"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`, listaHtml, `<span class="dim">Total</span><b class="${corSinal(total)}" style="font-size:14px;font-weight:800">${brl(total)}</b>`)}</div>
       </div>
       <div class="grid">
-        <div class="c12">${card("", "Saldo banco", mesesBancos ? `Movimentação dos últimos ${mesesBancos} meses` : "comparação entre contas",
+        <div class="c12">${card("", "Saldo banco", mesesBancos ? `Movimentação últimos ${mesesBancos} meses` : "comparação entre contas",
           abasMeses("periodo-bancos", mesesBancos, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }, { meses: 0, rotulo: "Tudo" }]),
           `<div style="padding:12px 18px 16px;height:${Math.max(190, bancos.length * 52)}px"><canvas id="graf-saldo-bancos"></canvas></div>`)}</div>
       </div>
