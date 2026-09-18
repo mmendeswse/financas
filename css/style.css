@@ -1076,3 +1076,10 @@ table.tab-acoes th.col-atualiz, table.tab-acoes td.col-atualiz { display: none; 
 /* linhas de repetição prevista */
 .linha-prevista { opacity: .78; }
 .selo-prevista { background: rgba(0,229,255,.12); color: var(--cy); border: 1px solid rgba(0,229,255,.25); }
+
+/* quadros A e B do dashboard: conteúdo centralizado na altura do card */
+.card-centrado > .body { display: flex; flex-direction: column; justify-content: center; }
+.card-centrado > .body > .pad, .card-centrado > .body.pad { width: 100%; }
+.card-centrado .barlist { display: flex; flex-direction: column; justify-content: center; gap: 12px; height: 100%; }
+.card-centrado .donut-wrap { align-items: center; }
+.card-centrado .legenda { justify-content: center; }
