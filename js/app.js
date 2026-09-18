@@ -381,7 +381,7 @@
   // É uma lista de sugestões: quem precisar de outro banco escolhe
   // "Outro" e digita o nome.
   // ---------------------------------------------------------------------
-  const BANCOS_SUGERIDOS = ["Banco do Brasil", "Nubank", "Itaú", "Mercado Pago", "Caixa Tem", "Inter"];
+  const BANCOS_SUGERIDOS = ["Banco do Brasil", "Nubank", "Itaú", "Mercado Pago", "Caixa", "Inter"];
 
   function campoBanco(id, valorAtual, rotuloVazio) {
     const atual = (valorAtual || "").trim();
@@ -3180,7 +3180,7 @@
           lista = F.listaBancosComSaldo(d);
         }
         // a ordenação vem depois do cálculo, sempre do maior para o menor
-        G.renderSaldoBancos("graf-saldo-bancos", bancosNaOrdem(lista));
+        G.renderSaldoBancos("graf-saldo-bancos", bancosNaOrdem(lista), { aoClicar: (b) => explicarBanco(b.id) });
         break;
       }
       case "despesas": break;

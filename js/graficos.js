@@ -209,7 +209,8 @@
   // ---------------------------------------------------------------------
   // Barras horizontais (saldo por banco, gastos por banco)
   // ---------------------------------------------------------------------
-  function renderSaldoBancos(canvasId, bancos) {
+  function renderSaldoBancos(canvasId, bancos, opcoes) {
+    opcoes = opcoes || {};
     destruir(canvasId);
     var ctx = ctxOf(canvasId); if (!ctx) return;
     var total = bancos.reduce(function (t, b) { return t + Math.abs(Number(b.saldoAtual || 0)); }, 0) || 1;
@@ -238,7 +239,13 @@
         datasets: [{ data: bancos.map(function (b) { return b.saldoAtual; }), backgroundColor: bancos.map(function (b) { return b.cor || CORES.cy; }), borderColor: bancos.map(function (b) { return b.cor || CORES.cy; }), borderWidth: 1, borderRadius: 3, maxBarThickness: 26 }]
       },
       options: {
-        indexAxis: "y", responsive: true, maintainAspectRatio: false,
+        indexAxis: "y",
+        onClick: function (evt, elementos) {
+          if (opcoes.aoClicar && elementos && elementos.length) opcoes.aoClicar(bancos[elementos[0].index]);
+        },
+        onHover: function (evt, elementos) {
+          if (evt && evt.native && evt.native.target) evt.native.target.style.cursor = (opcoes.aoClicar && elementos.length) ? "pointer" : "default";
+        }, responsive: true, maintainAspectRatio: false,
         scales: { x: eixoY({ grid: { color: CORES.grade } }), y: eixoX() },
         plugins: {
           legend: { display: false },
