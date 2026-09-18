@@ -721,6 +721,16 @@
     }
 
     // carteira de ações
+    // metas cujo prazo passou sem atingir o objetivo
+    const metasVencidas = (d.metas || []).filter((m) => m.prazo && F.diasEntre(m.prazo) < 0 && Number(m.atual || 0) < Number(m.objetivo || 0));
+    metasVencidas.forEach((m) => {
+      const falta = Number(m.objetivo || 0) - Number(m.atual || 0);
+      alertas.push({
+        tipo: "perigo", rota: "metas",
+        texto: `A meta "${esc(m.nome)}" passou do prazo (${fmtData(m.prazo)}) e ainda faltam ${brl(falta)}.`
+      });
+    });
+
     if (d.acoes.length) {
       const rent = I.rentabilidadeCarteiraAcoes(d);
       alertas.push({ tipo: rent >= 0 ? "sucesso" : "info", rota: "acoes", texto: `Sua carteira de ações acumula ${pct(rent)} em relação ao preço médio.` });
@@ -1022,7 +1032,8 @@
     if (!d.metas.length) return `<div class="empty" style="padding:14px">Nenhuma meta cadastrada.</div>`;
     return `<div class="mix-lista">` + d.metas.slice(0, 4).map((m) => {
       const p = m.objetivo > 0 ? Math.min(100, (m.atual / m.objetivo) * 100) : 0;
-      return `<button class="mix-item clicavel" data-acao="explicar-meta" data-id="${m.id}" title="Ver detalhes da meta">
+      const vencida = m.prazo && F.diasEntre(m.prazo) < 0 && Number(m.atual || 0) < Number(m.objetivo || 0);
+      return `<button class="mix-item clicavel${vencida ? " meta-vencida" : ""}" data-acao="explicar-meta" data-id="${m.id}" title="Ver detalhes da meta">
         <div class="mix-topo"><span>${esc(m.nome)}</span><b style="color:${m.cor || "var(--laranja)"}">${p.toFixed(0)}% (${brl(m.atual)})</b></div>
         <div class="progresso fina"><i style="width:${p}%;background:${m.cor || "var(--laranja)"}"></i></div>
       </button>`;
@@ -1750,7 +1761,7 @@
         <div class="c12">${card("c12", "Meus bancos", `${bancos.length} ${bancos.length === 1 ? "Conta Cadastrada" : "Contas Cadastradas"}`, `<button class="btn primario" data-acao="nova-banco"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`, listaHtml, `<span class="dim">Total</span><b class="${corSinal(total)}" style="font-size:14px;font-weight:800">${brl(total)}</b>`)}</div>
       </div>
       <div class="grid">
-        <div class="c12">${card("", "Saldo banco", mesesBancos ? `movimentação dos últimos ${mesesBancos} meses` : "comparação entre contas",
+        <div class="c12">${card("", "Saldo banco", mesesBancos ? `Movimentação dos últimos ${mesesBancos} meses` : "comparação entre contas",
           abasMeses("periodo-bancos", mesesBancos, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }, { meses: 0, rotulo: "Tudo" }]),
           `<div style="padding:12px 18px 16px;height:${Math.max(190, bancos.length * 52)}px"><canvas id="graf-saldo-bancos"></canvas></div>`)}</div>
       </div>
@@ -1941,7 +1952,10 @@
         return comparar(a, b, ordemDespesas.campo, ordemDespesas.dir);
       });
 
-    const totalMes = F.totalDespesasMes(d, mesDespesas);
+    // "Pagas" soma as despesas lançadas e as contas já quitadas do mês;
+    // "em aberto" soma o que ainda está pendente ou atrasado no mês
+    const totalMes = lista.filter((x) => x.status === "Pago").reduce((t, x) => t + Number(x.valor || 0), 0);
+    const emAberto = lista.filter((x) => x.status !== "Pago").reduce((t, x) => t + Number(x.valor || 0), 0);
     const aPagar = F.totalAPagar(d);
     const grid = GRID_LANCAMENTOS;
 
@@ -1961,7 +1975,7 @@
 
     return `
       <div class="grid g-top">
-        <div class="c12">${card("c12", "Despesas", `Pagas: ${brl(totalMes)} · em aberto: ${brl(aPagar)}`,
+        <div class="c12">${card("c12", "Despesas", `Pagas: ${brl(totalMes)} · em aberto: ${brl(emAberto)}`,
           `${abasMeses12("mes-despesas", mesDespesas, "anoDespesas", anosDisponiveis(d))}<button class="btn primario" data-acao="nova-despesa"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`,
           corpo)}</div>
       </div>
@@ -2934,8 +2948,10 @@
     } else {
       corpo = d.metas.map((m) => {
         const progresso = m.objetivo > 0 ? Math.min(100, (m.atual / m.objetivo) * 100) : 0;
-        return `<div class="c4"><div class="card">
-          <header><div><h2>${esc(m.nome)}</h2>${m.prazo ? `<div class="sub">até ${fmtData(m.prazo)}</div>` : ""}</div>
+        const diasPrazo = m.prazo ? F.diasEntre(m.prazo) : null;
+        const vencida = diasPrazo !== null && diasPrazo < 0 && Number(m.atual || 0) < Number(m.objetivo || 0);
+        return `<div class="c4"><div class="card${vencida ? " card-meta-vencida" : ""}">
+          <header><div><h2>${esc(m.nome)}${vencida ? ' <span class="selo-tag selo-atrasado">prazo vencido</span>' : ""}</h2>${m.prazo ? `<div class="sub ${vencida ? "down" : ""}">até ${fmtData(m.prazo)}${vencida ? ` · há ${plural(Math.abs(diasPrazo), "dia")}` : ""}</div>` : ""}</div>
             <div class="acoes">${linhaAcoes("editar-meta", m.id, "excluir-meta", m.id)}</div>
           </header>
           <div class="body pad">
@@ -3149,18 +3165,22 @@
       }
       case "bancos": {
         if (!d.bancos.length) break;
-        let lista = bancosNaOrdem(F.listaBancosComSaldo(d));
+        let lista;
         if (mesesBancos) {
-          // saldo inicial + o que entrou e saiu dentro do período escolhido
+          // no período escolhido o gráfico mostra a movimentação líquida
+          // de cada conta (o que entrou menos o que saiu)
           const corte = new Date(); corte.setMonth(corte.getMonth() - (mesesBancos - 1)); corte.setDate(1);
           const ini = corte.toISOString().slice(0, 10);
-          lista = bancosNaOrdem(d.bancos).map((b) => {
-            const ent = d.entradas.filter((e) => e.bancoId === b.id && e.data >= ini).reduce((t, e) => t + Number(e.valor || 0), 0);
-            const sai = d.despesas.filter((x) => x.bancoId === b.id && !x.cartaoId && x.data >= ini).reduce((t, x) => t + Number(x.valor || 0), 0);
-            return { ...b, saldoAtual: Number(b.saldoInicial || 0) + ent - sai };
+          lista = d.bancos.map((b) => {
+            const ent = d.entradas.filter((e) => e.bancoId === b.id && String(e.data || "") >= ini).reduce((t, e) => t + Number(e.valor || 0), 0);
+            const sai = d.despesas.filter((x) => x.bancoId === b.id && !x.cartaoId && String(x.data || "") >= ini).reduce((t, x) => t + Number(x.valor || 0), 0);
+            return { ...b, saldoAtual: ent - sai };
           });
+        } else {
+          lista = F.listaBancosComSaldo(d);
         }
-        G.renderSaldoBancos("graf-saldo-bancos", lista);
+        // a ordenação vem depois do cálculo, sempre do maior para o menor
+        G.renderSaldoBancos("graf-saldo-bancos", bancosNaOrdem(lista));
         break;
       }
       case "despesas": break;

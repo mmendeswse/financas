@@ -1037,3 +1037,8 @@ table.tab-acoes th.col-atualiz, table.tab-acoes td.col-atualiz { display: none; 
 /* botão de lançar entrada dentro do cartão do banco */
 .cartao-item .rodape { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .cartao-item .rodape .btn { position: relative; z-index: 2; padding: 5px 10px; font-size: 11px; }
+
+/* meta com prazo vencido: quadro em destaque */
+.card-meta-vencida { border-color: rgba(255,92,106,.55); box-shadow: 0 0 0 1px rgba(255,92,106,.25), 0 10px 30px rgba(255,92,106,.12); }
+.card-meta-vencida header { background: rgba(255,92,106,.07); }
+.mix-item.meta-vencida { border-left: 3px solid var(--down); padding-left: 8px; }
