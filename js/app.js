@@ -1286,7 +1286,7 @@
       linha("Saldo inicial", brl(b.saldoInicial)) + linha("+ Entradas recebidas", brl(entradas), "up") +
       linha("− Despesas pagas por aqui", brl(saidas), "down") + linha("Saldo atual", brl(saldo), corSinal(saldo)) +
       linha("Tipo de conta", esc(b.tipo || "—")), "bancos",
-      { rotulo: "Adicionar", acao: () => abrirModalEntrada(null, b.id) });
+      { rotulo: "+ Adicionar", acao: () => abrirModalValorBanco(b.id) });
   }
 
   function explicarClasse(rotulo) {
@@ -1835,6 +1835,31 @@
         <div class="c12">${card("c12", "Entradas", `Total: ${brl(totalMes)}`, `${abasMeses12("mes-entradas", mesEntradas, "anoEntradas", anosDisponiveis(d))}<button class="btn primario" data-acao="nova-entrada"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`, corpo)}</div>
       </div>
     `;
+  }
+
+
+  // Janela simples para somar um valor à conta, no mesmo formato da que
+  // adiciona valor a uma meta. O lançamento entra em Entradas.
+  function abrirModalValorBanco(bancoId) {
+    const b = achar(DADOS.bancos, bancoId);
+    if (!b) return;
+    abrirModal(`
+      <h3>Adicionar valor — ${esc(b.nome)}</h3>
+      <div class="campo"><label for="f_valor">Quanto você quer adicionar?</label>${campoMoeda("f_valor", "")}</div>
+      <div class="campo"><label for="f_desc">Descrição</label><input id="f_desc" value="Depósito" placeholder="Depósito"></div>
+      <div class="modal-acoes"><button class="btn primario salvar" id="btnSalvar">Adicionar</button></div>`);
+    document.getElementById("btnSalvar").onclick = () => {
+      const v = numIn(document.getElementById("f_valor").value);
+      if (!(v > 0)) { toast("Informe um valor maior que zero."); return; }
+      DADOS.entradas.push({
+        id: A.novoId(), data: hojeISO(),
+        descricao: (document.getElementById("f_desc").value || "Depósito").trim(),
+        categoria: "Outros", bancoId: b.id, valor: v, tipo: "Variável",
+        recorrencia: FREQUENCIAS[0], recorrente: false, obs: ""
+      });
+      fecharModal();
+      salvarEAtualizar(`${brl(v)} adicionado em ${b.nome}.`);
+    };
   }
 
   function abrirModalEntrada(id, bancoIdPadrao) {
@@ -3183,6 +3208,7 @@
       switch (acao) {
         case "ir": navegarPara(b.dataset.secao, b.dataset.id); break;
 
+        case "entrada-banco": abrirModalValorBanco(id); break;
         case "nova-banco": abrirModalBanco(null); break;
         case "editar-banco": abrirModalBanco(id); break;
 
