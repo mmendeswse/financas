@@ -1981,12 +1981,21 @@
   // =========================================================================
   // DESPESAS
   // =========================================================================
+  // nome do banco de uma despesa (se foi no cartão, o banco do cartão)
+  function bancoDoLancamento(d, x) {
+    if (x.cartaoId) {
+      const c = achar(d.cartoes, x.cartaoId);
+      return c ? F.nomeBanco(d, c.bancoId) : "Cartão";
+    }
+    return F.nomeBanco(d, x.bancoId);
+  }
+
   function renderDespesas(d) {
     // a tela reúne o que já saiu (despesas lançadas) e o que ainda vai
     // sair (contas a pagar), com o status de cada linha
     const lancadas = d.despesas.map((x) => ({
       origem: "despesa", id: x.id, descricao: x.descricao, categoria: x.categoria,
-      pagoCom: x.cartaoId ? "💳 " + nomeCartao(d, x.cartaoId) : F.nomeBanco(d, x.bancoId),
+      pagoCom: bancoDoLancamento(d, x),
       data: x.data, status: "Pago", valor: Number(x.valor || 0), recorrencia: freqDe(x)
     }));
     const previstas = F.listaContasPagarComStatus(d).map((c) => ({
@@ -2011,7 +2020,7 @@
     const totalMes = lista.filter((x) => x.status === "Pago").reduce((t, x) => t + Number(x.valor || 0), 0);
     const emAberto = lista.filter((x) => x.status !== "Pago").reduce((t, x) => t + Number(x.valor || 0), 0);
     const aPagar = F.totalAPagar(d);
-    const gridD = "grid-template-columns:minmax(0,1fr) 110px 130px 110px 160px";
+    const gridD = "grid-template-columns:minmax(0,1fr) 105px minmax(140px, 168px) 105px 155px";
 
     let corpo;
     if (!lista.length) {
@@ -2022,7 +2031,7 @@
         <div class="rw clicavel" style="${gridD}" data-acao="${x.origem === "despesa" ? "editar-despesa" : "editar-conta"}" data-id="${x.id}" title="Abrir para editar">
           <div><div class="nm">${esc(x.descricao)}${x.recorrencia && x.recorrencia !== FREQUENCIAS[0] ? ` <span class="selo-tag selo-cat">${esc(x.recorrencia.toLowerCase())}</span>` : ""}</div><div class="sub">${esc(x.categoria || "—")}</div></div>
           <div><button class="selo-tag selo-${x.status.toLowerCase()} selo-botao" data-acao="${x.origem === "conta" ? "alternar-pago" : "tornar-pendente"}" data-id="${x.id}" title="${x.origem === "conta" ? (x.status === "Pago" ? "Marcar como pendente" : "Marcar como paga") : "Marcar como pendente (vira conta a pagar)"}">${x.status}</button></div>
-          <div class="dim celula-texto">${esc(x.pagoCom || "—")}</div>
+          <div class="celula-texto cel-banco">${x.pagoCom && x.pagoCom !== "—" ? marcaBanco(x.pagoCom, 18) + `<span class="dim">${esc(x.pagoCom)}</span>` : '<span class="dim">—</span>'}</div>
           <div class="r dim" style="font-size:12px">${fmtData(x.data)}</div>
           <div class="cel-valor"><span class="big down">−${brl(x.valor)}</span></div>
         </div>`).join("");
@@ -3041,9 +3050,8 @@
         const progresso = m.objetivo > 0 ? Math.min(100, (m.atual / m.objetivo) * 100) : 0;
         const diasPrazo = m.prazo ? F.diasEntre(m.prazo) : null;
         const vencida = diasPrazo !== null && diasPrazo < 0 && Number(m.atual || 0) < Number(m.objetivo || 0);
-        return `<div class="c4"><div class="card${vencida ? " card-meta-vencida" : ""}">
+        return `<div class="c4"><div class="card card-clicavel${vencida ? " card-meta-vencida" : ""}" data-acao="editar-meta" data-id="${m.id}" title="Abrir para editar">
           <header><div><h2>${esc(m.nome)}${vencida ? ' <span class="selo-tag selo-atrasado">prazo vencido</span>' : ""}</h2>${m.prazo ? `<div class="sub ${vencida ? "down" : ""}">até ${fmtData(m.prazo)}${vencida ? ` · há ${plural(Math.abs(diasPrazo), "dia")}` : ""}</div>` : ""}</div>
-            <div class="acoes">${linhaAcoes("editar-meta", m.id, "excluir-meta", m.id)}</div>
           </header>
           <div class="body pad">
             <div style="display:flex;justify-content:space-between;margin-bottom:8px">
