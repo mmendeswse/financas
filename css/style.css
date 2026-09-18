@@ -1042,3 +1042,9 @@ table.tab-acoes th.col-atualiz, table.tab-acoes td.col-atualiz { display: none; 
 .card-meta-vencida { border-color: rgba(255,92,106,.55); box-shadow: 0 0 0 1px rgba(255,92,106,.25), 0 10px 30px rgba(255,92,106,.12); }
 .card-meta-vencida header { background: rgba(255,92,106,.07); }
 .mix-item.meta-vencida { border-left: 3px solid var(--down); padding-left: 8px; }
+
+/* saldo por banco: coluna do nome com espaço suficiente para nomes longos */
+.barlist-linha { grid-template-columns: minmax(132px, 168px) 1fr 112px; }
+.barlist-nome { min-width: 0; overflow: hidden; }
+.barlist-nome span:not(.marca-banco):not(.marca-logo), .barlist-nome { white-space: nowrap; text-overflow: ellipsis; }
+@media (max-width: 640px) { .barlist-linha { grid-template-columns: minmax(110px, 140px) 1fr 96px; } }

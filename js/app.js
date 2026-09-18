@@ -50,6 +50,8 @@
   let ROTA = { secao: "dashboard", param: null };
   let editandoPrecos = false;
   let periodoGrafico = "tudo";
+  let anoRD = null;    // ano escolhido no quadro Receitas x despesas
+  let anoEvo = null;   // ano escolhido no quadro Evolução patrimonial
   let mesesRD = 6;        // meses no gráfico receitas x despesas
   let mesesEvo = 12;      // meses no gráfico de evolução patrimonial   // período mostrado no gráfico do ativo
   let filtrosHistorico = { periodo: "3m", banco: "", categoria: "", tipo: "todos", busca: "", ordenarPor: "data", ordemAsc: false };
@@ -381,7 +383,7 @@
   // É uma lista de sugestões: quem precisar de outro banco escolhe
   // "Outro" e digita o nome.
   // ---------------------------------------------------------------------
-  const BANCOS_SUGERIDOS = ["Banco do Brasil", "Nubank", "Itaú", "Mercado Pago", "Caixa", "Inter"];
+  const BANCOS_SUGERIDOS = ["Banco do Brasil", "Nubank", "Itaú", "Mercado Pago", "Caixa", "Banco Inter"];
 
   function campoBanco(id, valorAtual, rotuloVazio) {
     const atual = (valorAtual || "").trim();
@@ -845,13 +847,14 @@
     "itau":            { arquivo: "itau.svg" },
     "inter":           { arquivo: "inter.svg" },
     "banco inter":     { arquivo: "inter.svg" },
+    "banco do brasil": { arquivo: "banco-do-brasil.svg" },
+    "bb":              { arquivo: "banco-do-brasil.svg" },
+    "banco brasil":    { arquivo: "banco-do-brasil.svg" },
     "caixa":           { arquivo: "caixa.svg" },
     "caixa tem":       { arquivo: "caixa.svg" },
     "caixa econômica federal": { arquivo: "caixa.svg" },
     "mercado pago":    { arquivo: "mercado-pago.svg" },
     // demais bancos: marca com a cor e a inicial
-    "banco do brasil": { cor: "#FCEE26", letra: "BB", texto: "#0038A8" },
-    "bb":              { cor: "#FCEE26", letra: "BB", texto: "#0038A8" },
     "bradesco":        { cor: "#CC092F", letra: "B" },
     "santander":       { cor: "#EC0000", letra: "S" },
     "c6 bank":         { cor: "#242424", letra: "C6" },
@@ -1580,15 +1583,11 @@
     const totalComp = composicao.reduce((s, i) => s + i.valor, 0);
     const legendaComp = composicao.length ? composicao.map((i) => `<button class="legenda-linha clicavel" data-acao="explicar-classe" data-rotulo="${esc(i.rotulo)}" title="Ver detalhes"><span class="legenda-nome"><span class="legenda-ponto" style="background:${i.cor}"></span>${esc(i.rotulo)}</span><span class="legenda-pct" style="color:${i.cor}">${(totalComp > 0 ? (i.valor / totalComp) * 100 : 0).toFixed(1).replace(".", ",")}%</span><span class="legenda-val">${brl(i.valor)}</span></button>`).join("") : `<div class="empty">Sem ativos ainda.</div>`;
 
+    if (!anoRD) anoRD = String(new Date().getFullYear());
+    if (!anoEvo) anoEvo = String(new Date().getFullYear());
+
     // o pico é o maior valor dentro do período escolhido no quadro E
-    const histPeriodo = (() => {
-      const h = d.historicoPatrimonio;
-      if (!mesesEvo) return h;
-      const corte = new Date(); corte.setMonth(corte.getMonth() - mesesEvo);
-      const limite = corte.toISOString().slice(0, 10);
-      const filtrado = h.filter((x) => x.data >= limite);
-      return filtrado.length >= 2 ? filtrado : h;
-    })();
+    const histPeriodo = historicoEvo(d);
     const pico = histPeriodo.length ? Math.max(...histPeriodo.map((h) => h.valor)) : 0;
 
     const acoes = I.listaAcoesComCalculo(d);
@@ -1623,12 +1622,15 @@
             </div>
             <div class="legenda">${legendaComp}</div>
           </div>`)}</div>
-        <div class="c3">${card("", "Receitas x despesas", `últimos ${mesesRD} meses`, abasMeses("periodo-rd", mesesRD, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }]), `<div style="padding:8px 14px 12px;height:236px"><canvas id="graf-receitas-despesas"></canvas></div>`)}</div>
+        <div class="c3">${card("", "Receitas x despesas", `${mesesRD} ${mesesRD === 1 ? "mês" : "meses"} de ${anoRD}`,
+          `<div class="filtro-mes">${seletorAnoDash("anoRD", anoRD, anosDashboard(d))}${abasMeses("periodo-rd", mesesRD, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }])}</div>`, `<div style="padding:8px 14px 12px;height:236px"><canvas id="graf-receitas-despesas"></canvas></div>`)}</div>
         <div class="c3">${card("", "Metas", "progressos", `<button class="btn pequeno" data-acao="ir" data-secao="metas">ver todas →</button>`, metasMini(d))}</div>
       </div>
 
       <div class="grid">
-        <div class="c12">${card("", "Evolução patrimonial", "patrimônio líquido", (pico ? `<span class="pill-pico">PICO ${brl(pico)}</span>` : "") + abasMeses("periodo-evo", mesesEvo, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }, { meses: 0, rotulo: "Tudo" }]), `<div style="padding:8px 14px 12px;height:236px"><canvas id="graf-evolucao"></canvas></div>`)}</div>
+        <div class="c12">${card("", "Evolução patrimonial", `patrimônio líquido · ${mesesEvo ? mesesEvo + " meses de " + anoEvo : "todo o histórico"}`,
+          (pico ? `<span class="pill-pico">PICO ${brl(pico)}</span>` : "") +
+          `<div class="filtro-mes">${seletorAnoDash("anoEvo", anoEvo, anosDashboard(d))}${abasMeses("periodo-evo", mesesEvo, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }, { meses: 0, rotulo: "Tudo" }])}</div>`, `<div style="padding:8px 14px 12px;height:236px"><canvas id="graf-evolucao"></canvas></div>`)}</div>
       </div>
 
       ${stripKpis([
@@ -2879,6 +2881,42 @@
     return filtrado.length >= 2 ? filtrado : (historico || []);
   }
 
+  // anos com dados, para os seletores dos quadros do dashboard
+  function serieRD(d) {
+    const fx = intervaloAnoMeses(anoRD, mesesRD);
+    return serieMensalPeriodo(d, fx.ini, fx.fim);
+  }
+
+  function historicoEvo(d) {
+    const h = d.historicoPatrimonio || [];
+    if (!mesesEvo) return h;
+    const fx = intervaloAnoMeses(anoEvo, mesesEvo);
+    const filtrado = h.filter((x) => x.data >= fx.ini && x.data <= fx.fim);
+    return filtrado.length >= 2 ? filtrado : h;
+  }
+
+  function anosDashboard(d) {
+    const anos = new Set([String(new Date().getFullYear())]);
+    [...d.entradas, ...d.despesas].forEach((m) => { if (m.data) anos.add(String(m.data).slice(0, 4)); });
+    (d.historicoPatrimonio || []).forEach((h) => { if (h.data) anos.add(String(h.data).slice(0, 4)); });
+    return [...anos].sort((a, b) => b.localeCompare(a));
+  }
+
+  // intervalo dos primeiros N meses do ano escolhido; no ano corrente
+  // não passa do mês atual
+  function intervaloAnoMeses(ano, meses) {
+    const hoje = new Date();
+    const ehAnoAtual = Number(ano) === hoje.getFullYear();
+    const ultimo = ehAnoAtual ? Math.min(meses, hoje.getMonth() + 1) : meses;
+    const fimMes = new Date(Number(ano), ultimo, 0);
+    return { ini: `${ano}-01-01`, fim: fimMes.toISOString().slice(0, 10) };
+  }
+
+  function seletorAnoDash(id, ano, anos) {
+    return `<select class="sel-ano" id="${id}" title="Ano">${anos.map((a) =>
+      `<option value="${a}" ${a === ano ? "selected" : ""}>${a}</option>`).join("")}</select>`;
+  }
+
   function abasMeses(acao, atual, opcoes) {
     return `<div class="abas abas-periodo">${opcoes.map((op) =>
       `<button class="${atual === op.meses ? "ativo" : ""}" data-acao="${acao}" data-meses="${op.meses}">${op.rotulo}</button>`).join("")}</div>`;
@@ -3178,16 +3216,12 @@
     const d = DADOS;
     switch (ROTA.secao) {
       case "dashboard": {
-        let hist = d.historicoPatrimonio;
-        if (mesesEvo > 0) {
-          const corte = new Date(); corte.setMonth(corte.getMonth() - mesesEvo);
-          const limite = corte.toISOString().slice(0, 10);
-          const filtrado = hist.filter((h) => h.data >= limite);
-          if (filtrado.length >= 2) hist = filtrado;
-        }
+        if (!anoRD) anoRD = String(new Date().getFullYear());
+        if (!anoEvo) anoEvo = String(new Date().getFullYear());
+        const hist = historicoEvo(d);
         if (hist.length >= 2) G.renderEvolucaoPatrimonio("graf-evolucao", hist, { aoClicar: explicarPatrimonio });
         else G.destruir("graf-evolucao");
-        G.renderReceitasDespesas("graf-receitas-despesas", F.serieMensal(d, mesesRD), { aoClicar: explicarMes });
+        G.renderReceitasDespesas("graf-receitas-despesas", serieRD(d), { aoClicar: explicarMes });
         if (itensPatrimonio(d).length) G.renderDoughnutGenerico("graf-dash-composicao", itensPatrimonio(d), { semLegenda: true, aoClicar: (item) => explicarClasse(item.rotulo) });
         break;
       }
@@ -3428,6 +3462,8 @@
 
     cont.addEventListener("change", (e) => {
       const id = e.target.id;
+      if (id === "anoRD") { anoRD = e.target.value; renderRota(); return; }
+      if (id === "anoEvo") { anoEvo = e.target.value; renderRota(); return; }
       if (id === "anoEntradas") { mesEntradas = e.target.value + mesEntradas.slice(4); renderRota(); return; }
       if (id === "anoDespesas") { mesDespesas = e.target.value + mesDespesas.slice(4); renderRota(); return; }
       if (id === "filtroPeriodo") { filtrosHistorico.periodo = e.target.value; renderRota(); }

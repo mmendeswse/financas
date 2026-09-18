@@ -98,7 +98,7 @@
     d.bancos = [
       { id: bcoNu, nome: "Nubank", tipo: "Conta corrente", agencia: "0001", conta: "12345-6", saldoInicial: 2500, cor: "#8A2BE2", obs: "" },
       { id: bcoItau, nome: "Itaú", tipo: "Conta corrente", agencia: "0872", conta: "88213-1", saldoInicial: 6000, cor: "#FF7A00", obs: "" },
-      { id: bcoInter, nome: "Inter", tipo: "Conta digital", agencia: "0001", conta: "55201-9", saldoInicial: 1800, cor: "#FF7A00", obs: "" },
+      { id: bcoInter, nome: "Banco Inter", tipo: "Conta digital", agencia: "0001", conta: "55201-9", saldoInicial: 1800, cor: "#FF7A00", obs: "" },
       { id: bcoCaixa, nome: "Caixa", tipo: "Poupança", agencia: "1234", conta: "00998-2", saldoInicial: 900, cor: "#0057B8", obs: "" }
     ];
 
