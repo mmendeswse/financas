@@ -1285,17 +1285,29 @@
 
   function explicarBanco(id) {
     const d = DADOS;
-    const b = achar(d.bancos, id);
+    const lista = bancosDoPeriodo(d);
+    const b = lista.find((x) => x.id === id);
     if (!b) return;
-    const entradas = d.entradas.filter((e) => e.bancoId === id).reduce((s, e) => s + Number(e.valor || 0), 0);
-    const saidas = d.despesas.filter((x) => x.bancoId === id && !x.cartaoId).reduce((s, x) => s + Number(x.valor || 0), 0);
-    const saldo = F.saldoBanco(d, b);
-    const total = F.totalBancos(d);
+    const totalPeriodo = lista.reduce((t, x) => t + Number(x.valor || 0), 0);
     const linha = (r, v, c) => `<div class="kv"><span class="dim">${rotuloPainel(r)}</span><b class="${c || ""}">${v}</b></div>`;
-    painelSimples(esc(b.nome), total > 0 ? (saldo / total) * 100 : 0, "do seu dinheiro em bancos está aqui",
+    const periodo = mesesBancos ? `nos últimos ${mesesBancos} meses` : "";
+
+    if (mesesBancos) {
+      painelSimples(esc(b.nome), totalPeriodo !== 0 ? (b.valor / totalPeriodo) * 100 : 0,
+        `da movimentação de todas as contas ${periodo}`, "entradas − despesas do período",
+        linha(`Entradas ${periodo}`, brl(b.entradas), "up") +
+        linha(`Despesas ${periodo}`, brl(b.saidas), "down") +
+        linha("Movimentação líquida", brlSinal(b.valor), corSinal(b.valor)) +
+        linha("Saldo atual da conta", brl(b.saldoAtual), corSinal(b.saldoAtual)) +
+        linha("Tipo de conta", esc(b.tipo || "—")), "bancos",
+        { rotulo: "+ Adicionar", acao: () => abrirModalValorBanco(b.id) });
+      return;
+    }
+
+    painelSimples(esc(b.nome), totalPeriodo > 0 ? (b.saldoAtual / totalPeriodo) * 100 : 0, "do seu dinheiro em bancos está aqui",
       "saldo inicial + entradas − despesas",
-      linha("Saldo inicial", brl(b.saldoInicial)) + linha("+ Entradas recebidas", brl(entradas), "up") +
-      linha("− Despesas pagas por aqui", brl(saidas), "down") + linha("Saldo atual", brl(saldo), corSinal(saldo)) +
+      linha("Saldo inicial", brl(b.saldoInicial)) + linha("+ Entradas recebidas", brl(b.entradas), "up") +
+      linha("− Despesas pagas por aqui", brl(b.saidas), "down") + linha("Saldo atual", brl(b.saldoAtual), corSinal(b.saldoAtual)) +
       linha("Tipo de conta", esc(b.tipo || "—")), "bancos",
       { rotulo: "+ Adicionar", acao: () => abrirModalValorBanco(b.id) });
   }
@@ -1420,7 +1432,8 @@
   // telas (barras do dashboard, cartões e gráfico da guia Bancos).
   // ---------------------------------------------------------------------
   function bancosNaOrdem(lista) {
-    return lista.slice().sort((a, b) => Number(b.saldoAtual || 0) - Number(a.saldoAtual || 0));
+    const v = (x) => Number(x.valor !== undefined ? x.valor : x.saldoAtual || 0);
+    return lista.slice().sort((a, b) => v(b) - v(a));
   }
 
 
@@ -1739,9 +1752,32 @@
   // =========================================================================
   // BANCOS
   // =========================================================================
+
+  // Valores de cada conta conforme o período escolhido na guia Bancos.
+  // Sem período ("Tudo") é o saldo atual; com período, a movimentação
+  // líquida do intervalo (entradas menos saídas).
+  function inicioPeriodoBancos() {
+    const corte = new Date();
+    corte.setMonth(corte.getMonth() - (mesesBancos - 1));
+    corte.setDate(1);
+    return corte.toISOString().slice(0, 10);
+  }
+
+  function bancosDoPeriodo(d) {
+    const ini = mesesBancos ? inicioPeriodoBancos() : "0000-01-01";
+    return F.listaBancosComSaldo(d).map((b) => {
+      const ent = d.entradas.filter((e) => e.bancoId === b.id && String(e.data || "") >= ini)
+        .reduce((t, e) => t + Number(e.valor || 0), 0);
+      const sai = d.despesas.filter((x) => x.bancoId === b.id && !x.cartaoId && String(x.data || "") >= ini)
+        .reduce((t, x) => t + Number(x.valor || 0), 0);
+      return Object.assign({}, b, { entradas: ent, saidas: sai, valor: mesesBancos ? ent - sai : b.saldoAtual });
+    });
+  }
+
   function renderBancos(d) {
-    const bancos = bancosNaOrdem(F.listaBancosComSaldo(d));
-    const total = F.totalBancos(d);
+    const bancos = bancosNaOrdem(bancosDoPeriodo(d));
+    const total = bancos.reduce((t, b) => t + Number(b.valor || 0), 0);
+    const rotuloPeriodo = mesesBancos ? `Movimentação últimos ${mesesBancos} meses` : "";
     let listaHtml;
     if (!bancos.length) {
       listaHtml = `<div class="empty">Nenhum banco cadastrado. Use "+ Novo banco" para começar.</div>`;
@@ -1749,8 +1785,8 @@
       listaHtml = `<div class="grade-bancos">` + bancos.map((b) => `
           <div class="cartao-item" style="border-left-color:${esc(b.cor || "#3FC1E0")}" data-acao="editar-banco" data-id="${b.id}">
             <div class="linha1"><div class="nome-com-marca">${marcaBanco(b.nome, 26)}<div><div class="nome">${esc(b.nome)}</div><div class="tipo">${esc(b.tipo || "—")}</div>${b.agencia || b.conta ? `<div class="tipo">${b.agencia ? "Ag " + esc(b.agencia) : ""}${b.agencia && b.conta ? " · " : ""}${b.conta ? "Cc " + esc(b.conta) : ""}</div>` : ""}</div></div></div>
-            <div class="saldo ${corSinal(b.saldoAtual)}">${brl(b.saldoAtual)}</div>
-            <div class="rodape">Saldo Inicial ${brl(b.saldoInicial)}
+            <div class="saldo ${corSinal(b.valor)}">${brl(b.valor)}</div>
+            <div class="rodape">${mesesBancos ? `Saldo Atual ${brl(b.saldoAtual)}` : `Saldo Inicial ${brl(b.saldoInicial)}`}
               <button class="btn pequeno" data-acao="entrada-banco" data-id="${b.id}" title="Lançar uma entrada nesta conta">+ Adicionar</button>
             </div>
           </div>`).join("") + `</div>`;
@@ -3165,22 +3201,8 @@
       }
       case "bancos": {
         if (!d.bancos.length) break;
-        let lista;
-        if (mesesBancos) {
-          // no período escolhido o gráfico mostra a movimentação líquida
-          // de cada conta (o que entrou menos o que saiu)
-          const corte = new Date(); corte.setMonth(corte.getMonth() - (mesesBancos - 1)); corte.setDate(1);
-          const ini = corte.toISOString().slice(0, 10);
-          lista = d.bancos.map((b) => {
-            const ent = d.entradas.filter((e) => e.bancoId === b.id && String(e.data || "") >= ini).reduce((t, e) => t + Number(e.valor || 0), 0);
-            const sai = d.despesas.filter((x) => x.bancoId === b.id && !x.cartaoId && String(x.data || "") >= ini).reduce((t, x) => t + Number(x.valor || 0), 0);
-            return { ...b, saldoAtual: ent - sai };
-          });
-        } else {
-          lista = F.listaBancosComSaldo(d);
-        }
-        // a ordenação vem depois do cálculo, sempre do maior para o menor
-        G.renderSaldoBancos("graf-saldo-bancos", bancosNaOrdem(lista), { aoClicar: (b) => explicarBanco(b.id) });
+        G.renderSaldoBancos("graf-saldo-bancos", bancosNaOrdem(bancosDoPeriodo(d)).map((b) => Object.assign({}, b, { saldoAtual: b.valor })),
+          { aoClicar: (b) => explicarBanco(b.id) });
         break;
       }
       case "despesas": break;
