@@ -1896,11 +1896,16 @@
       const dia = Math.min(inicio.getDate(), ultimo.getDate());
       datas.push(new Date(ano, m - 1, dia));
     } else {
+      // semanal/quinzenal: salta direto para a primeira repetição do mês,
+      // em vez de percorrer semana a semana desde o começo
       const passo = PASSO_DIAS[freq] || 7;
+      const diasAte = Math.floor((primeiro - inicio) / 86400000);
+      const saltos = Math.max(1, Math.ceil(diasAte / passo));
       const dt = new Date(inicio);
+      dt.setDate(dt.getDate() + saltos * passo);
       while (dt <= ultimo) {
+        if (dt >= primeiro) datas.push(new Date(dt));
         dt.setDate(dt.getDate() + passo);
-        if (dt >= primeiro && dt <= ultimo) datas.push(new Date(dt));
       }
     }
     return datas.map((dt) => dt.toISOString().slice(0, 10));
@@ -2982,14 +2987,14 @@
   }
 
 
-  // Lista de anos dos seletores: vai do ano mais antigo com dados (ou do
-  // ano atual, se não houver) até cinco anos à frente, para permitir
-  // planejar o futuro.
+  // Lista de anos dos seletores: do ano mais antigo com dados (ou do ano
+  // atual) até 2070, para planejar recorrências de longo prazo.
+  const ANO_LIMITE = 2070;
   function faixaAnos(anosComDados) {
     const atual = new Date().getFullYear();
     const numeros = anosComDados.map(Number).filter((n) => n > 1900);
     const inicio = Math.min(atual, ...(numeros.length ? numeros : [atual]));
-    const fim = Math.max(atual + 5, ...(numeros.length ? numeros : [atual]));
+    const fim = Math.max(ANO_LIMITE, ...(numeros.length ? numeros : [atual]));
     const lista = [];
     for (let a = fim; a >= inicio; a--) lista.push(String(a));
     return lista;
