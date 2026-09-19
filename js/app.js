@@ -1935,12 +1935,12 @@
     if (!mesEntradas) mesEntradas = F.mesAtual();
     const previstasEnt = repeticoesPrevistas(d.entradas, mesEntradas, (reg, data) => ({ ...reg, data, prevista: true }));
     const lista = [...d.entradas.filter((e) => String(e.data || "").slice(0, 7) === mesEntradas), ...previstasEnt]
-      .map((e) => ({ ...e, banco: F.nomeBanco(d, e.bancoId), status: e.prevista ? "Prevista" : "Recebida" }))
+      .map((e) => ({ ...e, banco: F.nomeBanco(d, e.bancoId), status: (e.prevista || e.previsto) ? "Prevista" : "Recebida" }))
       .sort((a, b) => ordemEntradas.campo === "recentes"
         ? (b.data || "").localeCompare(a.data || "")
         : comparar(a, b, ordemEntradas.campo, ordemEntradas.dir));
     const totalMes = F.totalEntradasMes(d, mesEntradas);
-    const totalPrevisto = previstasEnt.reduce((t, e) => t + Number(e.valor || 0), 0);
+    const totalPrevisto = previstasEnt.reduce((t, e) => t + Number(e.valor || 0), 0) + F.totalEntradasPrevistasMes(d, mesEntradas);
     const grid = GRID_LANCAMENTOS;
     let corpo;
     if (!lista.length) {
@@ -1952,7 +1952,7 @@
           <div><div class="nm">${esc(e.descricao)}${seloFreq(e)}</div><div class="sub">${esc(e.categoria)} · ${esc(e.tipo || "")}</div></div>
           <div>${e.prevista
             ? `<button class="selo-tag selo-prevista selo-botao" data-acao="confirmar-previsao-entrada" data-id="${e.id}" data-data="${e.data}" title="Confirmar: cria a entrada deste mês">Prevista</button>`
-            : `<span class="selo-tag selo-pago">Recebida</span>`}</div>
+            : `<button class="selo-tag ${e.previsto ? "selo-prevista" : "selo-pago"} selo-botao" data-acao="alternar-prevista-entrada" data-id="${e.id}" title="${e.previsto ? "Marcar como recebida" : "Marcar como prevista"}">${e.status}</button>`}</div>
           <div><button class="cel-banco cel-banco-botao" data-acao="trocar-banco-entrada" data-id="${e.id}" title="${e.prevista ? "Troca o banco do lançamento original (vale para todas as repetições)" : "Trocar o banco desta entrada"}">${marcaBanco(e.banco, 18)}<span class="dim">${esc(e.banco)}</span></button></div>
           <div class="r dim" style="font-size:12px">${fmtDataCurta(e.data)}</div>
           <div class="cel-valor"><span class="big up">+${brl(e.valor)}</span></div>
@@ -3463,11 +3463,20 @@
           break;
         }
 
+        case "alternar-prevista-entrada": {
+          const ent4 = achar(DADOS.entradas, id);
+          if (ent4) {
+            ent4.previsto = !ent4.previsto;
+            salvarEAtualizar(ent4.previsto ? "Marcada como prevista." : "Marcada como recebida.");
+          }
+          break;
+        }
+
         case "confirmar-previsao-entrada": {
           const baseE = achar(DADOS.entradas, id);
           if (baseE) {
             DADOS.entradas.push(Object.assign({}, baseE, {
-              id: A.novoId(), data: b.dataset.data,
+              id: A.novoId(), data: b.dataset.data, previsto: false,
               recorrencia: FREQUENCIAS[0], recorrente: false
             }));
             salvarEAtualizar("Entrada confirmada.");
