@@ -2065,6 +2065,13 @@
     const contasDoMes = (d.contasPagar || [])
       .filter((c) => String(c.vencimento || "").slice(0, 7) === mesDespesas)
       .map((c) => ({ descricao: c.descricao, categoria: c.categoria, valor: c.valor, data: c.vencimento }));
+    // contas a pagar recorrentes também geram previsões
+    const contasComoLista = (d.contasPagar || []).map((c) => ({ ...c, data: c.vencimento }));
+    const repeticoesContas = repeticoesPrevistas(contasComoLista, mesDespesas, (reg, data) => ({
+      origem: "conta", id: reg.id, descricao: reg.descricao, categoria: reg.categoria,
+      pagoCom: reg.bancoId ? F.nomeBanco(d, reg.bancoId) : "—", data, valor: Number(reg.valor || 0),
+      status: "Prevista", recorrencia: freqDe(reg), prevista: true
+    }), []);
     const repeticoes = repeticoesPrevistas(d.despesas, mesDespesas, (reg, data) => ({
       origem: "despesa", id: reg.id, descricao: reg.descricao, categoria: reg.categoria,
       pagoCom: bancoDoLancamento(d, reg), data, valor: Number(reg.valor || 0),
@@ -2077,7 +2084,7 @@
       valor: Number(c.valor || 0), recorrencia: freqDe(c)
     }));
     if (!mesDespesas) mesDespesas = F.mesAtual();
-    const lista = [...lancadas, ...previstas, ...repeticoes]
+    const lista = [...lancadas, ...previstas, ...repeticoes, ...repeticoesContas]
       .filter((x) => String(x.data || "").slice(0, 7) === mesDespesas)
       .sort((a, b) => {
         if (ordemDespesas.campo === "pendentes") {
@@ -2105,7 +2112,7 @@
         <div class="rw clicavel${x.prevista ? " linha-prevista" : ""}" style="${gridD}" data-acao="${x.origem === "despesa" ? "editar-despesa" : "editar-conta"}" data-id="${x.id}" title="${x.prevista ? "Repetição prevista — abre o lançamento original" : "Abrir para editar"}">
           <div><div class="nm">${esc(x.descricao)}${x.recorrencia && x.recorrencia !== FREQUENCIAS[0] ? ` <span class="selo-tag selo-cat">${esc(x.recorrencia.toLowerCase())}</span>` : ""}</div><div class="sub">${esc(x.categoria || "—")}</div></div>
           <div>${x.prevista
-            ? `<button class="selo-tag selo-prevista selo-botao" data-acao="confirmar-previsao" data-id="${x.id}" data-data="${x.data}" title="Confirmar: cria o lançamento deste mês">${x.status}</button>`
+            ? `<button class="selo-tag selo-prevista selo-botao" data-acao="${x.origem === "conta" ? "confirmar-previsao-conta" : "confirmar-previsao"}" data-id="${x.id}" data-data="${x.data}" title="Confirmar: cria o lançamento deste mês">${x.status}</button>`
             : `<button class="selo-tag selo-${x.status.toLowerCase()} selo-botao" data-acao="${x.origem === "conta" ? "alternar-pago" : "tornar-pendente"}" data-id="${x.id}" title="${x.origem === "conta" ? (x.status === "Pago" ? "Marcar como prevista" : "Marcar como paga") : "Marcar como prevista (vira conta a pagar)"}">${x.status}</button>`}</div>
           <div>${x.origem === "despesa" || x.pagoCom !== "—"
             ? `<button class="cel-banco cel-banco-botao" data-acao="${x.origem === "despesa" ? "trocar-banco" : "trocar-banco-conta"}" data-id="${x.id}" title="Trocar o banco (nas repetições, altera o lançamento original)">${marcaBanco(x.pagoCom, 18)}<span class="dim">${esc(x.pagoCom)}</span></button>`
@@ -2117,7 +2124,7 @@
 
     return `
       <div class="grid g-top">
-        <div class="c12">${card("c12", "Despesas", `Pagas: ${brl(totalMes)} · em aberto: ${brl(emAberto)}`,
+        <div class="c12">${card("c12", "Despesas", `Pagas: ${brl(totalMes)} · previstas: ${brl(emAberto)}`,
           `${abasMeses12("mes-despesas", mesDespesas, "anoDespesas", anosDisponiveis(d))}<button class="btn primario" data-acao="nova-despesa"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`,
           corpo)}</div>
       </div>
@@ -3435,8 +3442,23 @@
           // a repetição prevista vira um lançamento de verdade naquele dia
           const base = achar(DADOS.despesas, id);
           if (base) {
-            DADOS.despesas.push(Object.assign({}, base, { id: A.novoId(), data: b.dataset.data }));
+            DADOS.despesas.push(Object.assign({}, base, {
+              id: A.novoId(), data: b.dataset.data,
+              recorrencia: FREQUENCIAS[0], recorrente: false   // a fonte da repetição continua sendo o original
+            }));
             salvarEAtualizar("Lançamento confirmado.");
+          }
+          break;
+        }
+
+        case "confirmar-previsao-conta": {
+          const baseC = achar(DADOS.contasPagar, id);
+          if (baseC) {
+            DADOS.contasPagar.push(Object.assign({}, baseC, {
+              id: A.novoId(), vencimento: b.dataset.data, status: "Pago",
+              recorrencia: FREQUENCIAS[0], recorrente: false
+            }));
+            salvarEAtualizar("Conta confirmada como paga.");
           }
           break;
         }
@@ -3444,7 +3466,10 @@
         case "confirmar-previsao-entrada": {
           const baseE = achar(DADOS.entradas, id);
           if (baseE) {
-            DADOS.entradas.push(Object.assign({}, baseE, { id: A.novoId(), data: b.dataset.data }));
+            DADOS.entradas.push(Object.assign({}, baseE, {
+              id: A.novoId(), data: b.dataset.data,
+              recorrencia: FREQUENCIAS[0], recorrente: false
+            }));
             salvarEAtualizar("Entrada confirmada.");
           }
           break;
