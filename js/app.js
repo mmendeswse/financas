@@ -116,7 +116,8 @@
   // Entradas e Despesas usam exatamente as mesmas larguras de coluna
   const GRID_LANCAMENTOS = "grid-template-columns:minmax(0,1fr) 104px minmax(118px, 138px) 96px 150px";
 
-  let mesesBancos = 0;   // período do gráfico da guia Bancos (0 = saldo atual)
+  let mesesBancos = 0;
+  let anoBancos = null;   // período do gráfico da guia Bancos (0 = saldo atual)
   let mesesRelA = 12;   // período do quadro Receitas x despesas
   let mesesRelB = 0;    // período do quadro Evolução patrimonial (0 = tudo)
   let anoRelA = null;
@@ -523,7 +524,7 @@
     // o período dos gráficos volta ao padrão, em vez de guardar a escolha
     if (secao === "acoes" || secao === "investimentos") periodoGrafico = "tudo";
     // a guia Bancos sempre abre mostrando o saldo atual ("Tudo")
-    if (secao === "bancos") mesesBancos = 0;
+    if (secao === "bancos") { mesesBancos = 0; anoBancos = String(new Date().getFullYear()); }
     // Dashboard e Relatórios abrem sempre no ano atual: receitas x despesas
     // em 12 meses e evolução patrimonial em "Tudo"
     if (secao === "dashboard") {
@@ -1773,19 +1774,18 @@
   // Valores de cada conta conforme o período escolhido na guia Bancos.
   // Sem período ("Tudo") é o saldo atual; com período, a movimentação
   // líquida do intervalo (entradas menos saídas).
-  function inicioPeriodoBancos() {
-    const corte = new Date();
-    corte.setMonth(corte.getMonth() - (mesesBancos - 1));
-    corte.setDate(1);
-    return corte.toISOString().slice(0, 10);
+  function faixaBancos() {
+    if (!anoBancos) anoBancos = String(new Date().getFullYear());
+    return intervaloAnoMeses(anoBancos, mesesBancos);
   }
 
   function bancosDoPeriodo(d) {
-    const ini = mesesBancos ? inicioPeriodoBancos() : "0000-01-01";
+    const fx = mesesBancos ? faixaBancos() : { ini: "0000-01-01", fim: "9999-12-31" };
+    const dentro = (dt) => String(dt || "") >= fx.ini && String(dt || "") <= fx.fim;
     return F.listaBancosComSaldo(d).map((b) => {
-      const ent = d.entradas.filter((e) => e.bancoId === b.id && String(e.data || "") >= ini)
+      const ent = d.entradas.filter((e) => e.bancoId === b.id && dentro(e.data))
         .reduce((t, e) => t + Number(e.valor || 0), 0);
-      const sai = d.despesas.filter((x) => x.bancoId === b.id && !x.cartaoId && String(x.data || "") >= ini)
+      const sai = d.despesas.filter((x) => x.bancoId === b.id && !x.cartaoId && dentro(x.data))
         .reduce((t, x) => t + Number(x.valor || 0), 0);
       return Object.assign({}, b, { entradas: ent, saidas: sai, valor: mesesBancos ? ent - sai : b.saldoAtual });
     });
@@ -1814,8 +1814,8 @@
         <div class="c12">${card("c12", "Meus bancos", `${bancos.length} ${bancos.length === 1 ? "Conta Cadastrada" : "Contas Cadastradas"}`, `<button class="btn primario" data-acao="nova-banco"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`, listaHtml, `<span class="dim">Total</span><b class="${corSinal(total)}" style="font-size:14px;font-weight:800">${brl(total)}</b>`)}</div>
       </div>
       <div class="grid">
-        <div class="c12">${card("", "Saldo banco", mesesBancos ? `Movimentação últimos ${mesesBancos} meses` : "comparação entre contas",
-          abasMeses("periodo-bancos", mesesBancos, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }, { meses: 0, rotulo: "Tudo" }]),
+        <div class="c12">${card("", "Saldo banco", mesesBancos ? `Movimentação · ${mesesBancos} ${mesesBancos === 1 ? "mês" : "meses"} de ${anoBancos}` : "comparação entre contas",
+          `<div class="filtro-mes">${seletorAnoDash("anoBancos", anoBancos, anosDashboard(d))}${abasMeses("periodo-bancos", mesesBancos, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }, { meses: 0, rotulo: "Tudo" }])}</div>`,
           `<div style="padding:12px 18px 16px;height:${Math.max(190, bancos.length * 52)}px"><canvas id="graf-saldo-bancos"></canvas></div>`)}</div>
       </div>
     `;
@@ -1949,7 +1949,9 @@
         lista.map((e) => `
         <div class="rw clicavel${e.prevista ? " linha-prevista" : ""}" style="${grid}" data-acao="editar-entrada" data-id="${e.id}" title="${e.prevista ? "Repetição prevista — abre o lançamento original" : "Abrir para editar"}">
           <div><div class="nm">${esc(e.descricao)}${seloFreq(e)}</div><div class="sub">${esc(e.categoria)} · ${esc(e.tipo || "")}</div></div>
-          <div><span class="selo-tag ${e.prevista ? "selo-prevista" : "selo-pago"}">${e.prevista ? "Prevista" : "Recebida"}</span></div>
+          <div>${e.prevista
+            ? `<button class="selo-tag selo-prevista selo-botao" data-acao="confirmar-previsao-entrada" data-id="${e.id}" data-data="${e.data}" title="Confirmar: cria a entrada deste mês">Prevista</button>`
+            : `<span class="selo-tag selo-pago">Recebida</span>`}</div>
           <div><button class="cel-banco cel-banco-botao" data-acao="trocar-banco-entrada" data-id="${e.id}" title="${e.prevista ? "Troca o banco do lançamento original (vale para todas as repetições)" : "Trocar o banco desta entrada"}">${marcaBanco(e.banco, 18)}<span class="dim">${esc(e.banco)}</span></button></div>
           <div class="r dim" style="font-size:12px">${fmtDataCurta(e.data)}</div>
           <div class="cel-valor"><span class="big up">+${brl(e.valor)}</span></div>
@@ -2097,7 +2099,7 @@
         <div class="rw clicavel${x.prevista ? " linha-prevista" : ""}" style="${gridD}" data-acao="${x.origem === "despesa" ? "editar-despesa" : "editar-conta"}" data-id="${x.id}" title="${x.prevista ? "Repetição prevista — abre o lançamento original" : "Abrir para editar"}">
           <div><div class="nm">${esc(x.descricao)}${x.recorrencia && x.recorrencia !== FREQUENCIAS[0] ? ` <span class="selo-tag selo-cat">${esc(x.recorrencia.toLowerCase())}</span>` : ""}</div><div class="sub">${esc(x.categoria || "—")}</div></div>
           <div>${x.prevista
-            ? `<span class="selo-tag selo-prevista">${x.status}</span>`
+            ? `<button class="selo-tag selo-prevista selo-botao" data-acao="confirmar-previsao" data-id="${x.id}" data-data="${x.data}" title="Confirmar: cria o lançamento deste mês">${x.status}</button>`
             : `<button class="selo-tag selo-${x.status.toLowerCase()} selo-botao" data-acao="${x.origem === "conta" ? "alternar-pago" : "tornar-pendente"}" data-id="${x.id}" title="${x.origem === "conta" ? (x.status === "Pago" ? "Marcar como pendente" : "Marcar como paga") : "Marcar como pendente (vira conta a pagar)"}">${x.status}</button>`}</div>
           <div>${x.origem === "despesa"
             ? `<button class="cel-banco cel-banco-botao" data-acao="trocar-banco" data-id="${x.id}" title="Trocar o banco (nas repetições, altera o lançamento original)">${marcaBanco(x.pagoCom, 18)}<span class="dim">${esc(x.pagoCom)}</span></button>`
@@ -3418,6 +3420,25 @@
         case "excluir-conta":
           confirmarExclusao("Excluir esta conta?", () => { DADOS.contasPagar = DADOS.contasPagar.filter((x) => x.id !== id); salvarEAtualizar("Conta excluída."); });
           break;
+        case "confirmar-previsao": {
+          // a repetição prevista vira um lançamento de verdade naquele dia
+          const base = achar(DADOS.despesas, id);
+          if (base) {
+            DADOS.despesas.push(Object.assign({}, base, { id: A.novoId(), data: b.dataset.data }));
+            salvarEAtualizar("Lançamento confirmado.");
+          }
+          break;
+        }
+
+        case "confirmar-previsao-entrada": {
+          const baseE = achar(DADOS.entradas, id);
+          if (baseE) {
+            DADOS.entradas.push(Object.assign({}, baseE, { id: A.novoId(), data: b.dataset.data }));
+            salvarEAtualizar("Entrada confirmada.");
+          }
+          break;
+        }
+
         case "trocar-banco-entrada": {
           const ent2 = achar(DADOS.entradas, id);
           if (ent2 && DADOS.bancos.length) {
@@ -3595,6 +3616,7 @@
       const id = e.target.id;
       if (id === "anoRelA") { anoRelA = e.target.value; renderRota(); return; }
       if (id === "anoRelB") { anoRelB = e.target.value; renderRota(); return; }
+      if (id === "anoBancos") { anoBancos = e.target.value; renderRota(); return; }
       if (id === "anoRD") { anoRD = e.target.value; renderRota(); return; }
       if (id === "anoEvo") { anoEvo = e.target.value; renderRota(); return; }
       if (id === "anoEntradas") { mesEntradas = e.target.value + mesEntradas.slice(4); renderRota(); return; }
