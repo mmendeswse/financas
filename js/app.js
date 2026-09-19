@@ -66,7 +66,7 @@
     const anos = new Set([String(new Date().getFullYear())]);
     [...d.entradas, ...d.despesas].forEach((m) => { if (m.data) anos.add(String(m.data).slice(0, 4)); });
     (d.contasPagar || []).forEach((c) => { if (c.vencimento) anos.add(String(c.vencimento).slice(0, 4)); });
-    return [...anos].sort((a, b) => b.localeCompare(a));
+    return faixaAnos([...anos]);
   }
 
   function abasMeses12(acao, selecionado, idAno, anos) {
@@ -102,7 +102,7 @@
     if (campo === "valor") { x = Number(a.valor || 0); y = Number(b.valor || 0); }
     else if (campo === "data") { x = a.data || ""; y = b.data || ""; }
     else if (campo === "status") {
-      const ordem = { "Atrasado": 0, "Pendente": 1, "Prevista": 2, "Pago": 3 };
+      const ordem = { "Atrasado": 0, "Pendente": 1, "Prevista": 2, "Pago": 3, "Recebida": 3 };
       x = ordem[a.status] !== undefined ? ordem[a.status] : 9;
       y = ordem[b.status] !== undefined ? ordem[b.status] : 9;
     }
@@ -114,7 +114,7 @@
   }
 
   // Entradas e Despesas usam exatamente as mesmas larguras de coluna
-  const GRID_LANCAMENTOS = "grid-template-columns:minmax(0,1fr) 130px 110px 160px";
+  const GRID_LANCAMENTOS = "grid-template-columns:minmax(0,1fr) 104px minmax(118px, 138px) 96px 150px";
 
   let mesesBancos = 0;   // período do gráfico da guia Bancos (0 = saldo atual)
   let mesesRelA = 12;   // período do quadro Receitas x despesas
@@ -1930,7 +1930,7 @@
     if (!mesEntradas) mesEntradas = F.mesAtual();
     const previstasEnt = repeticoesPrevistas(d.entradas, mesEntradas, (reg, data) => ({ ...reg, data, prevista: true }));
     const lista = [...d.entradas.filter((e) => String(e.data || "").slice(0, 7) === mesEntradas), ...previstasEnt]
-      .map((e) => ({ ...e, banco: F.nomeBanco(d, e.bancoId) }))
+      .map((e) => ({ ...e, banco: F.nomeBanco(d, e.bancoId), status: e.prevista ? "Prevista" : "Recebida" }))
       .sort((a, b) => ordemEntradas.campo === "recentes"
         ? (b.data || "").localeCompare(a.data || "")
         : comparar(a, b, ordemEntradas.campo, ordemEntradas.dir));
@@ -1940,13 +1940,12 @@
     if (!lista.length) {
       corpo = `<div class="empty">Nenhuma entrada cadastrada. Use "+ Nova entrada" para lançar seu salário ou outra receita.</div>`;
     } else {
-      corpo = `<div class="hd" style="${grid}">${thOrdem("ordenar-entradas", "descricao", "Descrição", ordemEntradas)}${thOrdem("ordenar-entradas", "banco", "Banco", ordemEntradas)}${thOrdem("ordenar-entradas", "data", "Data", ordemEntradas, "r")}${thOrdem("ordenar-entradas", "valor", "Valor", ordemEntradas, "r hd-valor")}</div>` +
+      corpo = `<div class="hd" style="${grid}">${thOrdem("ordenar-entradas", "descricao", "Descrição", ordemEntradas)}${thOrdem("ordenar-entradas", "status", "Status", ordemEntradas)}${thOrdem("ordenar-entradas", "banco", "Banco", ordemEntradas)}${thOrdem("ordenar-entradas", "data", "Data", ordemEntradas, "r")}${thOrdem("ordenar-entradas", "valor", "Valor", ordemEntradas, "r hd-valor")}</div>` +
         lista.map((e) => `
         <div class="rw clicavel${e.prevista ? " linha-prevista" : ""}" style="${grid}" data-acao="editar-entrada" data-id="${e.id}" title="${e.prevista ? "Repetição prevista — abre o lançamento original" : "Abrir para editar"}">
-          <div><div class="nm">${esc(e.descricao)}${seloFreq(e)}${e.prevista ? ' <span class="selo-tag selo-prevista">prevista</span>' : ""}</div><div class="sub">${esc(e.categoria)} · ${esc(e.tipo || "")}</div></div>
-          <div>${e.prevista
-            ? `<span class="cel-banco">${marcaBanco(e.banco, 18)}<span class="dim">${esc(e.banco)}</span></span>`
-            : `<button class="cel-banco cel-banco-botao" data-acao="trocar-banco-entrada" data-id="${e.id}" title="Trocar o banco desta entrada">${marcaBanco(e.banco, 18)}<span class="dim">${esc(e.banco)}</span></button>`}</div>
+          <div><div class="nm">${esc(e.descricao)}${seloFreq(e)}</div><div class="sub">${esc(e.categoria)} · ${esc(e.tipo || "")}</div></div>
+          <div><span class="selo-tag ${e.prevista ? "selo-prevista" : "selo-pago"}">${e.prevista ? "Prevista" : "Recebida"}</span></div>
+          <div><button class="cel-banco cel-banco-botao" data-acao="trocar-banco-entrada" data-id="${e.id}" title="${e.prevista ? "Troca o banco do lançamento original (vale para todas as repetições)" : "Trocar o banco desta entrada"}">${marcaBanco(e.banco, 18)}<span class="dim">${esc(e.banco)}</span></button></div>
           <div class="r dim" style="font-size:12px">${fmtDataCurta(e.data)}</div>
           <div class="cel-valor"><span class="big up">+${brl(e.valor)}</span></div>
         </div>`).join("");
@@ -2082,7 +2081,7 @@
     const totalMes = lista.filter((x) => x.status === "Pago").reduce((t, x) => t + Number(x.valor || 0), 0);
     const emAberto = lista.filter((x) => x.status !== "Pago").reduce((t, x) => t + Number(x.valor || 0), 0);
     const aPagar = F.totalAPagar(d);
-    const gridD = "grid-template-columns:minmax(0,1fr) 104px minmax(118px, 138px) 96px 150px";
+    const gridD = GRID_LANCAMENTOS;
 
     let corpo;
     if (!lista.length) {
@@ -2095,8 +2094,8 @@
           <div>${x.prevista
             ? `<span class="selo-tag selo-prevista">${x.status}</span>`
             : `<button class="selo-tag selo-${x.status.toLowerCase()} selo-botao" data-acao="${x.origem === "conta" ? "alternar-pago" : "tornar-pendente"}" data-id="${x.id}" title="${x.origem === "conta" ? (x.status === "Pago" ? "Marcar como pendente" : "Marcar como paga") : "Marcar como pendente (vira conta a pagar)"}">${x.status}</button>`}</div>
-          <div>${x.origem === "despesa" && !x.prevista
-            ? `<button class="cel-banco cel-banco-botao" data-acao="trocar-banco" data-id="${x.id}" title="Trocar o banco deste lançamento">${marcaBanco(x.pagoCom, 18)}<span class="dim">${esc(x.pagoCom)}</span></button>`
+          <div>${x.origem === "despesa"
+            ? `<button class="cel-banco cel-banco-botao" data-acao="trocar-banco" data-id="${x.id}" title="Trocar o banco (nas repetições, altera o lançamento original)">${marcaBanco(x.pagoCom, 18)}<span class="dim">${esc(x.pagoCom)}</span></button>`
             : `<span class="cel-banco">${x.pagoCom && x.pagoCom !== "—" ? marcaBanco(x.pagoCom, 18) + `<span class="dim">${esc(x.pagoCom)}</span>` : '<span class="dim">—</span>'}</span>`}</div>
           <div class="r dim" style="font-size:12px">${fmtData(x.data)}</div>
           <div class="cel-valor"><span class="big down">−${brl(x.valor)}</span></div>
@@ -2982,11 +2981,25 @@
     return h.filter((x) => x.data >= fx.ini && x.data <= fx.fim);
   }
 
+
+  // Lista de anos dos seletores: vai do ano mais antigo com dados (ou do
+  // ano atual, se não houver) até cinco anos à frente, para permitir
+  // planejar o futuro.
+  function faixaAnos(anosComDados) {
+    const atual = new Date().getFullYear();
+    const numeros = anosComDados.map(Number).filter((n) => n > 1900);
+    const inicio = Math.min(atual, ...(numeros.length ? numeros : [atual]));
+    const fim = Math.max(atual + 5, ...(numeros.length ? numeros : [atual]));
+    const lista = [];
+    for (let a = fim; a >= inicio; a--) lista.push(String(a));
+    return lista;
+  }
+
   function anosDashboard(d) {
     const anos = new Set([String(new Date().getFullYear())]);
     [...d.entradas, ...d.despesas].forEach((m) => { if (m.data) anos.add(String(m.data).slice(0, 4)); });
     (d.historicoPatrimonio || []).forEach((h) => { if (h.data) anos.add(String(h.data).slice(0, 4)); });
-    return [...anos].sort((a, b) => b.localeCompare(a));
+    return faixaAnos([...anos]);
   }
 
   // intervalo dos primeiros N meses do ano escolhido; no ano corrente
