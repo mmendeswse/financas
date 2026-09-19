@@ -102,7 +102,7 @@
     if (campo === "valor") { x = Number(a.valor || 0); y = Number(b.valor || 0); }
     else if (campo === "data") { x = a.data || ""; y = b.data || ""; }
     else if (campo === "status") {
-      const ordem = { "Atrasado": 0, "Pendente": 1, "A receber": 1, "Prevista": 2, "Pago": 3, "Recebida": 3 };
+      const ordem = { "Atrasado": 0, "Prevista": 1, "Pago": 2, "Recebida": 2 };
       x = ordem[a.status] !== undefined ? ordem[a.status] : 9;
       y = ordem[b.status] !== undefined ? ordem[b.status] : 9;
     }
@@ -1935,12 +1935,11 @@
     if (!mesEntradas) mesEntradas = F.mesAtual();
     const previstasEnt = repeticoesPrevistas(d.entradas, mesEntradas, (reg, data) => ({ ...reg, data, prevista: true }));
     const lista = [...d.entradas.filter((e) => String(e.data || "").slice(0, 7) === mesEntradas), ...previstasEnt]
-      .map((e) => ({ ...e, banco: F.nomeBanco(d, e.bancoId), status: e.prevista ? "Prevista" : (e.aReceber ? "A receber" : "Recebida") }))
+      .map((e) => ({ ...e, banco: F.nomeBanco(d, e.bancoId), status: e.prevista ? "Prevista" : "Recebida" }))
       .sort((a, b) => ordemEntradas.campo === "recentes"
         ? (b.data || "").localeCompare(a.data || "")
         : comparar(a, b, ordemEntradas.campo, ordemEntradas.dir));
     const totalMes = F.totalEntradasMes(d, mesEntradas);
-    const aReceber = F.totalAReceberMes(d, mesEntradas);
     const grid = GRID_LANCAMENTOS;
     let corpo;
     if (!lista.length) {
@@ -1952,7 +1951,7 @@
           <div><div class="nm">${esc(e.descricao)}${seloFreq(e)}</div><div class="sub">${esc(e.categoria)} · ${esc(e.tipo || "")}</div></div>
           <div>${e.prevista
             ? `<button class="selo-tag selo-prevista selo-botao" data-acao="confirmar-previsao-entrada" data-id="${e.id}" data-data="${e.data}" title="Confirmar: cria a entrada deste mês">Prevista</button>`
-            : `<button class="selo-tag ${e.aReceber ? "selo-pendente" : "selo-pago"} selo-botao" data-acao="alternar-recebida" data-id="${e.id}" title="${e.aReceber ? "Marcar como recebida" : "Marcar como a receber"}">${e.status}</button>`}</div>
+            : `<span class="selo-tag selo-pago">Recebida</span>`}</div>
           <div><button class="cel-banco cel-banco-botao" data-acao="trocar-banco-entrada" data-id="${e.id}" title="${e.prevista ? "Troca o banco do lançamento original (vale para todas as repetições)" : "Trocar o banco desta entrada"}">${marcaBanco(e.banco, 18)}<span class="dim">${esc(e.banco)}</span></button></div>
           <div class="r dim" style="font-size:12px">${fmtDataCurta(e.data)}</div>
           <div class="cel-valor"><span class="big up">+${brl(e.valor)}</span></div>
@@ -1960,7 +1959,7 @@
     }
     return `
       <div class="grid g-top">
-        <div class="c12">${card("c12", "Entradas", `Total: ${brl(totalMes)}${aReceber > 0 ? ` · a receber: ${brl(aReceber)}` : ""}`, `${abasMeses12("mes-entradas", mesEntradas, "anoEntradas", anosDisponiveis(d))}<button class="btn primario" data-acao="nova-entrada"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`, corpo)}</div>
+        <div class="c12">${card("c12", "Entradas", `Total: ${brl(totalMes)}`, `${abasMeses12("mes-entradas", mesEntradas, "anoEntradas", anosDisponiveis(d))}<button class="btn primario" data-acao="nova-entrada"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`, corpo)}</div>
       </div>
     `;
   }
@@ -2069,7 +2068,9 @@
     }));
     const previstas = F.listaContasPagarComStatus(d).map((c) => ({
       origem: "conta", id: c.id, descricao: c.descricao, categoria: c.categoria,
-      data: c.vencimento, status: c.statusReal, valor: Number(c.valor || 0), recorrencia: ""
+      pagoCom: c.bancoId ? F.nomeBanco(d, c.bancoId) : "—",
+      data: c.vencimento, status: c.statusReal === "Pendente" ? "Prevista" : c.statusReal,
+      valor: Number(c.valor || 0), recorrencia: freqDe(c)
     }));
     if (!mesDespesas) mesDespesas = F.mesAtual();
     const lista = [...lancadas, ...previstas, ...repeticoes]
@@ -2077,7 +2078,7 @@
       .sort((a, b) => {
         if (ordemDespesas.campo === "pendentes") {
           // o que ainda não foi pago vem primeiro, por data de vencimento
-          const pend = (x) => (x.status === "Pago" ? 2 : (x.status === "Prevista" ? 1 : 0));
+          const pend = (x) => (x.status === "Pago" ? 1 : 0);
           if (pend(a) !== pend(b)) return pend(a) - pend(b);
           return (a.data || "").localeCompare(b.data || "");
         }
@@ -2101,9 +2102,9 @@
           <div><div class="nm">${esc(x.descricao)}${x.recorrencia && x.recorrencia !== FREQUENCIAS[0] ? ` <span class="selo-tag selo-cat">${esc(x.recorrencia.toLowerCase())}</span>` : ""}</div><div class="sub">${esc(x.categoria || "—")}</div></div>
           <div>${x.prevista
             ? `<button class="selo-tag selo-prevista selo-botao" data-acao="confirmar-previsao" data-id="${x.id}" data-data="${x.data}" title="Confirmar: cria o lançamento deste mês">${x.status}</button>`
-            : `<button class="selo-tag selo-${x.status.toLowerCase()} selo-botao" data-acao="${x.origem === "conta" ? "alternar-pago" : "tornar-pendente"}" data-id="${x.id}" title="${x.origem === "conta" ? (x.status === "Pago" ? "Marcar como pendente" : "Marcar como paga") : "Marcar como pendente (vira conta a pagar)"}">${x.status}</button>`}</div>
-          <div>${x.origem === "despesa"
-            ? `<button class="cel-banco cel-banco-botao" data-acao="trocar-banco" data-id="${x.id}" title="Trocar o banco (nas repetições, altera o lançamento original)">${marcaBanco(x.pagoCom, 18)}<span class="dim">${esc(x.pagoCom)}</span></button>`
+            : `<button class="selo-tag selo-${x.status.toLowerCase()} selo-botao" data-acao="${x.origem === "conta" ? "alternar-pago" : "tornar-pendente"}" data-id="${x.id}" title="${x.origem === "conta" ? (x.status === "Pago" ? "Marcar como prevista" : "Marcar como paga") : "Marcar como prevista (vira conta a pagar)"}">${x.status}</button>`}</div>
+          <div>${x.origem === "despesa" || x.pagoCom !== "—"
+            ? `<button class="cel-banco cel-banco-botao" data-acao="${x.origem === "despesa" ? "trocar-banco" : "trocar-banco-conta"}" data-id="${x.id}" title="Trocar o banco (nas repetições, altera o lançamento original)">${marcaBanco(x.pagoCom, 18)}<span class="dim">${esc(x.pagoCom)}</span></button>`
             : `<span class="cel-banco">${x.pagoCom && x.pagoCom !== "—" ? marcaBanco(x.pagoCom, 18) + `<span class="dim">${esc(x.pagoCom)}</span>` : '<span class="dim">—</span>'}</span>`}</div>
           <div class="r dim" style="font-size:12px">${fmtData(x.data)}</div>
           <div class="cel-valor"><span class="big down">−${brl(x.valor)}</span></div>
@@ -2138,7 +2139,7 @@
     origem = origem || "despesa";
     const x = id ? achar(origem === "conta" ? DADOS.contasPagar : DADOS.despesas, id) : null;
     const ehConta = origem === "conta";
-    const statusAtual = x ? (ehConta ? (F.statusReal(x) === "Pago" ? "Pago" : "Pendente") : "Pago") : "Pago";
+    const statusAtual = x ? (ehConta ? (F.statusReal(x) === "Pago" ? "Pago" : "Prevista") : "Pago") : "Pago";
     const dataAtual = x ? (ehConta ? x.vencimento : x.data) : hojeISO();
 
     abrirModal(`
@@ -2150,14 +2151,14 @@
       <div class="campo"><label for="f_desc">Descrição</label><input id="f_desc" value="${x ? esc(x.descricao) : ""}" placeholder="Supermercado"></div>
       <div class="par">
         <div class="campo"><label for="f_cat">Categoria</label><select id="f_cat">${opcoes(CATS_DESPESA, x ? x.categoria : CATS_DESPESA[0])}</select></div>
-        <div class="campo"><label for="f_status">Status</label><select id="f_status">${opcoes(["Pago", "Pendente"], statusAtual)}</select></div>
+        <div class="campo"><label for="f_status">Status</label><select id="f_status">${opcoes(["Pago", "Prevista"], statusAtual)}</select></div>
       </div>
-      <div id="camposPagamento" style="${statusAtual === "Pago" ? "" : "display:none"}">
+      <div id="camposPagamento">
         <div class="par">
-          <div class="campo"><label for="f_pagarcom">Banco</label><select id="f_pagarcom">${opcoesPagarCom(DADOS, x && !ehConta ? x.bancoId : "", x && !ehConta ? x.cartaoId : "")}</select></div>
-          <div class="campo"><label for="f_forma">Forma</label><select id="f_forma">${opcoes(FORMAS_PAGAMENTO, x && !ehConta ? x.formaPagamento : FORMAS_PAGAMENTO[0])}</select></div>
+          <div class="campo"><label for="f_pagarcom">Banco</label><select id="f_pagarcom">${opcoesPagarCom(DADOS, x ? x.bancoId : "", x && !ehConta ? x.cartaoId : "")}</select></div>
+          <div class="campo"><label for="f_forma">Forma</label><select id="f_forma">${opcoes(FORMAS_PAGAMENTO, x ? x.formaPagamento : FORMAS_PAGAMENTO[0])}</select></div>
         </div>
-        <div class="campo"><label for="f_rec">Repetição</label><select id="f_rec">${opcoes(FREQUENCIAS, freqDe(ehConta ? null : x))}</select></div>
+        <div class="campo"><label for="f_rec">Repetição</label><select id="f_rec">${opcoes(FREQUENCIAS, freqDe(x))}</select></div>
       </div>
       <div class="campo"><label for="f_obs">Observação</label><textarea id="f_obs" placeholder="Opcional">${x ? esc(x.obs || "") : ""}</textarea></div>
       <div class="modal-acoes">
@@ -2169,7 +2170,6 @@
     const selStatus = document.getElementById("f_status");
     selStatus.addEventListener("change", () => {
       const pago = selStatus.value === "Pago";
-      document.getElementById("camposPagamento").style.display = pago ? "" : "none";
       document.getElementById("rotuloData").textContent = pago ? "Data" : "Data de vencimento";
     });
 
@@ -2199,9 +2199,15 @@
           if (x && ehConta) DADOS.contasPagar = DADOS.contasPagar.filter((r) => r.id !== x.id); // deixou de ser conta
         }
       } else {
+        const pagarComP = document.getElementById("f_pagarcom").value;
+        const [tipoP, idP] = pagarComP ? pagarComP.split(":") : ["", ""];
         const registro = {
           id: (x && ehConta) ? x.id : A.novoId(), descricao: desc, categoria,
-          vencimento: data, valor, status: "Pendente", obs
+          vencimento: data, valor, status: "Pendente", obs,
+          bancoId: tipoP === "banco" ? idP : "",
+          formaPagamento: document.getElementById("f_forma").value,
+          recorrencia: document.getElementById("f_rec").value,
+          recorrente: document.getElementById("f_rec").value !== FREQUENCIAS[0]
         };
         if (x && ehConta) Object.assign(x, registro);
         else {
@@ -2210,7 +2216,7 @@
         }
       }
       fecharModal();
-      salvarEAtualizar(x ? "Lançamento atualizado." : (status === "Pago" ? "Despesa cadastrada." : "Conta a pagar cadastrada."));
+      salvarEAtualizar(x ? "Lançamento atualizado." : (status === "Pago" ? "Despesa cadastrada." : "Conta prevista cadastrada."));
     };
 
     if (x) document.getElementById("btnExcluir").onclick = () => {
@@ -3431,15 +3437,6 @@
           break;
         }
 
-        case "alternar-recebida": {
-          const ent3 = achar(DADOS.entradas, id);
-          if (ent3) {
-            ent3.aReceber = !ent3.aReceber;
-            salvarEAtualizar(ent3.aReceber ? "Marcada como a receber." : "Marcada como recebida.");
-          }
-          break;
-        }
-
         case "confirmar-previsao-entrada": {
           const baseE = achar(DADOS.entradas, id);
           if (baseE) {
@@ -3456,6 +3453,17 @@
             const prox = ids[(ids.indexOf(ent2.bancoId) + 1) % ids.length];
             ent2.bancoId = prox;
             salvarEAtualizar(`Agora em ${F.nomeBanco(DADOS, prox)}.`);
+          }
+          break;
+        }
+
+        case "trocar-banco-conta": {
+          const cta = achar(DADOS.contasPagar, id);
+          if (cta && DADOS.bancos.length) {
+            const ids = DADOS.bancos.map((bb) => bb.id);
+            const prox = ids[(ids.indexOf(cta.bancoId) + 1) % ids.length];
+            cta.bancoId = prox;
+            salvarEAtualizar(`Agora pelo ${F.nomeBanco(DADOS, prox)}.`);
           }
           break;
         }
@@ -3480,14 +3488,14 @@
               id: dsp.id, descricao: dsp.descricao, categoria: dsp.categoria,
               vencimento: dsp.data, valor: dsp.valor, status: "Pendente", obs: dsp.obs || ""
             });
-            salvarEAtualizar("Marcada como pendente.");
+            salvarEAtualizar("Marcada como prevista.");
           }
           break;
         }
 
         case "alternar-pago": {
           const c = achar(DADOS.contasPagar, id);
-          if (c) { c.status = c.status === "Pago" ? "Pendente" : "Pago"; salvarEAtualizar(c.status === "Pago" ? "Marcada como paga." : "Marcada como pendente."); }
+          if (c) { c.status = c.status === "Pago" ? "Pendente" : "Pago"; salvarEAtualizar(c.status === "Pago" ? "Marcada como paga." : "Marcada como prevista."); }
           break;
         }
 
