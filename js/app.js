@@ -1911,9 +1911,9 @@
     return datas.map((dt) => dt.toISOString().slice(0, 10));
   }
 
-  function repeticoesPrevistas(lista, mes, monta) {
+  function repeticoesPrevistas(lista, mes, monta, existentes) {
     const saida = [];
-    const noMes = lista.filter((r) => String(r.data || "").slice(0, 7) === mes);
+    const noMes = [...lista.filter((r) => String(r.data || "").slice(0, 7) === mes), ...(existentes || [])];
     // assinatura usada para não repetir o que já foi lançado de verdade
     const chave = (r) => `${String(r.categoria || "").toLowerCase()}|${Number(r.valor || 0)}`;
     const jaNoMes = new Set(noMes.map(chave));
@@ -1940,6 +1940,7 @@
         ? (b.data || "").localeCompare(a.data || "")
         : comparar(a, b, ordemEntradas.campo, ordemEntradas.dir));
     const totalMes = F.totalEntradasMes(d, mesEntradas);
+    const totalPrevisto = previstasEnt.reduce((t, e) => t + Number(e.valor || 0), 0);
     const grid = GRID_LANCAMENTOS;
     let corpo;
     if (!lista.length) {
@@ -1959,7 +1960,7 @@
     }
     return `
       <div class="grid g-top">
-        <div class="c12">${card("c12", "Entradas", `Total: ${brl(totalMes)}`, `${abasMeses12("mes-entradas", mesEntradas, "anoEntradas", anosDisponiveis(d))}<button class="btn primario" data-acao="nova-entrada"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`, corpo)}</div>
+        <div class="c12">${card("c12", "Entradas", `Recebidas: ${brl(totalMes)} · previstas: ${brl(totalPrevisto)}`, `${abasMeses12("mes-entradas", mesEntradas, "anoEntradas", anosDisponiveis(d))}<button class="btn primario" data-acao="nova-entrada"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`, corpo)}</div>
       </div>
     `;
   }
@@ -2061,11 +2062,14 @@
       pagoCom: bancoDoLancamento(d, x),
       data: x.data, status: "Pago", valor: Number(x.valor || 0), recorrencia: freqDe(x)
     }));
+    const contasDoMes = (d.contasPagar || [])
+      .filter((c) => String(c.vencimento || "").slice(0, 7) === mesDespesas)
+      .map((c) => ({ descricao: c.descricao, categoria: c.categoria, valor: c.valor, data: c.vencimento }));
     const repeticoes = repeticoesPrevistas(d.despesas, mesDespesas, (reg, data) => ({
       origem: "despesa", id: reg.id, descricao: reg.descricao, categoria: reg.categoria,
       pagoCom: bancoDoLancamento(d, reg), data, valor: Number(reg.valor || 0),
       status: "Prevista", recorrencia: freqDe(reg), prevista: true
-    }));
+    }), contasDoMes);
     const previstas = F.listaContasPagarComStatus(d).map((c) => ({
       origem: "conta", id: c.id, descricao: c.descricao, categoria: c.categoria,
       pagoCom: c.bancoId ? F.nomeBanco(d, c.bancoId) : "—",
