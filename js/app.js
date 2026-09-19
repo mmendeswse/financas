@@ -1922,6 +1922,7 @@
     const origens = new Set(noMes.map((r) => r.origemRecorrente).filter(Boolean));
 
     lista.forEach((reg) => {
+      if (reg.origemRecorrente) return;                            // é a instância de um mês, não a origem
       if (String(reg.data || "").slice(0, 7) === mes) return;      // o próprio mês já tem o registro
       const raiz = reg.origemRecorrente || reg.id;
       if (origens.has(raiz)) return;                               // este mês já foi materializado
@@ -3448,8 +3449,7 @@
           if (base) {
             DADOS.despesas.push(Object.assign({}, base, {
               id: A.novoId(), data: b.dataset.data,
-              origemRecorrente: base.origemRecorrente || base.id,   // a fonte continua sendo o original
-              recorrencia: FREQUENCIAS[0], recorrente: false
+              origemRecorrente: base.origemRecorrente || base.id
             }));
             salvarEAtualizar("Lançamento confirmado.");
           }
@@ -3461,8 +3461,7 @@
           if (baseC) {
             DADOS.contasPagar.push(Object.assign({}, baseC, {
               id: A.novoId(), vencimento: b.dataset.data, status: "Pago",
-              origemRecorrente: baseC.origemRecorrente || baseC.id,
-              recorrencia: FREQUENCIAS[0], recorrente: false
+              origemRecorrente: baseC.origemRecorrente || baseC.id
             }));
             salvarEAtualizar("Conta confirmada como paga.");
           }
@@ -3476,8 +3475,7 @@
           if (origem) {
             const novo = Object.assign({}, origem, {
               id: A.novoId(), data: b.dataset.data,
-              origemRecorrente: origem.origemRecorrente || origem.id,
-              recorrencia: FREQUENCIAS[0], recorrente: false
+              origemRecorrente: origem.origemRecorrente || origem.id
             });
             DADOS.despesas.push(novo);
             A.salvarDados(DADOS, true, true);
@@ -3492,8 +3490,7 @@
           if (origemC) {
             const novaC = Object.assign({}, origemC, {
               id: A.novoId(), vencimento: b.dataset.data, status: "Pendente",
-              origemRecorrente: origemC.origemRecorrente || origemC.id,
-              recorrencia: FREQUENCIAS[0], recorrente: false
+              origemRecorrente: origemC.origemRecorrente || origemC.id
             });
             DADOS.contasPagar.push(novaC);
             A.salvarDados(DADOS, true, true);
@@ -3508,8 +3505,7 @@
           if (origemE) {
             const novaE = Object.assign({}, origemE, {
               id: A.novoId(), data: b.dataset.data, previsto: true,
-              origemRecorrente: origemE.origemRecorrente || origemE.id,
-              recorrencia: FREQUENCIAS[0], recorrente: false
+              origemRecorrente: origemE.origemRecorrente || origemE.id
             });
             DADOS.entradas.push(novaE);
             A.salvarDados(DADOS, true, true);
@@ -3533,8 +3529,7 @@
           if (baseE) {
             DADOS.entradas.push(Object.assign({}, baseE, {
               id: A.novoId(), data: b.dataset.data, previsto: false,
-              origemRecorrente: baseE.origemRecorrente || baseE.id,
-              recorrencia: FREQUENCIAS[0], recorrente: false
+              origemRecorrente: baseE.origemRecorrente || baseE.id
             }));
             salvarEAtualizar("Entrada confirmada.");
           }
