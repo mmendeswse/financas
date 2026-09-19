@@ -1918,9 +1918,13 @@
     const chave = (r) => `${String(r.categoria || "").toLowerCase()}|${Number(r.valor || 0)}`;
     const jaNoMes = new Set(noMes.map(chave));
     const nomes = new Set(noMes.map((r) => String(r.descricao || "").toLowerCase()));
+    // registros que já foram criados a partir de uma recorrência neste mês
+    const origens = new Set(noMes.map((r) => r.origemRecorrente).filter(Boolean));
 
     lista.forEach((reg) => {
       if (String(reg.data || "").slice(0, 7) === mes) return;      // o próprio mês já tem o registro
+      const raiz = reg.origemRecorrente || reg.id;
+      if (origens.has(raiz)) return;                               // este mês já foi materializado
       if (jaNoMes.has(chave(reg)) || nomes.has(String(reg.descricao || "").toLowerCase())) return;
       const datas = ocorrenciasNoMes(reg, mes);
       if (!datas.length) return;
@@ -2064,7 +2068,7 @@
     }));
     const contasDoMes = (d.contasPagar || [])
       .filter((c) => String(c.vencimento || "").slice(0, 7) === mesDespesas)
-      .map((c) => ({ descricao: c.descricao, categoria: c.categoria, valor: c.valor, data: c.vencimento }));
+      .map((c) => ({ descricao: c.descricao, categoria: c.categoria, valor: c.valor, data: c.vencimento, origemRecorrente: c.origemRecorrente }));
     // contas a pagar recorrentes também geram previsões
     const contasComoLista = (d.contasPagar || []).map((c) => ({ ...c, data: c.vencimento }));
     const repeticoesContas = repeticoesPrevistas(contasComoLista, mesDespesas, (reg, data) => ({
@@ -3444,7 +3448,8 @@
           if (base) {
             DADOS.despesas.push(Object.assign({}, base, {
               id: A.novoId(), data: b.dataset.data,
-              recorrencia: FREQUENCIAS[0], recorrente: false   // a fonte da repetição continua sendo o original
+              origemRecorrente: base.origemRecorrente || base.id,   // a fonte continua sendo o original
+              recorrencia: FREQUENCIAS[0], recorrente: false
             }));
             salvarEAtualizar("Lançamento confirmado.");
           }
@@ -3456,6 +3461,7 @@
           if (baseC) {
             DADOS.contasPagar.push(Object.assign({}, baseC, {
               id: A.novoId(), vencimento: b.dataset.data, status: "Pago",
+              origemRecorrente: baseC.origemRecorrente || baseC.id,
               recorrencia: FREQUENCIAS[0], recorrente: false
             }));
             salvarEAtualizar("Conta confirmada como paga.");
@@ -3470,6 +3476,7 @@
           if (origem) {
             const novo = Object.assign({}, origem, {
               id: A.novoId(), data: b.dataset.data,
+              origemRecorrente: origem.origemRecorrente || origem.id,
               recorrencia: FREQUENCIAS[0], recorrente: false
             });
             DADOS.despesas.push(novo);
@@ -3485,6 +3492,7 @@
           if (origemC) {
             const novaC = Object.assign({}, origemC, {
               id: A.novoId(), vencimento: b.dataset.data, status: "Pendente",
+              origemRecorrente: origemC.origemRecorrente || origemC.id,
               recorrencia: FREQUENCIAS[0], recorrente: false
             });
             DADOS.contasPagar.push(novaC);
@@ -3500,6 +3508,7 @@
           if (origemE) {
             const novaE = Object.assign({}, origemE, {
               id: A.novoId(), data: b.dataset.data, previsto: true,
+              origemRecorrente: origemE.origemRecorrente || origemE.id,
               recorrencia: FREQUENCIAS[0], recorrente: false
             });
             DADOS.entradas.push(novaE);
@@ -3524,6 +3533,7 @@
           if (baseE) {
             DADOS.entradas.push(Object.assign({}, baseE, {
               id: A.novoId(), data: b.dataset.data, previsto: false,
+              origemRecorrente: baseE.origemRecorrente || baseE.id,
               recorrencia: FREQUENCIAS[0], recorrente: false
             }));
             salvarEAtualizar("Entrada confirmada.");
