@@ -1948,7 +1948,7 @@
     } else {
       corpo = `<div class="hd" style="${grid}">${thOrdem("ordenar-entradas", "descricao", "Descrição", ordemEntradas)}${thOrdem("ordenar-entradas", "status", "Status", ordemEntradas)}${thOrdem("ordenar-entradas", "banco", "Banco", ordemEntradas)}${thOrdem("ordenar-entradas", "data", "Data", ordemEntradas, "r")}${thOrdem("ordenar-entradas", "valor", "Valor", ordemEntradas, "r hd-valor")}</div>` +
         lista.map((e) => `
-        <div class="rw clicavel${e.prevista ? " linha-prevista" : ""}" style="${grid}" data-acao="editar-entrada" data-id="${e.id}" title="${e.prevista ? "Repetição prevista — abre o lançamento original" : "Abrir para editar"}">
+        <div class="rw clicavel${e.prevista ? " linha-prevista" : ""}" style="${grid}" data-acao="${e.prevista ? "editar-previsao-entrada" : "editar-entrada"}" data-id="${e.id}" data-data="${e.data}" title="${e.prevista ? "Abre este mês para edição (o valor muda só aqui)" : "Abrir para editar"}">
           <div><div class="nm">${esc(e.descricao)}${seloFreq(e)}</div><div class="sub">${esc(e.categoria)} · ${esc(e.tipo || "")}</div></div>
           <div>${e.prevista
             ? `<button class="selo-tag selo-prevista selo-botao" data-acao="confirmar-previsao-entrada" data-id="${e.id}" data-data="${e.data}" title="Confirmar: cria a entrada deste mês">Prevista</button>`
@@ -2109,7 +2109,7 @@
     } else {
       corpo = `<div class="hd" style="${gridD}">${thOrdem("ordenar-despesas", "descricao", "Descrição", ordemDespesas)}${thOrdem("ordenar-despesas", "status", "Status", ordemDespesas)}${thOrdem("ordenar-despesas", "pagoCom", "Banco", ordemDespesas)}${thOrdem("ordenar-despesas", "data", "Data", ordemDespesas, "r")}${thOrdem("ordenar-despesas", "valor", "Valor", ordemDespesas, "r hd-valor")}</div>` +
         lista.map((x) => `
-        <div class="rw clicavel${x.prevista ? " linha-prevista" : ""}" style="${gridD}" data-acao="${x.origem === "despesa" ? "editar-despesa" : "editar-conta"}" data-id="${x.id}" title="${x.prevista ? "Repetição prevista — abre o lançamento original" : "Abrir para editar"}">
+        <div class="rw clicavel${x.prevista ? " linha-prevista" : ""}" style="${gridD}" data-acao="${x.prevista ? (x.origem === "conta" ? "editar-previsao-conta" : "editar-previsao") : (x.origem === "despesa" ? "editar-despesa" : "editar-conta")}" data-id="${x.id}" data-data="${x.data}" title="${x.prevista ? "Abre este mês para edição (o valor muda só aqui)" : "Abrir para editar"}">
           <div><div class="nm">${esc(x.descricao)}${x.recorrencia && x.recorrencia !== FREQUENCIAS[0] ? ` <span class="selo-tag selo-cat">${esc(x.recorrencia.toLowerCase())}</span>` : ""}</div><div class="sub">${esc(x.categoria || "—")}</div></div>
           <div>${x.prevista
             ? `<button class="selo-tag selo-prevista selo-botao" data-acao="${x.origem === "conta" ? "confirmar-previsao-conta" : "confirmar-previsao"}" data-id="${x.id}" data-data="${x.data}" title="Confirmar: cria o lançamento deste mês">${x.status}</button>`
@@ -3459,6 +3459,53 @@
               recorrencia: FREQUENCIAS[0], recorrente: false
             }));
             salvarEAtualizar("Conta confirmada como paga.");
+          }
+          break;
+        }
+
+        case "editar-previsao": {
+          // a repetição vira um lançamento só deste mês, para o valor poder
+          // ser diferente sem afetar os outros meses
+          const origem = achar(DADOS.despesas, id);
+          if (origem) {
+            const novo = Object.assign({}, origem, {
+              id: A.novoId(), data: b.dataset.data,
+              recorrencia: FREQUENCIAS[0], recorrente: false
+            });
+            DADOS.despesas.push(novo);
+            A.salvarDados(DADOS, true, true);
+            renderRota();
+            abrirModalDespesa(novo.id, "despesa");
+          }
+          break;
+        }
+
+        case "editar-previsao-conta": {
+          const origemC = achar(DADOS.contasPagar, id);
+          if (origemC) {
+            const novaC = Object.assign({}, origemC, {
+              id: A.novoId(), vencimento: b.dataset.data, status: "Pendente",
+              recorrencia: FREQUENCIAS[0], recorrente: false
+            });
+            DADOS.contasPagar.push(novaC);
+            A.salvarDados(DADOS, true, true);
+            renderRota();
+            abrirModalDespesa(novaC.id, "conta");
+          }
+          break;
+        }
+
+        case "editar-previsao-entrada": {
+          const origemE = achar(DADOS.entradas, id);
+          if (origemE) {
+            const novaE = Object.assign({}, origemE, {
+              id: A.novoId(), data: b.dataset.data, previsto: true,
+              recorrencia: FREQUENCIAS[0], recorrente: false
+            });
+            DADOS.entradas.push(novaE);
+            A.salvarDados(DADOS, true, true);
+            renderRota();
+            abrirModalEntrada(novaE.id);
           }
           break;
         }
