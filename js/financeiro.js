@@ -46,7 +46,9 @@
   }
 
   function saldoBanco(d, banco) {
-    var totalEntradas = entradasDoBanco(d, banco.id).reduce(function (s, e) { return s + Number(e.valor || 0); }, 0);
+    // entradas ainda não recebidas não entram no saldo da conta
+    var totalEntradas = entradasDoBanco(d, banco.id).filter(function (e) { return !e.aReceber; })
+      .reduce(function (s, e) { return s + Number(e.valor || 0); }, 0);
     var totalDespesas = despesasDoBanco(d, banco.id).reduce(function (s, x) { return s + Number(x.valor || 0); }, 0);
     return Number(banco.saldoInicial || 0) + totalEntradas - totalDespesas;
   }
@@ -78,7 +80,12 @@
     return d.despesas.filter(function (x) { return mesDe(x.data) === mes; });
   }
   function totalEntradasMes(d, mes) {
-    return entradasNoMes(d, mes).reduce(function (s, e) { return s + Number(e.valor || 0); }, 0);
+    return entradasNoMes(d, mes).filter(function (e) { return !e.aReceber; })
+      .reduce(function (s, e) { return s + Number(e.valor || 0); }, 0);
+  }
+  function totalAReceberMes(d, mes) {
+    return entradasNoMes(d, mes).filter(function (e) { return e.aReceber; })
+      .reduce(function (s, e) { return s + Number(e.valor || 0); }, 0);
   }
   function totalDespesasMes(d, mes) {
     return despesasNoMes(d, mes).reduce(function (s, x) { return s + Number(x.valor || 0); }, 0);
@@ -241,6 +248,7 @@
     entradasNoMes: entradasNoMes,
     despesasNoMes: despesasNoMes,
     totalEntradasMes: totalEntradasMes,
+    totalAReceberMes: totalAReceberMes,
     totalDespesasMes: totalDespesasMes,
     resultadoMes: resultadoMes,
     variacaoPercentual: variacaoPercentual,
