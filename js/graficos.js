@@ -384,7 +384,7 @@
     destruir(canvasId);
     var ctx = ctxOf(canvasId); if (!ctx) return;
     var datasets = [{
-      label: "Valor bruto", data: historico.map(function (p) { return p.valor; }),
+      label: "Valor Bruto", data: historico.map(function (p) { return p.valor; }),
       borderColor: CORES.azul, backgroundColor: gradiente(ctx, CORES.azul, 260), fill: true,
       tension: 0.25, pointRadius: historico.length <= 14 ? 4 : 0, pointHoverRadius: 5,
       pointBackgroundColor: "#FFFFFF", pointBorderColor: CORES.azul, pointBorderWidth: 2, borderWidth: 2
