@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "1.0.8";
+  const VERSAO_APP = "1.0.9";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -655,7 +655,7 @@
   function iniciar() {
     DADOS = A.carregarDados();
     I.registrarPontoPatrimonio(DADOS);
-    A.salvarDados(DADOS, true);
+    A.salvarDados(DADOS, true, true);   // automático: não conta como alteração sua
     A.aoMudar(() => { DADOS = A.carregarDados(); renderRota(); });
 
     ligarTopbar();
@@ -679,8 +679,13 @@
     navegarPara("dashboard");
     atualizarCotacoesAutomaticas(true);
     setInterval(() => atualizarCotacoesAutomaticas(true), 5 * 60 * 1000);
-    sincronizar(true);
+    sincronizar(true);                                   // ao abrir/atualizar a página
     setInterval(() => sincronizar(true), 2 * 60 * 1000);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") sincronizar(true);   // voltou para a aba/app
+      else if (cfgSync().token) { clearTimeout(timerEnvio); sincronizar(true); }  // saiu: envia já
+    });
+    window.addEventListener("focus", () => sincronizar(true));
     window.addEventListener("online", () => sincronizar(true));
   }
 
@@ -972,7 +977,7 @@
       const lidas = DADOS.notificacoesLidas || [];
       if (lidas.indexOf(chave) === -1) {
         DADOS.notificacoesLidas = [...lidas, chave];
-        A.salvarDados(DADOS, true);
+        A.salvarDados(DADOS, true, true);
       }
       drop.classList.remove("on");
       navegarPara(item.dataset.secao || "dashboard");
@@ -1059,7 +1064,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.0.8" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.0.9" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1305,7 +1310,10 @@
         if (!a.empresa && q.nome) a.empresa = q.nome;
       });
       const qtdErros = Object.keys(erros).length;
-      if (alterados) salvarEAtualizar(silencioso ? "" : `Cotações atualizadas (${plural(alterados, "ativo")})${qtdErros ? ` · ${qtdErros} com erro` : ""}.`);
+      if (alterados) {
+        A.salvarDados(DADOS, false, true);   // preço de mercado não conta como alteração sua
+        if (!silencioso) toast(`Cotações atualizadas (${plural(alterados, "ativo")})${qtdErros ? ` · ${qtdErros} com erro` : ""}.`);
+      }
       else if (!silencioso) {
         if (qtdErros) { const k = Object.keys(erros)[0]; toast(`Não consegui buscar ${plural(qtdErros, "ativo")}. Ex.: ${k}: ${erros[k]}`); }
         else toast("Cotações já estavam atualizadas.");
