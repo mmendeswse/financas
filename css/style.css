@@ -1083,3 +1083,7 @@ table.tab-acoes th.col-atualiz, table.tab-acoes td.col-atualiz { display: none; 
 .card-centrado .barlist { display: flex; flex-direction: column; justify-content: center; gap: 12px; height: 100%; }
 .card-centrado .donut-wrap { align-items: center; }
 .card-centrado .legenda { justify-content: center; }
+
+/* botão "Importar PDF" com cor própria */
+.btn.btn-pdf { background: linear-gradient(135deg, #8A2BE2, #B45CFF); color: #fff; border-color: transparent; }
+.btn.btn-pdf:hover { filter: brightness(1.12); }

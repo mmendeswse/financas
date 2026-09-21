@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "1.0.4";
+  const VERSAO_APP = "1.0.2";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -123,7 +123,7 @@
   let anoRelA = null;
   let anoRelB = null;
 
-  // intervalo correspondente ao período escolhido; 0 = todo o histórico
+  // intervalo correspondente ao período escolhido; 0 = todo histórico
   function intervaloRel(meses, ano) {
     const fim = new Date().toISOString().slice(0, 10);
     if (!meses) return { ini: "0000-01-01", fim };   // "Tudo"
@@ -472,6 +472,126 @@
     };
     leitor.onerror = () => toast("Não consegui ler o arquivo.");
     leitor.readAsText(arquivo);
+  }
+
+
+  // ---------------------------------------------------------------------
+  // IMPORTAR PDF — lê o Extrato de Custódia do banco dentro do sistema e
+  // alimenta as guias Investimentos e Ações. Nada sai do aparelho.
+  // ---------------------------------------------------------------------
+  // Carrega o leitor de PDF só na primeira importação. O "worker" do
+  // pdf.js é carregado como script comum, para rodar na própria página:
+  // assim funciona também a partir de arquivos locais (Windows e iPad),
+  // onde o navegador bloqueia processos em segundo plano.
+  function carregarScript(src, pronto) {
+    return new Promise((ok, falha) => {
+      if (pronto()) { ok(); return; }
+      const el = document.createElement("script");
+      el.src = src;
+      el.onload = () => ok();
+      el.onerror = () => falha(new Error("não encontrei " + src));
+      document.head.appendChild(el);
+    });
+  }
+  function prepararLeitorPdf() {
+    return carregarScript("js/vendor/pdf.min.js", () => !!window.pdfjsLib)
+      .then(() => carregarScript("js/vendor/pdf.worker.min.js", () => !!window.pdfjsWorker));
+  }
+
+  function importarPdf(arquivo) {
+    if (!window.Extrato) { toast("O leitor de PDF não foi carregado."); return; }
+    toast("Lendo o extrato…");
+    prepararLeitorPdf()
+      .then(() => arquivo.arrayBuffer())
+      .then((buf) => window.Extrato.lerPdf(buf))
+      .then((paginas) => mostrarPreviaExtrato(window.Extrato.interpretar(paginas)))
+      .catch((e) => toast("Não consegui ler o PDF: " + (e && e.message ? e.message : e)));
+  }
+
+  function mostrarPreviaExtrato(r) {
+    if (r.avisos.length && !r.investimentos.length && !r.acoes.length) { toast(r.avisos[0]); return; }
+    const dataRef = r.data || hojeISO();
+    const total = r.investimentos.reduce((t, i) => t + i.valorAtual, 0) + r.acoes.reduce((t, a) => t + a.valorAtual, 0);
+    const linha = (rot, val) => `<div class="kv"><span class="dim">${rot}</span><b>${val}</b></div>`;
+    abrirModal(`
+      <h3>Importar PDF — ${esc(r.banco)} · ${fmtData(dataRef)}</h3>
+      <div class="explica-lista">
+        ${r.investimentos.map((i) => linha(esc(i.nome), brl(i.valorAtual))).join("")}
+        ${r.acoes.map((a) => linha(`${esc(a.ticker)} · ${a.quantidade} un.`, brl(a.valorAtual))).join("")}
+        ${linha("Total do extrato", brl(total))}
+      </div>
+      <p class="campo ajuda" style="margin-top:12px"><b>Atualizar</b> mantém o que você já tem e renova os valores dos ativos do extrato (os novos são acrescentados). <b>Substituir</b> troca tudo das guias Investimentos e Ações pelo conteúdo do PDF.</p>
+      <div class="modal-acoes">
+        <button class="btn primario salvar" id="btnAtualizarPdf">Atualizar</button>
+        <button class="btn perigo" id="btnSubstituirPdf">Substituir</button>
+      </div>`);
+    document.getElementById("btnAtualizarPdf").onclick = () => aplicarExtrato(r, dataRef, false);
+    document.getElementById("btnSubstituirPdf").onclick = () =>
+      confirmarExclusao("Substituir todos os investimentos e ações pelos do extrato?", () => aplicarExtrato(r, dataRef, true));
+  }
+
+  function aplicarExtrato(r, dataRef, substituir) {
+    const pontoValor = (hist, valor) => {
+      const h = (hist || []).filter((p) => p.data !== dataRef);
+      h.push({ data: dataRef, valor }); h.sort((a, b) => a.data.localeCompare(b.data));
+      return h;
+    };
+    const pontoPreco = (hist, preco) => {
+      const h = (hist || []).filter((p) => p.data !== dataRef);
+      h.push({ data: dataRef, preco }); h.sort((a, b) => a.data.localeCompare(b.data));
+      return h;
+    };
+    if (substituir) { DADOS.investimentos = []; DADOS.acoes = []; }
+    let novos = 0, atualizados = 0;
+
+    r.investimentos.forEach((i) => {
+      const atual = DADOS.investimentos.find((x) => String(x.nome).toLowerCase() === i.nome.toLowerCase());
+      if (atual) {
+        // só um extrato igual ou mais recente muda o valor atual;
+        // um extrato antigo apenas completa o histórico do gráfico
+        const ultima = (atual.historicoValores || []).reduce((m, p) => (p.data > m ? p.data : m), "");
+        if (dataRef >= ultima) atual.valorAtual = i.valorAtual;
+        if (i.valorInvestido) atual.valorInvestido = i.valorInvestido;
+        ["dataAplicacao", "dataVencimento", "quantidade", "taxaContratada", "indexador", "emissor", "tipoAtivo", "liquidez"]
+          .forEach((k) => { if (i[k]) atual[k] = i[k]; });
+        atual.historicoValores = pontoValor(atual.historicoValores, i.valorAtual);
+        atualizados++;
+      } else {
+        DADOS.investimentos.push({
+          id: A.novoId(), nome: i.nome, categoria: i.categoria, tipoAtivo: i.tipoAtivo, emissor: i.emissor || "",
+          liquidez: i.liquidez || "Liquidez diária", valorInvestido: i.valorInvestido || 0, quantidade: i.quantidade || 0,
+          dataAplicacao: i.dataAplicacao || "", dataVencimento: i.dataVencimento || "", indexador: i.indexador || "Não se aplica",
+          taxaContratada: i.taxaContratada || 0, valorAtual: i.valorAtual, isentoIR: !!i.isentoIR,
+          obs: `Importado do extrato de ${fmtData(dataRef)}.`, historicoValores: [{ data: dataRef, valor: i.valorAtual }]
+        });
+        novos++;
+      }
+    });
+
+    r.acoes.forEach((a) => {
+      const atual = DADOS.acoes.find((x) => String(x.ticker).toUpperCase() === a.ticker);
+      if (atual) {
+        const ultimaP = (atual.historicoPrecos || []).reduce((m, p) => (p.data > m ? p.data : m), "");
+        if (dataRef >= ultimaP) {
+          atual.quantidade = a.quantidade;
+          atual.precoAtual = a.precoAtual;
+          atual.atualizadoEm = dataRef;
+        }
+        atual.historicoPrecos = pontoPreco(atual.historicoPrecos, a.precoAtual);
+        atualizados++;
+      } else {
+        DADOS.acoes.push({
+          id: A.novoId(), ticker: a.ticker, empresa: a.empresa, categoria: a.categoria,
+          quantidade: a.quantidade, precoMedio: a.precoAtual, precoAtual: a.precoAtual, dividendos: 0,
+          atualizadoEm: dataRef, historicoPrecos: [{ data: dataRef, preco: a.precoAtual }],
+          obs: `Importado do extrato de ${fmtData(dataRef)}. Ajuste o preço médio de compra.`
+        });
+        novos++;
+      }
+    });
+
+    fecharModal();
+    salvarEAtualizar(`Extrato importado: ${plural(atualizados, "ativo atualizado", "ativos atualizados")} e ${plural(novos, "novo", "novos")}.`);
   }
 
   // =========================================================================
@@ -1188,7 +1308,7 @@
     const d = DADOS;
     const p = I.patrimonio(d);
     const mes = F.mesAtual(), mesAnt = F.mesAnterior();
-    const entradas = F.totalEntradasMes(d, mes), entradasAnt = F.totalEntradasMes(d, mesAnt);
+    const entradas = totalEntradasEfetivas(d, mes), entradasAnt = totalEntradasEfetivas(d, mesAnt);
     const despesas = F.totalDespesasMes(d, mes), despesasAnt = F.totalDespesasMes(d, mesAnt);
     const linha = (rot, val, cls) => `<div class="kv"><span class="dim">${rotuloPainel(rot)}</span><b class="${cls || ""}">${val}</b></div>`;
 
@@ -1198,18 +1318,18 @@
         conta: "bancos + investimentos + ações − dívidas",
         pct: p.bruto > 0 ? (p.liquido / p.bruto) * 100 : 0,
         pctRotulo: "do patrimônio bruto está livre de dívidas",
-        linhas: linha("+ Bancos", brl(p.bancos)) + linha("+ Investimentos", brl(p.investimentos)) +
-          linha("+ Ações e FIIs", brl(p.acoes)) + linha("− Dívidas", brl(p.dividas), "down") +
+        linhas: linha("Dinheiro em bancos", brl(p.bancos)) + linha("+ Investimentos", brl(p.investimentos)) +
+          linha("+ Ações e FIIs", brl(p.acoes)) + linha("− Dívidas em aberto", brl(p.dividas), "down") +
           linha("Patrimônio líquido", brl(p.liquido), corSinal(p.liquido)),
         secao: "bancos"
       },
       bancos: {
         titulo: "Saldo bancário",
-        conta: "saldo = saldo inicial + entradas − despesas",
+        conta: "saldo de cada banco = saldo inicial + entradas − despesas",
         pct: p.bruto > 0 ? (p.bancos / p.bruto) * 100 : 0,
         pctRotulo: "do patrimônio bruto está em conta",
         linhas: bancosNaOrdem(F.listaBancosComSaldo(d)).map((b) => linha(esc(b.nome), brl(b.saldoAtual))).join("") +
-          linha("Total", brl(p.bancos), "up"),
+          linha("Total em bancos", brl(p.bancos), "up"),
         secao: "bancos"
       },
       investido: {
@@ -1217,10 +1337,10 @@
         conta: "(investimentos + ações) ÷ patrimônio bruto",
         pct: I.percentualInvestido(d),
         pctRotulo: "do patrimônio bruto está investido",
-        linhas: linha("Rentabilidade carteira", pct(I.rentabilidadeCarteiraAcoes(d)), corSinal(I.rentabilidadeCarteiraAcoes(d))) +
-          linha("Renda fixa, Tesouro e Fundos", brl(p.investimentos)) + linha("Ações, FIIs e ETFs", brl(p.acoes)) +
+        linhas: linha("Renda fixa, tesouro e fundos", brl(p.investimentos)) + linha("Ações, FIIs e ETFs", brl(p.acoes)) +
           linha("Total investido", brl(p.investimentos + p.acoes), "up") +
-          linha("Patrimônio bruto", brl(p.bruto)),
+          linha("Patrimônio bruto", brl(p.bruto)) +
+          linha("Rentabilidade da carteira de ações", pct(I.rentabilidadeCarteiraAcoes(d)), corSinal(I.rentabilidadeCarteiraAcoes(d))),
         secao: "investimentos"
       },
       receitas: {
@@ -1228,9 +1348,9 @@
         conta: "soma das entradas lançadas no mês atual",
         pct: F.variacaoPercentual(entradas, entradasAnt),
         pctRotulo: "de variação em relação ao mês anterior",
-        linhas: linha("Lançamentos", plural(F.entradasNoMes(d, mes).length, "entrada")) +
-          linha("Receitas", brl(entradas), "up") + linha("Receitas mês Anterior", brl(entradasAnt)) +
-          linha("Diferença", brlSinal(entradas - entradasAnt), corSinal(entradas - entradasAnt)),
+        linhas: linha("+ Entradas", brl(entradas), "up") + linha("Mês anterior", brl(entradasAnt)) +
+          linha("≠ Diferença", brlSinal(entradas - entradasAnt), corSinal(entradas - entradasAnt)) +
+          linha("Lançamentos", plural(entradasEfetivasMes(d, mes).length, "entrada")),
         secao: "entradas"
       },
       despesas: {
@@ -1238,11 +1358,11 @@
         conta: "despesas do mês ÷ receitas do mês",
         pct: entradas > 0 ? (despesas / entradas) * 100 : 0,
         pctRotulo: "das receitas do mês já foram gastas",
-        linhas: (F.maiorCategoriaDeGasto(d) ? linha("Maior categoria", esc(F.maiorCategoriaDeGasto(d).categoria) + " · " + brl(F.maiorCategoriaDeGasto(d).valor)) : "") +
-          linha("Despesas mês Anterior", brl(despesasAnt)) +
-          linha("Despesas", brl(despesas), "down") +
-          linha("Receitas", brl(entradas), "up") +
-          linha("Saldo", brlSinal(entradas - despesas), corSinal(entradas - despesas)),
+        linhas: linha("− Despesas", brl(despesas), "down") +
+          linha("+ Entradas", brl(entradas), "up") +
+          linha("Sobra do mês", brlSinal(entradas - despesas), corSinal(entradas - despesas)) +
+          (F.maiorCategoriaDeGasto(d) ? linha("Maior categoria", esc(F.maiorCategoriaDeGasto(d).categoria) + " · " + brl(F.maiorCategoriaDeGasto(d).valor)) : "") +
+          linha("Mês anterior", brl(despesasAnt)),
         secao: "despesas"
       }
     };
@@ -1255,7 +1375,7 @@
       <p class="campo ajuda" style="margin:0 0 12px">Como é calculado: <b>${x.conta}</b></p>
       <div class="explica-lista">${x.linhas}</div>
       <div class="modal-acoes">
-        <button class="btn primario salvar" id="btnIrPainel">Abrir</button>
+        <button class="btn primario salvar" id="btnIrPainel">Abrir ${TITULOS[x.secao][0]}</button>
         <button class="btn" id="btnFecharPainel">Fechar</button>
       </div>`);
     document.getElementById("btnIrPainel").onclick = () => { fecharModal(); navegarPara(x.secao); };
@@ -1276,7 +1396,6 @@
     let palavras = 0;
     return String(texto).split(" ").map((p) => {
       if (!/^[\p{L}]/u.test(p)) return p;            // símbolos (+, −, parênteses) não contam
-      if (/^[\p{L}]$/u.test(p)) return p;            // conectivos de uma letra ("e") ficam em minúsculo
       palavras++;
       return palavras === 2 ? p.charAt(0).toUpperCase() + p.slice(1) : p;
     }).join(" ");
@@ -1314,20 +1433,20 @@
     if (mesesBancos) {
       painelSimples(esc(b.nome), totalPeriodo !== 0 ? (b.valor / totalPeriodo) * 100 : 0,
         `da movimentação de todas as contas ${periodo}`, "entradas − despesas do período",
-        linha("Tipo conta", esc(b.tipo || "—")) +
         linha(`Entradas ${periodo}`, brl(b.entradas), "up") +
         linha(`Despesas ${periodo}`, brl(b.saidas), "down") +
         linha("Movimentação líquida", brlSinal(b.valor), corSinal(b.valor)) +
-        linha("Saldo atual da conta", brl(b.saldoAtual), corSinal(b.saldoAtual)), "bancos",
+        linha("Saldo atual da conta", brl(b.saldoAtual), corSinal(b.saldoAtual)) +
+        linha("Tipo de conta", esc(b.tipo || "—")), "bancos",
         { rotulo: "+ Adicionar", acao: () => abrirModalValorBanco(b.id) });
       return;
     }
 
     painelSimples(esc(b.nome), totalPeriodo > 0 ? (b.saldoAtual / totalPeriodo) * 100 : 0, "do seu dinheiro em bancos está aqui",
       "saldo inicial + entradas − despesas",
-      linha("Tipo conta", esc(b.tipo || "—")) +
-      linha("Saldo inicial", brl(b.saldoInicial)) + linha("+ Entradas recebidas", brl(b.entradas), "up") +
-      linha("− Despesas pagas", brl(b.saidas), "down") + linha("Saldo atual", brl(b.saldoAtual), corSinal(b.saldoAtual)), "bancos",
+      linha("Saldo inicial", brl(b.saldoInicial)) + linha("+ Entradas", brl(b.entradas), "up") +
+      linha("− Despesas", brl(b.saidas), "down") + linha("Saldo", brl(b.saldoAtual), corSinal(b.saldoAtual)) +
+      linha("Tipo de conta", esc(b.tipo || "—")), "bancos",
       { rotulo: "+ Adicionar", acao: () => abrirModalValorBanco(b.id) });
   }
 
@@ -1354,7 +1473,7 @@
     }
     painelSimples(rotulo, total > 0 ? (item.valor / total) * 100 : 0, "do seu patrimônio bruto",
       "valor deste grupo ÷ patrimônio bruto",
-      detalhe + linha("Total grupo", brl(item.valor), "up") + linha("Patrimônio bruto", brl(total)), secao);
+      detalhe + linha("Total do grupo", brl(item.valor), "up") + linha("Patrimônio bruto", brl(total)), secao);
   }
 
   function explicarMeta(id) {
@@ -1365,11 +1484,11 @@
     const dias = m.prazo ? F.diasEntre(m.prazo) : null;
     const linha = (r, v, c) => `<div class="kv"><span class="dim">${rotuloPainel(r)}</span><b class="${c || ""}">${v}</b></div>`;
     painelSimples(esc(m.nome), progresso, "do objetivo já foi guardado", "valor atual ÷ objetivo",
-      linha("Objetivo", brl(m.objetivo)) + linha("Guardado", brl(m.atual), "up") +
-      linha("Falta", brl(falta), falta > 0 ? "down" : "up") +
+      linha("Objetivo", brl(m.objetivo)) + linha("Já guardado", brl(m.atual), "up") +
+      linha("Faltam", brl(falta), falta > 0 ? "down" : "up") +
       linha("Prazo", m.prazo ? fmtData(m.prazo) : "sem prazo") +
       (dias !== null ? linha("Dias restantes", dias >= 0 ? String(dias) : "prazo vencido", dias >= 0 ? "" : "down") : "") +
-      (dias !== null && dias > 0 && falta > 0 ? linha("Guardado mensal", brl(falta / Math.max(1, dias / 30))) : ""),
+      (dias !== null && dias > 0 && falta > 0 ? linha("Guardando por mês", brl(falta / Math.max(1, dias / 30))) : ""),
       "metas", { rotulo: "+ Adicionar", acao: () => abrirModalDeposito(m.id) });
   }
 
@@ -1386,9 +1505,9 @@
       const sobra = entradas - despesas;
       const taxa = entradas > 0 ? (sobra / entradas) * 100 : 0;
       painelSimples("Taxa Poupança", taxa, "das receitas do mês sobraram", "(receitas − despesas) ÷ receitas",
-        linha("+ Receitas mês", brl(entradas), "up") + linha("− Despesas mês", brl(despesas), "down") +
-        linha("Saldo", brlSinal(sobra), corSinal(sobra)) +
-        linha("Referência saudável", "20% ou mais"), "entradas");
+        linha("Referência saudável", "20% ou mais") +
+        linha("+ Entradas", brl(entradas), "up") + linha("− Despesas", brl(despesas), "down") +
+        linha("Sobra", brlSinal(sobra), corSinal(sobra)), "entradas");
       return;
     }
     if (chave === "projecao") {
@@ -1404,9 +1523,9 @@
       const dif = media3 > 0 ? ((projecao - media3) / media3) * 100 : 0;
       painelSimples("Projeção de despesas", dif, "acima (ou abaixo) da sua média dos últimos meses",
         "(gasto até hoje ÷ dias corridos) × dias do mês",
-        linha("Gasto", brl(despesas), "down") + linha("Dias corridos", `${dia} de ${diasNoMes}`) +
-        linha("Média diária", brl(mediaDia)) + linha("Projeção mês", brl(projecao), "down") +
-        linha("Média trimestral", media3 > 0 ? brl(media3) : "sem histórico"), "despesas");
+        linha("− Despesas", brl(despesas), "down") + linha("Dias corridos do mês", `${dia} de ${diasNoMes}`) +
+        linha("Média por dia", brl(mediaDia)) + linha("Projeção para o mês", brl(projecao), "down") +
+        linha("Média dos últimos 3 meses", media3 > 0 ? brl(media3) : "sem histórico"), "despesas");
       return;
     }
     if (chave === "maiorgasto") {
@@ -1416,7 +1535,7 @@
         "do total gasto no mês veio deste lançamento", "maior valor entre as despesas do mês",
         linha("Descrição", esc(maior.descricao)) + linha("Valor", brl(maior.valor), "down") +
         linha("Categoria", esc(maior.categoria || "—")) + linha("Data", fmtData(maior.data)) +
-        linha("Total", brl(despesas)), "despesas");
+        linha("Total gasto no mês", brl(despesas)), "despesas");
       return;
     }
     if (chave === "melhorativo") {
@@ -1435,12 +1554,12 @@
       const vencendo = F.contasVencendoEm(d, 7).filter((c) => c.statusReal !== "Pago");
       const total = vencendo.reduce((sm, c) => sm + Number(c.valor || 0), 0);
       const saldo = F.totalBancos(d);
-      painelSimples("Contas Pendentes", saldo > 0 ? (total / saldo) * 100 : 0,
-        "do seu saldo em bancos está comprometido", "soma contas com vencimento próximos 7 dias",
+      painelSimples("Contas Vencer", saldo > 0 ? (total / saldo) * 100 : 0,
+        "do seu saldo em bancos está comprometido", "soma das contas com vencimento nos próximos 7 dias",
         (vencendo.length
           ? vencendo.map((c) => linha(esc(c.descricao) + " · " + fmtData(c.vencimento), brl(c.valor), c.statusReal === "Atrasado" ? "down" : "")).join("")
-          : `<div class="kv"><span class="dim">Nenhuma conta para os próximos 7 dias</span><b>—</b></div>`) +
-        linha("Total pendente", brl(total), "down") + linha("Saldo bancos", brl(saldo), "up"), "despesas");
+          : linha("Nenhuma conta nos próximos 7 dias", "—")) +
+        linha("Saldo em bancos", brl(saldo), "up") + linha("Total a pagar", brl(total), "down"), "despesas");
       return;
     }
   }
@@ -1464,7 +1583,7 @@
     const totE = entradas.reduce((s, e) => s + Number(e.valor || 0), 0);
     const totD = despesas.reduce((s, x) => s + Number(x.valor || 0), 0);
     const meses = mesesRelA || Math.max(1, new Set(entradas.concat(despesas).map((m) => String(m.data).slice(0, 7))).size);
-    const periodo = mesesRelA ? `últimos ${mesesRelA} meses` : "todo o histórico";
+    const periodo = mesesRelA ? `últimos ${mesesRelA} meses` : "todo histórico";
     const linha = (r, v, c) => `<div class="kv"><span class="dim">${rotuloPainel(r)}</span><b class="${c || ""}">${v}</b></div>`;
     const porCategoria = (lista) => {
       const mapa = {};
@@ -1475,35 +1594,33 @@
 
     if (chave === "rel-receitas") {
       painelSimples("Receitas", totE > 0 ? 100 : 0, `do que entrou no período (${periodo})`, "soma das entradas no período",
-        linha("Lançamentos", plural(entradas.length, "entrada")) +
-        porCategoria(entradas) + linha("Total recebido", brl(totE), "up") +
-        linha("Média mensal", brl(totE / meses)), "entradas");
+        porCategoria(entradas) + linha("Média por mês", brl(totE / meses)) +
+        linha("Total", brl(totE), "up") + linha("Lançamentos", plural(entradas.length, "entrada")), "entradas");
       return;
     }
     if (chave === "rel-despesas") {
       painelSimples("Despesas", totE > 0 ? (totD / totE) * 100 : 0, "das receitas do período foram gastas", "soma das despesas ÷ receitas",
-        linha("Lançamentos", plural(despesas.length, "despesa")) +
-        porCategoria(despesas) + linha("Total gasto", brl(totD), "down") +
-        linha("Média mensal", brl(totD / meses)), "despesas");
+        porCategoria(despesas) + linha("Média por mês", brl(totD / meses)) +
+        linha("Total", brl(totD), "down") + linha("Lançamentos", plural(despesas.length, "despesa")), "despesas");
       return;
     }
     if (chave === "rel-resultado") {
       const saldo = totE - totD;
       painelSimples("Resultado", totE > 0 ? (saldo / totE) * 100 : 0, "das receitas sobraram no período", "receitas − despesas",
-        linha("Período", periodo) +
-        linha("+ Receitas", brl(totE), "up") + linha("− Despesas", brl(totD), "down") +
-        linha("Média mensal", brlSinal(saldo / meses), corSinal(saldo)) +
-        linha("Resultado", brlSinal(saldo), corSinal(saldo)), "entradas");
+        linha("Receitas", brl(totE), "up") + linha("− Despesas", brl(totD), "down") +
+        linha("Resultado", brlSinal(saldo), corSinal(saldo)) +
+        linha("Média por mês", brlSinal(saldo / meses), corSinal(saldo)) +
+        linha("Período", periodo), "entradas");
       return;
     }
     if (chave === "rel-rentabilidade") {
       const rent = I.rentabilidadeCarteiraAcoes(d);
       painelSimples("Rentabilidade da carteira", rent, "acumulada em relação ao preço médio", "(valor atual ÷ valor investido − 1) × 100",
-        linha("Ativos carteira", plural(d.acoes.length, "ativo")) +
         linha("Valor investido", brl(I.totalInvestidoAcoes(d))) +
         linha("Valor atual", brl(I.totalCarteiraAcoes(d)), "creme") +
+        linha("Resultado", brlSinal(I.resultadoCarteiraAcoes(d)), corSinal(I.resultadoCarteiraAcoes(d))) +
         linha("Dividendos recebidos", brl(I.totalDividendosAcoes(d)), "up") +
-        linha("Resultado", brlSinal(I.resultadoCarteiraAcoes(d)), corSinal(I.resultadoCarteiraAcoes(d))), "acoes");
+        linha("Ativos na carteira", plural(d.acoes.length, "ativo")), "acoes");
     }
   }
 
@@ -1529,12 +1646,12 @@
 
     painelSimples(nomeMes.charAt(0).toUpperCase() + nomeMes.slice(1),
       totE > 0 ? (saldo / totE) * 100 : 0, "das receitas sobraram neste mês", "receitas − despesas",
-      linha("Lançamentos", `${plural(entradas.length, "entrada")} · ${plural(despesas.length, "despesa")}`) +
-      linha("Receitas", brl(totE), "up") +
+      linha("+ Entradas", brl(totE), "up") +
       catE.map((c) => linha("· " + esc(c.nome), brl(c.valor))).join("") +
-      linha("Despesas", brl(totD), "down") +
+      linha("− Despesas", brl(totD), "down") +
       catD.map((c) => linha("· " + esc(c.nome), brl(c.valor))).join("") +
-      linha("Resultado", brlSinal(saldo), corSinal(saldo)),
+      linha("Saldo", brlSinal(saldo), corSinal(saldo)) +
+      linha("Lançamentos", `${plural(entradas.length, "entrada")} · ${plural(despesas.length, "despesa")}`),
       "despesas");
   }
 
@@ -1558,15 +1675,15 @@
 
     painelSimples(quando.charAt(0).toUpperCase() + quando.slice(1), pctPeriodo,
       "de variação desde o início do período", "valor do mês ÷ valor do primeiro mês",
-      linha("Patrimônio mês", brl(ponto.valor), "creme") +
-      (ehPico ? linha("Situação", "maior valor do período · " + brl(ponto.valor), "up") : "") +
+      linha("Patrimônio", brl(ponto.valor), "creme") +
+      (ehPico ? linha("Situação", "maior valor do período", "up") : "") +
       (anterior ? linha("Mês anterior", brl(anterior.valor)) : "") +
-      (anterior ? linha("Variação mês", brlSinal(varMes), corSinal(varMes)) : "") +
-      linha("Início período", brl(primeiro.valor)) +
-      linha("Variação período", brlSinal(varPeriodo), corSinal(varPeriodo)) +
-      linha("Bancos", brl(p.bancos)) +
-      linha("Investimentos", brl(p.investimentos + p.acoes)) +
-      linha("Dívidas", brl(p.dividas), p.dividas > 0 ? "down" : ""),
+      (anterior ? linha("Variação", brlSinal(varMes), corSinal(varMes)) : "") +
+      linha("Início do período", brl(primeiro.valor)) +
+      linha("Variação no período", brlSinal(varPeriodo), corSinal(varPeriodo)) +
+      linha("Bancos hoje", brl(p.bancos)) +
+      linha("Investimentos hoje", brl(p.investimentos + p.acoes)) +
+      linha("Dívidas hoje", brl(p.dividas), p.dividas > 0 ? "down" : ""),
       "bancos");
   }
 
@@ -1576,7 +1693,7 @@
   function renderDashboard(d) {
     const p = I.patrimonio(d);
     const mesAtual = F.mesAtual(), mesAnt = F.mesAnterior();
-    const entradasMes = F.totalEntradasMes(d, mesAtual), entradasAnt = F.totalEntradasMes(d, mesAnt);
+    const entradasMes = totalEntradasEfetivas(d, mesAtual), entradasAnt = totalEntradasEfetivas(d, mesAnt);
     const despesasMes = F.totalDespesasMes(d, mesAtual), despesasAnt = F.totalDespesasMes(d, mesAnt);
     const resultadoMes = entradasMes - despesasMes, resultadoAnt = entradasAnt - despesasAnt;
     const patrimonioAnt = (() => {
@@ -1644,11 +1761,11 @@
       </div>
 
       <div class="grid">
-        <div class="c12">${card("", "Evolução patrimonial", `patrimônio líquido · ${mesesEvo ? mesesEvo + " meses de " + anoEvo : "todo o histórico"}`,
+        <div class="c12">${card("", "Evolução patrimonial", `patrimônio líquido · ${mesesEvo ? mesesEvo + " meses de " + anoEvo : "todo histórico"}`,
           (pico ? `<span class="pill-pico">PICO ${brl(pico)}</span>` : "") +
           `<div class="filtro-mes">${seletorAnoDash("anoEvo", anoEvo, anosDashboard(d))}${abasMeses("periodo-evo", mesesEvo, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }, { meses: 0, rotulo: "Tudo" }])}</div>`, histPeriodo.length >= 2
             ? `<div style="padding:8px 14px 12px;height:236px"><canvas id="graf-evolucao"></canvas></div>`
-            : `<div class="empty">Sem registros de patrimônio em ${mesesEvo ? `${mesesEvo} ${mesesEvo === 1 ? "mês" : "meses"} de ${anoEvo}` : "todo o histórico"}. O patrimônio é registrado a cada dia que você abre o sistema.</div>`)}</div>
+            : `<div class="empty">Sem registros de patrimônio em ${mesesEvo ? `${mesesEvo} ${mesesEvo === 1 ? "mês" : "meses"} de ${anoEvo}` : "todo histórico"}. O patrimônio é registrado a cada dia que você abre o sistema.</div>`)}</div>
       </div>
 
       ${stripKpis([
@@ -1656,7 +1773,7 @@
         { rotulo: "PROJEÇÃO DESPESAS", valor: brl(projecao), sub: `Ritmo Atual`, cor: "#FF7A1A", icone: ICONES_STRIP.projecao, chave: "projecao" },
         { rotulo: "MAIOR GASTO", valor: maiorDesp ? brl(maiorDesp.valor) : "—", sub: maiorDesp ? esc(maiorDesp.descricao) : "sem despesas", cor: "#FF4D7A", icone: ICONES_STRIP.maiorgasto, chave: "maiorgasto" },
         { rotulo: "MELHOR ATIVO", valor: melhor ? esc(melhor.ticker) : "—", sub: melhor ? `<b class="${corSinal(melhor.rentabilidade)}">${pct(melhor.rentabilidade)}</b> Preço Médio` : "sem ativos", cor: "#FFC233", icone: ICONES_STRIP.melhorativo, chave: "melhorativo" },
-        { rotulo: "CONTAS PENDENTES", valor: brl(totalVencendo), sub: `${vencendo.length} ${vencendo.length === 1 ? "Conta" : "Contas"}`, cor: "#2F8BFF", icone: ICONES_STRIP.avencer, chave: "avencer" }
+        { rotulo: "CONTAS VENCER", valor: brl(totalVencendo), sub: `${vencendo.length} ${vencendo.length === 1 ? "Conta" : "Contas"}`, cor: "#2F8BFF", icone: ICONES_STRIP.avencer, chave: "avencer" }
       ])}
 
     `;
@@ -1884,6 +2001,20 @@
   // ---------------------------------------------------------------------
   const PASSO_DIAS = { "Semanal": 7, "Quinzenal": 14 };
 
+  // Cada lançamento recorrente pode ter ajustes por mês guardados nele
+  // mesmo (valor diferente, marcado como pago). Assim não é preciso criar
+  // um registro novo para mudar o valor de um único mês.
+  function ajusteDoMes(reg, mes) { return (reg && reg.meses && reg.meses[mes]) || {}; }
+  function valorDoMes(reg, mes) {
+    const a = ajusteDoMes(reg, mes);
+    return a.valor !== undefined ? Number(a.valor) : Number(reg.valor || 0);
+  }
+  function mesQuitado(reg, mes) { return !!ajusteDoMes(reg, mes).pago; }
+  function gravarAjuste(reg, mes, dados) {
+    reg.meses = reg.meses || {};
+    reg.meses[mes] = Object.assign({}, reg.meses[mes], dados);
+  }
+
   function ocorrenciasNoMes(reg, mes) {
     const freq = freqDe(reg);
     if (freq === FREQUENCIAS[0] || !reg.data) return [];
@@ -1915,6 +2046,18 @@
     return datas.map((dt) => dt.toISOString().slice(0, 10));
   }
 
+
+  function entradasEfetivasMes(d, mes) {
+    const reais = d.entradas.filter((e) => String(e.data || "").slice(0, 7) === mes && !e.previsto);
+    const recorrentes = repeticoesPrevistas(d.entradas, mes, (reg, data) => ({
+      descricao: reg.descricao, valor: valorDoMes(reg, data.slice(0, 7)), quitado: mesQuitado(reg, data.slice(0, 7))
+    })).filter((x) => x.quitado);
+    return [...reais, ...recorrentes];
+  }
+  function totalEntradasEfetivas(d, mes) {
+    return entradasEfetivasMes(d, mes).reduce((t, e) => t + Number(e.valor || 0), 0);
+  }
+
   function repeticoesPrevistas(lista, mes, monta, existentes) {
     const saida = [];
     const noMes = [...lista.filter((r) => String(r.data || "").slice(0, 7) === mes), ...(existentes || [])];
@@ -1942,9 +2085,12 @@
 
   function renderEntradas(d) {
     if (!mesEntradas) mesEntradas = F.mesAtual();
-    const previstasEnt = repeticoesPrevistas(d.entradas, mesEntradas, (reg, data) => ({ ...reg, data, prevista: true }));
+    const previstasEnt = repeticoesPrevistas(d.entradas, mesEntradas, (reg, data) => ({
+      ...reg, data, valor: valorDoMes(reg, data.slice(0, 7)), prevista: true,
+      recebidaNoMes: mesQuitado(reg, data.slice(0, 7)), mesRef: data.slice(0, 7)
+    }));
     const lista = [...d.entradas.filter((e) => String(e.data || "").slice(0, 7) === mesEntradas), ...previstasEnt]
-      .map((e) => ({ ...e, banco: F.nomeBanco(d, e.bancoId), status: (e.prevista || e.previsto) ? "Prevista" : "Recebida" }))
+      .map((e) => ({ ...e, banco: F.nomeBanco(d, e.bancoId), status: e.prevista ? (e.recebidaNoMes ? "Recebida" : "Prevista") : (e.previsto ? "Prevista" : "Recebida") }))
       .sort((a, b) => ordemEntradas.campo === "recentes"
         ? (b.data || "").localeCompare(a.data || "")
         : comparar(a, b, ordemEntradas.campo, ordemEntradas.dir));
@@ -1960,7 +2106,7 @@
         <div class="rw clicavel${e.prevista ? " linha-prevista" : ""}" style="${grid}" data-acao="${e.prevista ? "editar-previsao-entrada" : "editar-entrada"}" data-id="${e.id}" data-data="${e.data}" title="${e.prevista ? "Abre este mês para edição (o valor muda só aqui)" : "Abrir para editar"}">
           <div><div class="nm">${esc(e.descricao)}${seloFreq(e)}</div><div class="sub">${esc(e.categoria)} · ${esc(e.tipo || "")}</div></div>
           <div>${e.prevista
-            ? `<button class="selo-tag selo-prevista selo-botao" data-acao="confirmar-previsao-entrada" data-id="${e.id}" data-data="${e.data}" title="Confirmar: cria a entrada deste mês">Prevista</button>`
+            ? `<button class="selo-tag ${e.recebidaNoMes ? "selo-pago" : "selo-prevista"} selo-botao" data-acao="quitar-mes-entrada" data-id="${e.id}" data-mes="${e.mesRef}" title="${e.recebidaNoMes ? "Marcar como prevista" : "Marcar como recebida"}">${e.status}</button>`
             : `<button class="selo-tag ${e.previsto ? "selo-prevista" : "selo-pago"} selo-botao" data-acao="alternar-prevista-entrada" data-id="${e.id}" title="${e.previsto ? "Marcar como recebida" : "Marcar como prevista"}">${e.status}</button>`}</div>
           <div><button class="cel-banco cel-banco-botao" data-acao="trocar-banco-entrada" data-id="${e.id}" title="${e.prevista ? "Troca o banco do lançamento original (vale para todas as repetições)" : "Trocar o banco desta entrada"}">${marcaBanco(e.banco, 18)}<span class="dim">${esc(e.banco)}</span></button></div>
           <div class="r dim" style="font-size:12px">${fmtDataCurta(e.data)}</div>
@@ -1999,12 +2145,14 @@
     };
   }
 
-  function abrirModalEntrada(id, bancoIdPadrao) {
+  // "previsao" indica que estamos editando a repetição de um mês: o
+  // registro daquele mês só é criado quando o usuário salva.
+  function abrirModalEntrada(id, bancoIdPadrao, previsao) {
     const e = id ? achar(DADOS.entradas, id) : null;
     abrirModal(`
       <h3>${e ? "Editar entrada" : "Nova entrada"}</h3>
       <div class="par">
-        <div class="campo"><label for="f_data">Data</label><input id="f_data" type="date" value="${e ? e.data : hojeISO()}"></div>
+        <div class="campo"><label for="f_data">Data</label><input id="f_data" type="date" value="${previsao ? previsao.data : (e ? e.data : hojeISO())}"></div>
         <div class="campo"><label for="f_valor">Valor</label>${campoMoeda("f_valor", e ? e.valor : "")}</div>
       </div>
       <div class="campo"><label for="f_desc">Descrição</label><input id="f_desc" value="${e ? esc(e.descricao) : ""}" placeholder="Salário"></div>
@@ -2038,7 +2186,11 @@
         recorrente: document.getElementById("f_rec").value !== FREQUENCIAS[0],
         obs: document.getElementById("f_obs").value.trim()
       };
-      if (e) Object.assign(e, registro); else DADOS.entradas.push(registro);
+      if (previsao) {
+        // muda só o mês editado, dentro do próprio lançamento recorrente
+        gravarAjuste(e, previsao.data.slice(0, 7), { valor: registro.valor });
+      } else if (e) Object.assign(e, registro);
+      else DADOS.entradas.push(registro);
       fecharModal();
       salvarEAtualizar(e ? "Entrada atualizada." : "Entrada cadastrada.");
     };
@@ -2078,13 +2230,15 @@
     const contasComoLista = (d.contasPagar || []).map((c) => ({ ...c, data: c.vencimento }));
     const repeticoesContas = repeticoesPrevistas(contasComoLista, mesDespesas, (reg, data) => ({
       origem: "conta", id: reg.id, descricao: reg.descricao, categoria: reg.categoria,
-      pagoCom: reg.bancoId ? F.nomeBanco(d, reg.bancoId) : "—", data, valor: Number(reg.valor || 0),
-      status: "Prevista", recorrencia: freqDe(reg), prevista: true
+      pagoCom: reg.bancoId ? F.nomeBanco(d, reg.bancoId) : "—", data, valor: valorDoMes(reg, data.slice(0, 7)),
+      status: mesQuitado(reg, data.slice(0, 7)) ? "Pago" : "Prevista",
+      recorrencia: freqDe(reg), prevista: true, mesRef: data.slice(0, 7)
     }), []);
     const repeticoes = repeticoesPrevistas(d.despesas, mesDespesas, (reg, data) => ({
       origem: "despesa", id: reg.id, descricao: reg.descricao, categoria: reg.categoria,
-      pagoCom: bancoDoLancamento(d, reg), data, valor: Number(reg.valor || 0),
-      status: "Prevista", recorrencia: freqDe(reg), prevista: true
+      pagoCom: bancoDoLancamento(d, reg), data, valor: valorDoMes(reg, data.slice(0, 7)),
+      status: mesQuitado(reg, data.slice(0, 7)) ? "Pago" : "Prevista",
+      recorrencia: freqDe(reg), prevista: true, mesRef: data.slice(0, 7)
     }), contasDoMes);
     const previstas = F.listaContasPagarComStatus(d).map((c) => ({
       origem: "conta", id: c.id, descricao: c.descricao, categoria: c.categoria,
@@ -2107,12 +2261,10 @@
 
     // "Pagas" soma as despesas lançadas e as contas já quitadas do mês;
     // "em aberto" soma o que ainda está pendente ou atrasado no mês
-    const listaPagas = lista.filter((x) => x.status === "Pago");
-    const listaAbertas = lista.filter((x) => x.status !== "Pago");
-    const listaAtrasadas = lista.filter((x) => x.status === "Atrasado");
-    const totalMes = listaPagas.reduce((t, x) => t + Number(x.valor || 0), 0);
-    const emAberto = listaAbertas.reduce((t, x) => t + Number(x.valor || 0), 0);
-    const totalAtrasadas = listaAtrasadas.reduce((t, x) => t + Number(x.valor || 0), 0);
+    const somaStatus = (st) => lista.filter((x) => x.status === st).reduce((t, x) => t + Number(x.valor || 0), 0);
+    const totalMes = somaStatus("Pago");
+    const emAberto = somaStatus("Prevista");
+    const atrasadas = somaStatus("Atrasado");
     const aPagar = F.totalAPagar(d);
     const gridD = GRID_LANCAMENTOS;
 
@@ -2125,7 +2277,7 @@
         <div class="rw clicavel${x.prevista ? " linha-prevista" : ""}" style="${gridD}" data-acao="${x.prevista ? (x.origem === "conta" ? "editar-previsao-conta" : "editar-previsao") : (x.origem === "despesa" ? "editar-despesa" : "editar-conta")}" data-id="${x.id}" data-data="${x.data}" title="${x.prevista ? "Abre este mês para edição (o valor muda só aqui)" : "Abrir para editar"}">
           <div><div class="nm">${esc(x.descricao)}${x.recorrencia && x.recorrencia !== FREQUENCIAS[0] ? ` <span class="selo-tag selo-cat">${esc(x.recorrencia.toLowerCase())}</span>` : ""}</div><div class="sub">${esc(x.categoria || "—")}</div></div>
           <div>${x.prevista
-            ? `<button class="selo-tag selo-prevista selo-botao" data-acao="${x.origem === "conta" ? "confirmar-previsao-conta" : "confirmar-previsao"}" data-id="${x.id}" data-data="${x.data}" title="Confirmar: cria o lançamento deste mês">${x.status}</button>`
+            ? `<button class="selo-tag ${x.status === "Pago" ? "selo-pago" : "selo-prevista"} selo-botao" data-acao="${x.origem === "conta" ? "quitar-mes-conta" : "quitar-mes"}" data-id="${x.id}" data-mes="${x.mesRef}" title="Confirmar: cria o lançamento deste mês">${x.status}</button>`
             : `<button class="selo-tag selo-${x.status.toLowerCase()} selo-botao" data-acao="${x.origem === "conta" ? "alternar-pago" : "tornar-pendente"}" data-id="${x.id}" title="${x.origem === "conta" ? (x.status === "Pago" ? "Marcar como prevista" : "Marcar como paga") : "Marcar como prevista (vira conta a pagar)"}">${x.status}</button>`}</div>
           <div>${x.origem === "despesa" || x.pagoCom !== "—"
             ? `<button class="cel-banco cel-banco-botao" data-acao="${x.origem === "despesa" ? "trocar-banco" : "trocar-banco-conta"}" data-id="${x.id}" title="Trocar o banco (nas repetições, altera o lançamento original)">${marcaBanco(x.pagoCom, 18)}<span class="dim">${esc(x.pagoCom)}</span></button>`
@@ -2137,7 +2289,7 @@
 
     return `
       <div class="grid g-top">
-        <div class="c12">${card("c12", "Despesas", `${listaPagas.length === 1 ? "Paga" : "Pagas"}: ${brl(totalMes)} · ${listaAbertas.length === 1 ? "prevista" : "previstas"}: ${brl(emAberto)}${totalAtrasadas > 0 ? ` · ${listaAtrasadas.length === 1 ? "Atrasada" : "Atrasadas"}: ${brl(totalAtrasadas)}` : ""}`,
+        <div class="c12">${card("c12", "Despesas", `Pagas: ${brl(totalMes)} · Previstas: ${brl(emAberto)} · Atrasadas: ${brl(atrasadas)}`,
           `${abasMeses12("mes-despesas", mesDespesas, "anoDespesas", anosDisponiveis(d))}<button class="btn primario" data-acao="nova-despesa"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`,
           corpo)}</div>
       </div>
@@ -2159,12 +2311,12 @@
   // Formulário único de despesa: o campo Status decide onde o registro
   // fica guardado — "Pago" vira uma despesa lançada, "Pendente" vira uma
   // conta a pagar com a data informada como vencimento.
-  function abrirModalDespesa(id, origem) {
+  function abrirModalDespesa(id, origem, previsao) {
     origem = origem || "despesa";
     const x = id ? achar(origem === "conta" ? DADOS.contasPagar : DADOS.despesas, id) : null;
     const ehConta = origem === "conta";
     const statusAtual = x ? (ehConta ? (F.statusReal(x) === "Pago" ? "Pago" : "Prevista") : "Pago") : "Pago";
-    const dataAtual = x ? (ehConta ? x.vencimento : x.data) : hojeISO();
+    const dataAtual = previsao ? previsao.data : (x ? (ehConta ? x.vencimento : x.data) : hojeISO());
 
     abrirModal(`
       <h3>${x ? "Editar lançamento" : "Nova despesa"}</h3>
@@ -2187,7 +2339,7 @@
       <div class="campo"><label for="f_obs">Observação</label><textarea id="f_obs" placeholder="Opcional">${x ? esc(x.obs || "") : ""}</textarea></div>
       <div class="modal-acoes">
         <button class="btn primario salvar" id="btnSalvar">Salvar</button>
-        ${x ? `<button class="btn perigo" id="btnExcluir">Excluir</button>` : ""}
+        ${x && !previsao ? `<button class="btn perigo" id="btnExcluir">Excluir</button>` : ""}
       </div>`);
 
     // mostra ou esconde os campos de pagamento conforme o status
@@ -2217,7 +2369,9 @@
           recorrencia: document.getElementById("f_rec").value,
           recorrente: document.getElementById("f_rec").value !== FREQUENCIAS[0], obs
         };
-        if (x && !ehConta) Object.assign(x, registro);
+        if (previsao) {
+          gravarAjuste(x, previsao.data.slice(0, 7), { valor: registro.valor, pago: true });
+        } else if (x && !ehConta) Object.assign(x, registro);
         else {
           DADOS.despesas.push(registro);
           if (x && ehConta) DADOS.contasPagar = DADOS.contasPagar.filter((r) => r.id !== x.id); // deixou de ser conta
@@ -2233,7 +2387,9 @@
           recorrencia: document.getElementById("f_rec").value,
           recorrente: document.getElementById("f_rec").value !== FREQUENCIAS[0]
         };
-        if (x && ehConta) Object.assign(x, registro);
+        if (previsao) {
+          gravarAjuste(x, previsao.data.slice(0, 7), { valor: registro.valor, pago: false });
+        } else if (x && ehConta) Object.assign(x, registro);
         else {
           DADOS.contasPagar.push(registro);
           if (x && !ehConta) DADOS.despesas = DADOS.despesas.filter((r) => r.id !== x.id); // virou conta a pagar
@@ -2243,7 +2399,7 @@
       salvarEAtualizar(x ? "Lançamento atualizado." : (status === "Pago" ? "Despesa cadastrada." : "Conta prevista cadastrada."));
     };
 
-    if (x) document.getElementById("btnExcluir").onclick = () => {
+    if (x && !previsao) document.getElementById("btnExcluir").onclick = () => {
       fecharModal();
       confirmarExclusao("Excluir este lançamento?", () => {
         if (ehConta) DADOS.contasPagar = DADOS.contasPagar.filter((r) => r.id !== x.id);
@@ -2701,6 +2857,26 @@
     return hist;
   }
 
+
+  function explicarPontoInvestimento(inv, ponto, idx, historico) {
+    if (!inv || !ponto) return;
+    const aplicado = Number(inv.valorInvestido || 0);
+    const anterior = idx > 0 ? historico[idx - 1] : null;
+    const resultado = ponto.valor - aplicado;
+    const varAnt = anterior ? ponto.valor - anterior.valor : 0;
+    const linha = (r, v, c) => `<div class="kv"><span class="dim">${rotuloPainel(r)}</span><b class="${c || ""}">${v}</b></div>`;
+    painelSimples(`${esc(inv.nome)} · ${fmtData(ponto.data)}`, aplicado > 0 ? (resultado / aplicado) * 100 : 0,
+      "de rendimento sobre o valor aplicado", "(valor na data ÷ valor aplicado − 1) × 100",
+      linha("Valor na data", brl(ponto.valor), "creme") +
+      linha("Valor aplicado", brl(aplicado)) +
+      linha("Resultado", brlSinal(resultado), corSinal(resultado)) +
+      (anterior ? linha("Registro anterior", `${brl(anterior.valor)} · ${fmtData(anterior.data)}`) : "") +
+      (anterior ? linha("Variação", brlSinal(varAnt), corSinal(varAnt)) : "") +
+      linha("Valor atual", brl(inv.valorAtual)),
+      "investimentos",
+      { rotulo: "Editar", acao: () => abrirModalInvestimento(inv.id) });
+  }
+
   function renderDetalheInvestimento(d, id) {
     const inv = achar(d.investimentos, id);
     if (!inv) return `<div class="empty">Aplicação não encontrada. <button class="link-acao" data-acao="ir" data-secao="investimentos">Voltar para Investimentos</button></div>`;
@@ -2727,10 +2903,10 @@
       <div class="grid g-top grid-detalhe">
         <div class="c8">${card("", `${esc(inv.nome)} <span class="selo-tag selo-acao">${esc(inv.tipoAtivo || inv.categoria)}</span>`,
           `${esc(inv.emissor || "emissor não informado")}${inv.indexador ? " · " + esc(inv.indexador) + (inv.taxaContratada ? " " + f2(inv.taxaContratada) + "%" : "") : ""}`,
-          `${abasPeriodo()}<button class="btn primario" data-acao="novo-valor-investimento" data-id="${inv.id}">Alterar Lançamento</button><button class="btn" data-acao="editar-investimento" data-id="${inv.id}">Editar</button>`,
+          `${abasPeriodo()}<button class="btn" data-acao="editar-investimento" data-id="${inv.id}">Editar</button>`,
           hist.length >= 2
             ? `<div style="padding:10px 16px;height:260px"><canvas id="graf-valor-investimento"></canvas></div>`
-            : `<div class="empty">Ainda não há histórico suficiente para o gráfico.<br>Use "Alterar Lançamento" sempre que consultar o saldo — cada lançamento vira um ponto na linha.</div>`)}</div>
+            : `<div class="empty">Ainda não há histórico suficiente para o gráfico.<br>Cada importação do extrato (ou edição do valor atual) acrescenta um ponto na linha.</div>`)}</div>
         <div class="c4">${card("", "Resumo da aplicação", "", "", `
           <div class="kv"><span class="dim">Quantidade de cotas</span><b>${inv.quantidade ? f2(inv.quantidade) : "—"}</b></div>
           <div class="kv"><span class="dim">Preço por cota (aplicação)</span><b>${inv.quantidade ? brl(aplicado / inv.quantidade) : "—"}</b></div>
@@ -2753,10 +2929,10 @@
     const inv = achar(DADOS.investimentos, id);
     if (!inv) return;
     abrirModal(`
-      <h3>Alterar Lançamento — ${esc(inv.nome)}</h3>
+      <h3>Lançar novo valor — ${esc(inv.nome)}</h3>
       <div class="par">
         <div class="campo"><label for="f_data">Data</label><input id="f_data" type="date" value="${hojeISO()}"></div>
-        <div class="campo"><label for="f_valor">Valor Bruto</label>${campoMoeda("f_valor", inv.valorAtual)}</div>
+        <div class="campo"><label for="f_valor">Valor bruto</label>${campoMoeda("f_valor", inv.valorAtual)}</div>
       </div>
       <p class="campo ajuda">Informe o saldo bruto que aparece hoje no extrato. O imposto e o valor líquido são recalculados automaticamente.</p>
       <div class="modal-acoes"><button class="btn primario salvar" id="btnSalvar">Salvar</button></div>`);
@@ -3191,10 +3367,10 @@
     const m = id ? achar(DADOS.metas, id) : null;
     abrirModal(`
       <h3>${m ? "Editar meta" : "Nova meta"}</h3>
-      <div class="campo"><label for="f_nome">Nome</label><input id="f_nome" value="${m ? esc(m.nome) : ""}" placeholder="Reserva de emergência"></div>
+      <div class="campo"><label for="f_nome">Nome da meta</label><input id="f_nome" value="${m ? esc(m.nome) : ""}" placeholder="Reserva de emergência"></div>
       <div class="par">
         <div class="campo"><label for="f_obj">Objetivo</label>${campoMoeda("f_obj", m ? m.objetivo : "", "R$ 30.000,00")}</div>
-        <div class="campo"><label for="f_atual">Valor Atual</label>${campoMoeda("f_atual", m ? m.atual : 0)}</div>
+        <div class="campo"><label for="f_atual">Valor atual</label>${campoMoeda("f_atual", m ? m.atual : 0)}</div>
       </div>
       <div class="par">
         <div class="campo"><label for="f_prazo">Prazo</label><input id="f_prazo" type="date" value="${m ? m.prazo || "" : ""}"></div>
@@ -3264,7 +3440,7 @@
     const historicoP = d.historicoPatrimonio.filter((h) => h.data >= fxB.ini && h.data <= fxB.fim);
     const picoB = historicoP.length ? Math.max(...historicoP.map((h) => h.valor)) : 0;
     const OPC = [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }, { meses: 0, rotulo: "Tudo" }];
-    const rotulo = (m, ano) => (m ? `${m} ${m === 1 ? "mês" : "meses"} de ${ano}` : "Todo o histórico");
+    const rotulo = (m, ano) => (m ? `${m} ${m === 1 ? "mês" : "meses"} de ${ano}` : "Todo histórico");
     const rotuloPeriodo = rotulo(mesesRelA, anoRelA);
 
     return `
@@ -3301,7 +3477,7 @@
           <div class="body pad" style="display:flex;gap:10px;flex-wrap:wrap">
             <button class="btn primario" data-acao="exportar-backup">Exportar Backup</button>
             <button class="btn primario" data-acao="importar-backup">Importar Backup</button>
-            <button class="btn primario" data-acao="importar-banco">Importar Banco</button>
+            <button class="btn btn-pdf" data-acao="importar-pdf">Importar PDF</button>
           </div>
           <p class="campo ajuda" style="padding:0 16px 14px">Importar um backup substitui todos os dados atuais — o sistema pede confirmação antes de aplicar.</p>
         `)}</div>
@@ -3316,7 +3492,7 @@
             ` : `
               <button class="btn primario" data-acao="criar-senha">Criar</button>
             `}
-            <p class="campo ajuda" style="margin-top:26px">Vale só neste aparelho. Se esquecer a senha, será preciso apagar os dados e restaurar um backup.</p>
+            <p class="campo ajuda" style="margin-top:26px">Válido exclusivamente neste dispositivo. Em caso de esquecimento da senha, será necessário apagar os dados e restaurar um backup.</p>
           </div>`)}</div>
         <div class="c6">${card("", "Cotações automáticas", "dólar via AwesomeAPI (sem chave) · ações via brapi.dev", "", `
           <div class="body pad">
@@ -3393,7 +3569,8 @@
       case "detalhe-investimento": {
         const inv = achar(d.investimentos, ROTA.param);
         const h = inv && inv.historicoValores ? inv.historicoValores : [];
-        if (h.length >= 2) G.renderEvolucaoValor("graf-valor-investimento", filtrarPeriodo(h, periodoGrafico), Number(inv.valorInvestido || 0), "Valor aplicado");
+        if (h.length >= 2) G.renderEvolucaoValor("graf-valor-investimento", filtrarPeriodo(h, periodoGrafico), Number(inv.valorInvestido || 0), "Valor aplicado",
+          { aoClicar: (ponto, idx, lista) => explicarPontoInvestimento(inv, ponto, idx, lista) });
         break;
       }
       case "detalhe-acao": {
@@ -3451,74 +3628,45 @@
         case "excluir-conta":
           confirmarExclusao("Excluir esta conta?", () => { DADOS.contasPagar = DADOS.contasPagar.filter((x) => x.id !== id); salvarEAtualizar("Conta excluída."); });
           break;
-        case "confirmar-previsao": {
-          // a repetição prevista vira um lançamento de verdade naquele dia
-          const base = achar(DADOS.despesas, id);
-          if (base) {
-            DADOS.despesas.push(Object.assign({}, base, {
-              id: A.novoId(), data: b.dataset.data,
-              origemRecorrente: base.origemRecorrente || base.id
-            }));
-            salvarEAtualizar("Lançamento confirmado.");
+
+        case "editar-previsao":
+          abrirModalDespesa(id, "despesa", { origemId: id, data: b.dataset.data });
+          break;
+
+        case "editar-previsao-conta":
+          abrirModalDespesa(id, "conta", { origemId: id, data: b.dataset.data });
+          break;
+
+        case "editar-previsao-entrada":
+          abrirModalEntrada(id, null, { origemId: id, data: b.dataset.data });
+          break;
+
+        case "quitar-mes": {
+          const reg = achar(DADOS.despesas, id);
+          if (reg) {
+            const mes = b.dataset.mes;
+            gravarAjuste(reg, mes, { pago: !mesQuitado(reg, mes) });
+            salvarEAtualizar(mesQuitado(reg, mes) ? "Marcada como paga neste mês." : "Marcada como prevista.");
           }
           break;
         }
 
-        case "confirmar-previsao-conta": {
-          const baseC = achar(DADOS.contasPagar, id);
-          if (baseC) {
-            DADOS.contasPagar.push(Object.assign({}, baseC, {
-              id: A.novoId(), vencimento: b.dataset.data, status: "Pago",
-              origemRecorrente: baseC.origemRecorrente || baseC.id
-            }));
-            salvarEAtualizar("Conta confirmada como paga.");
+        case "quitar-mes-conta": {
+          const regC = achar(DADOS.contasPagar, id);
+          if (regC) {
+            const mes = b.dataset.mes;
+            gravarAjuste(regC, mes, { pago: !mesQuitado(regC, mes) });
+            salvarEAtualizar(mesQuitado(regC, mes) ? "Marcada como paga neste mês." : "Marcada como prevista.");
           }
           break;
         }
 
-        case "editar-previsao": {
-          // a repetição vira um lançamento só deste mês, para o valor poder
-          // ser diferente sem afetar os outros meses
-          const origem = achar(DADOS.despesas, id);
-          if (origem) {
-            const novo = Object.assign({}, origem, {
-              id: A.novoId(), data: b.dataset.data,
-              origemRecorrente: origem.origemRecorrente || origem.id
-            });
-            DADOS.despesas.push(novo);
-            A.salvarDados(DADOS, true, true);
-            renderRota();
-            abrirModalDespesa(novo.id, "despesa");
-          }
-          break;
-        }
-
-        case "editar-previsao-conta": {
-          const origemC = achar(DADOS.contasPagar, id);
-          if (origemC) {
-            const novaC = Object.assign({}, origemC, {
-              id: A.novoId(), vencimento: b.dataset.data, status: "Pendente",
-              origemRecorrente: origemC.origemRecorrente || origemC.id
-            });
-            DADOS.contasPagar.push(novaC);
-            A.salvarDados(DADOS, true, true);
-            renderRota();
-            abrirModalDespesa(novaC.id, "conta");
-          }
-          break;
-        }
-
-        case "editar-previsao-entrada": {
-          const origemE = achar(DADOS.entradas, id);
-          if (origemE) {
-            const novaE = Object.assign({}, origemE, {
-              id: A.novoId(), data: b.dataset.data, previsto: true,
-              origemRecorrente: origemE.origemRecorrente || origemE.id
-            });
-            DADOS.entradas.push(novaE);
-            A.salvarDados(DADOS, true, true);
-            renderRota();
-            abrirModalEntrada(novaE.id);
+        case "quitar-mes-entrada": {
+          const regE = achar(DADOS.entradas, id);
+          if (regE) {
+            const mes = b.dataset.mes;
+            gravarAjuste(regE, mes, { pago: !mesQuitado(regE, mes) });
+            salvarEAtualizar(mesQuitado(regE, mes) ? "Marcada como recebida neste mês." : "Marcada como prevista.");
           }
           break;
         }
@@ -3528,18 +3676,6 @@
           if (ent4) {
             ent4.previsto = !ent4.previsto;
             salvarEAtualizar(ent4.previsto ? "Marcada como prevista." : "Marcada como recebida.");
-          }
-          break;
-        }
-
-        case "confirmar-previsao-entrada": {
-          const baseE = achar(DADOS.entradas, id);
-          if (baseE) {
-            DADOS.entradas.push(Object.assign({}, baseE, {
-              id: A.novoId(), data: b.dataset.data, previsto: false,
-              origemRecorrente: baseE.origemRecorrente || baseE.id
-            }));
-            salvarEAtualizar("Entrada confirmada.");
           }
           break;
         }
@@ -3717,7 +3853,7 @@
         case "desligar-sync": desligarSync(); break;
         case "abrir-pasta-banco": A.abrirPastaBanco(); break;
         case "exportar-backup": A.exportarDados(); toast("Backup exportado — verifique seus downloads."); break;
-        case "importar-banco": document.getElementById("inputImportarBanco").click(); break;
+        case "importar-pdf": document.getElementById("inputImportarPdf").click(); break;
         case "importar-backup": document.getElementById("inputImportarBackup").click(); break;
 
         case "apagar-tudo":
@@ -3763,11 +3899,11 @@
   // ENTRADAS GLOBAIS (arquivos de importação, fora de #conteudo)
   // =========================================================================
   function ligarInputsGlobais() {
-    const inpBanco = document.getElementById("inputImportarBanco");
-    if (inpBanco) inpBanco.addEventListener("change", (e) => {
+    const inpPdf = document.getElementById("inputImportarPdf");
+    if (inpPdf) inpPdf.addEventListener("change", (e) => {
       const arquivo = e.target.files[0];
       e.target.value = "";
-      if (arquivo) importarBanco(arquivo);
+      if (arquivo) importarPdf(arquivo);
     });
 
     document.getElementById("inputImportarBackup").addEventListener("change", (e) => {

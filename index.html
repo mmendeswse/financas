@@ -17,7 +17,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="assets/icons/icon-192.png?v=4">
 <meta name="color-scheme" content="dark">
 <title>Muller Mendes — Gerenciamento de Finanças Pessoais</title>
-<link rel="stylesheet" href="css/style.css?v=1.0.4">
+<link rel="stylesheet" href="css/style.css?v=1.0.2">
 </head>
 <body>
 
@@ -73,21 +73,22 @@
 <div class="scrim" id="scrim"></div>
 <div class="modal" id="modal" role="dialog" aria-modal="true"></div>
 <div class="toast" id="toast"></div>
-<input type="file" id="inputImportarBanco" accept="application/json" style="display:none">
+<input type="file" id="inputImportarPdf" accept=".pdf,application/pdf" style="display:none">
 <input type="file" id="inputImportarBackup" accept="application/json" style="display:none">
 
 <!-- bibliotecas de terceiros (offline, incluídas no projeto) -->
 <script src="js/vendor/chart.umd.min.js"></script>
 
 <!-- módulos do sistema — ordem importa: cada um usa o anterior -->
-<script src="js/bloqueio.js?v=1.0.4"></script>
-<script src="js/armazenamento.js?v=1.0.4"></script>
-<script src="js/financeiro.js?v=1.0.4"></script>
-<script src="js/investimentos.js?v=1.0.4"></script>
-<script src="js/graficos.js?v=1.0.4"></script>
-<script src="js/cotacoes.js?v=1.0.4"></script>
-<script src="js/sincronizacao.js?v=1.0.4"></script>
-<script src="js/app.js?v=1.0.4"></script>
+<script src="js/bloqueio.js?v=1.0.2"></script>
+<script src="js/armazenamento.js?v=1.0.2"></script>
+<script src="js/financeiro.js?v=1.0.2"></script>
+<script src="js/investimentos.js?v=1.0.2"></script>
+<script src="js/graficos.js?v=1.0.2"></script>
+<script src="js/extrato.js?v=1.0.2"></script>
+<script src="js/cotacoes.js?v=1.0.2"></script>
+<script src="js/sincronizacao.js?v=1.0.2"></script>
+<script src="js/app.js?v=1.0.2"></script>
 <script>
   // registra o service worker (só funciona via http/https — no iPad, depois de publicado)
   if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {

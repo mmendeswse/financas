@@ -283,7 +283,7 @@
       tension: 0.25, pointRadius: 0, pointHoverRadius: 4, borderWidth: 2
     }];
     if (precoMedio > 0) {
-      datasets.push({ label: "Preço médio", data: historicoPrecos.map(function () { return precoMedio; }), borderColor: CORES.laranja, borderDash: [5, 4], borderWidth: 1.5, pointRadius: 0, fill: false });
+      datasets.push({ label: "Valor de compra", data: historicoPrecos.map(function () { return precoMedio; }), borderColor: CORES.laranja, borderDash: [6, 4], borderWidth: 2, pointRadius: 0, fill: false });
     }
     instancias[canvasId] = new Chart(ctx, {
       type: "line",
@@ -295,7 +295,23 @@
           legend: { position: "top", align: "end", labels: { color: CORES.texto, font: fonte(10.5), boxWidth: 8, usePointStyle: true, pointStyle: "circle" } },
           tooltip: tooltipPadrao({ callbacks: { label: function (c) { return " " + c.dataset.label + ": R$ " + c.parsed.y.toFixed(2); } } })
         }
-      }
+      },
+      plugins: precoMedio > 0 ? [{
+        // etiqueta "Compra R$ x" encostada na linha, na borda direita
+        id: "rotuloCompra",
+        afterDatasetsDraw: function (grafico) {
+          var y = grafico.scales.y.getPixelForValue(precoMedio);
+          if (y < grafico.chartArea.top || y > grafico.chartArea.bottom) return;
+          var c = grafico.ctx, txt = "Compra " + moeda(precoMedio);
+          c.save();
+          c.font = "700 10.5px 'Segoe UI', Roboto, sans-serif";
+          var larg = c.measureText(txt).width + 12, x = grafico.chartArea.right - larg - 4;
+          c.fillStyle = "rgba(255,138,61,0.18)"; c.strokeStyle = CORES.laranja; c.lineWidth = 1;
+          c.fillRect(x, y - 9, larg, 18); c.strokeRect(x, y - 9, larg, 18);
+          c.fillStyle = CORES.laranja; c.textBaseline = "middle"; c.fillText(txt, x + 6, y);
+          c.restore();
+        }
+      }] : []
     });
   }
 
@@ -380,11 +396,12 @@
   // Evolução do valor de um investimento (detalhe da aplicação), com
   // linha de referência no valor aplicado
   // ---------------------------------------------------------------------
-  function renderEvolucaoValor(canvasId, historico, referencia, rotuloRef) {
+  function renderEvolucaoValor(canvasId, historico, referencia, rotuloRef, opcoes) {
+    opcoes = opcoes || {};
     destruir(canvasId);
     var ctx = ctxOf(canvasId); if (!ctx) return;
     var datasets = [{
-      label: "Valor Bruto", data: historico.map(function (p) { return p.valor; }),
+      label: "Valor bruto", data: historico.map(function (p) { return p.valor; }),
       borderColor: CORES.azul, backgroundColor: gradiente(ctx, CORES.azul, 260), fill: true,
       tension: 0.25, pointRadius: historico.length <= 14 ? 4 : 0, pointHoverRadius: 5,
       pointBackgroundColor: "#FFFFFF", pointBorderColor: CORES.azul, pointBorderWidth: 2, borderWidth: 2
@@ -401,6 +418,12 @@
       data: { labels: historico.map(function (p) { return new Date(p.data + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }); }), datasets: datasets },
       options: {
         responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
+        onClick: function (evt, elementos) {
+          if (opcoes.aoClicar && elementos && elementos.length) opcoes.aoClicar(historico[elementos[0].index], elementos[0].index, historico);
+        },
+        onHover: function (evt, elementos) {
+          if (evt && evt.native && evt.native.target) evt.native.target.style.cursor = (opcoes.aoClicar && elementos.length) ? "pointer" : "default";
+        },
         scales: { x: eixoX({ ticks: { color: CORES.texto, font: fonte(10.5), maxTicksLimit: 6 } }), y: eixoY() },
         plugins: {
           legend: { position: "top", align: "end", labels: { color: CORES.texto, font: fonte(10.5), boxWidth: 8, usePointStyle: true, pointStyle: "circle" } },
