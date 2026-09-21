@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "1.0.7";
+  const VERSAO_APP = "1.0.8";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -324,7 +324,8 @@
   // ou com o exemplo) pareceria "mais recente" e apagaria o cofre.
   function conectarSync() {
     const token = (document.getElementById("cfgSyncToken").value || "").trim();
-    const cofreInformado = (document.getElementById("cfgSyncCofre").value || "").trim();
+    const campoCofre = document.getElementById("cfgSyncCofre");
+    const cofreInformado = campoCofre ? (campoCofre.value || "").trim() : "";
     if (!token) { toast("Cole o token do GitHub para ativar."); return; }
     mostrarStatusSync("verificando token…");
     let login = "";
@@ -1058,7 +1059,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.0.7" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.0.8" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -3557,9 +3558,8 @@
             <div class="sync-estado"><span class="sync-ponto ligado"></span><b>Ligada neste aparelho</b>
               <span class="dim" id="statusSync">${esc(statusSync || "última sincronização: " + ultima)}</span></div>
             <div class="campo" style="margin-top:14px"><label>Código do cofre</label>
-              <div class="sync-codigo"><code>${esc(sc.cofre || "sendo criado…")}</code>
-                ${sc.cofre ? `<button class="btn pequeno" data-acao="copiar-cofre" data-cofre="${esc(sc.cofre)}">Copiar</button>` : ""}</div>
-              <div class="ajuda">Para ligar outro aparelho seu, use o mesmo token. O código só é necessário se mais de uma pessoa usar a mesma conta do GitHub.</div></div>
+              <div class="sync-codigo"><code>${esc(sc.cofre || "sendo criado…")}</code></div>
+              <div class="ajuda">Para ligar outro aparelho seu, use o mesmo token.</div></div>
             <div style="display:flex;gap:10px;flex-wrap:wrap">
               <button class="btn primario" data-acao="sincronizar-agora">Sincronizar</button>
               <button class="btn perigo" data-acao="desligar-sync">Desligar</button>
@@ -3568,14 +3568,9 @@
           <div class="body pad">
             <div class="sync-estado"><span class="sync-ponto"></span><b>Desligada neste aparelho</b>
               <span class="dim" id="statusSync">${esc(statusSync)}</span></div>
-            <div class="sync-grade">
-              <div class="campo"><label for="cfgSyncToken">Token do GitHub</label>
-                <input id="cfgSyncToken" type="password" autocomplete="off" spellcheck="false" placeholder="ghp_…">
-                <div class="ajuda">Crie em GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic), marcando só a permissão <b>gist</b>.</div></div>
-              <div class="campo"><label for="cfgSyncCofre">Código do cofre <span class="dim">(opcional)</span></label>
-                <input id="cfgSyncCofre" autocomplete="off" spellcheck="false" placeholder="deixe vazio na maioria dos casos">
-                <div class="ajuda">Preencha só se mais de uma pessoa usar a mesma conta do GitHub: cada uma informa o código do próprio cofre.</div></div>
-            </div>
+            <div class="campo"><label for="cfgSyncToken">Token do GitHub</label>
+              <input id="cfgSyncToken" type="password" autocomplete="off" spellcheck="false" placeholder="ghp_…">
+              <div class="ajuda">Crie em GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic), marcando só a permissão <b>gist</b>.</div></div>
             <button class="btn primario" data-acao="conectar-sync">Ligar</button>
             <p class="campo ajuda" style="margin-top:14px">Ligue primeiro no aparelho com os dados mais completos. Nos outros, use o mesmo token: eles baixam os dados e passam a se atualizar sozinhos. Cada pessoa com o próprio token tem um cofre separado — os dados nunca se misturam. O token fica salvo só neste aparelho.</p>
           </div>`;
