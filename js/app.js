@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "1.0.2";
+  const VERSAO_APP = "1.0.5";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -1004,7 +1004,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.0.2" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.0.5" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1318,18 +1318,18 @@
         conta: "bancos + investimentos + ações − dívidas",
         pct: p.bruto > 0 ? (p.liquido / p.bruto) * 100 : 0,
         pctRotulo: "do patrimônio bruto está livre de dívidas",
-        linhas: linha("Dinheiro em bancos", brl(p.bancos)) + linha("+ Investimentos", brl(p.investimentos)) +
-          linha("+ Ações e FIIs", brl(p.acoes)) + linha("− Dívidas em aberto", brl(p.dividas), "down") +
+        linhas: linha("+ Bancos", brl(p.bancos)) + linha("+ Investimentos", brl(p.investimentos)) +
+          linha("+ Ações e FIIs", brl(p.acoes)) + linha("− Dívidas", brl(p.dividas), "down") +
           linha("Patrimônio líquido", brl(p.liquido), corSinal(p.liquido)),
         secao: "bancos"
       },
       bancos: {
         titulo: "Saldo bancário",
-        conta: "saldo de cada banco = saldo inicial + entradas − despesas",
+        conta: "saldo = saldo inicial + entradas − despesas",
         pct: p.bruto > 0 ? (p.bancos / p.bruto) * 100 : 0,
         pctRotulo: "do patrimônio bruto está em conta",
         linhas: bancosNaOrdem(F.listaBancosComSaldo(d)).map((b) => linha(esc(b.nome), brl(b.saldoAtual))).join("") +
-          linha("Total em bancos", brl(p.bancos), "up"),
+          linha("Total", brl(p.bancos), "up"),
         secao: "bancos"
       },
       investido: {
@@ -1337,10 +1337,10 @@
         conta: "(investimentos + ações) ÷ patrimônio bruto",
         pct: I.percentualInvestido(d),
         pctRotulo: "do patrimônio bruto está investido",
-        linhas: linha("Renda fixa, tesouro e fundos", brl(p.investimentos)) + linha("Ações, FIIs e ETFs", brl(p.acoes)) +
+        linhas: linha("Rentabilidade carteira", pct(I.rentabilidadeCarteiraAcoes(d)), corSinal(I.rentabilidadeCarteiraAcoes(d))) +
+          linha("Renda fixa, Tesouro e Fundos", brl(p.investimentos)) + linha("Ações, FIIs e ETFs", brl(p.acoes)) +
           linha("Total investido", brl(p.investimentos + p.acoes), "up") +
-          linha("Patrimônio bruto", brl(p.bruto)) +
-          linha("Rentabilidade da carteira de ações", pct(I.rentabilidadeCarteiraAcoes(d)), corSinal(I.rentabilidadeCarteiraAcoes(d))),
+          linha("Patrimônio bruto", brl(p.bruto)),
         secao: "investimentos"
       },
       receitas: {
@@ -1348,9 +1348,9 @@
         conta: "soma das entradas lançadas no mês atual",
         pct: F.variacaoPercentual(entradas, entradasAnt),
         pctRotulo: "de variação em relação ao mês anterior",
-        linhas: linha("+ Entradas", brl(entradas), "up") + linha("Mês anterior", brl(entradasAnt)) +
-          linha("≠ Diferença", brlSinal(entradas - entradasAnt), corSinal(entradas - entradasAnt)) +
-          linha("Lançamentos", plural(entradasEfetivasMes(d, mes).length, "entrada")),
+        linhas: linha("Lançamentos", plural(entradasEfetivasMes(d, mes).length, "entrada")) +
+          linha("+ Entradas", brl(entradas), "up") + linha("Mês anterior", brl(entradasAnt)) +
+          linha("≠ Diferença", brlSinal(entradas - entradasAnt), corSinal(entradas - entradasAnt)),
         secao: "entradas"
       },
       despesas: {
@@ -1358,10 +1358,10 @@
         conta: "despesas do mês ÷ receitas do mês",
         pct: entradas > 0 ? (despesas / entradas) * 100 : 0,
         pctRotulo: "das receitas do mês já foram gastas",
-        linhas: linha("− Despesas", brl(despesas), "down") +
+        linhas: (F.maiorCategoriaDeGasto(d) ? linha("Maior categoria", esc(F.maiorCategoriaDeGasto(d).categoria) + " · " + brl(F.maiorCategoriaDeGasto(d).valor)) : "") +
+          linha("− Despesas", brl(despesas), "down") +
           linha("+ Entradas", brl(entradas), "up") +
-          linha("Sobra do mês", brlSinal(entradas - despesas), corSinal(entradas - despesas)) +
-          (F.maiorCategoriaDeGasto(d) ? linha("Maior categoria", esc(F.maiorCategoriaDeGasto(d).categoria) + " · " + brl(F.maiorCategoriaDeGasto(d).valor)) : "") +
+          linha("Saldo", brlSinal(entradas - despesas), corSinal(entradas - despesas)) +
           linha("Mês anterior", brl(despesasAnt)),
         secao: "despesas"
       }
@@ -1375,7 +1375,7 @@
       <p class="campo ajuda" style="margin:0 0 12px">Como é calculado: <b>${x.conta}</b></p>
       <div class="explica-lista">${x.linhas}</div>
       <div class="modal-acoes">
-        <button class="btn primario salvar" id="btnIrPainel">Abrir ${TITULOS[x.secao][0]}</button>
+        <button class="btn primario salvar" id="btnIrPainel">Abrir</button>
         <button class="btn" id="btnFecharPainel">Fechar</button>
       </div>`);
     document.getElementById("btnIrPainel").onclick = () => { fecharModal(); navegarPara(x.secao); };
@@ -1396,6 +1396,7 @@
     let palavras = 0;
     return String(texto).split(" ").map((p) => {
       if (!/^[\p{L}]/u.test(p)) return p;            // símbolos (+, −, parênteses) não contam
+      if (/^[\p{L}]$/u.test(p)) return p;            // conectivos de uma letra ("e") ficam em minúsculo
       palavras++;
       return palavras === 2 ? p.charAt(0).toUpperCase() + p.slice(1) : p;
     }).join(" ");
@@ -1433,20 +1434,20 @@
     if (mesesBancos) {
       painelSimples(esc(b.nome), totalPeriodo !== 0 ? (b.valor / totalPeriodo) * 100 : 0,
         `da movimentação de todas as contas ${periodo}`, "entradas − despesas do período",
+        linha("Tipo conta", esc(b.tipo || "—")) +
         linha(`Entradas ${periodo}`, brl(b.entradas), "up") +
         linha(`Despesas ${periodo}`, brl(b.saidas), "down") +
         linha("Movimentação líquida", brlSinal(b.valor), corSinal(b.valor)) +
-        linha("Saldo atual da conta", brl(b.saldoAtual), corSinal(b.saldoAtual)) +
-        linha("Tipo de conta", esc(b.tipo || "—")), "bancos",
+        linha("Saldo atual da conta", brl(b.saldoAtual), corSinal(b.saldoAtual)), "bancos",
         { rotulo: "+ Adicionar", acao: () => abrirModalValorBanco(b.id) });
       return;
     }
 
     painelSimples(esc(b.nome), totalPeriodo > 0 ? (b.saldoAtual / totalPeriodo) * 100 : 0, "do seu dinheiro em bancos está aqui",
       "saldo inicial + entradas − despesas",
+      linha("Tipo conta", esc(b.tipo || "—")) +
       linha("Saldo inicial", brl(b.saldoInicial)) + linha("+ Entradas", brl(b.entradas), "up") +
-      linha("− Despesas", brl(b.saidas), "down") + linha("Saldo", brl(b.saldoAtual), corSinal(b.saldoAtual)) +
-      linha("Tipo de conta", esc(b.tipo || "—")), "bancos",
+      linha("− Despesas", brl(b.saidas), "down") + linha("Saldo", brl(b.saldoAtual), corSinal(b.saldoAtual)), "bancos",
       { rotulo: "+ Adicionar", acao: () => abrirModalValorBanco(b.id) });
   }
 
@@ -1473,7 +1474,7 @@
     }
     painelSimples(rotulo, total > 0 ? (item.valor / total) * 100 : 0, "do seu patrimônio bruto",
       "valor deste grupo ÷ patrimônio bruto",
-      detalhe + linha("Total do grupo", brl(item.valor), "up") + linha("Patrimônio bruto", brl(total)), secao);
+      detalhe + linha("Total grupo", brl(item.valor), "up") + linha("Patrimônio bruto", brl(total)), secao);
   }
 
   function explicarMeta(id) {
@@ -1484,11 +1485,11 @@
     const dias = m.prazo ? F.diasEntre(m.prazo) : null;
     const linha = (r, v, c) => `<div class="kv"><span class="dim">${rotuloPainel(r)}</span><b class="${c || ""}">${v}</b></div>`;
     painelSimples(esc(m.nome), progresso, "do objetivo já foi guardado", "valor atual ÷ objetivo",
-      linha("Objetivo", brl(m.objetivo)) + linha("Já guardado", brl(m.atual), "up") +
+      linha("Objetivo", brl(m.objetivo)) + linha("Guardado", brl(m.atual), "up") +
       linha("Faltam", brl(falta), falta > 0 ? "down" : "up") +
       linha("Prazo", m.prazo ? fmtData(m.prazo) : "sem prazo") +
       (dias !== null ? linha("Dias restantes", dias >= 0 ? String(dias) : "prazo vencido", dias >= 0 ? "" : "down") : "") +
-      (dias !== null && dias > 0 && falta > 0 ? linha("Guardando por mês", brl(falta / Math.max(1, dias / 30))) : ""),
+      (dias !== null && dias > 0 && falta > 0 ? linha("Guardado mensal", brl(falta / Math.max(1, dias / 30))) : ""),
       "metas", { rotulo: "+ Adicionar", acao: () => abrirModalDeposito(m.id) });
   }
 
@@ -1507,7 +1508,7 @@
       painelSimples("Taxa Poupança", taxa, "das receitas do mês sobraram", "(receitas − despesas) ÷ receitas",
         linha("Referência saudável", "20% ou mais") +
         linha("+ Entradas", brl(entradas), "up") + linha("− Despesas", brl(despesas), "down") +
-        linha("Sobra", brlSinal(sobra), corSinal(sobra)), "entradas");
+        linha("Saldo", brlSinal(sobra), corSinal(sobra)), "entradas");
       return;
     }
     if (chave === "projecao") {
@@ -1523,9 +1524,9 @@
       const dif = media3 > 0 ? ((projecao - media3) / media3) * 100 : 0;
       painelSimples("Projeção de despesas", dif, "acima (ou abaixo) da sua média dos últimos meses",
         "(gasto até hoje ÷ dias corridos) × dias do mês",
-        linha("− Despesas", brl(despesas), "down") + linha("Dias corridos do mês", `${dia} de ${diasNoMes}`) +
-        linha("Média por dia", brl(mediaDia)) + linha("Projeção para o mês", brl(projecao), "down") +
-        linha("Média dos últimos 3 meses", media3 > 0 ? brl(media3) : "sem histórico"), "despesas");
+        linha("− Despesas", brl(despesas), "down") + linha("Dias corridos", `${dia} de ${diasNoMes}`) +
+        linha("Média diária", brl(mediaDia)) + linha("Projeção mês", brl(projecao), "down") +
+        linha("Média trimestral", media3 > 0 ? brl(media3) : "sem histórico"), "despesas");
       return;
     }
     if (chave === "maiorgasto") {
@@ -1535,7 +1536,7 @@
         "do total gasto no mês veio deste lançamento", "maior valor entre as despesas do mês",
         linha("Descrição", esc(maior.descricao)) + linha("Valor", brl(maior.valor), "down") +
         linha("Categoria", esc(maior.categoria || "—")) + linha("Data", fmtData(maior.data)) +
-        linha("Total gasto no mês", brl(despesas)), "despesas");
+        linha("Total", brl(despesas)), "despesas");
       return;
     }
     if (chave === "melhorativo") {
@@ -1554,12 +1555,12 @@
       const vencendo = F.contasVencendoEm(d, 7).filter((c) => c.statusReal !== "Pago");
       const total = vencendo.reduce((sm, c) => sm + Number(c.valor || 0), 0);
       const saldo = F.totalBancos(d);
-      painelSimples("Contas Vencer", saldo > 0 ? (total / saldo) * 100 : 0,
-        "do seu saldo em bancos está comprometido", "soma das contas com vencimento nos próximos 7 dias",
+      painelSimples("Contas Pendentes", saldo > 0 ? (total / saldo) * 100 : 0,
+        "do seu saldo em bancos está comprometido", "soma contas com vencimento próximos 7 dias",
         (vencendo.length
           ? vencendo.map((c) => linha(esc(c.descricao) + " · " + fmtData(c.vencimento), brl(c.valor), c.statusReal === "Atrasado" ? "down" : "")).join("")
-          : linha("Nenhuma conta nos próximos 7 dias", "—")) +
-        linha("Saldo em bancos", brl(saldo), "up") + linha("Total a pagar", brl(total), "down"), "despesas");
+          : `<div class="kv"><span class="dim">Nenhuma conta para os próximos 7 dias</span><b>—</b></div>`) +
+        linha("Saldo bancos", brl(saldo), "up") + linha("Total pendente", brl(total), "down"), "despesas");
       return;
     }
   }
@@ -1594,23 +1595,23 @@
 
     if (chave === "rel-receitas") {
       painelSimples("Receitas", totE > 0 ? 100 : 0, `do que entrou no período (${periodo})`, "soma das entradas no período",
-        porCategoria(entradas) + linha("Média por mês", brl(totE / meses)) +
-        linha("Total", brl(totE), "up") + linha("Lançamentos", plural(entradas.length, "entrada")), "entradas");
+        porCategoria(entradas) + linha("Média mensal", brl(totE / meses)) +
+        linha("Lançamentos", plural(entradas.length, "entrada")) + linha("Total", brl(totE), "up"), "entradas");
       return;
     }
     if (chave === "rel-despesas") {
       painelSimples("Despesas", totE > 0 ? (totD / totE) * 100 : 0, "das receitas do período foram gastas", "soma das despesas ÷ receitas",
-        porCategoria(despesas) + linha("Média por mês", brl(totD / meses)) +
-        linha("Total", brl(totD), "down") + linha("Lançamentos", plural(despesas.length, "despesa")), "despesas");
+        porCategoria(despesas) + linha("Média mensal", brl(totD / meses)) +
+        linha("Lançamentos", plural(despesas.length, "despesa")) + linha("Total", brl(totD), "down"), "despesas");
       return;
     }
     if (chave === "rel-resultado") {
       const saldo = totE - totD;
       painelSimples("Resultado", totE > 0 ? (saldo / totE) * 100 : 0, "das receitas sobraram no período", "receitas − despesas",
-        linha("Receitas", brl(totE), "up") + linha("− Despesas", brl(totD), "down") +
-        linha("Resultado", brlSinal(saldo), corSinal(saldo)) +
-        linha("Média por mês", brlSinal(saldo / meses), corSinal(saldo)) +
-        linha("Período", periodo), "entradas");
+        linha("Período", periodo) +
+        linha("+ Receitas", brl(totE), "up") + linha("− Despesas", brl(totD), "down") +
+        linha("Média mensal", brlSinal(saldo / meses), corSinal(saldo)) +
+        linha("Resultado", brlSinal(saldo), corSinal(saldo)), "entradas");
       return;
     }
     if (chave === "rel-rentabilidade") {
@@ -1618,9 +1619,9 @@
       painelSimples("Rentabilidade da carteira", rent, "acumulada em relação ao preço médio", "(valor atual ÷ valor investido − 1) × 100",
         linha("Valor investido", brl(I.totalInvestidoAcoes(d))) +
         linha("Valor atual", brl(I.totalCarteiraAcoes(d)), "creme") +
-        linha("Resultado", brlSinal(I.resultadoCarteiraAcoes(d)), corSinal(I.resultadoCarteiraAcoes(d))) +
         linha("Dividendos recebidos", brl(I.totalDividendosAcoes(d)), "up") +
-        linha("Ativos na carteira", plural(d.acoes.length, "ativo")), "acoes");
+        linha("Ativos carteira", plural(d.acoes.length, "ativo")) +
+        linha("Resultado", brlSinal(I.resultadoCarteiraAcoes(d)), corSinal(I.resultadoCarteiraAcoes(d))), "acoes");
     }
   }
 
@@ -1650,8 +1651,8 @@
       catE.map((c) => linha("· " + esc(c.nome), brl(c.valor))).join("") +
       linha("− Despesas", brl(totD), "down") +
       catD.map((c) => linha("· " + esc(c.nome), brl(c.valor))).join("") +
-      linha("Saldo", brlSinal(saldo), corSinal(saldo)) +
-      linha("Lançamentos", `${plural(entradas.length, "entrada")} · ${plural(despesas.length, "despesa")}`),
+      linha("Lançamentos", `${plural(entradas.length, "entrada")} · ${plural(despesas.length, "despesa")}`) +
+      linha("Saldo", brlSinal(saldo), corSinal(saldo)),
       "despesas");
   }
 
@@ -1676,14 +1677,14 @@
     painelSimples(quando.charAt(0).toUpperCase() + quando.slice(1), pctPeriodo,
       "de variação desde o início do período", "valor do mês ÷ valor do primeiro mês",
       linha("Patrimônio", brl(ponto.valor), "creme") +
-      (ehPico ? linha("Situação", "maior valor do período", "up") : "") +
+      (ehPico ? linha("Situação", "maior valor do período · " + brl(ponto.valor), "up") : "") +
       (anterior ? linha("Mês anterior", brl(anterior.valor)) : "") +
       (anterior ? linha("Variação", brlSinal(varMes), corSinal(varMes)) : "") +
-      linha("Início do período", brl(primeiro.valor)) +
-      linha("Variação no período", brlSinal(varPeriodo), corSinal(varPeriodo)) +
-      linha("Bancos hoje", brl(p.bancos)) +
-      linha("Investimentos hoje", brl(p.investimentos + p.acoes)) +
-      linha("Dívidas hoje", brl(p.dividas), p.dividas > 0 ? "down" : ""),
+      linha("Início período", brl(primeiro.valor)) +
+      linha("Variação período", brlSinal(varPeriodo), corSinal(varPeriodo)) +
+      linha("Bancos", brl(p.bancos)) +
+      linha("Investimentos", brl(p.investimentos + p.acoes)) +
+      linha("Dívidas", brl(p.dividas), p.dividas > 0 ? "down" : ""),
       "bancos");
   }
 
@@ -1773,7 +1774,7 @@
         { rotulo: "PROJEÇÃO DESPESAS", valor: brl(projecao), sub: `Ritmo Atual`, cor: "#FF7A1A", icone: ICONES_STRIP.projecao, chave: "projecao" },
         { rotulo: "MAIOR GASTO", valor: maiorDesp ? brl(maiorDesp.valor) : "—", sub: maiorDesp ? esc(maiorDesp.descricao) : "sem despesas", cor: "#FF4D7A", icone: ICONES_STRIP.maiorgasto, chave: "maiorgasto" },
         { rotulo: "MELHOR ATIVO", valor: melhor ? esc(melhor.ticker) : "—", sub: melhor ? `<b class="${corSinal(melhor.rentabilidade)}">${pct(melhor.rentabilidade)}</b> Preço Médio` : "sem ativos", cor: "#FFC233", icone: ICONES_STRIP.melhorativo, chave: "melhorativo" },
-        { rotulo: "CONTAS VENCER", valor: brl(totalVencendo), sub: `${vencendo.length} ${vencendo.length === 1 ? "Conta" : "Contas"}`, cor: "#2F8BFF", icone: ICONES_STRIP.avencer, chave: "avencer" }
+        { rotulo: "CONTAS PENDENTES", valor: brl(totalVencendo), sub: `${vencendo.length} ${vencendo.length === 1 ? "Conta" : "Contas"}`, cor: "#2F8BFF", icone: ICONES_STRIP.avencer, chave: "avencer" }
       ])}
 
     `;
@@ -2932,7 +2933,7 @@
       <h3>Lançar novo valor — ${esc(inv.nome)}</h3>
       <div class="par">
         <div class="campo"><label for="f_data">Data</label><input id="f_data" type="date" value="${hojeISO()}"></div>
-        <div class="campo"><label for="f_valor">Valor bruto</label>${campoMoeda("f_valor", inv.valorAtual)}</div>
+        <div class="campo"><label for="f_valor">Valor Bruto</label>${campoMoeda("f_valor", inv.valorAtual)}</div>
       </div>
       <p class="campo ajuda">Informe o saldo bruto que aparece hoje no extrato. O imposto e o valor líquido são recalculados automaticamente.</p>
       <div class="modal-acoes"><button class="btn primario salvar" id="btnSalvar">Salvar</button></div>`);
@@ -3367,10 +3368,10 @@
     const m = id ? achar(DADOS.metas, id) : null;
     abrirModal(`
       <h3>${m ? "Editar meta" : "Nova meta"}</h3>
-      <div class="campo"><label for="f_nome">Nome da meta</label><input id="f_nome" value="${m ? esc(m.nome) : ""}" placeholder="Reserva de emergência"></div>
+      <div class="campo"><label for="f_nome">Nome</label><input id="f_nome" value="${m ? esc(m.nome) : ""}" placeholder="Reserva de emergência"></div>
       <div class="par">
         <div class="campo"><label for="f_obj">Objetivo</label>${campoMoeda("f_obj", m ? m.objetivo : "", "R$ 30.000,00")}</div>
-        <div class="campo"><label for="f_atual">Valor atual</label>${campoMoeda("f_atual", m ? m.atual : 0)}</div>
+        <div class="campo"><label for="f_atual">Valor Atual</label>${campoMoeda("f_atual", m ? m.atual : 0)}</div>
       </div>
       <div class="par">
         <div class="campo"><label for="f_prazo">Prazo</label><input id="f_prazo" type="date" value="${m ? m.prazo || "" : ""}"></div>
