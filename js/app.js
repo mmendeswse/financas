@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "1.0.5";
+  const VERSAO_APP = "1.0.6";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -1004,7 +1004,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.0.5" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.0.6" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1339,8 +1339,8 @@
         pctRotulo: "do patrimônio bruto está investido",
         linhas: linha("Rentabilidade carteira", pct(I.rentabilidadeCarteiraAcoes(d)), corSinal(I.rentabilidadeCarteiraAcoes(d))) +
           linha("Renda fixa, Tesouro e Fundos", brl(p.investimentos)) + linha("Ações, FIIs e ETFs", brl(p.acoes)) +
-          linha("Total investido", brl(p.investimentos + p.acoes), "up") +
-          linha("Patrimônio bruto", brl(p.bruto)),
+          linha("Patrimônio bruto", brl(p.bruto)) +
+          linha("Total investido", brl(p.investimentos + p.acoes), "up"),
         secao: "investimentos"
       },
       receitas: {
@@ -1361,8 +1361,8 @@
         linhas: (F.maiorCategoriaDeGasto(d) ? linha("Maior categoria", esc(F.maiorCategoriaDeGasto(d).categoria) + " · " + brl(F.maiorCategoriaDeGasto(d).valor)) : "") +
           linha("− Despesas", brl(despesas), "down") +
           linha("+ Entradas", brl(entradas), "up") +
-          linha("Saldo", brlSinal(entradas - despesas), corSinal(entradas - despesas)) +
-          linha("Mês anterior", brl(despesasAnt)),
+          linha("Mês anterior", brl(despesasAnt)) +
+          linha("Saldo atual", brlSinal(entradas - despesas), corSinal(entradas - despesas)),
         secao: "despesas"
       }
     };
@@ -1447,7 +1447,7 @@
       "saldo inicial + entradas − despesas",
       linha("Tipo conta", esc(b.tipo || "—")) +
       linha("Saldo inicial", brl(b.saldoInicial)) + linha("+ Entradas", brl(b.entradas), "up") +
-      linha("− Despesas", brl(b.saidas), "down") + linha("Saldo", brl(b.saldoAtual), corSinal(b.saldoAtual)), "bancos",
+      linha("− Despesas", brl(b.saidas), "down") + linha("Saldo atual", brl(b.saldoAtual), corSinal(b.saldoAtual)), "bancos",
       { rotulo: "+ Adicionar", acao: () => abrirModalValorBanco(b.id) });
   }
 
@@ -1508,7 +1508,7 @@
       painelSimples("Taxa Poupança", taxa, "das receitas do mês sobraram", "(receitas − despesas) ÷ receitas",
         linha("Referência saudável", "20% ou mais") +
         linha("+ Entradas", brl(entradas), "up") + linha("− Despesas", brl(despesas), "down") +
-        linha("Saldo", brlSinal(sobra), corSinal(sobra)), "entradas");
+        linha("Saldo atual", brlSinal(sobra), corSinal(sobra)), "entradas");
       return;
     }
     if (chave === "projecao") {
@@ -1647,12 +1647,12 @@
 
     painelSimples(nomeMes.charAt(0).toUpperCase() + nomeMes.slice(1),
       totE > 0 ? (saldo / totE) * 100 : 0, "das receitas sobraram neste mês", "receitas − despesas",
+      linha("Lançamentos", `${plural(entradas.length, "entrada")} · ${plural(despesas.length, "despesa")}`) +
       linha("+ Entradas", brl(totE), "up") +
       catE.map((c) => linha("· " + esc(c.nome), brl(c.valor))).join("") +
       linha("− Despesas", brl(totD), "down") +
       catD.map((c) => linha("· " + esc(c.nome), brl(c.valor))).join("") +
-      linha("Lançamentos", `${plural(entradas.length, "entrada")} · ${plural(despesas.length, "despesa")}`) +
-      linha("Saldo", brlSinal(saldo), corSinal(saldo)),
+      linha("Saldo atual", brlSinal(saldo), corSinal(saldo)),
       "despesas");
   }
 
@@ -1680,8 +1680,8 @@
       (ehPico ? linha("Situação", "maior valor do período · " + brl(ponto.valor), "up") : "") +
       (anterior ? linha("Mês anterior", brl(anterior.valor)) : "") +
       (anterior ? linha("Variação", brlSinal(varMes), corSinal(varMes)) : "") +
-      linha("Início período", brl(primeiro.valor)) +
-      linha("Variação período", brlSinal(varPeriodo), corSinal(varPeriodo)) +
+      linha("Início", brl(primeiro.valor)) +
+      linha("Variação", brlSinal(varPeriodo), corSinal(varPeriodo)) +
       linha("Bancos", brl(p.bancos)) +
       linha("Investimentos", brl(p.investimentos + p.acoes)) +
       linha("Dívidas", brl(p.dividas), p.dividas > 0 ? "down" : ""),
