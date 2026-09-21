@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "1.0.9";
+  const VERSAO_APP = "1.1.1";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -248,6 +248,21 @@
   const S = window.Sincronizacao;
   let sincronizando = false, timerEnvio = null, statusSync = "";
 
+  // nome curto deste aparelho, gravado junto com cada alteração
+  function rotuloAparelho() {
+    if (A.ehDesktop) return "Windows";
+    const ua = navigator.userAgent || "";
+    if (/iPad/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) return "iPad";
+    if (/iPhone/.test(ua)) return "iPhone";
+    if (/Android/.test(ua)) return "Android";
+    return "Navegador";
+  }
+  function descreverAlteracao(d) {
+    if (!d || !d.atualizadoEm) return "";
+    const quando = new Date(d.atualizadoEm).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+    return `última alteração: ${d.alteradoPor || "outro aparelho"} · ${quando}`;
+  }
+
   function cfgSync() {
     const c = (DADOS.config && DADOS.config.sync) || {};
     return { token: c.token || "", cofre: c.cofre || "", ultima: c.ultima || null, ligada: !!c.token };
@@ -296,16 +311,16 @@
       if (hrRemoto && hrRemoto > hrLocal) {
         aplicarRemoto(remoto);
         gravarCfgSync({ ultima: new Date().toISOString() });
-        mostrarStatusSync("dados atualizados a partir de outro aparelho");
-        if (!silencioso) toast("Dados atualizados a partir de outro aparelho.");
+        mostrarStatusSync(descreverAlteracao(remoto));
+        toast(`Dados atualizados pelo ${remoto.alteradoPor || "outro aparelho"}.`);
       } else if (hrLocal && hrLocal !== hrRemoto) {
         return S.enviar(cfg.token, cofre, dadosParaCofre()).then(() => {
           gravarCfgSync({ ultima: new Date().toISOString() });
-          mostrarStatusSync("tudo sincronizado · " + new Date().toLocaleTimeString("pt-BR"));
+          mostrarStatusSync(descreverAlteracao(DADOS));
           if (!silencioso) toast("Dados enviados para o cofre.");
         });
       } else {
-        mostrarStatusSync("tudo sincronizado · " + new Date().toLocaleTimeString("pt-BR"));
+        mostrarStatusSync(descreverAlteracao(DADOS));
       }
     })).catch((e) => {
       mostrarStatusSync("não sincronizado: " + e.message);
@@ -316,7 +331,7 @@
   function agendarEnvioSync() {                       // chamado após cada alteração
     if (!cfgSync().token) return;
     clearTimeout(timerEnvio);
-    timerEnvio = setTimeout(() => sincronizar(true), 4000);
+    timerEnvio = setTimeout(() => sincronizar(true), 2000);
   }
 
   // Ao ligar um aparelho, se já existe um cofre com dados, o usuário
@@ -653,6 +668,7 @@
   // CICLO DE VIDA
   // =========================================================================
   function iniciar() {
+    if (A.definirAparelho) A.definirAparelho(rotuloAparelho());
     DADOS = A.carregarDados();
     I.registrarPontoPatrimonio(DADOS);
     A.salvarDados(DADOS, true, true);   // automático: não conta como alteração sua
@@ -680,7 +696,7 @@
     atualizarCotacoesAutomaticas(true);
     setInterval(() => atualizarCotacoesAutomaticas(true), 5 * 60 * 1000);
     sincronizar(true);                                   // ao abrir/atualizar a página
-    setInterval(() => sincronizar(true), 2 * 60 * 1000);
+    setInterval(() => { if (document.visibilityState !== "hidden") sincronizar(true); }, 30 * 1000);
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "visible") sincronizar(true);   // voltou para a aba/app
       else if (cfgSync().token) { clearTimeout(timerEnvio); sincronizar(true); }  // saiu: envia já
@@ -1064,7 +1080,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.0.9" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.1.1" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -3563,8 +3579,8 @@
           const ultima = sc.ultima ? new Date(sc.ultima).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
           const corpo = sc.ligada ? `
           <div class="body pad">
-            <div class="sync-estado"><span class="sync-ponto ligado"></span><b>Ligada neste aparelho</b>
-              <span class="dim" id="statusSync">${esc(statusSync || "última sincronização: " + ultima)}</span></div>
+            <div class="sync-estado"><span class="sync-ponto ligado"></span><b>Ligado</b>
+              <span class="dim" id="statusSync">${esc(statusSync || descreverAlteracao(DADOS) || "última sincronização: " + ultima)}</span></div>
             <div class="campo" style="margin-top:14px"><label>Código do cofre</label>
               <div class="sync-codigo"><code>${esc(sc.cofre || "sendo criado…")}</code></div>
               <div class="ajuda">Para ligar outro aparelho seu, use o mesmo token.</div></div>
@@ -3574,7 +3590,7 @@
             </div>
           </div>` : `
           <div class="body pad">
-            <div class="sync-estado"><span class="sync-ponto"></span><b>Desligada neste aparelho</b>
+            <div class="sync-estado"><span class="sync-ponto"></span><b>Desligado</b>
               <span class="dim" id="statusSync">${esc(statusSync)}</span></div>
             <div class="campo"><label for="cfgSyncToken">Token do GitHub</label>
               <input id="cfgSyncToken" type="password" autocomplete="off" spellcheck="false" placeholder="ghp_…">

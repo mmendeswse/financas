@@ -257,8 +257,15 @@
     }
   }
 
+  // aparelho que está usando o sistema (definido pela interface ao iniciar)
+  var aparelhoAtual = "";
+  function definirAparelho(nome) { aparelhoAtual = nome || ""; }
+
   function salvarDados(dados, semNotificar, semCarimbo) {
-    if (!semCarimbo) dados.atualizadoEm = new Date().toISOString();
+    if (!semCarimbo) {
+      dados.atualizadoEm = new Date().toISOString();
+      if (aparelhoAtual) dados.alteradoPor = aparelhoAtual;   // quem fez a alteração
+    }
     try {
       gravarBruto(JSON.stringify(dados));
     } catch (e) {
@@ -329,6 +336,7 @@
   global.Armazenamento = {
     carregarDados: carregarDados,
     salvarDados: salvarDados,
+    definirAparelho: definirAparelho,
     limparDados: limparDados,
     carregarExemplo: carregarExemplo,
     exportarDados: exportarDados,
