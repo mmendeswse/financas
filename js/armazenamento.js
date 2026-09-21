@@ -288,8 +288,12 @@
     dados.config.ultimoBackup = new Date().toISOString();
     salvarDados(dados);
     var carimboArq = new Date().toISOString().slice(0, 10);
-    if (BD && BD.salvarArquivo) { BD.salvarArquivo("muller-mendes-backup-" + carimboArq + ".json", JSON.stringify(dados, null, 2)); return; }
-    var blob = new Blob([JSON.stringify(dados, null, 2)], { type: "application/json" });
+    // o arquivo de backup não leva o token de sincronização deste aparelho
+    var copia = JSON.parse(JSON.stringify(dados));
+    if (copia.config) delete copia.config.sync;
+    var texto = JSON.stringify(copia, null, 2);
+    if (BD && BD.salvarArquivo) { BD.salvarArquivo("muller-mendes-backup-" + carimboArq + ".json", texto); return; }
+    var blob = new Blob([texto], { type: "application/json" });
     var url = URL.createObjectURL(blob);
     var a = document.createElement("a");
     var carimbo = new Date().toISOString().slice(0, 10);

@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "1.0.6";
+  const VERSAO_APP = "1.0.7";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -263,6 +263,13 @@
     if (el) el.textContent = texto;
   }
 
+  // o que vai para o cofre: os dados, sem o token de acesso deste aparelho
+  function dadosParaCofre() {
+    const copia = JSON.parse(JSON.stringify(DADOS));
+    if (copia.config) delete copia.config.sync;
+    return JSON.stringify(copia, null, 2);
+  }
+
   // aplica os dados vindos do cofre, preservando a configuração deste aparelho
   function aplicarRemoto(remoto) {
     const meuSync = (DADOS.config && DADOS.config.sync) || {};
@@ -280,7 +287,7 @@
 
     const garantirCofre = cfg.cofre
       ? Promise.resolve(cfg.cofre)
-      : S.procurarCofre(cfg.token).then((id) => id || S.criarCofre(cfg.token, JSON.stringify(DADOS, null, 2)))
+      : S.procurarCofre(cfg.token).then((id) => id || S.criarCofre(cfg.token, dadosParaCofre()))
          .then((id) => { gravarCfgSync({ cofre: id }); return id; });
 
     return garantirCofre.then((cofre) => S.baixar(cfg.token, cofre).then((remoto) => {
@@ -292,7 +299,7 @@
         mostrarStatusSync("dados atualizados a partir de outro aparelho");
         if (!silencioso) toast("Dados atualizados a partir de outro aparelho.");
       } else if (hrLocal && hrLocal !== hrRemoto) {
-        return S.enviar(cfg.token, cofre, JSON.stringify(DADOS, null, 2)).then(() => {
+        return S.enviar(cfg.token, cofre, dadosParaCofre()).then(() => {
           gravarCfgSync({ ultima: new Date().toISOString() });
           mostrarStatusSync("tudo sincronizado · " + new Date().toLocaleTimeString("pt-BR"));
           if (!silencioso) toast("Dados enviados para o cofre.");
@@ -312,17 +319,64 @@
     timerEnvio = setTimeout(() => sincronizar(true), 4000);
   }
 
+  // Ao ligar um aparelho, se já existe um cofre com dados, o usuário
+  // escolhe de que lado ficam os dados. Sem isso, um aparelho novo (vazio
+  // ou com o exemplo) pareceria "mais recente" e apagaria o cofre.
   function conectarSync() {
     const token = (document.getElementById("cfgSyncToken").value || "").trim();
     const cofreInformado = (document.getElementById("cfgSyncCofre").value || "").trim();
     if (!token) { toast("Cole o token do GitHub para ativar."); return; }
     mostrarStatusSync("verificando token…");
-    S.verificarToken(token).then((login) => {
-      gravarCfgSync({ token, cofre: cofreInformado });
-      mostrarStatusSync("conectado como " + login + " · sincronizando…");
-      return sincronizar(false);
-    }).then(() => renderRota())
+    let login = "";
+    S.verificarToken(token)
+      .then((l) => { login = l; return cofreInformado || S.procurarCofre(token); })
+      .then((cofre) => {
+        if (!cofre) {
+          // primeiro aparelho: cria o cofre com os dados daqui
+          gravarCfgSync({ token, cofre: "" });
+          mostrarStatusSync("conectado como " + login + " · criando o cofre…");
+          return sincronizar(false).then(() => renderRota());
+        }
+        return S.baixar(token, cofre).then((remoto) => escolherLadoDoCofre(token, cofre, login, remoto));
+      })
       .catch((e) => { mostrarStatusSync("falhou: " + e.message); toast("Não consegui conectar: " + e.message); });
+  }
+
+  function escolherLadoDoCofre(token, cofre, login, remoto) {
+    const cont = (d) => d ? `${plural((d.entradas || []).length + (d.despesas || []).length, "lançamento")}, ${plural((d.bancos || []).length, "banco")}` : "vazio";
+    const quando = (iso) => iso ? new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
+    abrirModal(`
+      <h3>Já existe um cofre nesta conta</h3>
+      <p style="margin-top:0;font-size:13px">Conectado como <b>${esc(login)}</b>. Escolha quais dados ficam valendo:</p>
+      <div class="explica-lista">
+        <div class="kv"><span class="dim">No cofre</span><b>${cont(remoto)} · ${quando(remoto && remoto.atualizadoEm)}</b></div>
+        <div class="kv"><span class="dim">Neste aparelho</span><b>${cont(DADOS)} · ${quando(DADOS.atualizadoEm)}</b></div>
+      </div>
+      <p class="campo ajuda" style="margin-top:12px">Na maioria dos casos, use os dados do cofre: é o que acontece ao ligar um segundo aparelho seu.</p>
+      <div class="modal-acoes">
+        <button class="btn primario salvar" id="btnUsarCofre">Usar dados do cofre</button>
+        <button class="btn perigo" id="btnEnviarAparelho">Enviar deste aparelho</button>
+      </div>`);
+    document.getElementById("btnUsarCofre").onclick = () => {
+      fecharModal();
+      gravarCfgSync({ token, cofre });
+      if (remoto) aplicarRemoto(remoto);
+      gravarCfgSync({ ultima: new Date().toISOString() });
+      mostrarStatusSync("dados trazidos do cofre · " + new Date().toLocaleTimeString("pt-BR"));
+      renderRota();
+      toast("Aparelho conectado com os dados do cofre.");
+    };
+    document.getElementById("btnEnviarAparelho").onclick = () => {
+      confirmarExclusao("Substituir o conteúdo do cofre pelos dados deste aparelho? Os outros aparelhos também passarão a ver estes dados.", () => {
+        gravarCfgSync({ token, cofre });
+        S.enviar(token, cofre, dadosParaCofre()).then(() => {
+          gravarCfgSync({ ultima: new Date().toISOString() });
+          mostrarStatusSync("dados enviados ao cofre · " + new Date().toLocaleTimeString("pt-BR"));
+          renderRota();
+          toast("Cofre atualizado com os dados deste aparelho.");
+        }).catch((e) => toast("Não consegui enviar: " + e.message));
+      });
+    };
   }
 
   function desligarSync() {
@@ -1004,7 +1058,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.0.6" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.0.7" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -3495,6 +3549,38 @@
             `}
             <p class="campo ajuda" style="margin-top:26px">Válido exclusivamente neste dispositivo. Em caso de esquecimento da senha, será necessário apagar os dados e restaurar um backup.</p>
           </div>`)}</div>
+        <div class="c12">${(() => {
+          const sc = cfgSync();
+          const ultima = sc.ultima ? new Date(sc.ultima).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
+          const corpo = sc.ligada ? `
+          <div class="body pad">
+            <div class="sync-estado"><span class="sync-ponto ligado"></span><b>Ligada neste aparelho</b>
+              <span class="dim" id="statusSync">${esc(statusSync || "última sincronização: " + ultima)}</span></div>
+            <div class="campo" style="margin-top:14px"><label>Código do cofre</label>
+              <div class="sync-codigo"><code>${esc(sc.cofre || "sendo criado…")}</code>
+                ${sc.cofre ? `<button class="btn pequeno" data-acao="copiar-cofre" data-cofre="${esc(sc.cofre)}">Copiar</button>` : ""}</div>
+              <div class="ajuda">Para ligar outro aparelho seu, use o mesmo token. O código só é necessário se mais de uma pessoa usar a mesma conta do GitHub.</div></div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+              <button class="btn primario" data-acao="sincronizar-agora">Sincronizar</button>
+              <button class="btn perigo" data-acao="desligar-sync">Desligar</button>
+            </div>
+          </div>` : `
+          <div class="body pad">
+            <div class="sync-estado"><span class="sync-ponto"></span><b>Desligada neste aparelho</b>
+              <span class="dim" id="statusSync">${esc(statusSync)}</span></div>
+            <div class="sync-grade">
+              <div class="campo"><label for="cfgSyncToken">Token do GitHub</label>
+                <input id="cfgSyncToken" type="password" autocomplete="off" spellcheck="false" placeholder="ghp_…">
+                <div class="ajuda">Crie em GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic), marcando só a permissão <b>gist</b>.</div></div>
+              <div class="campo"><label for="cfgSyncCofre">Código do cofre <span class="dim">(opcional)</span></label>
+                <input id="cfgSyncCofre" autocomplete="off" spellcheck="false" placeholder="deixe vazio na maioria dos casos">
+                <div class="ajuda">Preencha só se mais de uma pessoa usar a mesma conta do GitHub: cada uma informa o código do próprio cofre.</div></div>
+            </div>
+            <button class="btn primario" data-acao="conectar-sync">Ligar</button>
+            <p class="campo ajuda" style="margin-top:14px">Ligue primeiro no aparelho com os dados mais completos. Nos outros, use o mesmo token: eles baixam os dados e passam a se atualizar sozinhos. Cada pessoa com o próprio token tem um cofre separado — os dados nunca se misturam. O token fica salvo só neste aparelho.</p>
+          </div>`;
+          return card("", "Sincronização", "entre aparelhos · web, iPad e Windows", "", corpo);
+        })()}</div>
         <div class="c6">${card("", "Cotações automáticas", "dólar via AwesomeAPI (sem chave) · ações via brapi.dev", "", `
           <div class="body pad">
             <label class="chk-linha"><input type="checkbox" id="cfgCotacoesAuto" ${configCotacoes().auto ? "checked" : ""}> Buscar cotações automaticamente ao abrir o sistema e a cada 5 minutos</label>
@@ -3850,6 +3936,10 @@
           });
           break;
         case "conectar-sync": conectarSync(); break;
+        case "copiar-cofre":
+          if (navigator.clipboard) navigator.clipboard.writeText(b.dataset.cofre).then(() => toast("Código copiado."), () => toast("Código: " + b.dataset.cofre));
+          else toast("Código: " + b.dataset.cofre);
+          break;
         case "sincronizar-agora": toast("Sincronizando…"); sincronizar(false); break;
         case "desligar-sync": desligarSync(); break;
         case "abrir-pasta-banco": A.abrirPastaBanco(); break;

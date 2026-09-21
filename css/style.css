@@ -1087,3 +1087,13 @@ table.tab-acoes th.col-atualiz, table.tab-acoes td.col-atualiz { display: none; 
 /* botão "Importar PDF" com cor própria */
 .btn.btn-pdf { background: linear-gradient(135deg, #8A2BE2, #B45CFF); color: #fff; border-color: transparent; }
 .btn.btn-pdf:hover { filter: brightness(1.12); }
+
+/* quadro Sincronização */
+.sync-estado { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.sync-ponto { width: 10px; height: 10px; border-radius: 50%; background: var(--dim, #5b6b86); flex: none; }
+.sync-ponto.ligado { background: var(--up); box-shadow: 0 0 0 4px rgba(0,214,143,.15); }
+.sync-grade { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 760px) { .sync-grade { grid-template-columns: 1fr; } }
+.sync-codigo { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.sync-codigo code { background: var(--painel-2); border: 1px solid var(--linha-2); border-radius: 7px; padding: 7px 10px;
+  font-family: var(--mono); font-size: 12.5px; word-break: break-all; }
