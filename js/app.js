@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "1.1.1";
+  const VERSAO_APP = "1.1.2";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -1080,7 +1080,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.1.1" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.1.2" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -3596,7 +3596,7 @@
               <input id="cfgSyncToken" type="password" autocomplete="off" spellcheck="false" placeholder="ghp_…">
               <div class="ajuda">Crie em GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic), marcando só a permissão <b>gist</b>.</div></div>
             <button class="btn primario" data-acao="conectar-sync">Ligar</button>
-            <p class="campo ajuda" style="margin-top:14px">Ligue primeiro no aparelho com os dados mais completos. Nos outros, use o mesmo token: eles baixam os dados e passam a se atualizar sozinhos. Cada pessoa com o próprio token tem um cofre separado — os dados nunca se misturam. O token fica salvo só neste aparelho.</p>
+            <p class="campo ajuda" style="margin-top:14px">Ligue primeiro no aparelho com os dados mais completos. Nos seus outros aparelhos, use o mesmo token: eles baixam os dados e passam a se atualizar sozinhos. O token fica salvo só neste aparelho.</p>
           </div>`;
           return card("", "Sincronização", "entre aparelhos · web, iPad e Windows", "", corpo);
         })()}</div>
