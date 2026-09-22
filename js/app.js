@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "1.2.8";
+  const VERSAO_APP = "1.2.9";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -1187,7 +1187,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.2.8" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.2.9" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1543,9 +1543,8 @@
         conta: "soma das entradas lançadas no mês atual",
         pct: F.variacaoPercentual(entradas, entradasAnt),
         pctRotulo: "de variação em relação ao mês anterior",
-        linhas: linha("Lançamentos", plural(entradasEfetivasMes(d, mes).length, "entrada")) +
-          linha("+ Entradas", brl(entradas), "up") + linha("Mês anterior", brl(entradasAnt)) +
-          linha("≠ Diferença", brlSinal(entradas - entradasAnt), corSinal(entradas - entradasAnt)),
+        linhas: listaEntradasTodasMes(d, mes).map((e) => linha(esc(e.descricao) + " · " + fmtDataCurta(e.data), brl(e.valor))).join("") +
+          linha("Total", brl(entradas), "up"),
         secao: "entradas"
       },
       despesas: {
@@ -1553,11 +1552,8 @@
         conta: "despesas do mês ÷ receitas do mês",
         pct: entradas > 0 ? (despesas / entradas) * 100 : 0,
         pctRotulo: "das receitas do mês já foram gastas",
-        linhas: (F.maiorCategoriaDeGasto(d) ? linha("Maior categoria", esc(F.maiorCategoriaDeGasto(d).categoria) + " · " + brl(F.maiorCategoriaDeGasto(d).valor)) : "") +
-          linha("− Despesas", brl(despesas), "down") +
-          linha("+ Entradas", brl(entradas), "up") +
-          linha("Mês anterior", brl(despesasAnt)) +
-          linha("Saldo atual", brlSinal(entradas - despesas), corSinal(entradas - despesas)),
+        linhas: listaDespesasTodasMes(d, mes).map((x) => linha(esc(x.descricao) + " · " + fmtDataCurta(x.data), brl(x.valor), "down")).join("") +
+          linha("Total", brl(despesas), "down"),
         secao: "despesas"
       }
     };
@@ -2287,6 +2283,36 @@
     return F.listaContasPagarComStatus(d)
       .filter((c) => c.statusReal !== "Pago" && String(c.vencimento || "").slice(0, 7) === mes)
       .sort((a, b) => (a.vencimento || "").localeCompare(b.vencimento || ""));
+  }
+
+
+  // Lista, ordenada por data, de todas as despesas/contas do mês (pagas,
+  // previstas ou atrasadas) — usada no painel "Despesas do mês".
+  function listaDespesasTodasMes(d, mes) {
+    const lancadas = d.despesas.filter((x) => String(x.data || "").slice(0, 7) === mes)
+      .map((x) => ({ descricao: x.descricao, valor: Number(x.valor || 0), data: x.data }));
+    const contasDoMes = (d.contasPagar || []).filter((c) => String(c.vencimento || "").slice(0, 7) === mes);
+    const contasMapeadas = contasDoMes.map((c) => ({ descricao: c.descricao, valor: Number(c.valor || 0), data: c.vencimento }));
+    const contasComoLista = (d.contasPagar || []).map((c) => ({ ...c, data: c.vencimento }));
+    const repDespesas = repeticoesPrevistas(d.despesas, mes, (reg, data) => ({
+      descricao: reg.descricao, valor: valorDoMes(reg, data.slice(0, 7)), data
+    }), contasDoMes);
+    const repContas = repeticoesPrevistas(contasComoLista, mes, (reg, data) => ({
+      descricao: reg.descricao, valor: valorDoMes(reg, data.slice(0, 7)), data
+    }), []);
+    return [...lancadas, ...contasMapeadas, ...repDespesas, ...repContas]
+      .sort((a, b) => (a.data || "").localeCompare(b.data || ""));
+  }
+
+  // Lista, ordenada por data, de todas as entradas do mês (recebidas ou
+  // previstas) — usada no painel "Receitas do mês".
+  function listaEntradasTodasMes(d, mes) {
+    const reais = d.entradas.filter((e) => String(e.data || "").slice(0, 7) === mes)
+      .map((e) => ({ descricao: e.descricao, valor: Number(e.valor || 0), data: e.data }));
+    const recorrentes = repeticoesPrevistas(d.entradas, mes, (reg, data) => ({
+      descricao: reg.descricao, valor: valorDoMes(reg, data.slice(0, 7)), data
+    }));
+    return [...reais, ...recorrentes].sort((a, b) => (a.data || "").localeCompare(b.data || ""));
   }
 
   function totalDespesasPagasMes(d, mes) {
