@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "1.3.2";
+  const VERSAO_APP = "1.3.4";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -1187,7 +1187,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.3.2" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.3.4" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1544,9 +1544,9 @@
         pct: F.variacaoPercentual(entradas, entradasAnt),
         pctRotulo: "de variação em relação ao mês anterior",
         linhas: (() => {
-          const itensR = listaEntradasTodasMes(d, mes), itensDR = listaDespesasTodasMes(d, mes);
-          return linha("Lançamentos", `${plural(itensR.length, "entrada")} · ${plural(itensDR.length, "despesa")}`) +
-            itensR.map((e) => linha(fmtDataCurta(e.data) + " · " + esc(e.descricao), brl(e.valor))).join("") +
+          const itensR = listaEntradasTodasMes(d, mes);
+          return linha("Lançamentos", plural(itensR.length, "entrada")) +
+            itensR.map((e) => linha(fmtDataCurta(e.data) + " · " + esc(e.descricao), seloStatusPainel(e.status) + brl(e.valor))).join("") +
             linha("Total", brl(entradas), "up");
         })(),
         secao: "entradas"
@@ -1557,9 +1557,9 @@
         pct: entradas > 0 ? (despesas / entradas) * 100 : 0,
         pctRotulo: "das receitas do mês já foram gastas",
         linhas: (() => {
-          const itensD = listaDespesasTodasMes(d, mes), itensRD = listaEntradasTodasMes(d, mes);
-          return linha("Lançamentos", `${plural(itensRD.length, "entrada")} · ${plural(itensD.length, "despesa")}`) +
-            itensD.map((x) => linha(fmtDataCurta(x.data) + " · " + esc(x.descricao), brl(x.valor), "down")).join("") +
+          const itensD = listaDespesasTodasMes(d, mes);
+          return linha("Lançamentos", plural(itensD.length, "despesa")) +
+            itensD.map((x) => linha(fmtDataCurta(x.data) + " · " + esc(x.descricao), seloStatusPainel(x.status) + brl(x.valor), "down")).join("") +
             linha("Total", brl(despesas), "down");
         })(),
         secao: "despesas"
@@ -2296,17 +2296,28 @@
 
   // Lista, ordenada por data, de todas as despesas/contas do mês (pagas,
   // previstas ou atrasadas) — usada no painel "Despesas do mês".
+  // selo colorido do status, no mesmo padrão das guias Entradas e Despesas
+  function seloStatusPainel(st) {
+    const cls = st === "Atrasado" ? "selo-atrasado" : (st === "Prevista" ? "selo-prevista" : "selo-pago");
+    return `<span class="selo-tag ${cls} selo-painel">${esc(st)}</span>`;
+  }
+
   function listaDespesasTodasMes(d, mes) {
     const lancadas = d.despesas.filter((x) => String(x.data || "").slice(0, 7) === mes)
-      .map((x) => ({ descricao: x.descricao, valor: Number(x.valor || 0), data: x.data }));
+      .map((x) => ({ descricao: x.descricao, valor: Number(x.valor || 0), data: x.data, status: "Pago" }));
     const contasDoMes = (d.contasPagar || []).filter((c) => String(c.vencimento || "").slice(0, 7) === mes);
-    const contasMapeadas = contasDoMes.map((c) => ({ descricao: c.descricao, valor: Number(c.valor || 0), data: c.vencimento }));
+    const contasMapeadas = contasDoMes.map((c) => {
+      const st = F.statusReal(c);
+      return { descricao: c.descricao, valor: Number(c.valor || 0), data: c.vencimento, status: st === "Pendente" ? "Prevista" : st };
+    });
     const contasComoLista = (d.contasPagar || []).map((c) => ({ ...c, data: c.vencimento }));
     const repDespesas = repeticoesPrevistas(d.despesas, mes, (reg, data) => ({
-      descricao: reg.descricao, valor: valorDoMes(reg, data.slice(0, 7)), data
+      descricao: reg.descricao, valor: valorDoMes(reg, data.slice(0, 7)), data,
+      status: mesQuitado(reg, data.slice(0, 7)) ? "Pago" : "Prevista"
     }), contasDoMes);
     const repContas = repeticoesPrevistas(contasComoLista, mes, (reg, data) => ({
-      descricao: reg.descricao, valor: valorDoMes(reg, data.slice(0, 7)), data
+      descricao: reg.descricao, valor: valorDoMes(reg, data.slice(0, 7)), data,
+      status: mesQuitado(reg, data.slice(0, 7)) ? "Pago" : "Prevista"
     }), []);
     return [...lancadas, ...contasMapeadas, ...repDespesas, ...repContas]
       .sort((a, b) => (a.data || "").localeCompare(b.data || ""));
@@ -2316,9 +2327,10 @@
   // previstas) — usada no painel "Receitas do mês".
   function listaEntradasTodasMes(d, mes) {
     const reais = d.entradas.filter((e) => String(e.data || "").slice(0, 7) === mes)
-      .map((e) => ({ descricao: e.descricao, valor: Number(e.valor || 0), data: e.data }));
+      .map((e) => ({ descricao: e.descricao, valor: Number(e.valor || 0), data: e.data, status: e.previsto ? "Prevista" : "Recebida" }));
     const recorrentes = repeticoesPrevistas(d.entradas, mes, (reg, data) => ({
-      descricao: reg.descricao, valor: valorDoMes(reg, data.slice(0, 7)), data
+      descricao: reg.descricao, valor: valorDoMes(reg, data.slice(0, 7)), data,
+      status: mesQuitado(reg, data.slice(0, 7)) ? "Recebida" : "Prevista"
     }));
     return [...reais, ...recorrentes].sort((a, b) => (a.data || "").localeCompare(b.data || ""));
   }

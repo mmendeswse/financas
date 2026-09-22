@@ -1116,3 +1116,6 @@ table.tab-acoes th.col-atualiz, table.tab-acoes td.col-atualiz { display: none; 
 #puxarAtualizar.girando { color: var(--cy); border-color: var(--cy); }
 #puxarAtualizar.girando svg { animation: girarPuxar .8s linear infinite; }
 @keyframes girarPuxar { to { transform: rotate(360deg); } }
+
+/* selo de status nos painéis Receitas/Despesas do mês */
+.kv .selo-painel { margin-right: 10px; font-size: 10px; padding: 2px 8px; vertical-align: middle; }
