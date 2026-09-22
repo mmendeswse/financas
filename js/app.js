@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "1.2.1";
+  const VERSAO_APP = "1.2.2";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -1024,11 +1024,11 @@
     const hoje = new Date();
     const diaAtual = hoje.getDate();
     const diasNoMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).getDate();
-    const gastoAtual = F.totalDespesasMes(d, F.mesAtual());
+    const gastoAtual = totalDespesasPagasMes(d, F.mesAtual());
     let somaAnt = 0, mesesAnt = 0;
     for (let i = 1; i <= 3; i++) {
       const dt = new Date(); dt.setMonth(dt.getMonth() - i);
-      const total = F.totalDespesasMes(d, dt.toISOString().slice(0, 7));
+      const total = totalDespesasPagasMes(d, dt.toISOString().slice(0, 7));
       if (total > 0) { somaAnt += total; mesesAnt++; }
     }
     if (mesesAnt > 0 && diaAtual >= 5) {
@@ -1187,7 +1187,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.2.1" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.2.2" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1495,7 +1495,7 @@
     const p = I.patrimonio(d);
     const mes = F.mesAtual(), mesAnt = F.mesAnterior();
     const entradas = totalEntradasEfetivas(d, mes), entradasAnt = totalEntradasEfetivas(d, mesAnt);
-    const despesas = F.totalDespesasMes(d, mes), despesasAnt = F.totalDespesasMes(d, mesAnt);
+    const despesas = totalDespesasPagasMes(d, mes), despesasAnt = totalDespesasPagasMes(d, mesAnt);
     const linha = (rot, val, cls) => `<div class="kv"><span class="dim">${rotuloPainel(rot)}</span><b class="${cls || ""}">${val}</b></div>`;
 
     const paineis = {
@@ -1692,7 +1692,7 @@
   function explicarStrip(chave) {
     const d = DADOS;
     const mes = F.mesAtual();
-    const entradas = F.totalEntradasMes(d, mes), despesas = F.totalDespesasMes(d, mes);
+    const entradas = totalEntradasEfetivas(d, mes), despesas = totalDespesasPagasMes(d, mes);
     const hoje = new Date(), dia = hoje.getDate();
     const diasNoMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).getDate();
     const linha = (r, v, c) => `<div class="kv"><span class="dim">${rotuloPainel(r)}</span><b class="${c || ""}">${v}</b></div>`;
@@ -1712,7 +1712,7 @@
       let soma = 0, meses = 0;
       for (let i = 1; i <= 3; i++) {
         const dt = new Date(); dt.setMonth(dt.getMonth() - i);
-        const t = F.totalDespesasMes(d, dt.toISOString().slice(0, 7));
+        const t = totalDespesasPagasMes(d, dt.toISOString().slice(0, 7));
         if (t > 0) { soma += t; meses++; }
       }
       const media3 = meses ? soma / meses : 0;
@@ -1890,7 +1890,7 @@
     const p = I.patrimonio(d);
     const mesAtual = F.mesAtual(), mesAnt = F.mesAnterior();
     const entradasMes = totalEntradasEfetivas(d, mesAtual), entradasAnt = totalEntradasEfetivas(d, mesAnt);
-    const despesasMes = F.totalDespesasMes(d, mesAtual), despesasAnt = F.totalDespesasMes(d, mesAnt);
+    const despesasMes = totalDespesasPagasMes(d, mesAtual), despesasAnt = totalDespesasPagasMes(d, mesAnt);
     const resultadoMes = entradasMes - despesasMes, resultadoAnt = entradasAnt - despesasAnt;
     const patrimonioAnt = (() => {
       const hist = d.historicoPatrimonio;
@@ -2034,7 +2034,7 @@
     const serie = F.serieMensal(d, 12);
     const renda = serie.map((s) => s.entradas), desp = serie.map((s) => s.despesas), poup = serie.map((s) => s.entradas - s.despesas);
     const media = (arr) => { const v = arr.filter((x) => x !== 0); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : 0; };
-    const rendaMes = F.totalEntradasMes(d), despMes = F.totalDespesasMes(d), poupMes = rendaMes - despMes;
+    const rendaMes = totalEntradasEfetivas(d, F.mesAtual()), despMes = totalDespesasPagasMes(d, F.mesAtual()), poupMes = rendaMes - despMes;
     const pctDesp = rendaMes > 0 ? (despMes / rendaMes) * 100 : 0;
     const pctPoup = rendaMes > 0 ? Math.max(0, (poupMes / rendaMes) * 100) : 0;
 
@@ -2243,6 +2243,29 @@
   }
 
 
+
+  // Total de despesas realmente PAGAS num mês: junta as despesas lançadas,
+  // as contas a pagar já quitadas com vencimento nesse mês, e as repetições
+  // (recorrências) confirmadas naquele mês em particular — a mesma conta
+  // que a guia Despesas usa no "Pagas:" do cabeçalho. A antiga
+  // F.totalDespesasMes só somava a tabela de despesas, sem contas pagas.
+  function totalDespesasPagasMes(d, mes) {
+    let total = d.despesas.filter((x) => String(x.data || "").slice(0, 7) === mes)
+      .reduce((t, x) => t + Number(x.valor || 0), 0);
+    total += (d.contasPagar || []).filter((c) => c.status === "Pago" && String(c.vencimento || "").slice(0, 7) === mes)
+      .reduce((t, c) => t + Number(c.valor || 0), 0);
+    const contasComoLista = (d.contasPagar || []).map((c) => ({ ...c, data: c.vencimento }));
+    const contasDoMes = (d.contasPagar || []).filter((c) => String(c.vencimento || "").slice(0, 7) === mes);
+    const repDespesas = repeticoesPrevistas(d.despesas, mes, (reg, data) => ({
+      valor: valorDoMes(reg, data.slice(0, 7)), quitado: mesQuitado(reg, data.slice(0, 7))
+    }), contasDoMes);
+    const repContas = repeticoesPrevistas(contasComoLista, mes, (reg, data) => ({
+      valor: valorDoMes(reg, data.slice(0, 7)), quitado: mesQuitado(reg, data.slice(0, 7))
+    }), []);
+    total += [...repDespesas, ...repContas].filter((x) => x.quitado).reduce((t, x) => t + Number(x.valor || 0), 0);
+    return total;
+  }
+
   function entradasEfetivasMes(d, mes) {
     const reais = d.entradas.filter((e) => String(e.data || "").slice(0, 7) === mes && !e.previsto);
     const recorrentes = repeticoesPrevistas(d.entradas, mes, (reg, data) => ({
@@ -2290,7 +2313,7 @@
       .sort((a, b) => ordemEntradas.campo === "recentes"
         ? (b.data || "").localeCompare(a.data || "")
         : comparar(a, b, ordemEntradas.campo, ordemEntradas.dir));
-    const totalMes = F.totalEntradasMes(d, mesEntradas);
+    const totalMes = totalEntradasEfetivas(d, mesEntradas);
     const totalPrevisto = previstasEnt.reduce((t, e) => t + Number(e.valor || 0), 0) + F.totalEntradasPrevistasMes(d, mesEntradas);
     const grid = GRID_LANCAMENTOS;
     let corpo;
@@ -3613,7 +3636,7 @@
     const fim = new Date(fimISO + "T00:00:00");
     while (cursor <= fim) {
       const chave = cursor.toISOString().slice(0, 7);
-      out.push({ mes: chave, rotulo: cursor.toLocaleDateString("pt-BR", { month: "short" }).replace(".", ""), entradas: F.totalEntradasMes(d, chave), despesas: F.totalDespesasMes(d, chave) });
+      out.push({ mes: chave, rotulo: cursor.toLocaleDateString("pt-BR", { month: "short" }).replace(".", ""), entradas: totalEntradasEfetivas(d, chave), despesas: totalDespesasPagasMes(d, chave) });
       cursor.setMonth(cursor.getMonth() + 1);
       if (out.length > 24) break;
     }
