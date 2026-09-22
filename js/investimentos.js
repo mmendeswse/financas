@@ -89,15 +89,35 @@
     return 15;
   }
 
+  // alíquota mostrada nas telas: quando o IR vem confirmado pelo banco,
+  // mostra a alíquota que ele realmente corresponde (imposto ÷ lucro),
+  // em vez da estimativa por dias corridos — evita um "22,5%" ao lado de
+  // um imposto que na verdade é de 20%, por exemplo
+  function aliquotaEfetiva(inv) {
+    if (inv && inv.irBanco != null) {
+      var lucro = lucroInvestimento(inv);
+      return lucro > 0 ? (Number(inv.irBanco) / lucro) * 100 : 0;
+    }
+    return aliquotaIR(inv);
+  }
+
   function lucroInvestimento(inv) {
     return Math.max(0, Number(inv.valorAtual || 0) - Number(inv.valorInvestido || 0));
   }
 
+  // Quando o investimento veio de um extrato importado (PDF do banco), o
+  // próprio banco já informa o IR e o valor líquido exatos daquela data —
+  // usamos esses números em vez de estimar pela tabela regressiva, que é
+  // só uma aproximação (não sabe a data de aplicação de Caixinhas/Tesouro,
+  // por exemplo). Uma edição manual do valor descarta esses campos,
+  // voltando a usar a estimativa.
   function impostoInvestimento(inv) {
+    if (inv && inv.irBanco != null) return Number(inv.irBanco);
     return lucroInvestimento(inv) * (aliquotaIR(inv) / 100);
   }
 
   function valorLiquidoInvestimento(inv) {
+    if (inv && inv.liquidoBanco != null) return Number(inv.liquidoBanco);
     return Number(inv.valorAtual || 0) - impostoInvestimento(inv);
   }
 
@@ -131,7 +151,7 @@
       return Object.assign({}, inv, {
         dias: diasCorridos(inv),
         diasVenc: diasAteVencimento(inv),
-        aliquota: aliquotaIR(inv),
+        aliquota: aliquotaEfetiva(inv),
         imposto: impostoInvestimento(inv),
         liquido: valorLiquidoInvestimento(inv),
         resultado: Number(inv.valorAtual || 0) - Number(inv.valorInvestido || 0),
@@ -302,6 +322,7 @@
     diasCorridos: diasCorridos,
     diasAteVencimento: diasAteVencimento,
     aliquotaIR: aliquotaIR,
+    aliquotaEfetiva: aliquotaEfetiva,
     ehIsento: ehIsento,
     impostoInvestimento: impostoInvestimento,
     valorLiquidoInvestimento: valorLiquidoInvestimento,

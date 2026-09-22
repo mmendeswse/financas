@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "1.1.7";
+  const VERSAO_APP = "1.1.8";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -620,7 +620,13 @@
         // só um extrato igual ou mais recente muda o valor atual;
         // um extrato antigo apenas completa o histórico do gráfico
         const ultima = (atual.historicoValores || []).reduce((m, p) => (p.data > m ? p.data : m), "");
-        if (dataRef >= ultima) atual.valorAtual = i.valorAtual;
+        if (dataRef >= ultima) {
+          atual.valorAtual = i.valorAtual;
+          // o banco informa o IR e o líquido exatos — usamos esses valores
+          // em vez de recalcular, para bater certinho com o extrato
+          if (i.ir !== undefined) atual.irBanco = i.ir; else delete atual.irBanco;
+          if (i.liquido !== undefined) atual.liquidoBanco = i.liquido; else delete atual.liquidoBanco;
+        }
         if (i.valorInvestido) atual.valorInvestido = i.valorInvestido;
         ["dataAplicacao", "dataVencimento", "quantidade", "taxaContratada", "indexador", "emissor", "tipoAtivo", "liquidez"]
           .forEach((k) => { if (i[k]) atual[k] = i[k]; });
@@ -632,6 +638,7 @@
           liquidez: i.liquidez || "Liquidez diária", valorInvestido: i.valorInvestido || 0, quantidade: i.quantidade || 0,
           dataAplicacao: i.dataAplicacao || "", dataVencimento: i.dataVencimento || "", indexador: i.indexador || "Não se aplica",
           taxaContratada: i.taxaContratada || 0, valorAtual: i.valorAtual, isentoIR: !!i.isentoIR,
+          irBanco: i.ir, liquidoBanco: i.liquido,
           obs: `Importado do extrato de ${fmtData(dataRef)}.`, historicoValores: [{ data: dataRef, valor: i.valorAtual }]
         });
         novos++;
@@ -1180,7 +1187,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.1.7" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.1.8" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -3010,7 +3017,8 @@
         historicoValores: adicionarPontoValor(inv ? inv.historicoValores : [], numIn(document.getElementById("f_va").value)),
         obs: document.getElementById("f_obs").value.trim()
       };
-      if (inv) Object.assign(inv, registro); else DADOS.investimentos.push(registro);
+      if (inv) { delete inv.irBanco; delete inv.liquidoBanco; Object.assign(inv, registro); }
+      else DADOS.investimentos.push(registro);
       fecharModal();
       salvarEAtualizar(inv ? "Investimento atualizado." : "Investimento cadastrado.");
     };
@@ -3066,7 +3074,7 @@
     const resultado = bruto - aplicado;
     const dias = I.diasCorridos(inv);
     const diasVenc = I.diasAteVencimento(inv);
-    const aliq = I.aliquotaIR(inv);
+    const aliq = I.aliquotaEfetiva(inv);
     const imposto = I.impostoInvestimento(inv);
     const liquido = I.valorLiquidoInvestimento(inv);
     const rentBruta = I.rentabilidadeInvestimento(inv);
@@ -3126,6 +3134,7 @@
       hist.sort((a, b) => a.data.localeCompare(b.data));
       inv.historicoValores = hist;
       inv.valorAtual = valor;
+      delete inv.irBanco; delete inv.liquidoBanco;   // valor digitado à mão, sem confirmação do banco
       fecharModal();
       salvarEAtualizar("Valor lançado.");
     };

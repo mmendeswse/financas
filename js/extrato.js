@@ -64,7 +64,7 @@
 
   var RX_CAIXINHA = new RegExp("^(RDB .+?) " + N + " " + N + " " + N + " " + N + "(?: (.*))?$");
   var RX_RENDA_FIXA = new RegExp("^(.+?) " + D + " (.+?) " + N + " " + D + " " + N + " " + N + " " + N + " " + N);
-  var RX_TESOURO = new RegExp("^(Tesouro .+?) " + D + " " + N + " " + N + " " + N + " " + N);
+  var RX_TESOURO = new RegExp("^(Tesouro .+?) " + D + " " + N + " " + N + " " + N + " " + N + " " + N + " " + N + " " + N);
   var RX_BOLSA = /^(Ação brasileira|FII|Fundo imobiliário|ETF|BDR)\s+(.+?)\s*\(([A-Z0-9]{4,7})\)\s+([\d.]+,\d+)\s+([\d.]+,\d+)/i;
 
   function interpretar(paginas) {
@@ -111,7 +111,7 @@
         resultado.investimentos.push({
           nome: m[1].trim(), categoria: "Tesouro Direto", tipoAtivo: tipoT, emissor: "Tesouro Nacional",
           dataVencimento: dataISO(m[2]), quantidade: numero(m[3]),
-          valorInvestido: numero(m[4]), valorAtual: numero(m[5]), ir: numero(m[6]),
+          valorInvestido: numero(m[4]), valorAtual: numero(m[5]), ir: numero(m[6]), liquido: numero(m[9]),
           indexador: tipoT === "Tesouro IPCA+" ? "IPCA +" : (tipoT === "Tesouro Selic" ? "Selic +" : "Prefixado"),
           liquidez: "Liquidez diária"
         });
