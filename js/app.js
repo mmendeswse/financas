@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "1.2.9";
+  const VERSAO_APP = "1.3.2";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -1187,7 +1187,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.2.9" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.3.2" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1543,8 +1543,12 @@
         conta: "soma das entradas lançadas no mês atual",
         pct: F.variacaoPercentual(entradas, entradasAnt),
         pctRotulo: "de variação em relação ao mês anterior",
-        linhas: listaEntradasTodasMes(d, mes).map((e) => linha(esc(e.descricao) + " · " + fmtDataCurta(e.data), brl(e.valor))).join("") +
-          linha("Total", brl(entradas), "up"),
+        linhas: (() => {
+          const itensR = listaEntradasTodasMes(d, mes), itensDR = listaDespesasTodasMes(d, mes);
+          return linha("Lançamentos", `${plural(itensR.length, "entrada")} · ${plural(itensDR.length, "despesa")}`) +
+            itensR.map((e) => linha(fmtDataCurta(e.data) + " · " + esc(e.descricao), brl(e.valor))).join("") +
+            linha("Total", brl(entradas), "up");
+        })(),
         secao: "entradas"
       },
       despesas: {
@@ -1552,8 +1556,12 @@
         conta: "despesas do mês ÷ receitas do mês",
         pct: entradas > 0 ? (despesas / entradas) * 100 : 0,
         pctRotulo: "das receitas do mês já foram gastas",
-        linhas: listaDespesasTodasMes(d, mes).map((x) => linha(esc(x.descricao) + " · " + fmtDataCurta(x.data), brl(x.valor), "down")).join("") +
-          linha("Total", brl(despesas), "down"),
+        linhas: (() => {
+          const itensD = listaDespesasTodasMes(d, mes), itensRD = listaEntradasTodasMes(d, mes);
+          return linha("Lançamentos", `${plural(itensRD.length, "entrada")} · ${plural(itensD.length, "despesa")}`) +
+            itensD.map((x) => linha(fmtDataCurta(x.data) + " · " + esc(x.descricao), brl(x.valor), "down")).join("") +
+            linha("Total", brl(despesas), "down");
+        })(),
         secao: "despesas"
       }
     };
