@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "1.2.3";
+  const VERSAO_APP = "1.2.8";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -339,13 +339,11 @@
   // ou com o exemplo) pareceria "mais recente" e apagaria o cofre.
   function conectarSync() {
     const token = (document.getElementById("cfgSyncToken").value || "").trim();
-    const campoCofre = document.getElementById("cfgSyncCofre");
-    const cofreInformado = campoCofre ? (campoCofre.value || "").trim() : "";
     if (!token) { toast("Cole o token do GitHub para ativar."); return; }
     mostrarStatusSync("verificando token…");
     let login = "";
     S.verificarToken(token)
-      .then((l) => { login = l; return cofreInformado || S.procurarCofre(token); })
+      .then((l) => { login = l; return S.procurarCofre(token); })
       .then((cofre) => {
         if (!cofre) {
           // primeiro aparelho: cria o cofre com os dados daqui
@@ -383,7 +381,7 @@
       toast("Aparelho conectado com os dados do cofre.");
     };
     document.getElementById("btnEnviarAparelho").onclick = () => {
-      confirmarExclusao("Substituir o conteúdo do cofre pelos dados deste aparelho? Os outros aparelhos também passarão a ver estes dados.", () => {
+      confirmarExclusao("Substituir TUDO o que está no cofre pelos dados deste aparelho? Isso apaga o que estava lá — inclusive se pertencer a outra pessoa que usa o mesmo token — e todos os outros aparelhos ligados a este cofre passam a ver só os dados daqui.", () => {
         gravarCfgSync({ token, cofre });
         S.enviar(token, cofre, dadosParaCofre()).then(() => {
           gravarCfgSync({ ultima: new Date().toISOString() });
@@ -987,9 +985,9 @@
         : `${atrasadas.length} contas estão atrasadas, somando ${brl(total)}.` });
     }
 
-    const vencendo = F.contasVencendoEm(d, 7).filter((c) => c.statusReal === "Pendente");
+    const vencendo = contasPendentesMes(d, F.mesAtual()).filter((c) => c.statusReal === "Pendente");
     if (vencendo.length) {
-      alertas.push({ tipo: "aviso", rota: "despesas", texto: `${vencendo.length === 1 ? "Existe 1 conta vencendo" : `Existem ${vencendo.length} contas vencendo`} nos próximos 7 dias.` });
+      alertas.push({ tipo: "aviso", rota: "despesas", texto: `${vencendo.length === 1 ? "Existe 1 conta pendente" : `Existem ${vencendo.length} contas pendentes`} no mês atual.` });
     }
 
     // categorias de despesa com alta em relação à média dos últimos 3 meses
@@ -1189,7 +1187,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.2.3" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.2.8" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1496,8 +1494,8 @@
     const d = DADOS;
     const p = I.patrimonio(d);
     const mes = F.mesAtual(), mesAnt = F.mesAnterior();
-    const entradas = totalEntradasEfetivas(d, mes), entradasAnt = totalEntradasEfetivas(d, mesAnt);
-    const despesas = totalDespesasPagasMes(d, mes), despesasAnt = totalDespesasPagasMes(d, mesAnt);
+    const entradas = totalEntradasTodasMes(d, mes), entradasAnt = totalEntradasTodasMes(d, mesAnt);
+    const despesas = totalDespesasTodasMes(d, mes), despesasAnt = totalDespesasTodasMes(d, mesAnt);
     const linha = (rot, val, cls) => `<div class="kv"><span class="dim">${rotuloPainel(rot)}</span><b class="${cls || ""}">${val}</b></div>`;
 
     const paineis = {
@@ -1749,14 +1747,14 @@
       return;
     }
     if (chave === "avencer") {
-      const vencendo = F.contasVencendoEm(d, 7).filter((c) => c.statusReal !== "Pago");
+      const vencendo = contasPendentesMes(d, F.mesAtual());
       const total = vencendo.reduce((sm, c) => sm + Number(c.valor || 0), 0);
       const saldo = F.totalBancos(d);
       painelSimples("Contas Pendentes", saldo > 0 ? (total / saldo) * 100 : 0,
-        "do seu saldo em bancos está comprometido", "soma contas com vencimento próximos 7 dias",
+        "do seu saldo em bancos está comprometido", "soma de contas pendentes no mês atual",
         (vencendo.length
           ? vencendo.map((c) => linha(esc(c.descricao) + " · " + fmtData(c.vencimento), brl(c.valor), c.statusReal === "Atrasado" ? "down" : "")).join("")
-          : `<div class="kv"><span class="dim">Nenhuma conta para os próximos 7 dias</span><b>—</b></div>`) +
+          : `<div class="kv"><span class="dim">Nenhuma conta pendente no mês atual</span><b>—</b></div>`) +
         linha("Saldo bancos", brl(saldo), "up") + linha("Total pendente", brl(total), "down"), "despesas");
       return;
     }
@@ -1891,8 +1889,8 @@
   function renderDashboard(d) {
     const p = I.patrimonio(d);
     const mesAtual = F.mesAtual(), mesAnt = F.mesAnterior();
-    const entradasMes = totalEntradasEfetivas(d, mesAtual), entradasAnt = totalEntradasEfetivas(d, mesAnt);
-    const despesasMes = totalDespesasPagasMes(d, mesAtual), despesasAnt = totalDespesasPagasMes(d, mesAnt);
+    const entradasMes = totalEntradasTodasMes(d, mesAtual), entradasAnt = totalEntradasTodasMes(d, mesAnt);
+    const despesasMes = totalDespesasTodasMes(d, mesAtual), despesasAnt = totalDespesasTodasMes(d, mesAnt);
     const resultadoMes = entradasMes - despesasMes, resultadoAnt = entradasAnt - despesasAnt;
     const patrimonioAnt = (() => {
       const hist = d.historicoPatrimonio;
@@ -1926,7 +1924,7 @@
     const maiorDesp = F.maiorDespesa(d);
     const hoje = new Date(), diaAtual = hoje.getDate(), diasNoMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).getDate();
     const projecao = diaAtual > 0 ? (despesasMes / diaAtual) * diasNoMes : 0;
-    const vencendo = F.contasVencendoEm(d, 7).filter((c) => c.statusReal === "Pendente");
+    const vencendo = contasPendentesMes(d, F.mesAtual());
     const totalVencendo = vencendo.reduce((s, c) => s + Number(c.valor || 0), 0);
 
     const movRecentes = [
@@ -1939,7 +1937,7 @@
       <div class="kpi-row">
         ${kpiCard("Patrimônio líquido", brl(p.bancos + I.totalLiquidoOutros(d) + p.acoes - p.dividas), pctLivre, "var(--laranja)", delta(F.variacaoPercentual(p.liquido, patrimonioAnt), "vs mês anterior"), `Dívidas: ${brl(p.dividas)}`, "patrimonio")}
         ${kpiCard("Saldo bancário", brl(p.bancos), pctBancos, "var(--azul)", delta(pctBancos, "do patrimônio"), `${bancos.length} ${bancos.length === 1 ? "Conta Cadastrada" : "Contas Cadastradas"}`, "bancos")}
-        ${kpiCard("Investimentos", brl(I.totalLiquidoOutros(d) + p.acoes), pctInvestido, "var(--vi)", delta(rentCarteira, "rent. carteira"), `${pctInvestido.toFixed(0)}% do patrimônio investido`, "investido")}
+        ${kpiCard("Investimentos Líquidos", brl(I.totalLiquidoOutros(d) + p.acoes), pctInvestido, "var(--vi)", delta(rentCarteira, "rent. carteira"), `${pctInvestido.toFixed(0)}% do patrimônio investido`, "investido")}
         ${kpiCard("Receitas mês", brl(entradasMes), entradasMes + despesasMes > 0 ? (entradasMes / (entradasMes + despesasMes)) * 100 : 0, "var(--up)", delta(F.variacaoPercentual(entradasMes, entradasAnt), "vs mês anterior"), `Mês anterior: ${brl(entradasAnt)}`, "receitas")}
         ${kpiCard("Despesas mês", brl(despesasMes), pctDespesas, "var(--down)", delta(F.variacaoPercentual(despesasMes, despesasAnt), "vs mês anterior", true), `${pctDespesas.toFixed(0)}% das receitas`, "despesas")}
       </div>
@@ -1969,7 +1967,7 @@
       ${stripKpis([
         { rotulo: "TAXA POUPANÇA", valor: taxaPoupanca.toFixed(1).replace(".", ",") + "%", sub: `Resultado: ${brlSinal(resultadoMes)}`, cor: "#22E39A", icone: ICONES_STRIP.poupanca, chave: "poupanca" },
         { rotulo: "PROJEÇÃO DESPESAS", valor: brl(projecao), sub: `Ritmo Atual`, cor: "#FF7A1A", icone: ICONES_STRIP.projecao, chave: "projecao" },
-        { rotulo: "MAIOR GASTO", valor: maiorDesp ? brl(maiorDesp.valor) : "—", sub: maiorDesp ? esc(maiorDesp.descricao) : "sem despesas", cor: "#FF4D7A", icone: ICONES_STRIP.maiorgasto, chave: "maiorgasto" },
+        { rotulo: "MAIOR GASTO", valor: maiorDesp ? brl(maiorDesp.valor) : "—", sub: maiorDesp ? esc(maiorDesp.descricao) : "Sem Despesas", cor: "#FF4D7A", icone: ICONES_STRIP.maiorgasto, chave: "maiorgasto" },
         { rotulo: "MELHOR ATIVO", valor: melhor ? esc(melhor.ticker) : "—", sub: melhor ? `<b class="${corSinal(melhor.rentabilidade)}">${pct(melhor.rentabilidade)}</b> Preço Médio` : "sem ativos", cor: "#FFC233", icone: ICONES_STRIP.melhorativo, chave: "melhorativo" },
         { rotulo: "CONTAS PENDENTES", valor: brl(totalVencendo), sub: `${vencendo.length} ${vencendo.length === 1 ? "Conta" : "Contas"}`, cor: "#2F8BFF", icone: ICONES_STRIP.avencer, chave: "avencer" }
       ])}
@@ -2251,6 +2249,46 @@
   // (recorrências) confirmadas naquele mês em particular — a mesma conta
   // que a guia Despesas usa no "Pagas:" do cabeçalho. A antiga
   // F.totalDespesasMes só somava a tabela de despesas, sem contas pagas.
+
+  // Total de TODAS as despesas do mês, independente do status (pagas,
+  // previstas ou atrasadas) — usado no card e no painel "Despesas do mês".
+  function totalDespesasTodasMes(d, mes) {
+    let total = d.despesas.filter((x) => String(x.data || "").slice(0, 7) === mes)
+      .reduce((t, x) => t + Number(x.valor || 0), 0);
+    total += (d.contasPagar || []).filter((c) => String(c.vencimento || "").slice(0, 7) === mes)
+      .reduce((t, c) => t + Number(c.valor || 0), 0);
+    const contasComoLista = (d.contasPagar || []).map((c) => ({ ...c, data: c.vencimento }));
+    const contasDoMes = (d.contasPagar || []).filter((c) => String(c.vencimento || "").slice(0, 7) === mes);
+    const repDespesas = repeticoesPrevistas(d.despesas, mes, (reg, data) => ({
+      valor: valorDoMes(reg, data.slice(0, 7))
+    }), contasDoMes);
+    const repContas = repeticoesPrevistas(contasComoLista, mes, (reg, data) => ({
+      valor: valorDoMes(reg, data.slice(0, 7))
+    }), []);
+    total += [...repDespesas, ...repContas].reduce((t, x) => t + Number(x.valor || 0), 0);
+    return total;
+  }
+
+  // Total de TODAS as entradas do mês, independente do status (recebidas
+  // ou previstas) — usado no card e no painel "Receitas do mês".
+  function totalEntradasTodasMes(d, mes) {
+    const reais = d.entradas.filter((e) => String(e.data || "").slice(0, 7) === mes)
+      .reduce((t, e) => t + Number(e.valor || 0), 0);
+    const recorrentes = repeticoesPrevistas(d.entradas, mes, (reg, data) => ({
+      valor: valorDoMes(reg, data.slice(0, 7))
+    })).reduce((t, e) => t + Number(e.valor || 0), 0);
+    return reais + recorrentes;
+  }
+
+
+  // Contas a pagar ainda não quitadas (pendentes ou atrasadas) com
+  // vencimento dentro de um mês — usado no quadro "Contas Pendentes".
+  function contasPendentesMes(d, mes) {
+    return F.listaContasPagarComStatus(d)
+      .filter((c) => c.statusReal !== "Pago" && String(c.vencimento || "").slice(0, 7) === mes)
+      .sort((a, b) => (a.vencimento || "").localeCompare(b.vencimento || ""));
+  }
+
   function totalDespesasPagasMes(d, mes) {
     let total = d.despesas.filter((x) => String(x.data || "").slice(0, 7) === mes)
       .reduce((t, x) => t + Number(x.valor || 0), 0);
@@ -3746,6 +3784,7 @@
               <div class="ajuda">Crie em GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic), marcando só a permissão <b>gist</b>.</div></div>
             <button class="btn primario" data-acao="conectar-sync">Ligar</button>
             <p class="campo ajuda" style="margin-top:14px">Ligue primeiro no aparelho com os dados mais completos. Nos seus outros aparelhos, use o mesmo token: eles baixam os dados e passam a se atualizar sozinhos. O token fica salvo só neste aparelho.</p>
+            <p class="campo ajuda" style="margin-top:8px;color:var(--acc)"><b>Se outras pessoas também vão usar o sistema:</b> cada uma precisa da <b>própria conta</b> do GitHub e do próprio token — gratuito e leva menos de 2 minutos para criar. Usar o mesmo token que o seu faz os dados de vocês se misturarem no mesmo cofre, podendo apagar uns aos outros.</p>
           </div>`;
           return card("", "Sincronização", "entre aparelhos · web, iPad e Windows", "", corpo);
         })()}</div>
