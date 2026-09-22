@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "1.3.8";
+  const VERSAO_APP = "1.3.9";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -114,7 +114,7 @@
   }
 
   // Entradas e Despesas usam exatamente as mesmas larguras de coluna
-  const GRID_LANCAMENTOS = "grid-template-columns:minmax(0,1fr) 104px minmax(118px, 138px) 96px 150px";
+  const GRID_LANCAMENTOS = "grid-template-columns:96px minmax(0,1fr) minmax(118px, 138px) 104px 150px";
 
   let mesesBancos = 0;
   let anoBancos = null;   // período do gráfico da guia Bancos (0 = saldo atual)
@@ -1195,7 +1195,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.3.8" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.3.9" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2454,15 +2454,15 @@
     if (!lista.length) {
       corpo = `<div class="empty">Nenhuma entrada cadastrada. Use "+ Nova entrada" para lançar seu salário ou outra receita.</div>`;
     } else {
-      corpo = `<div class="hd" style="${grid}">${thOrdem("ordenar-entradas", "descricao", "Descrição", ordemEntradas)}${thOrdem("ordenar-entradas", "status", "Status", ordemEntradas)}${thOrdem("ordenar-entradas", "banco", "Banco", ordemEntradas)}${thOrdem("ordenar-entradas", "data", "Data", ordemEntradas, "r")}${thOrdem("ordenar-entradas", "valor", "Valor", ordemEntradas, "r hd-valor")}</div>` +
+      corpo = `<div class="hd" style="${grid}">${thOrdem("ordenar-entradas", "data", "Data", ordemEntradas)}${thOrdem("ordenar-entradas", "descricao", "Descrição", ordemEntradas)}${thOrdem("ordenar-entradas", "banco", "Banco", ordemEntradas)}${thOrdem("ordenar-entradas", "status", "Status", ordemEntradas)}${thOrdem("ordenar-entradas", "valor", "Valor", ordemEntradas, "r hd-valor")}</div>` +
         lista.map((e) => `
         <div class="rw clicavel${e.prevista ? " linha-prevista" : ""}" style="${grid}" data-acao="${e.prevista ? "editar-previsao-entrada" : "editar-entrada"}" data-id="${e.id}" data-data="${e.data}" title="${e.prevista ? "Abre este mês para edição (o valor muda só aqui)" : "Abrir para editar"}">
+          <div class="dim" style="font-size:12px">${fmtDataCurta(e.data)}</div>
           <div><div class="nm">${esc(e.descricao)}${seloFreq(e)}</div><div class="sub">${esc(e.categoria)} · ${esc(e.tipo || "")}</div></div>
+          <div><button class="cel-banco cel-banco-botao" data-acao="trocar-banco-entrada" data-id="${e.id}" title="${e.prevista ? "Troca o banco do lançamento original (vale para todas as repetições)" : "Trocar o banco desta entrada"}">${marcaBanco(e.banco, 18)}<span class="dim">${esc(e.banco)}</span></button></div>
           <div>${e.prevista
             ? `<button class="selo-tag ${e.recebidaNoMes ? "selo-pago" : "selo-prevista"} selo-botao" data-acao="quitar-mes-entrada" data-id="${e.id}" data-mes="${e.mesRef}" title="${e.recebidaNoMes ? "Marcar como prevista" : "Marcar como recebida"}">${e.status}</button>`
             : `<button class="selo-tag ${e.previsto ? "selo-prevista" : "selo-pago"} selo-botao" data-acao="alternar-prevista-entrada" data-id="${e.id}" title="${e.previsto ? "Marcar como recebida" : "Marcar como prevista"}">${e.status}</button>`}</div>
-          <div><button class="cel-banco cel-banco-botao" data-acao="trocar-banco-entrada" data-id="${e.id}" title="${e.prevista ? "Troca o banco do lançamento original (vale para todas as repetições)" : "Trocar o banco desta entrada"}">${marcaBanco(e.banco, 18)}<span class="dim">${esc(e.banco)}</span></button></div>
-          <div class="r dim" style="font-size:12px">${fmtDataCurta(e.data)}</div>
           <div class="cel-valor"><span class="big up">+${brl(e.valor)}</span></div>
         </div>`).join("");
     }
@@ -2625,17 +2625,17 @@
     if (!lista.length) {
       corpo = `<div class="empty">Nenhum lançamento em ${NOMES_MES[Number(mesDespesas.slice(5, 7)) - 1]}/${mesDespesas.slice(0, 4)}. Use NOVO para lançar uma despesa ou uma conta a pagar.</div>`;
     } else {
-      corpo = `<div class="hd" style="${gridD}">${thOrdem("ordenar-despesas", "descricao", "Descrição", ordemDespesas)}${thOrdem("ordenar-despesas", "status", "Status", ordemDespesas)}${thOrdem("ordenar-despesas", "pagoCom", "Banco", ordemDespesas)}${thOrdem("ordenar-despesas", "data", "Data", ordemDespesas, "r")}${thOrdem("ordenar-despesas", "valor", "Valor", ordemDespesas, "r hd-valor")}</div>` +
+      corpo = `<div class="hd" style="${gridD}">${thOrdem("ordenar-despesas", "data", "Data", ordemDespesas)}${thOrdem("ordenar-despesas", "descricao", "Descrição", ordemDespesas)}${thOrdem("ordenar-despesas", "pagoCom", "Banco", ordemDespesas)}${thOrdem("ordenar-despesas", "status", "Status", ordemDespesas)}${thOrdem("ordenar-despesas", "valor", "Valor", ordemDespesas, "r hd-valor")}</div>` +
         lista.map((x) => `
         <div class="rw clicavel${x.prevista ? " linha-prevista" : ""}" style="${gridD}" data-acao="${x.prevista ? (x.origem === "conta" ? "editar-previsao-conta" : "editar-previsao") : (x.origem === "despesa" ? "editar-despesa" : "editar-conta")}" data-id="${x.id}" data-data="${x.data}" title="${x.prevista ? "Abre este mês para edição (o valor muda só aqui)" : "Abrir para editar"}">
+          <div class="dim" style="font-size:12px">${fmtData(x.data)}</div>
           <div><div class="nm">${esc(x.descricao)}${x.recorrencia && x.recorrencia !== FREQUENCIAS[0] ? ` <span class="selo-tag selo-cat">${esc(x.recorrencia.toLowerCase())}</span>` : ""}</div><div class="sub">${esc(x.categoria || "—")}</div></div>
-          <div>${x.prevista
-            ? `<button class="selo-tag ${x.status === "Pago" ? "selo-pago" : "selo-prevista"} selo-botao" data-acao="${x.origem === "conta" ? "quitar-mes-conta" : "quitar-mes"}" data-id="${x.id}" data-mes="${x.mesRef}" title="Confirmar: cria o lançamento deste mês">${x.status}</button>`
-            : `<button class="selo-tag selo-${x.status.toLowerCase()} selo-botao" data-acao="${x.origem === "conta" ? "alternar-pago" : "tornar-pendente"}" data-id="${x.id}" title="${x.origem === "conta" ? (x.status === "Pago" ? "Marcar como prevista" : "Marcar como paga") : "Marcar como prevista (vira conta a pagar)"}">${x.status}</button>`}</div>
           <div>${x.origem === "despesa" || x.pagoCom !== "—"
             ? `<button class="cel-banco cel-banco-botao" data-acao="${x.origem === "despesa" ? "trocar-banco" : "trocar-banco-conta"}" data-id="${x.id}" title="Trocar o banco (nas repetições, altera o lançamento original)">${marcaBanco(x.pagoCom, 18)}<span class="dim">${esc(x.pagoCom)}</span></button>`
             : `<span class="cel-banco">${x.pagoCom && x.pagoCom !== "—" ? marcaBanco(x.pagoCom, 18) + `<span class="dim">${esc(x.pagoCom)}</span>` : '<span class="dim">—</span>'}</span>`}</div>
-          <div class="r dim" style="font-size:12px">${fmtData(x.data)}</div>
+          <div>${x.prevista
+            ? `<button class="selo-tag ${x.status === "Pago" ? "selo-pago" : "selo-prevista"} selo-botao" data-acao="${x.origem === "conta" ? "quitar-mes-conta" : "quitar-mes"}" data-id="${x.id}" data-mes="${x.mesRef}" title="Confirmar: cria o lançamento deste mês">${x.status}</button>`
+            : `<button class="selo-tag selo-${x.status.toLowerCase()} selo-botao" data-acao="${x.origem === "conta" ? "alternar-pago" : "tornar-pendente"}" data-id="${x.id}" title="${x.origem === "conta" ? (x.status === "Pago" ? "Marcar como prevista" : "Marcar como paga") : "Marcar como prevista (vira conta a pagar)"}">${x.status}</button>`}</div>
           <div class="cel-valor"><span class="big down">−${brl(x.valor)}</span></div>
         </div>`).join("");
     }
