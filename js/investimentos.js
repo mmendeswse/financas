@@ -35,6 +35,12 @@
     return d.investimentos.reduce(function (s, i) { return s + Number(i.valorAtual || 0); }, 0);
   }
 
+  // soma já descontando o imposto de cada aplicação (valor líquido) — usado
+  // nos painéis que mostram quanto realmente entraria no bolso hoje
+  function totalLiquidoOutros(d) {
+    return d.investimentos.reduce(function (s, i) { return s + valorLiquidoInvestimento(i); }, 0);
+  }
+
   function investimentosPorCategoria(d) {
     var mapa = {};
     d.investimentos.forEach(function (i) {
@@ -334,6 +340,7 @@
     ISENTOS: ISENTOS,
     totalInvestidoOutros: totalInvestidoOutros,
     totalAtualOutros: totalAtualOutros,
+    totalLiquidoOutros: totalLiquidoOutros,
     investimentosPorCategoria: investimentosPorCategoria,
 
     valorInvestidoAcao: valorInvestidoAcao,

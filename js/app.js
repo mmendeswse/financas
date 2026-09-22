@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "1.1.8";
+  const VERSAO_APP = "1.1.9";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -1187,7 +1187,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.1.8" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.1.9" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1504,7 +1504,7 @@
         conta: "bancos + investimentos + ações − dívidas",
         pct: p.bruto > 0 ? (p.liquido / p.bruto) * 100 : 0,
         pctRotulo: "do patrimônio bruto está livre de dívidas",
-        linhas: linha("+ Bancos", brl(p.bancos)) + linha("+ Investimentos", brl(p.investimentos)) +
+        linhas: linha("+ Bancos", brl(p.bancos)) + linha("+ Investimentos", brl(I.totalLiquidoOutros(d))) +
           linha("+ Ações e FIIs", brl(p.acoes)) + linha("− Dívidas", brl(p.dividas), "down") +
           linha("Patrimônio líquido", brl(p.liquido), corSinal(p.liquido)),
         secao: "bancos"
@@ -1524,7 +1524,7 @@
         pct: I.percentualInvestido(d),
         pctRotulo: "do patrimônio bruto está investido",
         linhas: linha("Rentabilidade carteira", pct(I.rentabilidadeCarteiraAcoes(d)), corSinal(I.rentabilidadeCarteiraAcoes(d))) +
-          linha("Renda fixa, Tesouro e Fundos", brl(p.investimentos)) + linha("Ações, FIIs e ETFs", brl(p.acoes)) +
+          linha("Renda fixa, Tesouro e Fundos", brl(I.totalLiquidoOutros(d))) + linha("Ações, FIIs e ETFs", brl(p.acoes)) +
           linha("Patrimônio bruto", brl(p.bruto)) +
           linha("Total investido", brl(p.investimentos + p.acoes), "up"),
         secao: "investimentos"
