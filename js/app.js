@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "1.1.4";
+  const VERSAO_APP = "1.1.5";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -683,9 +683,11 @@
     document.body.appendChild(ind);
 
     const LIMITE = 70, MAXIMO = 110;
-    let inicioY = null, puxado = 0, atualizando = false;
-    const noTopo = () => (window.scrollY || document.documentElement.scrollTop || 0) <= 0 &&
-      ((document.querySelector(".scroll") || {}).scrollTop || 0) <= 0;
+    let inicioY = null, puxado = 0, atualizando = false, travaSeguranca = null;
+    // pequena tolerância: no iPad, o próprio elástico do sistema pode deixar
+    // o scroll a 1-2px do topo por um instante depois de soltar
+    const noTopo = () => (window.scrollY || document.documentElement.scrollTop || 0) <= 2 &&
+      ((document.querySelector(".scroll") || {}).scrollTop || 0) <= 2;
     // parte de centralizado na folga do topo (translateY 0 = posição do CSS)
     // e desce um pouco conforme o dedo arrasta, sem sair da faixa
     const mostrar = (dist, pronto) => {
@@ -693,7 +695,12 @@
       ind.style.opacity = Math.min(1, dist / LIMITE);
       ind.classList.toggle("pronto", pronto);
     };
-    const esconder = () => {
+    // sempre volta ao estado inicial, mesmo que o gesto tenha sido
+    // interrompido pelo sistema (touchcancel) ou a sincronização trave
+    const resetar = () => {
+      clearTimeout(travaSeguranca); travaSeguranca = null;
+      inicioY = null; puxado = 0; atualizando = false;
+      ind.style.transition = "";
       ind.classList.remove("girando", "pronto");
       ind.style.transform = "translate(-50%, -50%)";
       ind.style.opacity = "0";
@@ -701,25 +708,26 @@
 
     document.addEventListener("touchstart", (e) => {
       if (atualizando || e.touches.length !== 1 || !noTopo()) { inicioY = null; return; }
-      if (document.getElementById("modal").classList.contains("on")) { inicioY = null; return; }
+      const modal = document.getElementById("modal");
+      if (modal && modal.classList.contains("on")) { inicioY = null; return; }
       inicioY = e.touches[0].clientY; puxado = 0;
       ind.style.transition = "none";
     }, { passive: true });
 
     document.addEventListener("touchmove", (e) => {
-      if (inicioY === null) return;
+      if (inicioY === null || atualizando) return;
       const dy = e.touches[0].clientY - inicioY;
-      if (dy <= 0 || !noTopo()) { puxado = 0; esconder(); return; }
+      if (dy <= 0 || !noTopo()) { puxado = 0; inicioY = null; ind.style.transition = ""; ind.style.transform = "translate(-50%, -50%)"; ind.style.opacity = "0"; ind.classList.remove("pronto"); return; }
       puxado = dy * 0.55;                       // resistência, como no iOS
       if (e.cancelable) e.preventDefault();
       mostrar(puxado, puxado >= LIMITE);
     }, { passive: false });
 
-    document.addEventListener("touchend", () => {
-      if (inicioY === null) return;
+    const soltar = () => {
+      if (inicioY === null || atualizando) { inicioY = null; return; }
       inicioY = null;
       ind.style.transition = "";
-      if (puxado < LIMITE) { esconder(); return; }
+      if (puxado < LIMITE) { ind.classList.remove("pronto"); ind.style.transform = "translate(-50%, -50%)"; ind.style.opacity = "0"; return; }
       atualizando = true;
       ind.style.transform = "translate(-50%, calc(-50% + 26px))";
       ind.style.opacity = "1";
@@ -729,8 +737,15 @@
         ? sincronizar(true).then(() => { if (DADOS.atualizadoEm === antes) toast("Tudo atualizado."); })
         : Promise.resolve().then(() => { renderRota(); toast("Sincronização desligada — ligue em Configurações."); });
       const minimo = new Promise((ok) => setTimeout(ok, 700));   // tempo mínimo para o giro ser visível
-      Promise.all([tarefa, minimo]).then(() => { atualizando = false; esconder(); }, () => { atualizando = false; esconder(); });
-    }, { passive: true });
+      // se a sincronização travar (rede lenta, wi-fi cativo), o gesto se
+      // libera sozinho depois de um tempo — sem isso, um travamento aqui
+      // impediria o gesto de funcionar de novo nas próximas vezes
+      travaSeguranca = setTimeout(resetar, 8000);
+      Promise.race([Promise.all([tarefa, minimo]), new Promise((ok) => setTimeout(ok, 8000))])
+        .then(resetar, resetar);
+    };
+    document.addEventListener("touchend", soltar, { passive: true });
+    document.addEventListener("touchcancel", () => { if (!atualizando) resetar(); }, { passive: true });
   }
 
   // =========================================================================
@@ -1150,7 +1165,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.1.4" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.1.5" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
