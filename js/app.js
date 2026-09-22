@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "1.3.5";
+  const VERSAO_APP = "1.3.7";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -921,6 +921,14 @@
     ligarMascaraMoeda(document.getElementById("modal"));
     ligarCamposBanco(document.getElementById("modal"));
     document.getElementById("scrim").addEventListener("click", fecharModal);
+    // selo de status clicável dentro dos painéis "Receitas/Despesas do mês"
+    document.getElementById("modal").addEventListener("click", (e) => {
+      const b = e.target.closest("[data-acao-status]");
+      if (!b) return;
+      e.stopPropagation();
+      alternarStatusLancamento(b.dataset.acaoStatus, b.dataset.id, b.dataset.mes);
+      if (painelKpiAberto) explicarKPI(painelKpiAberto);   // redesenha com o status novo
+    });
     document.addEventListener("keydown", (e) => { if (e.key === "Escape") fecharModal(); });
   }
 
@@ -1187,7 +1195,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.3.5" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.3.7" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1490,7 +1498,9 @@
   // Painel que explica de onde vem cada percentual do dashboard,
   // mostrando a conta com os seus próprios números
   // ---------------------------------------------------------------------
+  let painelKpiAberto = null;
   function explicarKPI(chave) {
+    painelKpiAberto = chave;
     const d = DADOS;
     const p = I.patrimonio(d);
     const mes = F.mesAtual(), mesAnt = F.mesAnterior();
@@ -1546,8 +1556,8 @@
         linhas: (() => {
           const itensR = listaEntradasTodasMes(d, mes);
           return linha("Lançamentos", plural(itensR.length, "entrada")) +
-            itensR.map((e) => linha(fmtDataCurta(e.data) + " · " + esc(e.descricao), seloStatusPainel(e.status) + `<span class="col-valor">${brl(e.valor)}</span>`)).join("") +
-            linha("Total", brl(entradas), "up");
+            itensR.map((e) => linha(fmtDataCurta(e.data) + " · " + esc(e.descricao), seloStatusPainel(e.status, e) + `<span class="col-valor">${brl(e.valor)}</span>`)).join("") +
+            linha("Total", brl(entradas));
         })(),
         secao: "entradas"
       },
@@ -1559,8 +1569,8 @@
         linhas: (() => {
           const itensD = listaDespesasTodasMes(d, mes);
           return linha("Lançamentos", plural(itensD.length, "despesa")) +
-            itensD.map((x) => linha(fmtDataCurta(x.data) + " · " + esc(x.descricao), seloStatusPainel(x.status) + `<span class="col-valor">${brl(x.valor)}</span>`, "down")).join("") +
-            linha("Total", brl(despesas), "down");
+            itensD.map((x) => linha(fmtDataCurta(x.data) + " · " + esc(x.descricao), seloStatusPainel(x.status, x) + `<span class="col-valor">${brl(x.valor)}</span>`, "down")).join("") +
+            linha("Total", brl(despesas));
         })(),
         secao: "despesas"
       }
@@ -2297,27 +2307,64 @@
   // Lista, ordenada por data, de todas as despesas/contas do mês (pagas,
   // previstas ou atrasadas) — usada no painel "Despesas do mês".
   // selo colorido do status, no mesmo padrão das guias Entradas e Despesas
-  function seloStatusPainel(st) {
+
+  // Troca o status de um lançamento — a mesma regra usada nas guias
+  // Entradas e Despesas e nos painéis "Receitas/Despesas do mês".
+  function alternarStatusLancamento(acao, id, mes) {
+    if (acao === "quitar-mes") {
+      const reg = achar(DADOS.despesas, id);
+      if (reg) { gravarAjuste(reg, mes, { pago: !mesQuitado(reg, mes) }); salvarEAtualizar(mesQuitado(reg, mes) ? "Marcada como paga neste mês." : "Marcada como prevista."); }
+    } else if (acao === "quitar-mes-conta") {
+      const regC = achar(DADOS.contasPagar, id);
+      if (regC) { gravarAjuste(regC, mes, { pago: !mesQuitado(regC, mes) }); salvarEAtualizar(mesQuitado(regC, mes) ? "Marcada como paga neste mês." : "Marcada como prevista."); }
+    } else if (acao === "quitar-mes-entrada") {
+      const regE = achar(DADOS.entradas, id);
+      if (regE) { gravarAjuste(regE, mes, { pago: !mesQuitado(regE, mes) }); salvarEAtualizar(mesQuitado(regE, mes) ? "Marcada como recebida neste mês." : "Marcada como prevista."); }
+    } else if (acao === "alternar-prevista-entrada") {
+      const ent4 = achar(DADOS.entradas, id);
+      if (ent4) { ent4.previsto = !ent4.previsto; salvarEAtualizar(ent4.previsto ? "Marcada como prevista." : "Marcada como recebida."); }
+    } else if (acao === "tornar-pendente") {
+      const dsp = achar(DADOS.despesas, id);
+      if (dsp) {
+        DADOS.despesas = DADOS.despesas.filter((r) => r.id !== dsp.id);
+        DADOS.contasPagar.push({
+          id: dsp.id, descricao: dsp.descricao, categoria: dsp.categoria,
+          vencimento: dsp.data, valor: dsp.valor, status: "Pendente", obs: dsp.obs || ""
+        });
+        salvarEAtualizar("Marcada como prevista.");
+      }
+    } else if (acao === "alternar-pago") {
+      const c = achar(DADOS.contasPagar, id);
+      if (c) { c.status = c.status === "Pago" ? "Pendente" : "Pago"; salvarEAtualizar(c.status === "Pago" ? "Marcada como paga." : "Marcada como prevista."); }
+    }
+  }
+
+  function seloStatusPainel(st, item) {
     const cls = st === "Atrasado" ? "selo-atrasado" : (st === "Prevista" ? "selo-prevista" : "selo-pago");
+    if (item && item.acao) {
+      return `<span class="col-status"><button class="selo-tag ${cls} selo-painel selo-botao" data-acao-status="${item.acao}" data-id="${esc(item.id)}"${item.mes ? ` data-mes="${item.mes}"` : ""} title="Clique para trocar o status">${esc(st)}</button></span>`;
+    }
     return `<span class="col-status"><span class="selo-tag ${cls} selo-painel">${esc(st)}</span></span>`;
   }
 
   function listaDespesasTodasMes(d, mes) {
     const lancadas = d.despesas.filter((x) => String(x.data || "").slice(0, 7) === mes)
-      .map((x) => ({ descricao: x.descricao, valor: Number(x.valor || 0), data: x.data, status: "Pago" }));
+      .map((x) => ({ descricao: x.descricao, valor: Number(x.valor || 0), data: x.data, status: "Pago", acao: "tornar-pendente", id: x.id }));
     const contasDoMes = (d.contasPagar || []).filter((c) => String(c.vencimento || "").slice(0, 7) === mes);
     const contasMapeadas = contasDoMes.map((c) => {
       const st = F.statusReal(c);
-      return { descricao: c.descricao, valor: Number(c.valor || 0), data: c.vencimento, status: st === "Pendente" ? "Prevista" : st };
+      return { descricao: c.descricao, valor: Number(c.valor || 0), data: c.vencimento, status: st === "Pendente" ? "Prevista" : st, acao: "alternar-pago", id: c.id };
     });
     const contasComoLista = (d.contasPagar || []).map((c) => ({ ...c, data: c.vencimento }));
     const repDespesas = repeticoesPrevistas(d.despesas, mes, (reg, data) => ({
       descricao: reg.descricao, valor: valorDoMes(reg, data.slice(0, 7)), data,
-      status: mesQuitado(reg, data.slice(0, 7)) ? "Pago" : "Prevista"
+      status: mesQuitado(reg, data.slice(0, 7)) ? "Pago" : "Prevista",
+      acao: "quitar-mes", id: reg.id, mes: data.slice(0, 7)
     }), contasDoMes);
     const repContas = repeticoesPrevistas(contasComoLista, mes, (reg, data) => ({
       descricao: reg.descricao, valor: valorDoMes(reg, data.slice(0, 7)), data,
-      status: mesQuitado(reg, data.slice(0, 7)) ? "Pago" : "Prevista"
+      status: mesQuitado(reg, data.slice(0, 7)) ? "Pago" : "Prevista",
+      acao: "quitar-mes-conta", id: reg.id, mes: data.slice(0, 7)
     }), []);
     return [...lancadas, ...contasMapeadas, ...repDespesas, ...repContas]
       .sort((a, b) => (a.data || "").localeCompare(b.data || ""));
@@ -2327,10 +2374,11 @@
   // previstas) — usada no painel "Receitas do mês".
   function listaEntradasTodasMes(d, mes) {
     const reais = d.entradas.filter((e) => String(e.data || "").slice(0, 7) === mes)
-      .map((e) => ({ descricao: e.descricao, valor: Number(e.valor || 0), data: e.data, status: e.previsto ? "Prevista" : "Recebida" }));
+      .map((e) => ({ descricao: e.descricao, valor: Number(e.valor || 0), data: e.data, status: e.previsto ? "Prevista" : "Recebida", acao: "alternar-prevista-entrada", id: e.id }));
     const recorrentes = repeticoesPrevistas(d.entradas, mes, (reg, data) => ({
       descricao: reg.descricao, valor: valorDoMes(reg, data.slice(0, 7)), data,
-      status: mesQuitado(reg, data.slice(0, 7)) ? "Recebida" : "Prevista"
+      status: mesQuitado(reg, data.slice(0, 7)) ? "Recebida" : "Prevista",
+      acao: "quitar-mes-entrada", id: reg.id, mes: data.slice(0, 7)
     }));
     return [...reais, ...recorrentes].sort((a, b) => (a.data || "").localeCompare(b.data || ""));
   }
@@ -3981,44 +4029,13 @@
           abrirModalEntrada(id, null, { origemId: id, data: b.dataset.data });
           break;
 
-        case "quitar-mes": {
-          const reg = achar(DADOS.despesas, id);
-          if (reg) {
-            const mes = b.dataset.mes;
-            gravarAjuste(reg, mes, { pago: !mesQuitado(reg, mes) });
-            salvarEAtualizar(mesQuitado(reg, mes) ? "Marcada como paga neste mês." : "Marcada como prevista.");
-          }
-          break;
-        }
+        case "quitar-mes": alternarStatusLancamento("quitar-mes", id, b.dataset.mes); break;
 
-        case "quitar-mes-conta": {
-          const regC = achar(DADOS.contasPagar, id);
-          if (regC) {
-            const mes = b.dataset.mes;
-            gravarAjuste(regC, mes, { pago: !mesQuitado(regC, mes) });
-            salvarEAtualizar(mesQuitado(regC, mes) ? "Marcada como paga neste mês." : "Marcada como prevista.");
-          }
-          break;
-        }
+        case "quitar-mes-conta": alternarStatusLancamento("quitar-mes-conta", id, b.dataset.mes); break;
 
-        case "quitar-mes-entrada": {
-          const regE = achar(DADOS.entradas, id);
-          if (regE) {
-            const mes = b.dataset.mes;
-            gravarAjuste(regE, mes, { pago: !mesQuitado(regE, mes) });
-            salvarEAtualizar(mesQuitado(regE, mes) ? "Marcada como recebida neste mês." : "Marcada como prevista.");
-          }
-          break;
-        }
+        case "quitar-mes-entrada": alternarStatusLancamento("quitar-mes-entrada", id, b.dataset.mes); break;
 
-        case "alternar-prevista-entrada": {
-          const ent4 = achar(DADOS.entradas, id);
-          if (ent4) {
-            ent4.previsto = !ent4.previsto;
-            salvarEAtualizar(ent4.previsto ? "Marcada como prevista." : "Marcada como recebida.");
-          }
-          break;
-        }
+        case "alternar-prevista-entrada": alternarStatusLancamento("alternar-prevista-entrada", id); break;
 
         case "trocar-banco-entrada": {
           const ent2 = achar(DADOS.entradas, id);
@@ -4054,24 +4071,9 @@
           break;
         }
 
-        case "tornar-pendente": {
-          const dsp = achar(DADOS.despesas, id);
-          if (dsp) {
-            DADOS.despesas = DADOS.despesas.filter((r) => r.id !== dsp.id);
-            DADOS.contasPagar.push({
-              id: dsp.id, descricao: dsp.descricao, categoria: dsp.categoria,
-              vencimento: dsp.data, valor: dsp.valor, status: "Pendente", obs: dsp.obs || ""
-            });
-            salvarEAtualizar("Marcada como prevista.");
-          }
-          break;
-        }
+        case "tornar-pendente": alternarStatusLancamento("tornar-pendente", id); break;
 
-        case "alternar-pago": {
-          const c = achar(DADOS.contasPagar, id);
-          if (c) { c.status = c.status === "Pago" ? "Pendente" : "Pago"; salvarEAtualizar(c.status === "Pago" ? "Marcada como paga." : "Marcada como prevista."); }
-          break;
-        }
+        case "alternar-pago": alternarStatusLancamento("alternar-pago", id); break;
 
         case "novo-investimento": abrirModalInvestimento(null); break;
         case "editar-investimento": abrirModalInvestimento(id); break;

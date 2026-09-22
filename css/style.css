@@ -255,9 +255,9 @@ svg { display: block; }
 .selo-acao { background: rgba(34,227,154,0.14); color: var(--up); }
 .selo-fii { background: rgba(47,139,255,0.16); color: var(--azul); }
 .selo-etf { background: rgba(255,194,51,0.16); color: var(--acc); }
-.selo-pago { background: rgba(34,227,154,0.14); color: var(--up); }
-.selo-pendente { background: rgba(255,194,51,0.16); color: var(--acc); }
-.selo-atrasado { background: rgba(255,77,122,0.16); color: var(--down); }
+.selo-pago { background: rgba(34,227,154,0.14); color: var(--up); border: 1px solid rgba(34,227,154,.35); }
+.selo-pendente { background: rgba(255,194,51,0.16); color: var(--acc); border: 1px solid rgba(255,194,51,.35); }
+.selo-atrasado { background: rgba(255,77,122,0.16); color: var(--down); border: 1px solid rgba(255,77,122,.4); }
 .selo-demo { background: rgba(255,194,51,0.16); color: var(--acc); }
 .selo-cat { background: var(--painel-2); color: var(--dim); border: 1px solid var(--linha-2); }
 
@@ -1122,3 +1122,5 @@ table.tab-acoes th.col-atualiz, table.tab-acoes td.col-atualiz { display: none; 
 /* coluna de status com largura fixa e alinhada à esquerda; valor à direita */
 .kv b .col-status { display: inline-block; width: 92px; margin-left: 14px; text-align: left; vertical-align: middle; }
 .kv b .col-valor { display: inline-block; min-width: 96px; text-align: right; vertical-align: middle; }
+.kv .selo-painel.selo-botao { cursor: pointer; font-family: inherit; }
+.kv .selo-painel.selo-botao:hover { filter: brightness(1.25); }
