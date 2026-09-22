@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "1.1.3";
+  const VERSAO_APP = "1.1.4";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -686,14 +686,16 @@
     let inicioY = null, puxado = 0, atualizando = false;
     const noTopo = () => (window.scrollY || document.documentElement.scrollTop || 0) <= 0 &&
       ((document.querySelector(".scroll") || {}).scrollTop || 0) <= 0;
+    // parte de centralizado na folga do topo (translateY 0 = posição do CSS)
+    // e desce um pouco conforme o dedo arrasta, sem sair da faixa
     const mostrar = (dist, pronto) => {
-      ind.style.transform = `translate(-50%, ${Math.min(dist, MAXIMO) - 50}px) rotate(${dist * 3}deg)`;
+      ind.style.transform = `translate(-50%, calc(-50% + ${Math.min(dist, MAXIMO) * 0.4}px)) rotate(${dist * 3}deg)`;
       ind.style.opacity = Math.min(1, dist / LIMITE);
       ind.classList.toggle("pronto", pronto);
     };
     const esconder = () => {
       ind.classList.remove("girando", "pronto");
-      ind.style.transform = "translate(-50%, -50px)";
+      ind.style.transform = "translate(-50%, -50%)";
       ind.style.opacity = "0";
     };
 
@@ -719,7 +721,7 @@
       ind.style.transition = "";
       if (puxado < LIMITE) { esconder(); return; }
       atualizando = true;
-      ind.style.transform = "translate(-50%, 16px)";
+      ind.style.transform = "translate(-50%, calc(-50% + 26px))";
       ind.style.opacity = "1";
       ind.classList.add("girando");
       const antes = DADOS.atualizadoEm;
@@ -1148,7 +1150,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.1.3" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.1.4" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;

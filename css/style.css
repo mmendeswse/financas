@@ -1100,12 +1100,14 @@ table.tab-acoes th.col-atualiz, table.tab-acoes td.col-atualiz { display: none; 
 
 /* puxar para atualizar (iPad/iPhone) — ícone centralizado no topo */
 #puxarAtualizar {
-  position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 8px); z-index: 60;
+  /* centralizado na folga entre a barra de status e a barra do app —
+     no iPad em paisagem, o próprio iOS reserva essa faixa (env(safe-area-inset-top)) */
+  position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 60px) / 2); z-index: 60;
   width: 40px; height: 40px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   background: var(--painel, #0E1622); color: var(--texto, #cfd8e6);
   border: 1px solid var(--linha-2, #22314a); box-shadow: 0 6px 18px rgba(0,0,0,.35);
-  transform: translate(-50%, -50px); opacity: 0; pointer-events: none;
+  transform: translate(-50%, -50%); opacity: 0; pointer-events: none;
   transition: transform .25s ease, opacity .25s ease;
 }
 #puxarAtualizar.pronto { color: var(--cy); border-color: var(--cy); }
