@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "1.1.5";
+  const VERSAO_APP = "1.1.7";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -674,36 +674,49 @@
   function ligarPuxarParaAtualizar() {
     const ehApp = window.navigator.standalone === true ||
       (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches);
-    if (!ehApp || !("ontouchstart" in window)) return;
+    const shell = document.querySelector(".shell");
+    if (!ehApp || !("ontouchstart" in window) || !shell) return;
 
+    // Modelo clássico: a TELA inteira desce junto com o dedo, revelando o
+    // ícone acima dela — como no Mail, Twitter etc. Ao soltar, tudo sobe de
+    // volta ao lugar; o ícone só some quando essa subida termina.
     const ind = document.createElement("div");
     ind.id = "puxarAtualizar";
     ind.setAttribute("aria-hidden", "true");
     ind.innerHTML = `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/></svg>`;
     document.body.appendChild(ind);
+    const svg = ind.querySelector("svg");
 
-    const LIMITE = 70, MAXIMO = 110;
+    const LIMITE = 70, MAXIMO = 110, REPOUSO_CARREGANDO = 58;
     let inicioY = null, puxado = 0, atualizando = false, travaSeguranca = null;
     // pequena tolerância: no iPad, o próprio elástico do sistema pode deixar
     // o scroll a 1-2px do topo por um instante depois de soltar
     const noTopo = () => (window.scrollY || document.documentElement.scrollTop || 0) <= 2 &&
       ((document.querySelector(".scroll") || {}).scrollTop || 0) <= 2;
-    // parte de centralizado na folga do topo (translateY 0 = posição do CSS)
-    // e desce um pouco conforme o dedo arrasta, sem sair da faixa
-    const mostrar = (dist, pronto) => {
-      ind.style.transform = `translate(-50%, calc(-50% + ${Math.min(dist, MAXIMO) * 0.4}px)) rotate(${dist * 3}deg)`;
+
+    // enquanto o dedo está na tela, a tela acompanha 1:1 (sem suavização);
+    // ao soltar, uma transição cuidadosa leva tudo de volta ao lugar
+    const semTransicao = () => { shell.style.transition = "none"; };
+    const comTransicao = () => { shell.style.transition = ""; };
+
+    const posicionar = (dist, pronto) => {
+      shell.style.transform = `translateY(${Math.min(dist, MAXIMO)}px)`;
       ind.style.opacity = Math.min(1, dist / LIMITE);
+      svg.style.transform = `rotate(${Math.min(dist, MAXIMO) * 3}deg)`;
       ind.classList.toggle("pronto", pronto);
     };
-    // sempre volta ao estado inicial, mesmo que o gesto tenha sido
-    // interrompido pelo sistema (touchcancel) ou a sincronização trave
+
+    // volta tudo ao lugar (tela sobe, ícone some) — só chega aqui quando o
+    // gesto termina de verdade: soltou sem atingir o limite, ou a
+    // sincronização acabou (sucesso, erro ou trava de segurança)
     const resetar = () => {
       clearTimeout(travaSeguranca); travaSeguranca = null;
       inicioY = null; puxado = 0; atualizando = false;
-      ind.style.transition = "";
+      comTransicao();
+      shell.style.transform = "";
       ind.classList.remove("girando", "pronto");
-      ind.style.transform = "translate(-50%, -50%)";
       ind.style.opacity = "0";
+      svg.style.transform = "";
     };
 
     document.addEventListener("touchstart", (e) => {
@@ -711,25 +724,27 @@
       const modal = document.getElementById("modal");
       if (modal && modal.classList.contains("on")) { inicioY = null; return; }
       inicioY = e.touches[0].clientY; puxado = 0;
-      ind.style.transition = "none";
+      semTransicao();
     }, { passive: true });
 
     document.addEventListener("touchmove", (e) => {
       if (inicioY === null || atualizando) return;
       const dy = e.touches[0].clientY - inicioY;
-      if (dy <= 0 || !noTopo()) { puxado = 0; inicioY = null; ind.style.transition = ""; ind.style.transform = "translate(-50%, -50%)"; ind.style.opacity = "0"; ind.classList.remove("pronto"); return; }
+      if (dy <= 0 || !noTopo()) { puxado = 0; inicioY = null; comTransicao(); shell.style.transform = ""; ind.style.opacity = "0"; svg.style.transform = ""; ind.classList.remove("pronto"); return; }
       puxado = dy * 0.55;                       // resistência, como no iOS
       if (e.cancelable) e.preventDefault();
-      mostrar(puxado, puxado >= LIMITE);
+      posicionar(puxado, puxado >= LIMITE);
     }, { passive: false });
 
     const soltar = () => {
       if (inicioY === null || atualizando) { inicioY = null; return; }
       inicioY = null;
-      ind.style.transition = "";
-      if (puxado < LIMITE) { ind.classList.remove("pronto"); ind.style.transform = "translate(-50%, -50%)"; ind.style.opacity = "0"; return; }
+      comTransicao();                            // a partir daqui, tudo anima suavemente
+      if (puxado < LIMITE) { shell.style.transform = ""; ind.classList.remove("pronto"); ind.style.opacity = "0"; svg.style.transform = ""; return; }
       atualizando = true;
-      ind.style.transform = "translate(-50%, calc(-50% + 26px))";
+      // a tela para num respiro menor, só o suficiente para mostrar o ícone
+      // girando, em vez de ficar no ponto máximo onde o dedo soltou
+      shell.style.transform = `translateY(${REPOUSO_CARREGANDO}px)`;
       ind.style.opacity = "1";
       ind.classList.add("girando");
       const antes = DADOS.atualizadoEm;
@@ -1165,7 +1180,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.1.5" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.1.7" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
