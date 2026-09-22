@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "1.2.2";
+  const VERSAO_APP = "1.2.3";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -628,6 +628,7 @@
           if (i.liquido !== undefined) atual.liquidoBanco = i.liquido; else delete atual.liquidoBanco;
         }
         if (i.valorInvestido) atual.valorInvestido = i.valorInvestido;
+        if (r.banco && !atual.banco) atual.banco = r.banco;   // não sobrescreve se o usuário já preencheu diferente
         ["dataAplicacao", "dataVencimento", "quantidade", "taxaContratada", "indexador", "emissor", "tipoAtivo", "liquidez"]
           .forEach((k) => { if (i[k]) atual[k] = i[k]; });
         atual.historicoValores = pontoValor(atual.historicoValores, i.valorAtual);
@@ -638,7 +639,7 @@
           liquidez: i.liquidez || "Liquidez diária", valorInvestido: i.valorInvestido || 0, quantidade: i.quantidade || 0,
           dataAplicacao: i.dataAplicacao || "", dataVencimento: i.dataVencimento || "", indexador: i.indexador || "Não se aplica",
           taxaContratada: i.taxaContratada || 0, valorAtual: i.valorAtual, isentoIR: !!i.isentoIR,
-          irBanco: i.ir, liquidoBanco: i.liquido,
+          irBanco: i.ir, liquidoBanco: i.liquido, banco: r.banco || "",
           obs: `Importado do extrato de ${fmtData(dataRef)}.`, historicoValores: [{ data: dataRef, valor: i.valorAtual }]
         });
         novos++;
@@ -654,6 +655,7 @@
           atual.precoAtual = a.precoAtual;
           atual.atualizadoEm = dataRef;
         }
+        if (r.banco && !atual.banco) atual.banco = r.banco;
         atual.historicoPrecos = pontoPreco(atual.historicoPrecos, a.precoAtual);
         atualizados++;
       } else {
@@ -661,7 +663,7 @@
           id: A.novoId(), ticker: a.ticker, empresa: a.empresa, categoria: a.categoria,
           quantidade: a.quantidade, precoMedio: a.precoAtual, precoAtual: a.precoAtual, dividendos: 0,
           atualizadoEm: dataRef, historicoPrecos: [{ data: dataRef, preco: a.precoAtual }],
-          obs: `Importado do extrato de ${fmtData(dataRef)}. Ajuste o preço médio de compra.`
+          obs: `Importado do extrato de ${fmtData(dataRef)}. Ajuste o preço médio de compra.`, banco: r.banco || ""
         });
         novos++;
       }
@@ -1187,7 +1189,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.2.2" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.2.3" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2894,7 +2896,7 @@
     } else {
       const linhas = lista.map((inv) => `
         <tr data-acao="ir" data-secao="detalhe-investimento" data-id="${inv.id}">
-          <td class="papel">${esc(inv.nome)}<small>${esc(inv.tipoAtivo || inv.categoria)}</small></td>
+          <td class="papel">${esc(inv.nome)}<small>${esc(inv.tipoAtivo || inv.categoria)}${inv.banco ? " · " + esc(inv.banco) : ""}</small></td>
           <td class="col-contratada">${esc(inv.indexador || "—")}${inv.taxaContratada ? " " + f2(inv.taxaContratada) + "%" : ""}</td>
           <td class="r">${fmtData(inv.dataAplicacao)}</td>
           <td class="r">${inv.quantidade ? f2(inv.quantidade) : "—"}</td>
@@ -2967,6 +2969,8 @@
         <div class="campo"><label for="f_emissor">Emissor / corretora</label>${campoBanco("f_emissor", inv ? inv.emissor || "" : "", "Selecione o emissor…")}</div>
         <div class="campo"><label for="f_liq">Liquidez</label><select id="f_liq">${opcoes(LIQUIDEZ, inv ? inv.liquidez : LIQUIDEZ[0])}</select></div>
       </div>
+      <div class="campo"><label for="f_banco">Banco onde está custodiado</label>${campoBanco("f_banco", inv ? inv.banco || "" : "", "Selecione o banco…")}
+        <div class="ajuda">Onde o ativo aparece hoje — pode ser diferente do emissor (ex.: um CDB do Banco Digimais guardado no Nubank).</div></div>
 
       <div class="sechead">APLICAÇÃO</div>
       <div class="par">
@@ -3037,6 +3041,7 @@
         categoria: document.getElementById("f_cat").value,
         tipoAtivo: document.getElementById("f_tipo").value,
         emissor: lerCampoBanco("f_emissor"),
+        banco: lerCampoBanco("f_banco"),
         liquidez: document.getElementById("f_liq").value,
         valorInvestido: numIn(document.getElementById("f_vi").value),
         quantidade: numIn(document.getElementById("f_qtd").value),
@@ -3122,7 +3127,7 @@
       <button class="voltar" data-acao="ir" data-secao="investimentos"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONES.voltar}</svg>Voltar para Investimentos</button>
       <div class="grid g-top grid-detalhe">
         <div class="c8">${card("", `${esc(inv.nome)} <span class="selo-tag selo-acao">${esc(inv.tipoAtivo || inv.categoria)}</span>`,
-          `${esc(inv.emissor || "emissor não informado")}${inv.indexador ? " · " + esc(inv.indexador) + (inv.taxaContratada ? " " + f2(inv.taxaContratada) + "%" : "") : ""}`,
+          `${esc(inv.emissor || "emissor não informado")}${inv.banco ? " · custódia: " + esc(inv.banco) : ""}${inv.indexador ? " · " + esc(inv.indexador) + (inv.taxaContratada ? " " + f2(inv.taxaContratada) + "%" : "") : ""}`,
           `${abasPeriodo()}<button class="btn" data-acao="editar-investimento" data-id="${inv.id}">Editar</button>`,
           hist.length >= 2
             ? `<div style="padding:10px 16px;height:260px"><canvas id="graf-valor-investimento"></canvas></div>`
@@ -3251,7 +3256,7 @@
           ? `<input class="campo-preco moeda" data-id="${a.id}" type="text" inputmode="decimal" value="${valorCampoMoeda(a.precoAtual)}" onclick="event.stopPropagation()">`
           : `<span class="${forte}">${brl(a.precoAtual)}</span>`;
         return `<tr data-acao="ir" data-secao="detalhe-acao" data-id="${a.id}">
-          <td class="papel">${esc(a.ticker)}<small>${esc(a.categoria)}</small></td>
+          <td class="papel">${esc(a.ticker)}<small>${esc(a.categoria)}${a.banco ? " · " + esc(a.banco) : ""}</small></td>
           <td class="r">${ultima}</td>
           <td class="r"><span class="${v.valor >= 0 ? "cel-up" : "cel-down"}">${v.valor >= 0 ? "+" : "−"}${brl(Math.abs(v.valor))}</span></td>
           <td class="r">${fp(v.pct)}</td>
@@ -3310,6 +3315,7 @@
         <div class="campo"><label for="f_cat">Categoria</label><select id="f_cat">${opcoes(CATS_ACAO, a ? a.categoria : CATS_ACAO[0])}</select></div>
       </div>
       <div class="campo"><label for="f_emp">Empresa / fundo</label><input id="f_emp" value="${a ? esc(a.empresa) : ""}" placeholder="Petrobras PN"></div>
+      <div class="campo"><label for="f_banco">Banco / corretora</label>${campoBanco("f_banco", a ? a.banco || "" : "", "Selecione o banco…")}</div>
       <div class="par">
         <div class="campo"><label for="f_qtd">Quantidade</label><input id="f_qtd" type="number" step="0.00000001" value="${a ? a.quantidade : ""}" placeholder="100"></div>
         <div class="campo"><label for="f_pm">Preço médio</label>${campoMoeda("f_pm", a ? a.precoMedio : "")}</div>
@@ -3332,6 +3338,7 @@
       const registro = {
         id: a ? a.id : A.novoId(),
         ticker: tk, empresa: document.getElementById("f_emp").value.trim(),
+        banco: lerCampoBanco("f_banco"),
         categoria: document.getElementById("f_cat").value,
         quantidade: numIn(document.getElementById("f_qtd").value),
         precoMedio: numIn(document.getElementById("f_pm").value),
@@ -3487,6 +3494,7 @@
           <div class="kv"><span class="dim">Preço mínimo (histórico)</span><b>${brl(min)}</b></div>
           <div class="kv"><span class="dim">Preço máximo (histórico)</span><b>${brl(max)}</b></div>
           <div class="kv"><span class="dim">Atualizado em</span><b>${fmtData(a.atualizadoEm)}</b></div>
+          ${a.banco ? `<div class="kv"><span class="dim">Banco / corretora</span><b>${esc(a.banco)}</b></div>` : ""}
         `)}</div>
       </div>
       ${a.obs ? card("c12", "Observações", "", "", `<div style="padding:12px 16px;font-size:13px;color:var(--dim)">${esc(a.obs)}</div>`) : ""}
