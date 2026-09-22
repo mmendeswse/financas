@@ -936,7 +936,7 @@ table.tab-investimentos th.col-contratada, table.tab-investimentos td.col-contra
 
 /* tabela unificada de despesas: colunas que não cortam palavras */
 .celula-texto { font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.rw .selo-botao { border: none; cursor: pointer; font-family: inherit; }
+.rw .selo-botao { cursor: pointer; font-family: inherit; }
 .rw .selo-botao:hover { filter: brightness(1.2); }
 .hd > i, .hd > button { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
