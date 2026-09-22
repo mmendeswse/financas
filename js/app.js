@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "1.1.2";
+  const VERSAO_APP = "1.1.3";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -664,6 +664,73 @@
     salvarEAtualizar(`Extrato importado: ${plural(atualizados, "ativo atualizado", "ativos atualizados")} e ${plural(novos, "novo", "novos")}.`);
   }
 
+
+  // =========================================================================
+  // PUXAR PARA ATUALIZAR (iPad/iPhone, app instalado na tela de início)
+  // Arrastar a página para baixo estando no topo busca os dados do cofre,
+  // como nos aplicativos do iOS. No Safari comum o próprio navegador já
+  // tem esse gesto (recarrega a página, que também sincroniza).
+  // =========================================================================
+  function ligarPuxarParaAtualizar() {
+    const ehApp = window.navigator.standalone === true ||
+      (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches);
+    if (!ehApp || !("ontouchstart" in window)) return;
+
+    const ind = document.createElement("div");
+    ind.id = "puxarAtualizar";
+    ind.setAttribute("aria-hidden", "true");
+    ind.innerHTML = `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/></svg>`;
+    document.body.appendChild(ind);
+
+    const LIMITE = 70, MAXIMO = 110;
+    let inicioY = null, puxado = 0, atualizando = false;
+    const noTopo = () => (window.scrollY || document.documentElement.scrollTop || 0) <= 0 &&
+      ((document.querySelector(".scroll") || {}).scrollTop || 0) <= 0;
+    const mostrar = (dist, pronto) => {
+      ind.style.transform = `translate(-50%, ${Math.min(dist, MAXIMO) - 50}px) rotate(${dist * 3}deg)`;
+      ind.style.opacity = Math.min(1, dist / LIMITE);
+      ind.classList.toggle("pronto", pronto);
+    };
+    const esconder = () => {
+      ind.classList.remove("girando", "pronto");
+      ind.style.transform = "translate(-50%, -50px)";
+      ind.style.opacity = "0";
+    };
+
+    document.addEventListener("touchstart", (e) => {
+      if (atualizando || e.touches.length !== 1 || !noTopo()) { inicioY = null; return; }
+      if (document.getElementById("modal").classList.contains("on")) { inicioY = null; return; }
+      inicioY = e.touches[0].clientY; puxado = 0;
+      ind.style.transition = "none";
+    }, { passive: true });
+
+    document.addEventListener("touchmove", (e) => {
+      if (inicioY === null) return;
+      const dy = e.touches[0].clientY - inicioY;
+      if (dy <= 0 || !noTopo()) { puxado = 0; esconder(); return; }
+      puxado = dy * 0.55;                       // resistência, como no iOS
+      if (e.cancelable) e.preventDefault();
+      mostrar(puxado, puxado >= LIMITE);
+    }, { passive: false });
+
+    document.addEventListener("touchend", () => {
+      if (inicioY === null) return;
+      inicioY = null;
+      ind.style.transition = "";
+      if (puxado < LIMITE) { esconder(); return; }
+      atualizando = true;
+      ind.style.transform = "translate(-50%, 16px)";
+      ind.style.opacity = "1";
+      ind.classList.add("girando");
+      const antes = DADOS.atualizadoEm;
+      const tarefa = cfgSync().token
+        ? sincronizar(true).then(() => { if (DADOS.atualizadoEm === antes) toast("Tudo atualizado."); })
+        : Promise.resolve().then(() => { renderRota(); toast("Sincronização desligada — ligue em Configurações."); });
+      const minimo = new Promise((ok) => setTimeout(ok, 700));   // tempo mínimo para o giro ser visível
+      Promise.all([tarefa, minimo]).then(() => { atualizando = false; esconder(); }, () => { atualizando = false; esconder(); });
+    }, { passive: true });
+  }
+
   // =========================================================================
   // CICLO DE VIDA
   // =========================================================================
@@ -685,6 +752,7 @@
       if (alvo) { e.preventDefault(); navegarPara("detalhe-dolar"); }
     });
     ligarDelegacaoConteudo();
+    ligarPuxarParaAtualizar();
     ligarMascaraMoeda(document.getElementById("conteudo"));
     iniciarRelogio();
     ajustarBarraGuias();
@@ -1080,7 +1148,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.1.2" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.1.3" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
