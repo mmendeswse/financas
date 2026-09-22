@@ -1118,4 +1118,7 @@ table.tab-acoes th.col-atualiz, table.tab-acoes td.col-atualiz { display: none; 
 @keyframes girarPuxar { to { transform: rotate(360deg); } }
 
 /* selo de status nos painéis Receitas/Despesas do mês */
-.kv .selo-painel { margin-right: 10px; font-size: 10px; padding: 2px 8px; vertical-align: middle; }
+.kv .selo-painel { font-size: 10px; padding: 2px 8px; vertical-align: middle; }
+/* coluna de status com largura fixa e alinhada à esquerda; valor à direita */
+.kv b .col-status { display: inline-block; width: 92px; margin-left: 14px; text-align: left; vertical-align: middle; }
+.kv b .col-valor { display: inline-block; min-width: 96px; text-align: right; vertical-align: middle; }
