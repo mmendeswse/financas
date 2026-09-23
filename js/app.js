@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "1.3.9";
+  const VERSAO_APP = "1.4.1";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -1195,7 +1195,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.3.9" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.4.1" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2225,17 +2225,37 @@
     reg.meses[mes] = Object.assign({}, reg.meses[mes], dados);
   }
 
+  // Quando o usuário muda a data de uma repetição, a nova data passa a
+  // valer para aquele mês e para todos os seguintes: guardamos uma
+  // "reancoragem" {desde: mês, data: nova data} no próprio lançamento.
+  function registrarReancoragem(reg, mes, novaData) {
+    if (!reg || !novaData) return;
+    reg.reancoragens = (reg.reancoragens || []).filter((r) => r.desde < mes);   // o novo ajuste substitui os posteriores
+    reg.reancoragens.push({ desde: mes, data: novaData });
+  }
+
   function ocorrenciasNoMes(reg, mes) {
     const freq = freqDe(reg);
     if (freq === FREQUENCIAS[0] || !reg.data) return [];
-    const inicio = new Date(reg.data + "T00:00:00");
+    // âncora vigente: a data original ou a última reancoragem que já vale neste mês
+    let ancora = reg.data, desde = null;
+    (reg.reancoragens || []).forEach((r) => { if (r.desde <= mes && (!desde || r.desde >= desde)) { desde = r.desde; ancora = r.data; } });
+    const inicio = new Date(ancora + "T00:00:00");
     const [ano, m] = mes.split("-").map(Number);
     const primeiro = new Date(ano, m - 1, 1), ultimo = new Date(ano, m, 0);
-    if (ultimo < inicio) return [];
+    if (!desde && ultimo < inicio) return [];
     const datas = [];
 
     if (freq === "Mensal" || freq === "Anual") {
       const passoMeses = freq === "Mensal" ? 1 : 12;
+      if (desde) {
+        // a partir do mês da mudança, usa o novo dia (e, no anual, o novo mês)
+        const [dAno, dMes] = desde.split("-").map(Number);
+        const diffD = (ano - dAno) * 12 + (m - dMes);
+        if (diffD < 0 || diffD % passoMeses !== 0) return [];
+        const dia = Math.min(inicio.getDate(), ultimo.getDate());
+        return [new Date(ano, m - 1, dia).toISOString().slice(0, 10)];
+      }
       const diff = (ano - inicio.getFullYear()) * 12 + (m - 1 - inicio.getMonth());
       if (diff <= 0 || diff % passoMeses !== 0) return [];
       const dia = Math.min(inicio.getDate(), ultimo.getDate());
@@ -2245,7 +2265,7 @@
       // em vez de percorrer semana a semana desde o começo
       const passo = PASSO_DIAS[freq] || 7;
       const diasAte = Math.floor((primeiro - inicio) / 86400000);
-      const saltos = Math.max(1, Math.ceil(diasAte / passo));
+      const saltos = desde ? Math.max(0, Math.ceil(diasAte / passo)) : Math.max(1, Math.ceil(diasAte / passo));
       const dt = new Date(inicio);
       dt.setDate(dt.getDate() + saltos * passo);
       while (dt <= ultimo) {
@@ -2468,7 +2488,7 @@
     }
     return `
       <div class="grid g-top">
-        <div class="c12">${card("c12", "Entradas", `Recebidas: ${brl(totalMes)} · previstas: ${brl(totalPrevisto)}`, `${abasMeses12("mes-entradas", mesEntradas, "anoEntradas", anosDisponiveis(d))}<button class="btn primario" data-acao="nova-entrada"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`, corpo)}</div>
+        <div class="c12">${card("c12", "Entradas", `Recebidas: +${brl(totalMes)} · previstas: +${brl(totalPrevisto)}`, `${abasMeses12("mes-entradas", mesEntradas, "anoEntradas", anosDisponiveis(d))}<button class="btn primario" data-acao="nova-entrada"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`, corpo)}</div>
       </div>
     `;
   }
@@ -2542,6 +2562,7 @@
       if (previsao) {
         // muda só o mês editado, dentro do próprio lançamento recorrente
         gravarAjuste(e, previsao.data.slice(0, 7), { valor: registro.valor });
+        if (registro.data && registro.data !== previsao.data) registrarReancoragem(e, previsao.data.slice(0, 7), registro.data);
       } else if (e) Object.assign(e, registro);
       else DADOS.entradas.push(registro);
       fecharModal();
@@ -2572,7 +2593,7 @@
     // a tela reúne o que já saiu (despesas lançadas) e o que ainda vai
     // sair (contas a pagar), com o status de cada linha
     const lancadas = d.despesas.map((x) => ({
-      origem: "despesa", id: x.id, descricao: x.descricao, categoria: x.categoria,
+      origem: "despesa", id: x.id, descricao: x.descricao, categoria: x.categoria, tipo: x.tipo,
       pagoCom: bancoDoLancamento(d, x),
       data: x.data, status: "Pago", valor: Number(x.valor || 0), recorrencia: freqDe(x)
     }));
@@ -2582,19 +2603,19 @@
     // contas a pagar recorrentes também geram previsões
     const contasComoLista = (d.contasPagar || []).map((c) => ({ ...c, data: c.vencimento }));
     const repeticoesContas = repeticoesPrevistas(contasComoLista, mesDespesas, (reg, data) => ({
-      origem: "conta", id: reg.id, descricao: reg.descricao, categoria: reg.categoria,
+      origem: "conta", id: reg.id, descricao: reg.descricao, categoria: reg.categoria, tipo: reg.tipo,
       pagoCom: reg.bancoId ? F.nomeBanco(d, reg.bancoId) : "—", data, valor: valorDoMes(reg, data.slice(0, 7)),
       status: mesQuitado(reg, data.slice(0, 7)) ? "Pago" : "Prevista",
       recorrencia: freqDe(reg), prevista: true, mesRef: data.slice(0, 7)
     }), []);
     const repeticoes = repeticoesPrevistas(d.despesas, mesDespesas, (reg, data) => ({
-      origem: "despesa", id: reg.id, descricao: reg.descricao, categoria: reg.categoria,
+      origem: "despesa", id: reg.id, descricao: reg.descricao, categoria: reg.categoria, tipo: reg.tipo,
       pagoCom: bancoDoLancamento(d, reg), data, valor: valorDoMes(reg, data.slice(0, 7)),
       status: mesQuitado(reg, data.slice(0, 7)) ? "Pago" : "Prevista",
       recorrencia: freqDe(reg), prevista: true, mesRef: data.slice(0, 7)
     }), contasDoMes);
     const previstas = F.listaContasPagarComStatus(d).map((c) => ({
-      origem: "conta", id: c.id, descricao: c.descricao, categoria: c.categoria,
+      origem: "conta", id: c.id, descricao: c.descricao, categoria: c.categoria, tipo: c.tipo,
       pagoCom: c.bancoId ? F.nomeBanco(d, c.bancoId) : "—",
       data: c.vencimento, status: c.statusReal === "Pendente" ? "Prevista" : c.statusReal,
       valor: Number(c.valor || 0), recorrencia: freqDe(c)
@@ -2629,20 +2650,20 @@
         lista.map((x) => `
         <div class="rw clicavel${x.prevista ? " linha-prevista" : ""}" style="${gridD}" data-acao="${x.prevista ? (x.origem === "conta" ? "editar-previsao-conta" : "editar-previsao") : (x.origem === "despesa" ? "editar-despesa" : "editar-conta")}" data-id="${x.id}" data-data="${x.data}" title="${x.prevista ? "Abre este mês para edição (o valor muda só aqui)" : "Abrir para editar"}">
           <div class="dim" style="font-size:12px">${fmtData(x.data)}</div>
-          <div><div class="nm">${esc(x.descricao)}${x.recorrencia && x.recorrencia !== FREQUENCIAS[0] ? ` <span class="selo-tag selo-cat">${esc(x.recorrencia.toLowerCase())}</span>` : ""}</div><div class="sub">${esc(x.categoria || "—")}</div></div>
+          <div><div class="nm">${esc(x.descricao)}${x.recorrencia && x.recorrencia !== FREQUENCIAS[0] ? ` <span class="selo-tag selo-cat">${esc(x.recorrencia.toLowerCase())}</span>` : ""}</div><div class="sub">${esc(x.categoria || "—")}${x.tipo ? " · " + esc(x.tipo) : ""}</div></div>
           <div>${x.origem === "despesa" || x.pagoCom !== "—"
             ? `<button class="cel-banco cel-banco-botao" data-acao="${x.origem === "despesa" ? "trocar-banco" : "trocar-banco-conta"}" data-id="${x.id}" title="Trocar o banco (nas repetições, altera o lançamento original)">${marcaBanco(x.pagoCom, 18)}<span class="dim">${esc(x.pagoCom)}</span></button>`
             : `<span class="cel-banco">${x.pagoCom && x.pagoCom !== "—" ? marcaBanco(x.pagoCom, 18) + `<span class="dim">${esc(x.pagoCom)}</span>` : '<span class="dim">—</span>'}</span>`}</div>
           <div>${x.prevista
             ? `<button class="selo-tag ${x.status === "Pago" ? "selo-pago" : "selo-prevista"} selo-botao" data-acao="${x.origem === "conta" ? "quitar-mes-conta" : "quitar-mes"}" data-id="${x.id}" data-mes="${x.mesRef}" title="Confirmar: cria o lançamento deste mês">${x.status}</button>`
             : `<button class="selo-tag selo-${x.status.toLowerCase()} selo-botao" data-acao="${x.origem === "conta" ? "alternar-pago" : "tornar-pendente"}" data-id="${x.id}" title="${x.origem === "conta" ? (x.status === "Pago" ? "Marcar como prevista" : "Marcar como paga") : "Marcar como prevista (vira conta a pagar)"}">${x.status}</button>`}</div>
-          <div class="cel-valor"><span class="big down">−${brl(x.valor)}</span></div>
+          <div class="cel-valor"><span class="big down valor-negrito">−${brl(x.valor)}</span></div>
         </div>`).join("");
     }
 
     return `
       <div class="grid g-top">
-        <div class="c12">${card("c12", "Despesas", `Pagas: ${brl(totalMes)} · Previstas: ${brl(emAberto)} · Atrasadas: ${brl(atrasadas)}`,
+        <div class="c12">${card("c12", "Despesas", `Pagas: −${brl(totalMes)} · Previstas: −${brl(emAberto)} · Atrasadas: −${brl(atrasadas)}`,
           `${abasMeses12("mes-despesas", mesDespesas, "anoDespesas", anosDisponiveis(d))}<button class="btn primario" data-acao="nova-despesa"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`,
           corpo)}</div>
       </div>
@@ -2680,8 +2701,9 @@
       <div class="campo"><label for="f_desc">Descrição</label><input id="f_desc" value="${x ? esc(x.descricao) : ""}" placeholder="Supermercado"></div>
       <div class="par">
         <div class="campo"><label for="f_cat">Categoria</label><select id="f_cat">${opcoes(CATS_DESPESA, x ? x.categoria : CATS_DESPESA[0])}</select></div>
-        <div class="campo"><label for="f_status">Status</label><select id="f_status">${opcoes(["Pago", "Prevista"], statusAtual)}</select></div>
+        <div class="campo"><label for="f_tipo">Tipo</label><select id="f_tipo">${opcoes(["Fixa", "Variável"], x && x.tipo ? x.tipo : "Variável")}</select></div>
       </div>
+      <div class="campo"><label for="f_status">Status</label><select id="f_status">${opcoes(["Pago", "Prevista"], statusAtual)}</select></div>
       <div id="camposPagamento">
         <div class="par">
           <div class="campo"><label for="f_pagarcom">Banco</label><select id="f_pagarcom">${opcoesPagarCom(DADOS, x ? x.bancoId : "", x && !ehConta ? x.cartaoId : "")}</select></div>
@@ -2709,6 +2731,7 @@
       const data = document.getElementById("f_data").value || hojeISO();
       const valor = numIn(document.getElementById("f_valor").value);
       const categoria = document.getElementById("f_cat").value;
+      const tipo = document.getElementById("f_tipo").value;
       const obs = document.getElementById("f_obs").value.trim();
 
       if (status === "Pago") {
@@ -2716,7 +2739,7 @@
         if (!pagarCom) { toast("Selecione com o que essa despesa foi paga."); return; }
         const [tipoPg, idPg] = pagarCom.split(":");
         const registro = {
-          id: (x && !ehConta) ? x.id : A.novoId(), data, descricao: desc, categoria,
+          id: (x && !ehConta) ? x.id : A.novoId(), data, descricao: desc, categoria, tipo,
           bancoId: tipoPg === "banco" ? idPg : "", cartaoId: tipoPg === "cartao" ? idPg : "",
           valor, formaPagamento: document.getElementById("f_forma").value,
           recorrencia: document.getElementById("f_rec").value,
@@ -2724,6 +2747,7 @@
         };
         if (previsao) {
           gravarAjuste(x, previsao.data.slice(0, 7), { valor: registro.valor, pago: true });
+          if (data !== previsao.data) registrarReancoragem(x, previsao.data.slice(0, 7), data);
         } else if (x && !ehConta) Object.assign(x, registro);
         else {
           DADOS.despesas.push(registro);
@@ -2733,7 +2757,7 @@
         const pagarComP = document.getElementById("f_pagarcom").value;
         const [tipoP, idP] = pagarComP ? pagarComP.split(":") : ["", ""];
         const registro = {
-          id: (x && ehConta) ? x.id : A.novoId(), descricao: desc, categoria,
+          id: (x && ehConta) ? x.id : A.novoId(), descricao: desc, categoria, tipo,
           vencimento: data, valor, status: "Pendente", obs,
           bancoId: tipoP === "banco" ? idP : "",
           formaPagamento: document.getElementById("f_forma").value,
@@ -2742,6 +2766,7 @@
         };
         if (previsao) {
           gravarAjuste(x, previsao.data.slice(0, 7), { valor: registro.valor, pago: false });
+          if (data !== previsao.data) registrarReancoragem(x, previsao.data.slice(0, 7), data);
         } else if (x && ehConta) Object.assign(x, registro);
         else {
           DADOS.contasPagar.push(registro);

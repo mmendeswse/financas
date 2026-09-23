@@ -1124,3 +1124,6 @@ table.tab-acoes th.col-atualiz, table.tab-acoes td.col-atualiz { display: none; 
 .kv b .col-valor { display: inline-block; min-width: 96px; text-align: right; vertical-align: middle; }
 .kv .selo-painel.selo-botao { cursor: pointer; font-family: inherit; }
 .kv .selo-painel.selo-botao:hover { filter: brightness(1.25); }
+
+/* valor em negrito na guia Despesas */
+.rw .big.valor-negrito { font-weight: 800; }
