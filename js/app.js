@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "1.5.0";
+  const VERSAO_APP = "1.5.2";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -84,8 +84,8 @@
   }
 
   // ordenação das tabelas de Entradas e Despesas
-  const ORDEM_ENTRADAS_PADRAO = { campo: "recentes", dir: "desc" };   // mais recentes primeiro, sem coluna destacada
-  const ORDEM_DESPESAS_PADRAO = { campo: "pendentes", dir: "asc" };   // pendentes por data
+  const ORDEM_ENTRADAS_PADRAO = { campo: "cronologica", dir: "asc" };   // por data (do dia 1 ao fim do mês), sem coluna destacada
+  const ORDEM_DESPESAS_PADRAO = { campo: "cronologica", dir: "asc" };   // por data (do dia 1 ao fim do mês), sem coluna destacada
   let ordemEntradas = { ...ORDEM_ENTRADAS_PADRAO };
   let ordemDespesas = { ...ORDEM_DESPESAS_PADRAO };
 
@@ -1210,7 +1210,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.5.0" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.5.2" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2524,9 +2524,10 @@
     }));
     const lista = [...d.entradas.filter((e) => String(e.data || "").slice(0, 7) === mesEntradas), ...previstasEnt]
       .map((e) => ({ ...e, banco: F.nomeBanco(d, e.bancoId), status: e.prevista ? (e.recebidaNoMes ? "Recebida" : "Prevista") : (e.previsto ? "Prevista" : "Recebida") }))
-      .sort((a, b) => ordemEntradas.campo === "recentes"
-        ? (b.data || "").localeCompare(a.data || "")
-        : comparar(a, b, ordemEntradas.campo, ordemEntradas.dir));
+      .sort((a, b) => {
+        if (ordemEntradas.campo === "cronologica") return (a.data || "").localeCompare(b.data || "");
+        return comparar(a, b, ordemEntradas.campo, ordemEntradas.dir);
+      });
     const totalMes = totalEntradasEfetivas(d, mesEntradas);
     const totalPrevisto = previstasEnt.filter((e) => !e.recebidaNoMes).reduce((t, e) => t + Number(e.valor || 0), 0) + F.totalEntradasPrevistasMes(d, mesEntradas);
     const grid = GRID_LANCAMENTOS;
@@ -2684,12 +2685,7 @@
     const lista = [...lancadas, ...previstas, ...repeticoes, ...repeticoesContas]
       .filter((x) => String(x.data || "").slice(0, 7) === mesDespesas)
       .sort((a, b) => {
-        if (ordemDespesas.campo === "pendentes") {
-          // o que ainda não foi pago vem primeiro, por data de vencimento
-          const pend = (x) => (x.status === "Pago" ? 1 : 0);
-          if (pend(a) !== pend(b)) return pend(a) - pend(b);
-          return (a.data || "").localeCompare(b.data || "");
-        }
+        if (ordemDespesas.campo === "cronologica") return (a.data || "").localeCompare(b.data || "");
         return comparar(a, b, ordemDespesas.campo, ordemDespesas.dir);
       });
 
