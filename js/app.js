@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "1.5.3";
+  const VERSAO_APP = "1.5.4";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -1210,7 +1210,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.5.3" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.5.4" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1576,7 +1576,8 @@
             itensR.map((e) => linhaEditavel(e, linha(fmtDataCurta(e.data) + " · " + esc(e.descricao), bancoPainel(e.banco, e) + seloStatusPainel(e.status, e) + `<span class="col-valor valor-guia up">+${brl(e.valor)}</span>`))).join("") +
             linha("Total", "+" + brl(entradas));
         })(),
-        secao: "entradas"
+        secao: "entradas",
+        botao: { rotulo: "+ Adicionar", acao: () => abrirModalEntrada(null) }
       },
       despesas: {
         titulo: "Despesas do mês",
@@ -1589,7 +1590,8 @@
             itensD.map((x) => linhaEditavel(x, linha(fmtDataCurta(x.data) + " · " + esc(x.descricao), bancoPainel(x.banco, x) + seloStatusPainel(x.status, x) + `<span class="col-valor valor-guia down">−${brl(x.valor)}</span>`))).join("") +
             linha("Total", "−" + brl(despesas));
         })(),
-        secao: "despesas"
+        secao: "despesas",
+        botao: { rotulo: "+ Adicionar", acao: () => abrirModalDespesa(null) }
       }
     };
 
@@ -1601,10 +1603,13 @@
       <p class="campo ajuda" style="margin:0 0 12px">Como é calculado: <b>${x.conta}</b></p>
       <div class="explica-lista">${x.linhas}</div>
       <div class="modal-acoes">
-        <button class="btn primario salvar" id="btnIrPainel">Abrir</button>
+        <button class="btn primario salvar" id="btnIrPainel">${x.botao ? esc(x.botao.rotulo) : "Abrir"}</button>
         <button class="btn" id="btnFecharPainel">Fechar</button>
       </div>`);
-    document.getElementById("btnIrPainel").onclick = () => { fecharModal(); navegarPara(x.secao); };
+    document.getElementById("btnIrPainel").onclick = () => {
+      if (x.botao) { x.botao.acao(); return; }   // abre o formulário novo por cima do painel
+      fecharModal(); navegarPara(x.secao);
+    };
     document.getElementById("btnFecharPainel").onclick = fecharModal;
   }
 
