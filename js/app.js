@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "1.5.2";
+  const VERSAO_APP = "1.5.3";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -1210,7 +1210,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.5.2" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.5.3" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1776,15 +1776,19 @@
       return;
     }
     if (chave === "avencer") {
-      const vencendo = contasPendentesMes(d, F.mesAtual());
-      const total = vencendo.reduce((sm, c) => sm + Number(c.valor || 0), 0);
+      // mesmo formato do painel "Despesas do mês", só com o que ainda não foi pago
+      painelReabrir = () => explicarStrip("avencer");
+      const itens = pendentesDoMes(d, F.mesAtual());
+      const total = itens.reduce((sm, x) => sm + Number(x.valor || 0), 0);
       const saldo = F.totalBancos(d);
       painelSimples("Contas Pendentes", saldo > 0 ? (total / saldo) * 100 : 0,
         "do seu saldo em bancos está comprometido", "soma de contas pendentes no mês atual",
-        (vencendo.length
-          ? vencendo.map((c) => linha(esc(c.descricao) + " · " + fmtData(c.vencimento), brl(c.valor), c.statusReal === "Atrasado" ? "down" : "")).join("")
+        linha("Lançamentos", plural(itens.length, "despesa")) +
+        (itens.length
+          ? itens.map((x) => linhaEditavel(x, linha(fmtDataCurta(x.data) + " · " + esc(x.descricao),
+              bancoPainel(x.banco, x) + seloStatusPainel(x.status, x) + `<span class="col-valor valor-guia down">−${brl(x.valor)}</span>`))).join("")
           : `<div class="kv"><span class="dim">Nenhuma conta pendente no mês atual</span><b>—</b></div>`) +
-        linha("Saldo bancos", brl(saldo), "up") + linha("Total pendente", brl(total), "down"), "despesas");
+        linha("Total", "−" + brl(total)), "despesas");
       return;
     }
   }
@@ -1948,7 +1952,7 @@
     const maiorDesp = F.maiorDespesa(d);
     const hoje = new Date(), diaAtual = hoje.getDate(), diasNoMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).getDate();
     const projecao = diaAtual > 0 ? (despesasMes / diaAtual) * diasNoMes : 0;
-    const vencendo = contasPendentesMes(d, F.mesAtual());
+    const vencendo = pendentesDoMes(d, F.mesAtual());
     const totalVencendo = vencendo.reduce((s, c) => s + Number(c.valor || 0), 0);
 
     const movRecentes = [
@@ -2425,6 +2429,10 @@
       return `<span class="col-status"><button class="selo-tag ${cls} selo-painel selo-botao" data-acao-status="${item.acao}" data-id="${esc(item.id)}"${item.mes ? ` data-mes="${item.mes}"` : ""} title="Clique para trocar o status">${esc(st)}</button></span>`;
     }
     return `<span class="col-status"><span class="selo-tag ${cls} selo-painel">${esc(st)}</span></span>`;
+  }
+
+  function pendentesDoMes(d, mes) {
+    return listaDespesasTodasMes(d, mes).filter((x) => x.status !== "Pago");
   }
 
   function listaDespesasTodasMes(d, mes) {
