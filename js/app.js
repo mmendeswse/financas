@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "1.4.5";
+  const VERSAO_APP = "1.4.7";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -914,6 +914,7 @@
     if (primeiro) setTimeout(() => primeiro.focus(), 30);
   }
   function fecharModal() {
+    painelReabrir = null;
     document.getElementById("modal").classList.remove("on");
     document.getElementById("scrim").classList.remove("on");
   }
@@ -927,14 +928,14 @@
       if (st) {
         e.stopPropagation();
         alternarStatusLancamento(st.dataset.acaoStatus, st.dataset.id, st.dataset.mes);
-        if (painelKpiAberto) explicarKPI(painelKpiAberto);   // redesenha com o status novo
+        if (painelReabrir) painelReabrir();   // redesenha com o status novo
         return;
       }
       const bc = e.target.closest("[data-acao-banco]");
       if (bc) {
         e.stopPropagation();
         alternarBancoLancamento(bc.dataset.acaoBanco, bc.dataset.id);
-        if (painelKpiAberto) explicarKPI(painelKpiAberto);   // redesenha com o banco novo
+        if (painelReabrir) painelReabrir();   // redesenha com o banco novo
         return;
       }
       const ln = e.target.closest("[data-acao-editar]");
@@ -1209,7 +1210,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.4.5" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.4.7" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1513,8 +1514,10 @@
   // mostrando a conta com os seus próprios números
   // ---------------------------------------------------------------------
   let painelKpiAberto = null;
+  let painelReabrir = null;
   function explicarKPI(chave) {
     painelKpiAberto = chave;
+    painelReabrir = () => explicarKPI(chave);
     const d = DADOS;
     const p = I.patrimonio(d);
     const mes = F.mesAtual(), mesAnt = F.mesAnterior();
@@ -1705,14 +1708,12 @@
     if (!m) return;
     const progresso = m.objetivo > 0 ? (m.atual / m.objetivo) * 100 : 0;
     const falta = Math.max(0, Number(m.objetivo || 0) - Number(m.atual || 0));
-    const dias = m.prazo ? F.diasEntre(m.prazo) : null;
-    const linha = (r, v, c) => `<div class="kv"><span class="dim">${rotuloPainel(r)}</span><b class="${c || ""}">${v}</b></div>`;
+    // cada linha abre a edição da meta
+    const linha = (r, v, c) => `<div class="kv kv-editavel" data-acao-editar="editar-meta" data-id="${esc(m.id)}" title="Abrir para editar"><span class="dim">${rotuloPainel(r)}</span><b class="${c || ""}">${v}</b></div>`;
     painelSimples(esc(m.nome), progresso, "do objetivo já foi guardado", "valor atual ÷ objetivo",
       linha("Objetivo", brl(m.objetivo)) + linha("Guardado", brl(m.atual), "up") +
       linha("Faltam", brl(falta), falta > 0 ? "down" : "up") +
-      linha("Prazo", m.prazo ? fmtData(m.prazo) : "sem prazo") +
-      (dias !== null ? linha("Dias restantes", dias >= 0 ? String(dias) : "prazo vencido", dias >= 0 ? "" : "down") : "") +
-      (dias !== null && dias > 0 && falta > 0 ? linha("Guardado mensal", brl(falta / Math.max(1, dias / 30))) : ""),
+      linha("Prazo", m.prazo ? fmtData(m.prazo) : "sem prazo"),
       "metas", { rotulo: "+ Adicionar", acao: () => abrirModalDeposito(m.id) });
   }
 
@@ -1853,31 +1854,26 @@
     if (!ponto || !ponto.mes) return;
     const d = DADOS;
     const mes = ponto.mes;
-    const entradas = d.entradas.filter((e) => String(e.data || "").slice(0, 7) === mes);
-    const despesas = d.despesas.filter((x) => String(x.data || "").slice(0, 7) === mes);
-    const totE = entradas.reduce((s, e) => s + Number(e.valor || 0), 0);
-    const totD = despesas.reduce((s, x) => s + Number(x.valor || 0), 0);
-    const saldo = totE - totD;
+    painelReabrir = () => explicarMes(ponto);   // redesenha depois de trocar status/banco
     const linha = (r, v, c) => `<div class="kv"><span class="dim">${rotuloPainel(r)}</span><b class="${c || ""}">${v}</b></div>`;
-    // todas as categorias do mês, da maior para a menor, com os valores
-    const porCategoria = (lista) => {
-      const mapa = {};
-      lista.forEach((m) => { const k = m.categoria || "Outros"; mapa[k] = (mapa[k] || 0) + Number(m.valor || 0); });
-      return Object.keys(mapa).sort((a, b) => mapa[b] - mapa[a]).map((k) => ({ nome: k, valor: mapa[k] }));
-    };
-    const catE = porCategoria(entradas), catD = porCategoria(despesas);
+    // mesmo formato dos painéis "Receitas do mês" e "Despesas do mês":
+    // todos os lançamentos do mês, com banco, status e valor, e o saldo no fim
+    const itensR = listaEntradasTodasMes(d, mes).map((e) => ({ ...e, sinal: "+", cor: "up" }));
+    const itensD = listaDespesasTodasMes(d, mes).map((x) => ({ ...x, sinal: "−", cor: "down" }));
+    const todos = [...itensR, ...itensD].sort((a, b) => (a.data || "").localeCompare(b.data || ""));
+    const totE = totalEntradasTodasMes(d, mes), totD = totalDespesasTodasMes(d, mes);
+    const saldo = totE - totD;
     const nomeMes = new Date(mes + "-01T00:00:00").toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 
     painelSimples(nomeMes.charAt(0).toUpperCase() + nomeMes.slice(1),
-      totE > 0 ? (saldo / totE) * 100 : 0, "das receitas sobraram neste mês", "receitas − despesas",
-      linha("Lançamentos", `${plural(entradas.length, "entrada")} · ${plural(despesas.length, "despesa")}`) +
-      linha("+ Entradas", brl(totE), "up") +
-      catE.map((c) => linha("· " + esc(c.nome), brl(c.valor))).join("") +
-      linha("− Despesas", brl(totD), "down") +
-      catD.map((c) => linha("· " + esc(c.nome), brl(c.valor))).join("") +
-      linha("Saldo atual", brlSinal(saldo), corSinal(saldo)),
+      totE > 0 ? (saldo / totE) * 100 : 0, "das receitas sobraram neste mês", "receitas − despesas do mês",
+      linha("Lançamentos", `${plural(itensR.length, "entrada")} · ${plural(itensD.length, "despesa")}`) +
+      todos.map((it) => linhaEditavel(it, linha(fmtDataCurta(it.data) + " · " + esc(it.descricao),
+        bancoPainel(it.banco, it) + seloStatusPainel(it.status, it) + `<span class="col-valor valor-guia ${it.cor}">${it.sinal}${brl(it.valor)}</span>`))).join("") +
+      linha("Saldo", brlSinal(saldo)),
       "despesas");
   }
+
 
 
   // Painel do quadro "Evolução patrimonial": detalha o ponto clicado —
@@ -2399,7 +2395,8 @@
   // Abre a edição de um lançamento — mesma regra do clique na linha das guias
   // (numa repetição, abre só aquele mês).
   function abrirEdicaoLancamento(acao, id, data) {
-    if (acao === "editar-entrada") abrirModalEntrada(id);
+    if (acao === "editar-meta") abrirModalMeta(id);
+    else if (acao === "editar-entrada") abrirModalEntrada(id);
     else if (acao === "editar-previsao-entrada") abrirModalEntrada(id, null, { origemId: id, data });
     else if (acao === "editar-despesa") abrirModalDespesa(id);
     else if (acao === "editar-conta") abrirModalDespesa(id, "conta");
