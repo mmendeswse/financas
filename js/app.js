@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "1.4.7";
+  const VERSAO_APP = "1.4.9";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -1210,7 +1210,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.4.7" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.4.9" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1574,7 +1574,7 @@
           const itensR = listaEntradasTodasMes(d, mes);
           return linha("Lançamentos", plural(itensR.length, "entrada")) +
             itensR.map((e) => linhaEditavel(e, linha(fmtDataCurta(e.data) + " · " + esc(e.descricao), bancoPainel(e.banco, e) + seloStatusPainel(e.status, e) + `<span class="col-valor valor-guia up">+${brl(e.valor)}</span>`))).join("") +
-            linha("Total", brl(entradas));
+            linha("Total", "+" + brl(entradas));
         })(),
         secao: "entradas"
       },
@@ -1587,7 +1587,7 @@
           const itensD = listaDespesasTodasMes(d, mes);
           return linha("Lançamentos", plural(itensD.length, "despesa")) +
             itensD.map((x) => linhaEditavel(x, linha(fmtDataCurta(x.data) + " · " + esc(x.descricao), bancoPainel(x.banco, x) + seloStatusPainel(x.status, x) + `<span class="col-valor valor-guia down">−${brl(x.valor)}</span>`))).join("") +
-            linha("Total", brl(despesas));
+            linha("Total", "−" + brl(despesas));
         })(),
         secao: "despesas"
       }

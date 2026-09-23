@@ -1069,9 +1069,10 @@ table.tab-acoes th.col-atualiz, table.tab-acoes td.col-atualiz { display: none; 
 .card-clicavel .btn { position: relative; z-index: 2; }
 
 /* "Pago com" clicável, no mesmo espírito do selo de status */
-.cel-banco-botao { background: none; border: 1px solid transparent; border-radius: 7px; cursor: pointer; font: inherit;
-  padding: 3px 6px; margin: -3px -6px; display: flex; align-items: center; gap: 7px; min-width: 0; position: relative; z-index: 2; }
-.cel-banco-botao:hover { border-color: var(--linha-2); background: var(--painel-2); }
+.cel-banco-botao { background: none; border: 1px solid transparent; border-radius: 7px; cursor: pointer; font: inherit; color: inherit;
+  padding: 2px 5px; margin: -3px 0; display: inline-flex; align-items: center; gap: 6px; max-width: 100%; min-width: 0; position: relative; z-index: 2; text-align: left; }
+/* mesmo destaque do painel do Dashboard: contorno inteiro e fundo mais escuro que a linha */
+.cel-banco-botao:hover { border-color: var(--linha-2); background: var(--bg, #070B12); }
 
 /* linhas de repetição prevista */
 .linha-prevista { opacity: .78; }
@@ -1135,6 +1136,6 @@ table.tab-acoes th.col-atualiz, table.tab-acoes td.col-atualiz { display: none; 
 .kv b .valor-guia.up { color: var(--up); } .kv b .valor-guia.down { color: var(--down); }
 .modal:has(.col-banco) { width: 640px; }
 .kv b .banco-painel-botao { background: none; border: 1px solid transparent; border-radius: 7px; padding: 2px 5px; margin-top: -3px; margin-bottom: -3px; cursor: pointer; font-family: inherit; color: inherit; text-align: left; }
-.kv b .banco-painel-botao:hover { border-color: var(--linha-2); background: var(--painel-2); }
+.kv b .banco-painel-botao:hover { border-color: var(--linha-2); background: var(--bg, #070B12); }
 .kv.kv-editavel { cursor: pointer; }
 .kv.kv-editavel:hover { background: var(--painel-2); }
