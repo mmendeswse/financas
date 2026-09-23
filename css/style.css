@@ -1070,7 +1070,7 @@ table.tab-acoes th.col-atualiz, table.tab-acoes td.col-atualiz { display: none; 
 
 /* "Pago com" clicável, no mesmo espírito do selo de status */
 .cel-banco-botao { background: none; border: 1px solid transparent; border-radius: 7px; cursor: pointer; font: inherit; color: inherit;
-  padding: 2px 5px; margin: -3px 0; display: inline-flex; align-items: center; gap: 6px; max-width: 100%; min-width: 0; position: relative; z-index: 2; text-align: left; }
+  padding: 2px 5px; margin: 0; display: inline-flex; align-items: center; gap: 6px; max-width: 100%; min-width: 0; position: relative; z-index: 2; text-align: left; }
 /* mesmo destaque do painel do Dashboard: contorno inteiro e fundo mais escuro que a linha */
 .cel-banco-botao:hover { border-color: var(--linha-2); background: var(--bg, #070B12); }
 
