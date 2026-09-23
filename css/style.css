@@ -1125,3 +1125,12 @@ table.tab-acoes th.col-atualiz, table.tab-acoes td.col-atualiz { display: none; 
 .kv .selo-painel.selo-botao { cursor: pointer; font-family: inherit; }
 .kv .selo-painel.selo-botao:hover { filter: brightness(1.25); }
 
+
+/* painéis Receitas/Despesas do mês: coluna de banco antes do status,
+   valor no mesmo formato das guias Entradas e Despesas */
+.kv b .col-banco { display: inline-flex; align-items: center; gap: 6px; width: 118px; margin-left: 14px; vertical-align: middle; font-weight: 500; font-size: 12.5px; overflow: hidden; white-space: nowrap; }
+.kv b .col-banco .dim { overflow: hidden; text-overflow: ellipsis; }
+.kv b .col-banco + .col-status { margin-left: 8px; }
+.kv b .valor-guia { font-family: var(--mono); font-size: 13px; font-weight: 600; }
+.kv b .valor-guia.up { color: var(--up); } .kv b .valor-guia.down { color: var(--down); }
+.modal:has(.col-banco) { width: 640px; }
