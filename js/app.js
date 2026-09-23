@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "1.4.3";
+  const VERSAO_APP = "1.4.4";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -923,11 +923,25 @@
     document.getElementById("scrim").addEventListener("click", fecharModal);
     // selo de status clicável dentro dos painéis "Receitas/Despesas do mês"
     document.getElementById("modal").addEventListener("click", (e) => {
-      const b = e.target.closest("[data-acao-status]");
-      if (!b) return;
-      e.stopPropagation();
-      alternarStatusLancamento(b.dataset.acaoStatus, b.dataset.id, b.dataset.mes);
-      if (painelKpiAberto) explicarKPI(painelKpiAberto);   // redesenha com o status novo
+      const st = e.target.closest("[data-acao-status]");
+      if (st) {
+        e.stopPropagation();
+        alternarStatusLancamento(st.dataset.acaoStatus, st.dataset.id, st.dataset.mes);
+        if (painelKpiAberto) explicarKPI(painelKpiAberto);   // redesenha com o status novo
+        return;
+      }
+      const bc = e.target.closest("[data-acao-banco]");
+      if (bc) {
+        e.stopPropagation();
+        alternarBancoLancamento(bc.dataset.acaoBanco, bc.dataset.id);
+        if (painelKpiAberto) explicarKPI(painelKpiAberto);   // redesenha com o banco novo
+        return;
+      }
+      const ln = e.target.closest("[data-acao-editar]");
+      if (ln) {
+        e.stopPropagation();
+        abrirEdicaoLancamento(ln.dataset.acaoEditar, ln.dataset.id, ln.dataset.data);
+      }
     });
     document.addEventListener("keydown", (e) => { if (e.key === "Escape") fecharModal(); });
   }
@@ -1195,7 +1209,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.4.3" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.4.4" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1556,7 +1570,7 @@
         linhas: (() => {
           const itensR = listaEntradasTodasMes(d, mes);
           return linha("Lançamentos", plural(itensR.length, "entrada")) +
-            itensR.map((e) => linha(fmtDataCurta(e.data) + " · " + esc(e.descricao), bancoPainel(e.banco) + seloStatusPainel(e.status, e) + `<span class="col-valor valor-guia up">+${brl(e.valor)}</span>`)).join("") +
+            itensR.map((e) => linhaEditavel(e, linha(fmtDataCurta(e.data) + " · " + esc(e.descricao), bancoPainel(e.banco, e) + seloStatusPainel(e.status, e) + `<span class="col-valor valor-guia up">+${brl(e.valor)}</span>`))).join("") +
             linha("Total", brl(entradas));
         })(),
         secao: "entradas"
@@ -1569,7 +1583,7 @@
         linhas: (() => {
           const itensD = listaDespesasTodasMes(d, mes);
           return linha("Lançamentos", plural(itensD.length, "despesa")) +
-            itensD.map((x) => linha(fmtDataCurta(x.data) + " · " + esc(x.descricao), bancoPainel(x.banco) + seloStatusPainel(x.status, x) + `<span class="col-valor valor-guia down">−${brl(x.valor)}</span>`)).join("") +
+            itensD.map((x) => linhaEditavel(x, linha(fmtDataCurta(x.data) + " · " + esc(x.descricao), bancoPainel(x.banco, x) + seloStatusPainel(x.status, x) + `<span class="col-valor valor-guia down">−${brl(x.valor)}</span>`))).join("") +
             linha("Total", brl(despesas));
         })(),
         secao: "despesas"
@@ -2359,9 +2373,53 @@
     }
   }
 
-  function bancoPainel(nome) {
+
+  // Troca o banco de um lançamento para o próximo da lista — a mesma regra
+  // das guias Entradas e Despesas e dos painéis "Receitas/Despesas do mês".
+  function alternarBancoLancamento(acao, id) {
+    if (!DADOS.bancos.length) return;
+    const ids = DADOS.bancos.map((bb) => bb.id);
+    if (acao === "trocar-banco-entrada") {
+      const ent2 = achar(DADOS.entradas, id);
+      if (ent2) { const prox = ids[(ids.indexOf(ent2.bancoId) + 1) % ids.length]; ent2.bancoId = prox; salvarEAtualizar(`Agora em ${F.nomeBanco(DADOS, prox)}.`); }
+    } else if (acao === "trocar-banco-conta") {
+      const cta = achar(DADOS.contasPagar, id);
+      if (cta) { const prox = ids[(ids.indexOf(cta.bancoId) + 1) % ids.length]; cta.bancoId = prox; salvarEAtualizar(`Agora pelo ${F.nomeBanco(DADOS, prox)}.`); }
+    } else if (acao === "trocar-banco") {
+      const dsp2 = achar(DADOS.despesas, id);
+      if (dsp2) {
+        const atual = dsp2.cartaoId ? (achar(DADOS.cartoes, dsp2.cartaoId) || {}).bancoId : dsp2.bancoId;
+        const prox = ids[(ids.indexOf(atual) + 1) % ids.length];
+        dsp2.bancoId = prox; dsp2.cartaoId = "";
+        salvarEAtualizar(`Agora pago com ${F.nomeBanco(DADOS, prox)}.`);
+      }
+    }
+  }
+
+  // Abre a edição de um lançamento — mesma regra do clique na linha das guias
+  // (numa repetição, abre só aquele mês).
+  function abrirEdicaoLancamento(acao, id, data) {
+    if (acao === "editar-entrada") abrirModalEntrada(id);
+    else if (acao === "editar-previsao-entrada") abrirModalEntrada(id, null, { origemId: id, data });
+    else if (acao === "editar-despesa") abrirModalDespesa(id);
+    else if (acao === "editar-conta") abrirModalDespesa(id, "conta");
+    else if (acao === "editar-previsao") abrirModalDespesa(id, "despesa", { origemId: id, data });
+    else if (acao === "editar-previsao-conta") abrirModalDespesa(id, "conta", { origemId: id, data });
+  }
+
+  // marca a linha do painel como clicável para abrir a edição
+  function linhaEditavel(item, html) {
+    if (!item || !item.acaoEditar) return html;
+    return html.replace('<div class="kv">', `<div class="kv kv-editavel" data-acao-editar="${item.acaoEditar}" data-id="${esc(item.id)}" data-data="${item.data || ""}" title="Abrir para editar">`);
+  }
+
+  function bancoPainel(nome, item) {
     const n = nome && nome !== "—" ? nome : "";
-    return `<span class="col-banco">${n ? marcaBanco(n, 16) + `<span class="dim">${esc(n)}</span>` : '<span class="dim">—</span>'}</span>`;
+    const miolo = n ? marcaBanco(n, 16) + `<span class="dim">${esc(n)}</span>` : '<span class="dim">—</span>';
+    if (item && item.acaoBanco) {
+      return `<button class="col-banco banco-painel-botao" data-acao-banco="${item.acaoBanco}" data-id="${esc(item.id)}" title="Clique para trocar o banco">${miolo}</button>`;
+    }
+    return `<span class="col-banco">${miolo}</span>`;
   }
 
   function seloStatusPainel(st, item) {
@@ -2374,22 +2432,22 @@
 
   function listaDespesasTodasMes(d, mes) {
     const lancadas = d.despesas.filter((x) => String(x.data || "").slice(0, 7) === mes)
-      .map((x) => ({ descricao: x.descricao, valor: Number(x.valor || 0), data: x.data, status: "Pago", acao: "tornar-pendente", id: x.id, banco: bancoDoLancamento(d, x) }));
+      .map((x) => ({ descricao: x.descricao, valor: Number(x.valor || 0), data: x.data, status: "Pago", acao: "tornar-pendente", id: x.id, banco: bancoDoLancamento(d, x), acaoBanco: "trocar-banco", acaoEditar: "editar-despesa" }));
     const contasDoMes = (d.contasPagar || []).filter((c) => String(c.vencimento || "").slice(0, 7) === mes);
     const contasMapeadas = contasDoMes.map((c) => {
       const st = F.statusReal(c);
-      return { descricao: c.descricao, valor: Number(c.valor || 0), data: c.vencimento, status: st === "Pendente" ? "Prevista" : st, acao: "alternar-pago", id: c.id, banco: c.bancoId ? F.nomeBanco(d, c.bancoId) : "—" };
+      return { descricao: c.descricao, valor: Number(c.valor || 0), data: c.vencimento, status: st === "Pendente" ? "Prevista" : st, acao: "alternar-pago", id: c.id, banco: c.bancoId ? F.nomeBanco(d, c.bancoId) : "—", acaoBanco: "trocar-banco-conta", acaoEditar: "editar-conta" };
     });
     const contasComoLista = (d.contasPagar || []).map((c) => ({ ...c, data: c.vencimento }));
     const repDespesas = repeticoesPrevistas(d.despesas, mes, (reg, data) => ({
       descricao: reg.descricao, valor: valorDoMes(reg, data.slice(0, 7)), data,
       status: mesQuitado(reg, data.slice(0, 7)) ? "Pago" : "Prevista",
-      acao: "quitar-mes", id: reg.id, mes: data.slice(0, 7), banco: bancoDoLancamento(d, reg)
+      acao: "quitar-mes", id: reg.id, mes: data.slice(0, 7), banco: bancoDoLancamento(d, reg), acaoBanco: "trocar-banco", acaoEditar: "editar-previsao"
     }), contasDoMes);
     const repContas = repeticoesPrevistas(contasComoLista, mes, (reg, data) => ({
       descricao: reg.descricao, valor: valorDoMes(reg, data.slice(0, 7)), data,
       status: mesQuitado(reg, data.slice(0, 7)) ? "Pago" : "Prevista",
-      acao: "quitar-mes-conta", id: reg.id, mes: data.slice(0, 7), banco: reg.bancoId ? F.nomeBanco(d, reg.bancoId) : "—"
+      acao: "quitar-mes-conta", id: reg.id, mes: data.slice(0, 7), banco: reg.bancoId ? F.nomeBanco(d, reg.bancoId) : "—", acaoBanco: "trocar-banco-conta", acaoEditar: "editar-previsao-conta"
     }), []);
     return [...lancadas, ...contasMapeadas, ...repDespesas, ...repContas]
       .sort((a, b) => (a.data || "").localeCompare(b.data || ""));
@@ -2399,11 +2457,11 @@
   // previstas) — usada no painel "Receitas do mês".
   function listaEntradasTodasMes(d, mes) {
     const reais = d.entradas.filter((e) => String(e.data || "").slice(0, 7) === mes)
-      .map((e) => ({ descricao: e.descricao, valor: Number(e.valor || 0), data: e.data, status: e.previsto ? "Prevista" : "Recebida", acao: "alternar-prevista-entrada", id: e.id, banco: F.nomeBanco(d, e.bancoId) }));
+      .map((e) => ({ descricao: e.descricao, valor: Number(e.valor || 0), data: e.data, status: e.previsto ? "Prevista" : "Recebida", acao: "alternar-prevista-entrada", id: e.id, banco: F.nomeBanco(d, e.bancoId), acaoBanco: "trocar-banco-entrada", acaoEditar: "editar-entrada" }));
     const recorrentes = repeticoesPrevistas(d.entradas, mes, (reg, data) => ({
       descricao: reg.descricao, valor: valorDoMes(reg, data.slice(0, 7)), data,
       status: mesQuitado(reg, data.slice(0, 7)) ? "Recebida" : "Prevista",
-      acao: "quitar-mes-entrada", id: reg.id, mes: data.slice(0, 7), banco: F.nomeBanco(d, reg.bancoId)
+      acao: "quitar-mes-entrada", id: reg.id, mes: data.slice(0, 7), banco: F.nomeBanco(d, reg.bancoId), acaoBanco: "trocar-banco-entrada", acaoEditar: "editar-previsao-entrada"
     }));
     return [...reais, ...recorrentes].sort((a, b) => (a.data || "").localeCompare(b.data || ""));
   }
@@ -4067,39 +4125,11 @@
 
         case "alternar-prevista-entrada": alternarStatusLancamento("alternar-prevista-entrada", id); break;
 
-        case "trocar-banco-entrada": {
-          const ent2 = achar(DADOS.entradas, id);
-          if (ent2 && DADOS.bancos.length) {
-            const ids = DADOS.bancos.map((bb) => bb.id);
-            const prox = ids[(ids.indexOf(ent2.bancoId) + 1) % ids.length];
-            ent2.bancoId = prox;
-            salvarEAtualizar(`Agora em ${F.nomeBanco(DADOS, prox)}.`);
-          }
-          break;
-        }
+        case "trocar-banco-entrada": alternarBancoLancamento("trocar-banco-entrada", id); break;
 
-        case "trocar-banco-conta": {
-          const cta = achar(DADOS.contasPagar, id);
-          if (cta && DADOS.bancos.length) {
-            const ids = DADOS.bancos.map((bb) => bb.id);
-            const prox = ids[(ids.indexOf(cta.bancoId) + 1) % ids.length];
-            cta.bancoId = prox;
-            salvarEAtualizar(`Agora pelo ${F.nomeBanco(DADOS, prox)}.`);
-          }
-          break;
-        }
+        case "trocar-banco-conta": alternarBancoLancamento("trocar-banco-conta", id); break;
 
-        case "trocar-banco": {
-          const dsp2 = achar(DADOS.despesas, id);
-          if (dsp2 && DADOS.bancos.length) {
-            const ids = DADOS.bancos.map((bb) => bb.id);
-            const atual = dsp2.cartaoId ? (achar(DADOS.cartoes, dsp2.cartaoId) || {}).bancoId : dsp2.bancoId;
-            const prox = ids[(ids.indexOf(atual) + 1) % ids.length];
-            dsp2.bancoId = prox; dsp2.cartaoId = "";
-            salvarEAtualizar(`Agora pago com ${F.nomeBanco(DADOS, prox)}.`);
-          }
-          break;
-        }
+        case "trocar-banco": alternarBancoLancamento("trocar-banco", id); break;
 
         case "tornar-pendente": alternarStatusLancamento("tornar-pendente", id); break;
 

@@ -1134,3 +1134,7 @@ table.tab-acoes th.col-atualiz, table.tab-acoes td.col-atualiz { display: none; 
 .kv b .valor-guia { font-family: var(--mono); font-size: 13px; font-weight: 600; }
 .kv b .valor-guia.up { color: var(--up); } .kv b .valor-guia.down { color: var(--down); }
 .modal:has(.col-banco) { width: 640px; }
+.kv b .banco-painel-botao { background: none; border: 1px solid transparent; border-radius: 7px; padding: 2px 5px; margin-top: -3px; margin-bottom: -3px; cursor: pointer; font-family: inherit; color: inherit; text-align: left; }
+.kv b .banco-painel-botao:hover { border-color: var(--linha-2); background: var(--painel-2); }
+.kv.kv-editavel { cursor: pointer; }
+.kv.kv-editavel:hover { background: var(--painel-2); }
