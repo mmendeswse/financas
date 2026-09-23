@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "1.4.4";
+  const VERSAO_APP = "1.4.5";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -1209,7 +1209,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.4.4" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.4.5" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1577,7 +1577,7 @@
       },
       despesas: {
         titulo: "Despesas do mês",
-        conta: "despesas do mês ÷ receitas do mês",
+        conta: "soma das despesas lançadas no mês atual",
         pct: entradas > 0 ? (despesas / entradas) * 100 : 0,
         pctRotulo: "das receitas do mês já foram gastas",
         linhas: (() => {
@@ -2148,7 +2148,7 @@
           <div class="cartao-item" style="border-left-color:${esc(b.cor || "#3FC1E0")}" data-acao="editar-banco" data-id="${b.id}">
             <div class="linha1"><div class="nome-com-marca">${marcaBanco(b.nome, 26)}<div><div class="nome">${esc(b.nome)}</div><div class="tipo">${esc(b.tipo || "—")}</div>${b.agencia || b.conta ? `<div class="tipo">${b.agencia ? "Ag " + esc(b.agencia) : ""}${b.agencia && b.conta ? " · " : ""}${b.conta ? "Cc " + esc(b.conta) : ""}</div>` : ""}</div></div></div>
             <div class="saldo ${corSinal(b.valor)}">${brl(b.valor)}</div>
-            <div class="rodape">${mesesBancos ? `Saldo Atual ${brl(b.saldoAtual)}` : `Saldo Inicial ${brl(b.saldoInicial)}`}
+            <div class="rodape"><span>${mesesBancos ? `Saldo Atual ${brl(b.saldoAtual)}` : ""}</span>
               <button class="btn pequeno" data-acao="entrada-banco" data-id="${b.id}" title="Lançar uma entrada nesta conta">+ Adicionar</button>
             </div>
           </div>`).join("") + `</div>`;
