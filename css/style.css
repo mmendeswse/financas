@@ -255,7 +255,8 @@ svg { display: block; }
 .selo-acao { background: rgba(34,227,154,0.14); color: var(--up); }
 .selo-fii { background: rgba(47,139,255,0.16); color: var(--azul); }
 .selo-etf { background: rgba(255,194,51,0.16); color: var(--acc); }
-.selo-pago { background: rgba(34,227,154,0.14); color: var(--up); border: 1px solid rgba(34,227,154,.35); }
+.selo-pago { background: rgba(0,229,255,.12); color: var(--cy); border: 1px solid rgba(0,229,255,.25); }
+.selo-entrada { background: rgba(34,227,154,0.14); color: var(--up); border: 1px solid rgba(34,227,154,.35); }
 .selo-pendente { background: rgba(255,194,51,0.16); color: var(--acc); border: 1px solid rgba(255,194,51,.35); }
 .selo-atrasado { background: rgba(255,77,122,0.16); color: var(--down); border: 1px solid rgba(255,77,122,.4); }
 .selo-demo { background: rgba(255,194,51,0.16); color: var(--acc); }
@@ -1076,7 +1077,7 @@ table.tab-acoes th.col-atualiz, table.tab-acoes td.col-atualiz { display: none; 
 
 /* linhas de repetição prevista */
 .linha-prevista { opacity: .78; }
-.selo-prevista { background: rgba(0,229,255,.12); color: var(--cy); border: 1px solid rgba(0,229,255,.25); }
+.selo-prevista { background: rgba(255,214,51,.14); color: #FFD633; border: 1px solid rgba(255,214,51,.4); }
 
 /* quadros A e B do dashboard: conteúdo centralizado na altura do card */
 .card-centrado > .body { display: flex; flex-direction: column; justify-content: center; }

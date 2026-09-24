@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "1.5.6";
+  const VERSAO_APP = "1.5.9";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -102,7 +102,7 @@
     if (campo === "valor") { x = Number(a.valor || 0); y = Number(b.valor || 0); }
     else if (campo === "data") { x = a.data || ""; y = b.data || ""; }
     else if (campo === "status") {
-      const ordem = { "Atrasado": 0, "Prevista": 1, "Pago": 2, "Recebida": 2 };
+      const ordem = { "Atrasado": 0, "Prevista": 1, "Pago": 2 };
       x = ordem[a.status] !== undefined ? ordem[a.status] : 9;
       y = ordem[b.status] !== undefined ? ordem[b.status] : 9;
     }
@@ -1210,7 +1210,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.5.6" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.5.9" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1664,10 +1664,10 @@
       painelSimples(esc(b.nome), totalPeriodo !== 0 ? (b.valor / totalPeriodo) * 100 : 0,
         `da movimentação de todas as contas ${periodo}`, "entradas − despesas do período",
         linha("Tipo conta", esc(b.tipo || "—")) +
-        linha(`Entradas ${periodo}`, brl(b.entradas), "up") +
-        linha(`Despesas ${periodo}`, brl(b.saidas), "down") +
-        linha("Movimentação líquida", brlSinal(b.valor), corSinal(b.valor)) +
-        linha("Saldo atual da conta", brl(b.saldoAtual), corSinal(b.saldoAtual)), "bancos",
+        linha(`Entradas ${periodo}`, `<span class="valor-guia up">+${brl(b.entradas)}</span>`) +
+        linha(`Despesas ${periodo}`, `<span class="valor-guia down">−${brl(b.saidas)}</span>`) +
+        linha("Movimentação líquida", brlSinal(b.valor)) +
+        linha("Saldo atual da conta", brlSinal(b.saldoAtual)), "bancos",
         { rotulo: "+ Adicionar", acao: () => abrirModalValorBanco(b.id) });
       return;
     }
@@ -1675,8 +1675,9 @@
     painelSimples(esc(b.nome), totalPeriodo > 0 ? (b.saldoAtual / totalPeriodo) * 100 : 0, "do seu dinheiro em bancos está aqui",
       "saldo inicial + entradas − despesas",
       linha("Tipo conta", esc(b.tipo || "—")) +
-      linha("Saldo inicial", brl(b.saldoInicial)) + linha("+ Entradas", brl(b.entradas), "up") +
-      linha("− Despesas", brl(b.saidas), "down") + linha("Saldo atual", brl(b.saldoAtual), corSinal(b.saldoAtual)), "bancos",
+      linha("+ Entradas", `<span class="valor-guia up">+${brl(b.entradas)}</span>`) +
+      linha("− Despesas", `<span class="valor-guia down">−${brl(b.saidas)}</span>`) +
+      linha("Saldo atual", brlSinal(b.saldoAtual)), "bancos",
       { rotulo: "+ Adicionar", acao: () => abrirModalValorBanco(b.id) });
   }
 
@@ -1975,7 +1976,7 @@
 
       <div class="grid">
         <div class="c3">${card("card-centrado", "Saldo banco", "mapa ativos", `<span class="acc-laranja" style="font-size:12px;font-weight:700">Total: ${brl(p.bancos)}</span>`, `<div class="body pad">${barList(bancos)}</div>`)}</div>
-        <div class="c3">${card("card-centrado", "Composição patrimônio", "ativos brutos, antes das dívidas", `<span class="acc-laranja" style="font-size:12px;font-weight:700">Total: ${brl(p.bancos + I.totalLiquidoOutros(d) + p.acoes)}</span>`, `
+        <div class="c3">${card("card-centrado", "Composição patrimônio", "ativos brutos", `<span class="acc-laranja" style="font-size:12px;font-weight:700">Total: ${brl(p.bancos + I.totalLiquidoOutros(d) + p.acoes)}</span>`, `
           <div class="donut-wrap">
             <div class="donut-centro"><canvas id="graf-dash-composicao" width="150" height="150" style="width:150px;height:150px"></canvas>
               <button class="donut-rotulo clicavel" data-acao="explicar-kpi" data-kpi="investido" title="Ver como este percentual é calculado"><b>${pctInvestido.toFixed(1).replace(".", ",")}%</b><span class="acc-laranja">INVESTIDO</span></button>
@@ -2104,7 +2105,7 @@
       </div>
 
       <div class="grid">
-        <div class="c6">${card("card-centrado", "Composição patrimônio", "ativos brutos, antes das dívidas", `<span class="acc-laranja" style="font-size:12px;font-weight:700">Total: ${brl(totalComp)}</span>`, `<div class="donut-wrap"><div class="donut-centro"><canvas id="graf-patrimonio-divisao" width="150" height="150" style="width:150px;height:150px"></canvas><div class="donut-rotulo"><b>${brl(p.bruto).replace("R$", "").trim()}</b><span class="acc-laranja">BRUTO</span></div></div><div class="legenda">${legendaHtml}</div></div>`)}</div>
+        <div class="c6">${card("card-centrado", "Composição patrimônio", "ativos brutos", `<span class="acc-laranja" style="font-size:12px;font-weight:700">Total: ${brl(p.bancos + I.totalLiquidoOutros(d) + p.acoes)}</span>`, `<div class="donut-wrap"><div class="donut-centro"><canvas id="graf-patrimonio-divisao" width="150" height="150" style="width:150px;height:150px"></canvas><div class="donut-rotulo"><b>${brl(p.bruto).replace("R$", "").trim()}</b><span class="acc-laranja">BRUTO</span></div></div><div class="legenda">${legendaHtml}</div></div>`)}</div>
         <div class="c6">${card("", "Resumo patrimonial", "", "", `
           <div class="kv"><span class="dim">Dinheiro em bancos</span><b>${brl(p.bancos)}</b></div>
           <div class="kv"><span class="dim">+ Ações e FIIs</span><b>${brl(p.acoes)}</b></div>
@@ -2356,10 +2357,10 @@
       if (regC) { gravarAjuste(regC, mes, { pago: !mesQuitado(regC, mes) }); salvarEAtualizar(mesQuitado(regC, mes) ? "Marcada como paga neste mês." : "Marcada como prevista."); }
     } else if (acao === "quitar-mes-entrada") {
       const regE = achar(DADOS.entradas, id);
-      if (regE) { gravarAjuste(regE, mes, { pago: !mesQuitado(regE, mes) }); salvarEAtualizar(mesQuitado(regE, mes) ? "Marcada como recebida neste mês." : "Marcada como prevista."); }
+      if (regE) { gravarAjuste(regE, mes, { pago: !mesQuitado(regE, mes) }); salvarEAtualizar(mesQuitado(regE, mes) ? "Marcada como paga neste mês." : "Marcada como prevista."); }
     } else if (acao === "alternar-prevista-entrada") {
       const ent4 = achar(DADOS.entradas, id);
-      if (ent4) { ent4.previsto = !ent4.previsto; salvarEAtualizar(ent4.previsto ? "Marcada como prevista." : "Marcada como recebida."); }
+      if (ent4) { ent4.previsto = !ent4.previsto; salvarEAtualizar(ent4.previsto ? "Marcada como prevista." : "Marcada como paga."); }
     } else if (acao === "tornar-pendente") {
       const dsp = achar(DADOS.despesas, id);
       if (dsp) {
@@ -2465,10 +2466,10 @@
   // previstas) — usada no painel "Receitas do mês".
   function listaEntradasTodasMes(d, mes) {
     const reais = d.entradas.filter((e) => String(e.data || "").slice(0, 7) === mes)
-      .map((e) => ({ descricao: e.descricao, valor: Number(e.valor || 0), data: e.data, status: e.previsto ? "Prevista" : "Recebida", acao: "alternar-prevista-entrada", id: e.id, banco: F.nomeBanco(d, e.bancoId), acaoBanco: "trocar-banco-entrada", acaoEditar: "editar-entrada" }));
+      .map((e) => ({ descricao: e.descricao, valor: Number(e.valor || 0), data: e.data, status: e.previsto ? "Prevista" : "Pago", acao: "alternar-prevista-entrada", id: e.id, banco: F.nomeBanco(d, e.bancoId), acaoBanco: "trocar-banco-entrada", acaoEditar: "editar-entrada" }));
     const recorrentes = repeticoesPrevistas(d.entradas, mes, (reg, data) => ({
       descricao: reg.descricao, valor: valorDoMes(reg, data.slice(0, 7)), data,
-      status: mesQuitado(reg, data.slice(0, 7)) ? "Recebida" : "Prevista",
+      status: mesQuitado(reg, data.slice(0, 7)) ? "Pago" : "Prevista",
       acao: "quitar-mes-entrada", id: reg.id, mes: data.slice(0, 7), banco: F.nomeBanco(d, reg.bancoId), acaoBanco: "trocar-banco-entrada", acaoEditar: "editar-previsao-entrada"
     }));
     return [...reais, ...recorrentes].sort((a, b) => (a.data || "").localeCompare(b.data || ""));
@@ -2534,7 +2535,7 @@
       recebidaNoMes: mesQuitado(reg, data.slice(0, 7)), mesRef: data.slice(0, 7)
     }));
     const lista = [...d.entradas.filter((e) => String(e.data || "").slice(0, 7) === mesEntradas), ...previstasEnt]
-      .map((e) => ({ ...e, banco: F.nomeBanco(d, e.bancoId), status: e.prevista ? (e.recebidaNoMes ? "Recebida" : "Prevista") : (e.previsto ? "Prevista" : "Recebida") }))
+      .map((e) => ({ ...e, banco: F.nomeBanco(d, e.bancoId), status: e.prevista ? (e.recebidaNoMes ? "Pago" : "Prevista") : (e.previsto ? "Prevista" : "Pago") }))
       .sort((a, b) => {
         if (ordemEntradas.campo === "cronologica") return (a.data || "").localeCompare(b.data || "");
         return comparar(a, b, ordemEntradas.campo, ordemEntradas.dir);
@@ -2553,8 +2554,8 @@
           <div><div class="nm">${esc(e.descricao)}${seloFreq(e)}</div><div class="sub">${esc(e.categoria)} · ${esc(e.tipo || "")}</div></div>
           <div><button class="cel-banco cel-banco-botao" data-acao="trocar-banco-entrada" data-id="${e.id}" title="${e.prevista ? "Troca o banco do lançamento original (vale para todas as repetições)" : "Trocar o banco desta entrada"}">${marcaBanco(e.banco, 18)}<span class="dim">${esc(e.banco)}</span></button></div>
           <div>${e.prevista
-            ? `<button class="selo-tag ${e.recebidaNoMes ? "selo-pago" : "selo-prevista"} selo-botao" data-acao="quitar-mes-entrada" data-id="${e.id}" data-mes="${e.mesRef}" title="${e.recebidaNoMes ? "Marcar como prevista" : "Marcar como recebida"}">${e.status}</button>`
-            : `<button class="selo-tag ${e.previsto ? "selo-prevista" : "selo-pago"} selo-botao" data-acao="alternar-prevista-entrada" data-id="${e.id}" title="${e.previsto ? "Marcar como recebida" : "Marcar como prevista"}">${e.status}</button>`}</div>
+            ? `<button class="selo-tag ${e.recebidaNoMes ? "selo-pago" : "selo-prevista"} selo-botao" data-acao="quitar-mes-entrada" data-id="${e.id}" data-mes="${e.mesRef}" title="${e.recebidaNoMes ? "Marcar como prevista" : "Marcar como paga"}">${e.status}</button>`
+            : `<button class="selo-tag ${e.previsto ? "selo-prevista" : "selo-pago"} selo-botao" data-acao="alternar-prevista-entrada" data-id="${e.id}" title="${e.previsto ? "Marcar como paga" : "Marcar como prevista"}">${e.status}</button>`}</div>
           <div class="cel-valor"><span class="big up">+${brl(e.valor)}</span></div>
         </div>`).join("");
     }
@@ -3077,7 +3078,7 @@
           <div class="dim" style="font-size:12.5px">${esc(m.categoria || "—")}</div>
           <div class="dim" style="font-size:12.5px">${m.cartaoId ? "💳 " + esc(nomeCartao(d, m.cartaoId)) : esc(F.nomeBanco(d, m.bancoId))}</div>
           <div class="r big ${m.__tipo === "Entrada" ? "up" : "down"}">${m.__tipo === "Entrada" ? "+" : "−"}${brl(m.valor)}</div>
-          <div class="r"><span class="selo-tag ${m.__tipo === "Entrada" ? "selo-pago" : "selo-cat"}">${m.__tipo}</span></div>
+          <div class="r"><span class="selo-tag ${m.__tipo === "Entrada" ? "selo-entrada" : "selo-cat"}">${m.__tipo}</span></div>
         </div>`).join("");
     }
 
