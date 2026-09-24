@@ -1076,7 +1076,7 @@ table.tab-acoes th.col-atualiz, table.tab-acoes td.col-atualiz { display: none; 
 .cel-banco-botao:hover { border-color: var(--linha-2); background: var(--bg, #070B12); }
 
 /* linhas de repetição prevista */
-.linha-prevista { opacity: .78; }
+.linha-prevista { }   /* repetições com a mesma aparência das demais linhas */
 .selo-prevista { background: rgba(255,214,51,.14); color: #FFD633; border: 1px solid rgba(255,214,51,.4); }
 
 /* quadros A e B do dashboard: conteúdo centralizado na altura do card */
