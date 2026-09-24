@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "1.5.5";
+  const VERSAO_APP = "1.5.6";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -1210,7 +1210,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.5.5" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.5.6" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1559,9 +1559,9 @@
         linhas: (() => {
           const investLiq = I.totalLiquidoOutros(d);
           return linha("Rentabilidade carteira", pct(I.rentabilidadeCarteiraAcoes(d)), corSinal(I.rentabilidadeCarteiraAcoes(d))) +
-            linha("Renda fixa, Tesouro e Fundos", brl(investLiq)) + linha("Ações, FIIs e ETFs", brl(p.acoes)) +
-            linha("Patrimônio bruto", brl(p.bruto)) +
-            linha("Total Líquido", brl(investLiq + p.acoes), "up");
+            linha("Renda fixa, Tesouro e Fundos", `<span class="valor-guia up">+${brl(investLiq)}</span>`) +
+            linha("Ações, FIIs e ETFs", `<span class="valor-guia up">+${brl(p.acoes)}</span>`) +
+            linha("Total", "+" + brl(investLiq + p.acoes));
         })(),
         secao: "investimentos"
       },
@@ -1975,7 +1975,7 @@
 
       <div class="grid">
         <div class="c3">${card("card-centrado", "Saldo banco", "mapa ativos", `<span class="acc-laranja" style="font-size:12px;font-weight:700">Total: ${brl(p.bancos)}</span>`, `<div class="body pad">${barList(bancos)}</div>`)}</div>
-        <div class="c3">${card("card-centrado", "Composição patrimônio", "ativos brutos, antes das dívidas", `<span class="acc-laranja" style="font-size:12px;font-weight:700">Total: ${brl(totalComp)}</span>`, `
+        <div class="c3">${card("card-centrado", "Composição patrimônio", "ativos brutos, antes das dívidas", `<span class="acc-laranja" style="font-size:12px;font-weight:700">Total: ${brl(p.bancos + I.totalLiquidoOutros(d) + p.acoes)}</span>`, `
           <div class="donut-wrap">
             <div class="donut-centro"><canvas id="graf-dash-composicao" width="150" height="150" style="width:150px;height:150px"></canvas>
               <button class="donut-rotulo clicavel" data-acao="explicar-kpi" data-kpi="investido" title="Ver como este percentual é calculado"><b>${pctInvestido.toFixed(1).replace(".", ",")}%</b><span class="acc-laranja">INVESTIDO</span></button>
