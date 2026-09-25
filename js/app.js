@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "1.7.7";
+  const VERSAO_APP = "1.7.8";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -1248,7 +1248,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.7.7" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.7.8" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1610,9 +1610,9 @@
         pctRotulo: "de variação em relação ao mês anterior",
         linhas: (() => {
           const itensR = listaEntradasTodasMes(d, mes);
-          return linha("Lançamentos", plural(itensR.length, "entrada")) + cabecalhoColunasPainel() +
+          return cabecalhoColunasPainel() +
             itensR.map((e) => linhaEditavel(e, linha(fmtDataCurta(e.data) + " · " + esc(e.descricao), bancoPainel(e.banco, e) + seloStatusPainel(e.status, e) + `<span class="col-valor valor-guia up">+${brl(e.valor)}</span>`))).join("") +
-            linha("Total", `<span class="col-valor">+${brl(entradas)}</span>`);
+            linhaTotalPainel(plural(itensR.length, "lançamento"), `+${brl(entradas)}`);
         })(),
         secao: "entradas"
       },
@@ -1623,9 +1623,9 @@
         pctRotulo: "das receitas do mês já foram gastas",
         linhas: (() => {
           const itensD = listaDespesasTodasMes(d, mes);
-          return linha("Lançamentos", plural(itensD.length, "despesa")) + cabecalhoColunasPainel() +
+          return cabecalhoColunasPainel() +
             itensD.map((x) => linhaEditavel(x, linha(fmtDataCurta(x.data) + " · " + esc(x.descricao), bancoPainel(x.banco, x) + seloStatusPainel(x.status, x) + `<span class="col-valor valor-guia down">−${brl(x.valor)}</span>`))).join("") +
-            linha("Total", `<span class="col-valor">−${brl(despesas)}</span>`);
+            linhaTotalPainel(plural(itensD.length, "lançamento"), `−${brl(despesas)}`);
         })(),
         secao: "despesas"
       }
@@ -2476,6 +2476,11 @@
   }
 
   // títulos das colunas nos painéis de lançamentos, no mesmo padrão das guias
+  // última linha dos painéis: "Total · N lançamentos" e o valor, no padrão das linhas da lista
+  function linhaTotalPainel(qtd, valor) {
+    return `<div class="kv kv-total"><span class="dim">Total · ${esc(qtd)}</span><b><span class="col-valor">${valor}</span></b></div>`;
+  }
+
   function cabecalhoColunasPainel() {
     return `<div class="kv kv-cab"><span>Data · Descrição</span><b><span class="col-banco">Banco</span><span class="col-status">Status</span><span class="col-valor">Valor</span></b></div>`;
   }
