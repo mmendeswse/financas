@@ -595,7 +595,7 @@ table.terminal .campo-preco { width: 88px; text-align: right; background: var(--
 
 /* célula "valor + ações" das tabelas de entradas/despesas:
    o valor nunca encosta na data e os botões ficam sempre à direita */
-.cel-valor { display: flex; align-items: center; justify-content: flex-end; gap: 8px; min-width: 0; text-align: right; }
+.cel-valor { display: flex; align-items: center; justify-content: flex-start; gap: 8px; min-width: 0; text-align: left; }
 .cel-valor .big { white-space: nowrap; overflow: hidden; text-overflow: clip; }
 .cel-botoes { display: inline-flex; gap: 2px; flex: none; }
 .cel-botoes .btn.fantasma { padding: 4px; }
@@ -802,8 +802,8 @@ input, select, textarea,
 .hd i.r { text-align: right; }
 /* nas tabelas de entradas e despesas a última coluna traz os botões de
    editar/excluir; o recuo põe o título "Valor" em cima dos números */
-.hd i.hd-valor { padding-right: 58px; }
-@media (max-width: 640px) { .hd i.hd-valor { padding-right: 50px; } }
+.hd i.hd-valor { padding-right: 0; }
+@media (max-width: 640px) { .hd i.hd-valor { padding-right: 0; } }
 
 /* campos lado a lado (Data / Valor): o campo de data tem largura própria
    grande no Safari, que empurrava a coluna vizinha e sobrepunha os campos.
