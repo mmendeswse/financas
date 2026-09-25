@@ -279,14 +279,14 @@
     var ctx = ctxOf(canvasId); if (!ctx) return;
     // no gráfico de uma ação, a linha principal se chama "Resultado" e fica verde
     // (o gráfico do dólar, que usa esta mesma função, continua "Preço" em azul)
-    // na ação, a linha "Retorno" fica verde com lucro e vermelha com prejuízo
+    // na ação, a legenda "Resultado" fica verde com lucro e vermelha com prejuízo
     // (preço atual contra o preço de compra) — a mesma regra da caixa de diferença
     var ehAcao = precoAtual > 0;
     var corLinha = !ehAcao ? CORES.cy : (precoMedio > 0 && precoAtual < precoMedio ? CORES.down : CORES.up);
     var datasets = [{
-      label: ehAcao ? "Retorno" : "Preço", data: historicoPrecos.map(function (p) { return p.preco; }),
+      label: ehAcao ? "Resultado" : "Preço", data: historicoPrecos.map(function (p) { return p.preco; }),
       borderColor: CORES.cy, backgroundColor: gradiente(ctx, CORES.cy, Math.max(260, (ctx.canvas.parentNode && ctx.canvas.parentNode.clientHeight) || 260)), fill: true,
-      corLegenda: corLinha,   // bolinha da legenda "Retorno": verde com lucro, vermelha com prejuízo
+      corLegenda: corLinha,   // bolinha da legenda "Resultado": verde com lucro, vermelha com prejuízo
       tension: 0.25, pointRadius: 0, pointHoverRadius: 4, borderWidth: 2
     }];
     if (precoAtual > 0) {
