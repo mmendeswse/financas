@@ -1148,3 +1148,8 @@ table.tab-acoes th.col-atualiz, table.tab-acoes td.col-atualiz { display: none; 
 .meta-mensal-texto small { font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--dim); font-weight: 700; }
 .meta-mensal-texto b { font-size: 15px; font-weight: 700; }
 .meta-mensal-texto b.dim { font-size: 13px; font-weight: 600; }
+
+/* gráfico da ação ocupa toda a altura do quadro */
+.card:has(.grafico-acao-area) > .body { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
+.grafico-acao-area { flex: 1 1 auto; min-height: 300px; padding: 10px 16px 14px; position: relative; }
+.grafico-acao-area canvas { position: absolute; inset: 10px 16px 14px; width: calc(100% - 32px) !important; height: calc(100% - 24px) !important; }

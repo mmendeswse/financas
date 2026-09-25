@@ -285,7 +285,8 @@
     var corLinha = !ehAcao ? CORES.cy : (precoMedio > 0 && precoAtual < precoMedio ? CORES.down : CORES.up);
     var datasets = [{
       label: ehAcao ? "Retorno" : "Preço", data: historicoPrecos.map(function (p) { return p.preco; }),
-      borderColor: corLinha, backgroundColor: gradiente(ctx, CORES.cy, 260), fill: true,   // área interna na cor do "Preço Atual"
+      borderColor: CORES.cy, backgroundColor: gradiente(ctx, CORES.cy, Math.max(260, (ctx.canvas.parentNode && ctx.canvas.parentNode.clientHeight) || 260)), fill: true,
+      corLegenda: corLinha,   // bolinha da legenda "Retorno": verde com lucro, vermelha com prejuízo
       tension: 0.25, pointRadius: 0, pointHoverRadius: 4, borderWidth: 2
     }];
     if (precoAtual > 0) {
@@ -300,14 +301,16 @@
       data: { labels: historicoPrecos.map(function (p) { return new Date(p.data + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }); }), datasets: datasets },
       options: {
         responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
-        scales: { x: eixoX({ ticks: { color: CORES.texto, font: fonte(10.5), maxTicksLimit: 6 } }), y: eixoY({ ticks: { color: CORES.texto, font: fonte(10.5), callback: function (v) { return "R$ " + v.toFixed(2); } } }) },
+        scales: { x: eixoX({ ticks: { color: CORES.texto, font: fonte(10.5), maxTicksLimit: 6 } }), y: eixoY({ ticks: { color: CORES.texto, font: fonte(10.5), maxTicksLimit: 14, callback: function (v) { return "R$ " + v.toFixed(2); } } }) },
         plugins: {
           legend: { position: "top", align: "end", labels: { color: CORES.texto, font: fonte(10.5), boxWidth: 8, usePointStyle: true, pointStyle: "circle",
             // a bolinha de cada item usa a cor da própria linha (a área azul não "vaza" para o Retorno)
             generateLabels: function (ch) {
               return Chart.defaults.plugins.legend.labels.generateLabels(ch).map(function (l) {
                 var ds = ch.data.datasets[l.datasetIndex];
-                if (ds && ds.fill) { l.fillStyle = ds.borderColor; }
+                // todas as bolinhas preenchidas, cada uma na sua cor
+                var cor = (ds && (ds.corLegenda || ds.borderColor)) || l.strokeStyle;
+                l.fillStyle = cor; l.strokeStyle = cor; l.lineDash = []; l.lineWidth = 1;
                 return l;
               });
             } } },
