@@ -277,9 +277,15 @@
   function renderPrecoAcao(canvasId, historicoPrecos, precoMedio, precoAtual) {
     destruir(canvasId);
     var ctx = ctxOf(canvasId); if (!ctx) return;
+    // no gráfico de uma ação, a linha principal se chama "Resultado" e fica verde
+    // (o gráfico do dólar, que usa esta mesma função, continua "Preço" em azul)
+    // na ação, a linha "Retorno" fica verde com lucro e vermelha com prejuízo
+    // (preço atual contra o preço de compra) — a mesma regra da caixa de diferença
+    var ehAcao = precoAtual > 0;
+    var corLinha = !ehAcao ? CORES.cy : (precoMedio > 0 && precoAtual < precoMedio ? CORES.down : CORES.up);
     var datasets = [{
-      label: "Preço", data: historicoPrecos.map(function (p) { return p.preco; }),
-      borderColor: CORES.cy, backgroundColor: gradiente(ctx, CORES.cy, 260), fill: true,
+      label: ehAcao ? "Retorno" : "Preço", data: historicoPrecos.map(function (p) { return p.preco; }),
+      borderColor: corLinha, backgroundColor: gradiente(ctx, corLinha, 260), fill: true,
       tension: 0.25, pointRadius: 0, pointHoverRadius: 4, borderWidth: 2
     }];
     if (precoAtual > 0) {
@@ -287,7 +293,7 @@
       datasets.push({ label: "Preço Atual", data: historicoPrecos.map(function () { return precoAtual; }), borderColor: CORES.cy, backgroundColor: "transparent", borderDash: [6, 4], borderWidth: 1.5, pointRadius: 0, pointHoverRadius: 0, fill: false });
     }
     if (precoMedio > 0) {
-      datasets.push({ label: "Valor Compra", data: historicoPrecos.map(function () { return precoMedio; }), borderColor: CORES.laranja, borderDash: [6, 4], borderWidth: 2, pointRadius: 0, fill: false });
+      datasets.push({ label: "Preço Compra", data: historicoPrecos.map(function () { return precoMedio; }), borderColor: CORES.laranja, borderDash: [6, 4], borderWidth: 2, pointRadius: 0, fill: false });
     }
     instancias[canvasId] = new Chart(ctx, {
       type: "line",
@@ -328,6 +334,28 @@
           c.fillStyle = dif >= 0 ? "rgba(34,227,154,0.14)" : "rgba(255,77,122,0.16)"; c.fillRect(x, ym - alt / 2, larg, alt);
           c.strokeStyle = cor; c.lineWidth = 1; c.strokeRect(x + 0.5, ym - alt / 2 + 0.5, larg - 1, alt - 1);
           c.fillStyle = cor; c.textBaseline = "middle"; c.textAlign = "center"; c.fillText(txt, xc, ym + 0.5);
+          c.restore();
+        }
+      }] : []).concat(precoAtual > 0 ? [{
+        id: "rotuloAtual",
+        afterDatasetsDraw: function (grafico) {
+          var ca = grafico.chartArea;
+          var y = grafico.scales.y.getPixelForValue(precoAtual);
+          if (y < ca.top || y > ca.bottom) return;
+          // se a linha de compra estiver muito perto, afasta a etiqueta para não encavalar
+          if (precoMedio > 0) {
+            var yC = grafico.scales.y.getPixelForValue(precoMedio);
+            if (Math.abs(y - yC) < 22) y = y <= yC ? yC - 22 : yC + 22;
+            y = Math.max(ca.top + 10, Math.min(ca.bottom - 10, y));
+          }
+          var c = grafico.ctx, txt = "Atual " + moeda(precoAtual);
+          c.save();
+          c.font = "700 10.5px 'Segoe UI', Roboto, sans-serif";
+          var larg = c.measureText(txt).width + 12, x = ca.right - larg - 4;
+          c.fillStyle = "#0B1420"; c.fillRect(x, y - 10, larg, 20);
+          c.fillStyle = "rgba(0,229,255,0.14)"; c.fillRect(x, y - 10, larg, 20);
+          c.strokeStyle = CORES.cy; c.lineWidth = 1; c.strokeRect(x + 0.5, y - 9.5, larg - 1, 19);
+          c.fillStyle = CORES.cy; c.textBaseline = "middle"; c.fillText(txt, x + 6, y + 0.5);
           c.restore();
         }
       }] : []).concat(precoMedio > 0 ? [{

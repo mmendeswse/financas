@@ -595,7 +595,7 @@ table.terminal .campo-preco { width: 88px; text-align: right; background: var(--
 
 /* célula "valor + ações" das tabelas de entradas/despesas:
    o valor nunca encosta na data e os botões ficam sempre à direita */
-.cel-valor { display: flex; align-items: center; justify-content: flex-end; gap: 8px; min-width: 0; text-align: right; }
+.cel-valor { display: flex; align-items: center; justify-content: flex-start; gap: 8px; min-width: 0; text-align: left; }
 .cel-valor .big { white-space: nowrap; overflow: hidden; text-overflow: clip; }
 .cel-botoes { display: inline-flex; gap: 2px; flex: none; }
 .cel-botoes .btn.fantasma { padding: 4px; }
@@ -1123,7 +1123,7 @@ table.tab-acoes th.col-atualiz, table.tab-acoes td.col-atualiz { display: none; 
 .kv .selo-painel { font-size: 10px; padding: 2px 8px; vertical-align: middle; }
 /* coluna de status com largura fixa e alinhada à esquerda; valor à direita */
 .kv b .col-status { display: inline-block; width: 92px; margin-left: 14px; text-align: left; vertical-align: middle; }
-.kv b .col-valor { display: inline-block; min-width: 96px; text-align: right; vertical-align: middle; }
+.kv b .col-valor { display: inline-block; width: 112px; text-align: left; vertical-align: middle; white-space: nowrap; }
 .kv .selo-painel.selo-botao { cursor: pointer; font-family: inherit; }
 .kv .selo-painel.selo-botao:hover { filter: brightness(1.25); }
 
