@@ -285,7 +285,7 @@
     var corLinha = !ehAcao ? CORES.cy : (precoMedio > 0 && precoAtual < precoMedio ? CORES.down : CORES.up);
     var datasets = [{
       label: ehAcao ? "Retorno" : "Preço", data: historicoPrecos.map(function (p) { return p.preco; }),
-      borderColor: corLinha, backgroundColor: gradiente(ctx, corLinha, 260), fill: true,
+      borderColor: corLinha, backgroundColor: gradiente(ctx, CORES.cy, 260), fill: true,   // área interna na cor do "Preço Atual"
       tension: 0.25, pointRadius: 0, pointHoverRadius: 4, borderWidth: 2
     }];
     if (precoAtual > 0) {
@@ -302,7 +302,15 @@
         responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
         scales: { x: eixoX({ ticks: { color: CORES.texto, font: fonte(10.5), maxTicksLimit: 6 } }), y: eixoY({ ticks: { color: CORES.texto, font: fonte(10.5), callback: function (v) { return "R$ " + v.toFixed(2); } } }) },
         plugins: {
-          legend: { position: "top", align: "end", labels: { color: CORES.texto, font: fonte(10.5), boxWidth: 8, usePointStyle: true, pointStyle: "circle" } },
+          legend: { position: "top", align: "end", labels: { color: CORES.texto, font: fonte(10.5), boxWidth: 8, usePointStyle: true, pointStyle: "circle",
+            // a bolinha de cada item usa a cor da própria linha (a área azul não "vaza" para o Retorno)
+            generateLabels: function (ch) {
+              return Chart.defaults.plugins.legend.labels.generateLabels(ch).map(function (l) {
+                var ds = ch.data.datasets[l.datasetIndex];
+                if (ds && ds.fill) { l.fillStyle = ds.borderColor; }
+                return l;
+              });
+            } } },
           tooltip: tooltipPadrao({ callbacks: { label: function (c) { return " " + c.dataset.label + ": R$ " + c.parsed.y.toFixed(2); } } })
         }
       },

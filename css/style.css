@@ -595,7 +595,7 @@ table.terminal .campo-preco { width: 88px; text-align: right; background: var(--
 
 /* célula "valor + ações" das tabelas de entradas/despesas:
    o valor nunca encosta na data e os botões ficam sempre à direita */
-.cel-valor { display: flex; align-items: center; justify-content: flex-start; gap: 8px; min-width: 0; text-align: left; }
+.cel-valor { display: flex; align-items: center; justify-content: flex-end; gap: 8px; min-width: 0; text-align: right; }
 .cel-valor .big { white-space: nowrap; overflow: hidden; text-overflow: clip; }
 .cel-botoes { display: inline-flex; gap: 2px; flex: none; }
 .cel-botoes .btn.fantasma { padding: 4px; }
