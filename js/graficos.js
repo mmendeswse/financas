@@ -283,7 +283,7 @@
       tension: 0.25, pointRadius: 0, pointHoverRadius: 4, borderWidth: 2
     }];
     if (precoMedio > 0) {
-      datasets.push({ label: "Valor de compra", data: historicoPrecos.map(function () { return precoMedio; }), borderColor: CORES.laranja, borderDash: [6, 4], borderWidth: 2, pointRadius: 0, fill: false });
+      datasets.push({ label: "Valor Compra", data: historicoPrecos.map(function () { return precoMedio; }), borderColor: CORES.laranja, borderDash: [6, 4], borderWidth: 2, pointRadius: 0, fill: false });
     }
     instancias[canvasId] = new Chart(ctx, {
       type: "line",
@@ -306,9 +306,11 @@
           c.save();
           c.font = "700 10.5px 'Segoe UI', Roboto, sans-serif";
           var larg = c.measureText(txt).width + 12, x = grafico.chartArea.right - larg - 4;
-          c.fillStyle = "rgba(255,138,61,0.18)"; c.strokeStyle = CORES.laranja; c.lineWidth = 1;
-          c.fillRect(x, y - 9, larg, 18); c.strokeRect(x, y - 9, larg, 18);
-          c.fillStyle = CORES.laranja; c.textBaseline = "middle"; c.fillText(txt, x + 6, y);
+          // fundo opaco: a linha tracejada não passa por cima do texto
+          c.fillStyle = "#0B1420"; c.fillRect(x, y - 10, larg, 20);
+          c.fillStyle = "rgba(255,138,61,0.16)"; c.fillRect(x, y - 10, larg, 20);
+          c.strokeStyle = CORES.laranja; c.lineWidth = 1; c.strokeRect(x + 0.5, y - 9.5, larg - 1, 19);
+          c.fillStyle = CORES.laranja; c.textBaseline = "middle"; c.fillText(txt, x + 6, y + 0.5);
           c.restore();
         }
       }] : []

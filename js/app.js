@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "1.6.3";
+  const VERSAO_APP = "1.6.4";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -860,7 +860,9 @@
     if (secao === "despesas") { mesDespesas = F.mesAtual(); ordemDespesas = { ...ORDEM_DESPESAS_PADRAO }; }
     // ao entrar em Ações ou Investimentos (e nas telas de detalhe delas),
     // o período dos gráficos volta ao padrão, em vez de guardar a escolha
-    if (secao === "acoes" || secao === "investimentos") periodoGrafico = "tudo";
+    // (em Ações, sempre abre nos últimos 7 dias)
+    if (secao === "acoes") periodoGrafico = "7d";
+    if (secao === "investimentos") periodoGrafico = "tudo";
     // a guia Bancos sempre abre mostrando o saldo atual ("Tudo")
     if (secao === "bancos") { mesesBancos = 0; anoBancos = String(new Date().getFullYear()); }
     // Dashboard e Relatórios abrem sempre no ano atual: receitas x despesas
@@ -1245,7 +1247,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.6.3" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.6.4" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
