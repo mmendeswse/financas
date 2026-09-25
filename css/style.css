@@ -1122,20 +1122,20 @@ table.tab-acoes th.col-atualiz, table.tab-acoes td.col-atualiz { display: none; 
 /* selo de status nos painéis Receitas/Despesas do mês */
 .kv .selo-painel { font-size: 10px; padding: 2px 8px; vertical-align: middle; }
 /* coluna de status com largura fixa e alinhada à esquerda; valor à direita */
-.kv b .col-status { display: inline-block; width: 92px; margin-left: 14px; text-align: left; vertical-align: middle; }
-.kv b .col-valor { display: inline-block; width: 112px; text-align: left; vertical-align: middle; white-space: nowrap; }
+.kv b .col-status { display: inline-block; width: 120px; margin-left: 8px; text-align: left; vertical-align: middle; }
+.kv b .col-valor { display: inline-block; width: 130px; margin-left: 8px; text-align: left; vertical-align: middle; white-space: nowrap; }
 .kv .selo-painel.selo-botao { cursor: pointer; font-family: inherit; }
 .kv .selo-painel.selo-botao:hover { filter: brightness(1.25); }
 
 
 /* painéis Receitas/Despesas do mês: coluna de banco antes do status,
    valor no mesmo formato das guias Entradas e Despesas */
-.kv b .col-banco { display: inline-flex; align-items: center; gap: 6px; width: 118px; margin-left: 14px; vertical-align: middle; font-weight: 500; font-size: 12.5px; overflow: hidden; white-space: nowrap; }
+.kv b .col-banco { display: inline-flex; align-items: center; gap: 6px; width: 150px; margin-left: 14px; vertical-align: middle; font-weight: 500; font-size: 12.5px; overflow: hidden; white-space: nowrap; }
 .kv b .col-banco .dim { overflow: hidden; text-overflow: ellipsis; }
 .kv b .col-banco + .col-status { margin-left: 8px; }
 .kv b .valor-guia { font-family: var(--mono); font-size: 13px; font-weight: 600; }
 .kv b .valor-guia.up { color: var(--up); } .kv b .valor-guia.down { color: var(--down); }
-.modal:has(.col-banco) { width: 640px; }
+.modal:has(.col-banco) { width: 780px; }
 .kv b .banco-painel-botao { background: none; border: 1px solid transparent; border-radius: 7px; padding: 2px 5px; margin-top: -3px; margin-bottom: -3px; cursor: pointer; font-family: inherit; color: inherit; text-align: left; }
 .kv b .banco-painel-botao:hover { border-color: var(--linha-2); background: var(--bg, #070B12); }
 .kv.kv-editavel { cursor: pointer; }
@@ -1153,3 +1153,7 @@ table.tab-acoes th.col-atualiz, table.tab-acoes td.col-atualiz { display: none; 
 .card:has(.grafico-acao-area) > .body { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
 .grafico-acao-area { flex: 1 1 auto; min-height: 300px; padding: 10px 16px 14px; position: relative; }
 .grafico-acao-area canvas { position: absolute; inset: 10px 16px 14px; width: calc(100% - 32px) !important; height: calc(100% - 24px) !important; }
+/* títulos das colunas nos painéis (mesmo padrão das guias Entradas/Despesas) */
+.kv.kv-cab { padding-top: 7px; padding-bottom: 7px; }
+.kv.kv-cab, .kv.kv-cab b, .kv.kv-cab b span { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); font-weight: 700; font-family: inherit; }
+.kv.kv-cab b .col-banco { padding-left: 6px; }
