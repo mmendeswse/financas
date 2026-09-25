@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "1.8.1";
+  const VERSAO_APP = "1.8.2";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -1248,7 +1248,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.8.1" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.8.2" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2488,7 +2488,8 @@
     atrasado: '<path d="M12 3.5 2.8 19.5h18.4Z"/><path d="M12 10v4.2M12 17h.01"/>'
   };
   function resumoPills(itens) {
-    return `<span class="resumo-pills">${itens.map(([tipo, rotulo, valor]) =>
+    // status com valor zero não aparece
+    return `<span class="resumo-pills">${itens.filter((it) => Math.abs(Number(it[3]) || 0) >= 0.005).map(([tipo, rotulo, valor]) =>
       `<span class="resumo-pill rp-${tipo}"><span class="rp-ic"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${ICONES_RESUMO[tipo]}</svg></span><span class="rp-txt"><small>${rotulo}</small><b>${valor}</b></span></span>`).join("")}</span>`;
   }
 
@@ -2639,7 +2640,7 @@
     }
     return `
       <div class="grid g-top">
-        <div class="c12">${card("c12", `Entradas ${resumoPills([["pago", "Recebidas", "+" + brl(totalMes)], ["prevista", "Previstas", "+" + brl(totalPrevisto)]])}`, "", `${abasMeses12("mes-entradas", mesEntradas, "anoEntradas", anosDisponiveis(d))}<button class="btn primario" data-acao="nova-entrada"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`, corpo)}</div>
+        <div class="c12">${card("c12", `Entradas ${resumoPills([["pago", "Recebidas", "+" + brl(totalMes), totalMes], ["prevista", "Previstas", "+" + brl(totalPrevisto), totalPrevisto]])}`, "", `${abasMeses12("mes-entradas", mesEntradas, "anoEntradas", anosDisponiveis(d))}<button class="btn primario" data-acao="nova-entrada"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`, corpo)}</div>
       </div>
     `;
   }
@@ -2809,7 +2810,7 @@
 
     return `
       <div class="grid g-top">
-        <div class="c12">${card("c12", `Despesas ${resumoPills([["pago", "Pagas", "−" + brl(totalMes)], ["prevista", "Previstas", "−" + brl(emAberto)], ["atrasado", "Atrasadas", "−" + brl(atrasadas)]])}`, "",
+        <div class="c12">${card("c12", `Despesas ${resumoPills([["pago", "Pagas", "−" + brl(totalMes), totalMes], ["prevista", "Previstas", "−" + brl(emAberto), emAberto], ["atrasado", "Atrasadas", "−" + brl(atrasadas), atrasadas]])}`, "",
           `${abasMeses12("mes-despesas", mesDespesas, "anoDespesas", anosDisponiveis(d))}<button class="btn primario" data-acao="nova-despesa"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`,
           corpo)}</div>
       </div>
