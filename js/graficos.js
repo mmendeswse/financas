@@ -274,7 +274,7 @@
   // ---------------------------------------------------------------------
   // Preço de uma ação (detalhe do ativo)
   // ---------------------------------------------------------------------
-  function renderPrecoAcao(canvasId, historicoPrecos, precoMedio) {
+  function renderPrecoAcao(canvasId, historicoPrecos, precoMedio, precoAtual) {
     destruir(canvasId);
     var ctx = ctxOf(canvasId); if (!ctx) return;
     var datasets = [{
@@ -282,6 +282,10 @@
       borderColor: CORES.cy, backgroundColor: gradiente(ctx, CORES.cy, 260), fill: true,
       tension: 0.25, pointRadius: 0, pointHoverRadius: 4, borderWidth: 2
     }];
+    if (precoAtual > 0) {
+      // linha tracejada no preço atual, na mesma cor da linha de preço
+      datasets.push({ label: "Preço Atual", data: historicoPrecos.map(function () { return precoAtual; }), borderColor: CORES.cy, backgroundColor: "transparent", borderDash: [6, 4], borderWidth: 1.5, pointRadius: 0, pointHoverRadius: 0, fill: false });
+    }
     if (precoMedio > 0) {
       datasets.push({ label: "Valor Compra", data: historicoPrecos.map(function () { return precoMedio; }), borderColor: CORES.laranja, borderDash: [6, 4], borderWidth: 2, pointRadius: 0, fill: false });
     }
@@ -296,7 +300,37 @@
           tooltip: tooltipPadrao({ callbacks: { label: function (c) { return " " + c.dataset.label + ": R$ " + c.parsed.y.toFixed(2); } } })
         }
       },
-      plugins: precoMedio > 0 ? [{
+      plugins: (precoMedio > 0 && precoAtual > 0 ? [{
+        // caixa com a diferença entre o preço atual e o valor de compra,
+        // entre as duas linhas tracejadas, ligada a elas por um traço vertical
+        id: "diferencaCompra",
+        afterDatasetsDraw: function (grafico) {
+          var ca = grafico.chartArea, esc = grafico.scales.y;
+          var yA = esc.getPixelForValue(precoAtual), yC = esc.getPixelForValue(precoMedio);
+          var topo = Math.max(ca.top, Math.min(yA, yC)), base = Math.min(ca.bottom, Math.max(yA, yC));
+          var dif = precoAtual - precoMedio, pctDif = precoMedio ? (dif / precoMedio) * 100 : 0;
+          var cor = dif >= 0 ? CORES.up : CORES.down;
+          var txt = (dif >= 0 ? "+" : "−") + moeda(Math.abs(dif)) + " (" + (dif >= 0 ? "+" : "−") + Math.abs(pctDif).toFixed(1).replace(".", ",") + "%)";
+          var c = grafico.ctx;
+          c.save();
+          c.font = "700 11px 'Segoe UI', Roboto, sans-serif";
+          var larg = c.measureText(txt).width + 16, alt = 22;
+          var xc = ca.left + ca.width * 0.62;
+          // traço vertical entre as linhas
+          c.strokeStyle = cor; c.lineWidth = 1.2; c.setLineDash([3, 3]);
+          c.beginPath(); c.moveTo(xc, topo); c.lineTo(xc, base); c.stroke(); c.setLineDash([]);
+          c.fillStyle = cor;
+          [topo, base].forEach(function (yy) { c.beginPath(); c.arc(xc, yy, 2.5, 0, Math.PI * 2); c.fill(); });
+          // caixa no meio do caminho
+          var ym = Math.min(ca.bottom - alt / 2, Math.max(ca.top + alt / 2, (topo + base) / 2));
+          var x = xc - larg / 2;
+          c.fillStyle = "#0B1420"; c.fillRect(x, ym - alt / 2, larg, alt);
+          c.fillStyle = dif >= 0 ? "rgba(34,227,154,0.14)" : "rgba(255,77,122,0.16)"; c.fillRect(x, ym - alt / 2, larg, alt);
+          c.strokeStyle = cor; c.lineWidth = 1; c.strokeRect(x + 0.5, ym - alt / 2 + 0.5, larg - 1, alt - 1);
+          c.fillStyle = cor; c.textBaseline = "middle"; c.textAlign = "center"; c.fillText(txt, xc, ym + 0.5);
+          c.restore();
+        }
+      }] : []).concat(precoMedio > 0 ? [{
         // etiqueta "Compra R$ x" encostada na linha, na borda direita
         id: "rotuloCompra",
         afterDatasetsDraw: function (grafico) {
@@ -313,7 +347,7 @@
           c.fillStyle = CORES.laranja; c.textBaseline = "middle"; c.fillText(txt, x + 6, y + 0.5);
           c.restore();
         }
-      }] : []
+      }] : [])
     });
   }
 
