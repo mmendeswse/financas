@@ -1171,3 +1171,6 @@ table.tab-acoes th.col-atualiz, table.tab-acoes td.col-atualiz { display: none; 
 .rp-prevista .rp-ic { background: rgba(255,214,51,.16); }
 .rp-atrasado { color: var(--down); border-color: rgba(255,77,122,.35); background: rgba(255,77,122,.07); }
 .rp-atrasado .rp-ic { background: rgba(255,77,122,.16); }
+/* "Total · N Lançamentos" no mesmo estilo dos títulos das colunas */
+.kv.kv-total > span { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); font-weight: 700; }
+.kv.kv-total { align-items: center; }
