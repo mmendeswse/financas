@@ -1157,3 +1157,17 @@ table.tab-acoes th.col-atualiz, table.tab-acoes td.col-atualiz { display: none; 
 .kv.kv-cab { padding-top: 7px; padding-bottom: 7px; }
 .kv.kv-cab, .kv.kv-cab b, .kv.kv-cab b span { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); font-weight: 700; font-family: inherit; }
 .kv.kv-cab b .col-banco { padding-left: 6px; }
+
+/* resumo do mês ao lado do título das guias Entradas e Despesas */
+.card header h2 .resumo-pills { display: inline-flex; flex-wrap: wrap; gap: 8px; margin-left: 14px; vertical-align: middle; text-transform: none; letter-spacing: 0; font-weight: 400; }
+.resumo-pill { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px 5px 6px; border-radius: 10px; border: 1px solid; }
+.resumo-pill .rp-ic { display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 8px; }
+.resumo-pill .rp-txt { display: flex; flex-direction: column; line-height: 1.15; }
+.resumo-pill small { font-size: 9.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; opacity: .85; }
+.resumo-pill b { font-size: 14px; font-weight: 800; font-family: var(--mono); letter-spacing: 0; }
+.rp-pago { color: var(--cy); border-color: rgba(0,229,255,.28); background: rgba(0,229,255,.07); }
+.rp-pago .rp-ic { background: rgba(0,229,255,.16); }
+.rp-prevista { color: #FFD633; border-color: rgba(255,214,51,.32); background: rgba(255,214,51,.07); }
+.rp-prevista .rp-ic { background: rgba(255,214,51,.16); }
+.rp-atrasado { color: var(--down); border-color: rgba(255,77,122,.35); background: rgba(255,77,122,.07); }
+.rp-atrasado .rp-ic { background: rgba(255,77,122,.16); }

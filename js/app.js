@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "1.7.8";
+  const VERSAO_APP = "1.8.0";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -1248,7 +1248,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.7.8" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.8.0" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1612,7 +1612,7 @@
           const itensR = listaEntradasTodasMes(d, mes);
           return cabecalhoColunasPainel() +
             itensR.map((e) => linhaEditavel(e, linha(fmtDataCurta(e.data) + " · " + esc(e.descricao), bancoPainel(e.banco, e) + seloStatusPainel(e.status, e) + `<span class="col-valor valor-guia up">+${brl(e.valor)}</span>`))).join("") +
-            linhaTotalPainel(plural(itensR.length, "lançamento"), `+${brl(entradas)}`);
+            linhaTotalPainel(plural(itensR.length, "Lançamento"), `+${brl(entradas)}`);
         })(),
         secao: "entradas"
       },
@@ -1625,7 +1625,7 @@
           const itensD = listaDespesasTodasMes(d, mes);
           return cabecalhoColunasPainel() +
             itensD.map((x) => linhaEditavel(x, linha(fmtDataCurta(x.data) + " · " + esc(x.descricao), bancoPainel(x.banco, x) + seloStatusPainel(x.status, x) + `<span class="col-valor valor-guia down">−${brl(x.valor)}</span>`))).join("") +
-            linhaTotalPainel(plural(itensD.length, "lançamento"), `−${brl(despesas)}`);
+            linhaTotalPainel(plural(itensD.length, "Lançamento"), `−${brl(despesas)}`);
         })(),
         secao: "despesas"
       }
@@ -2481,6 +2481,17 @@
     return `<div class="kv kv-total"><span class="dim">Total · ${esc(qtd)}</span><b><span class="col-valor">${valor}</span></b></div>`;
   }
 
+  // resumo do mês ao lado do título das guias Entradas/Despesas, com ícone e na cor de cada status
+  const ICONES_RESUMO = {
+    pago: '<path d="M20 6 9 17l-5-5"/>',
+    prevista: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+    atrasado: '<path d="M12 3.5 2.8 19.5h18.4Z"/><path d="M12 10v4.2M12 17h.01"/>'
+  };
+  function resumoPills(itens) {
+    return `<span class="resumo-pills">${itens.map(([tipo, rotulo, valor]) =>
+      `<span class="resumo-pill rp-${tipo}"><span class="rp-ic"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${ICONES_RESUMO[tipo]}</svg></span><span class="rp-txt"><small>${rotulo}</small><b>${valor}</b></span></span>`).join("")}</span>`;
+  }
+
   function cabecalhoColunasPainel() {
     return `<div class="kv kv-cab"><span>Data · Descrição</span><b><span class="col-banco">Banco</span><span class="col-status">Status</span><span class="col-valor">Valor</span></b></div>`;
   }
@@ -2628,7 +2639,7 @@
     }
     return `
       <div class="grid g-top">
-        <div class="c12">${card("c12", "Entradas", `Recebidas: +${brl(totalMes)} · previstas: +${brl(totalPrevisto)}`, `${abasMeses12("mes-entradas", mesEntradas, "anoEntradas", anosDisponiveis(d))}<button class="btn primario" data-acao="nova-entrada"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`, corpo)}</div>
+        <div class="c12">${card("c12", `Entradas ${resumoPills([["pago", "Recebidas", "+" + brl(totalMes)], ["prevista", "Previstas", "+" + brl(totalPrevisto)]])}`, "", `${abasMeses12("mes-entradas", mesEntradas, "anoEntradas", anosDisponiveis(d))}<button class="btn primario" data-acao="nova-entrada"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`, corpo)}</div>
       </div>
     `;
   }
@@ -2798,7 +2809,7 @@
 
     return `
       <div class="grid g-top">
-        <div class="c12">${card("c12", "Despesas", `Pagas: −${brl(totalMes)} · Previstas: −${brl(emAberto)} · Atrasadas: −${brl(atrasadas)}`,
+        <div class="c12">${card("c12", `Despesas ${resumoPills([["pago", "Pagas", "−" + brl(totalMes)], ["prevista", "Previstas", "−" + brl(emAberto)], ["atrasado", "Atrasadas", "−" + brl(atrasadas)]])}`, "",
           `${abasMeses12("mes-despesas", mesDespesas, "anoDespesas", anosDisponiveis(d))}<button class="btn primario" data-acao="nova-despesa"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`,
           corpo)}</div>
       </div>
