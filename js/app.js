@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "1.7.1";
+  const VERSAO_APP = "1.7.3";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -1247,7 +1247,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.7.1" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.7.3" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -3163,6 +3163,80 @@
   // =========================================================================
   // INVESTIMENTOS (renda fixa, tesouro, fundos, cripto...)
   // =========================================================================
+
+  // ---------- Buscar: atualiza investimentos pelos índices oficiais ----------
+  // Renda fixa pós-fixada (% do CDI, CDI +, Selic +), prefixada e IPCA +:
+  // aplica a variação do índice desde o último valor registrado até hoje.
+  // É uma estimativa — o extrato do banco continua sendo a referência exata.
+  const INDEXADORES_ATUALIZAVEIS = ["% do CDI", "CDI +", "Selic +", "Prefixado", "IPCA +"];
+  function fatorInvestimento(inv, desde, cdi, selic, ipca) {
+    const taxa = Number(inv.taxaContratada || 0);
+    const dias = cdi.filter((x) => x.data > desde);               // dias úteis do período
+    const n = dias.length;
+    const anual = (t) => Math.pow(1 + t / 100, n / 252);
+    const produto = (lista, mult) => lista.filter((x) => x.data > desde).reduce((f, x) => f * (1 + (x.valor / 100) * mult), 1);
+    switch (inv.indexador) {
+      case "% do CDI": return produto(cdi, (taxa || 100) / 100);
+      case "CDI +": return produto(cdi, 1) * anual(taxa);
+      case "Selic +": return produto(selic, 1) * anual(taxa);
+      case "Prefixado": return anual(taxa);
+      case "IPCA +": {
+        // IPCA dos meses que já terminaram dentro do período + taxa real
+        const meses = ipca.filter((x) => x.data.slice(0, 7) >= desde.slice(0, 7) && x.data.slice(0, 7) < new Date().toISOString().slice(0, 7));
+        return meses.reduce((f, x) => f * (1 + x.valor / 100), 1) * anual(taxa);
+      }
+      default: return 1;
+    }
+  }
+
+  let buscandoInvestimentos = false;
+  function buscarInvestimentos() {
+    if (buscandoInvestimentos) return;
+    const hj = new Date(); const hoje = `${hj.getFullYear()}-${String(hj.getMonth() + 1).padStart(2, "0")}-${String(hj.getDate()).padStart(2, "0")}`;   // data local
+    const candidatos = DADOS.investimentos.filter((i) => INDEXADORES_ATUALIZAVEIS.indexOf(i.indexador) !== -1 &&
+      Number(i.valorAtual) > 0 && (!i.dataVencimento || i.dataVencimento >= hoje));
+    const semIndice = DADOS.investimentos.length - candidatos.length;
+    if (!candidatos.length) { toast("Nenhum investimento com índice para atualizar (use % do CDI, CDI +, Selic +, Prefixado ou IPCA +)."); return; }
+    const ultimaData = (i) => (i.historicoValores || []).reduce((m, p) => (p.data > m ? p.data : m), i.dataAplicacao || "") || hoje;
+    const inicio = candidatos.map(ultimaData).reduce((m, x) => (x < m ? x : m), hoje);
+    if (inicio >= hoje) { toast("Os investimentos já estão atualizados hoje."); return; }
+    buscandoInvestimentos = true;
+    toast("Buscando índices no Banco Central…");
+    const inicioIPCA = inicio.slice(0, 8) + "01";
+    Promise.all([
+      Cotacoes.buscarSerieBCB(12, inicio, hoje),
+      Cotacoes.buscarSerieBCB(11, inicio, hoje),
+      Cotacoes.buscarSerieBCB(433, inicioIPCA, hoje)
+    ]).then(([cdi, selic, ipca]) => {
+      let atualizados = 0, jaEmDia = 0;
+      candidatos.forEach((inv) => {
+        const desde = ultimaData(inv);
+        if (desde >= hoje) { jaEmDia++; return; }
+        const fator = fatorInvestimento(inv, desde, cdi, selic, ipca);
+        if (!isFinite(fator) || fator <= 0 || Math.abs(fator - 1) < 1e-9) { jaEmDia++; return; }
+        const antes = Number(inv.valorAtual);
+        const depois = Math.round(antes * fator * 100) / 100;
+        // IR informado pelo banco: soma o imposto estimado sobre o rendimento novo
+        if (inv.irBanco != null) {
+          const aliq = I.aliquotaIR(inv) / 100;
+          inv.irBanco = Math.round((Number(inv.irBanco) + (depois - antes) * aliq) * 100) / 100;
+          inv.liquidoBanco = Math.round((depois - inv.irBanco) * 100) / 100;
+        }
+        inv.valorAtual = depois;
+        inv.historicoValores = (inv.historicoValores || []).filter((p) => p.data !== hoje);
+        inv.historicoValores.push({ data: hoje, valor: depois });
+        atualizados++;
+      });
+      buscandoInvestimentos = false;
+      if (atualizados) salvarEAtualizar(`${plural(atualizados, "investimento atualizado", "investimentos atualizados")} pelos índices do Banco Central.` + (semIndice ? ` ${plural(semIndice, "outro sem índice", "outros sem índice")}.` : ""));
+      else toast("Nenhuma variação nova dos índices desde a última atualização.");
+    }).catch((e) => {
+      buscandoInvestimentos = false;
+      toast("Não foi possível buscar os índices agora. Verifique a internet e tente de novo.");
+      console.warn("Banco Central:", e && e.message);
+    });
+  }
+
   function renderInvestimentos(d) {
     const lista = I.listaInvestimentosComCalculo(d);
     const t = I.totaisInvestimentos(d);
@@ -3228,7 +3302,8 @@
       ${aviso}
       <div class="grid g-top">
         <div class="c12">${card("", "Investimentos", "renda fixa, tesouro, fundos e cripto",
-          `<button class="btn primario" data-acao="novo-investimento"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`,
+          `<button class="btn" data-acao="buscar-investimentos" title="Atualizar os investimentos pelos índices do Banco Central (CDI, Selic, IPCA)">↻ Buscar</button>
+           <button class="btn primario" data-acao="novo-investimento"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`,
           corpo,
           `<span class="dim">Total líquido</span><b class="creme" style="font-size:14px;font-weight:800">${brl(t.liquido)}</b>`)}</div>
       </div>
@@ -4254,6 +4329,7 @@
           salvarEAtualizar("Aviso dispensado. Ele volta se a data de vencimento mudar.");
           break;
         }
+        case "buscar-investimentos": buscarInvestimentos(); break;
         case "buscar-cotacoes":
           if (!configCotacoes().auto) { toast("Ative as cotações automáticas em Configurações."); break; }
           toast("Buscando cotações…"); atualizarCotacoesAutomaticas(false); break;

@@ -75,6 +75,25 @@
     }), 12000);
   }
 
+
+  // Séries oficiais do Banco Central (SGS): 12 = CDI diário (% a.d.),
+  // 11 = Selic diária (% a.d.), 433 = IPCA mensal (% a.m.).
+  function dataBR(iso) { var p = iso.split("-"); return p[2] + "/" + p[1] + "/" + p[0]; }
+  function buscarSerieBCB(codigo, inicioISO, fimISO) {
+    var url = "https://api.bcb.gov.br/dados/serie/bcdata.sgs." + codigo + "/dados?formato=json&dataInicial=" +
+      dataBR(inicioISO) + "&dataFinal=" + dataBR(fimISO);
+    return comTimeout(fetch(url).then(function (r) {
+      if (r.status === 404) return [];              // período sem dados (ex.: fim de semana)
+      if (!r.ok) throw new Error("Banco Central respondeu " + r.status);
+      return r.json();
+    }).then(function (lista) {
+      return (Array.isArray(lista) ? lista : []).map(function (x) {
+        var p = String(x.data).split("/");
+        return { data: p[2] + "-" + p[1] + "-" + p[0], valor: Number(String(x.valor).replace(",", ".")) };
+      }).filter(function (x) { return isFinite(x.valor); });
+    }), 15000);
+  }
+
   function buscarCotacoes(tickers, token) {
     var mapa = {}, erros = {};
     var fila = (tickers || []).map(function (t) { return String(t).toUpperCase().trim(); }).filter(Boolean);
@@ -86,5 +105,5 @@
     return proximo();
   }
 
-  global.Cotacoes = { buscarDolar: buscarDolar, buscarSerieDolar: buscarSerieDolar, buscarCotacoes: buscarCotacoes };
+  global.Cotacoes = { buscarDolar: buscarDolar, buscarSerieDolar: buscarSerieDolar, buscarCotacoes: buscarCotacoes, buscarSerieBCB: buscarSerieBCB };
 })(window);

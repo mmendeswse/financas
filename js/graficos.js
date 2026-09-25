@@ -308,9 +308,9 @@
             generateLabels: function (ch) {
               return Chart.defaults.plugins.legend.labels.generateLabels(ch).map(function (l) {
                 var ds = ch.data.datasets[l.datasetIndex];
-                // todas as bolinhas preenchidas, cada uma na sua cor
+                // estilo original: só o contorno da bolinha, na cor que o item representa
                 var cor = (ds && (ds.corLegenda || ds.borderColor)) || l.strokeStyle;
-                l.fillStyle = cor; l.strokeStyle = cor; l.lineDash = []; l.lineWidth = 1;
+                l.fillStyle = "transparent"; l.strokeStyle = cor; l.lineDash = []; l.lineWidth = 2;
                 return l;
               });
             } } },
