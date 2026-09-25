@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "1.6.0";
+  const VERSAO_APP = "1.6.1";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -1210,7 +1210,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.6.0" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.6.1" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2235,7 +2235,26 @@
   function ajusteDoMes(reg, mes) { return (reg && reg.meses && reg.meses[mes]) || {}; }
   function valorDoMes(reg, mes) {
     const a = ajusteDoMes(reg, mes);
-    return a.valor !== undefined ? Number(a.valor) : Number(reg.valor || 0);
+    if (a.valor !== undefined) return Number(a.valor);
+    // série "Variável": mudar o valor do lançamento original não altera os outros meses
+    if (reg.valorRepeticao !== undefined) return Number(reg.valorRepeticao);
+    return Number(reg.valor || 0);
+  }
+
+  // Ao salvar o lançamento original de uma série: mantém os ajustes por mês
+  // e, se for "Variável", guarda o valor antigo como base dos outros meses —
+  // assim só o lançamento editado muda. Numa série "Fixa", todos acompanham.
+  function manterSerie(antigo, registro) {
+    if (!antigo) return registro;
+    if (antigo.meses) registro.meses = antigo.meses;
+    if (antigo.reancoragens) registro.reancoragens = antigo.reancoragens;
+    if (registro.recorrente && registro.tipo === "Variável") {
+      const baseAnterior = antigo.valorRepeticao !== undefined ? Number(antigo.valorRepeticao) : Number(antigo.valor || 0);
+      registro.valorRepeticao = baseAnterior;
+    } else {
+      registro.valorRepeticao = undefined;
+    }
+    return registro;
   }
   function mesQuitado(reg, mes) { return !!ajusteDoMes(reg, mes).pago; }
   function gravarAjuste(reg, mes, dados) {
@@ -2599,7 +2618,7 @@
       <h3>${e ? "Editar entrada" : "Nova entrada"}</h3>
       <div class="par">
         <div class="campo"><label for="f_data">Data</label><input id="f_data" type="date" value="${previsao ? previsao.data : (e ? e.data : hojeISO())}"></div>
-        <div class="campo"><label for="f_valor">Valor</label>${campoMoeda("f_valor", e ? e.valor : "")}</div>
+        <div class="campo"><label for="f_valor">Valor</label>${campoMoeda("f_valor", e ? (previsao ? valorDoMes(e, previsao.data.slice(0, 7)) : e.valor) : "")}</div>
       </div>
       <div class="campo"><label for="f_desc">Descrição</label><input id="f_desc" value="${e ? esc(e.descricao) : ""}" placeholder="Salário"></div>
       <div class="par">
@@ -2636,7 +2655,7 @@
         // muda só o mês editado, dentro do próprio lançamento recorrente
         gravarAjuste(e, previsao.data.slice(0, 7), { valor: registro.valor });
         if (registro.data && registro.data !== previsao.data) registrarReancoragem(e, previsao.data.slice(0, 7), registro.data);
-      } else if (e) Object.assign(e, registro);
+      } else if (e) Object.assign(e, manterSerie(e, registro));
       else DADOS.entradas.push(registro);
       fecharModal();
       salvarEAtualizar(e ? "Entrada atualizada." : "Entrada cadastrada.");
@@ -2764,7 +2783,7 @@
       <h3>${x ? "Editar lançamento" : "Nova despesa"}</h3>
       <div class="par">
         <div class="campo"><label for="f_data"><span id="rotuloData">${statusAtual === "Pago" ? "Data" : "Data de vencimento"}</span></label><input id="f_data" type="date" value="${dataAtual}"></div>
-        <div class="campo"><label for="f_valor">Valor</label>${campoMoeda("f_valor", x ? x.valor : "")}</div>
+        <div class="campo"><label for="f_valor">Valor</label>${campoMoeda("f_valor", x ? (previsao ? valorDoMes(x, previsao.data.slice(0, 7)) : x.valor) : "")}</div>
       </div>
       <div class="campo"><label for="f_desc">Descrição</label><input id="f_desc" value="${x ? esc(x.descricao) : ""}" placeholder="Supermercado"></div>
       <div class="par">
@@ -2816,9 +2835,9 @@
         if (previsao) {
           gravarAjuste(x, previsao.data.slice(0, 7), { valor: registro.valor, pago: true });
           if (data !== previsao.data) registrarReancoragem(x, previsao.data.slice(0, 7), data);
-        } else if (x && !ehConta) Object.assign(x, registro);
+        } else if (x && !ehConta) Object.assign(x, manterSerie(x, registro));
         else {
-          DADOS.despesas.push(registro);
+          DADOS.despesas.push(manterSerie(x, registro));
           if (x && ehConta) DADOS.contasPagar = DADOS.contasPagar.filter((r) => r.id !== x.id); // deixou de ser conta
         }
       } else {
@@ -2835,9 +2854,9 @@
         if (previsao) {
           gravarAjuste(x, previsao.data.slice(0, 7), { valor: registro.valor, pago: false });
           if (data !== previsao.data) registrarReancoragem(x, previsao.data.slice(0, 7), data);
-        } else if (x && ehConta) Object.assign(x, registro);
+        } else if (x && ehConta) Object.assign(x, manterSerie(x, registro));
         else {
-          DADOS.contasPagar.push(registro);
+          DADOS.contasPagar.push(manterSerie(x, registro));
           if (x && !ehConta) DADOS.despesas = DADOS.despesas.filter((r) => r.id !== x.id); // virou conta a pagar
         }
       }
