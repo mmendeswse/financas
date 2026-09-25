@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "1.6.1";
+  const VERSAO_APP = "1.6.2";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -678,6 +678,40 @@
   // como nos aplicativos do iOS. No Safari comum o próprio navegador já
   // tem esse gesto (recarrega a página, que também sincroniza).
   // =========================================================================
+
+  // Atualização automática: quando o app volta a ficar visível (ou ao puxar
+  // para atualizar), confere se o index.html publicado já aponta para uma
+  // versão mais nova do código; se sim, recarrega a página uma única vez.
+  // Sem isso, o app instalado no iPad pode continuar rodando o código antigo
+  // por dias, porque fica aberto em segundo plano.
+  let verificandoVersao = false;
+  function verificarVersaoNova() {
+    if (verificandoVersao || location.protocol.indexOf("http") !== 0 || !navigator.onLine) return Promise.resolve(false);
+    verificandoVersao = true;
+    return fetch("index.html?_=" + Date.now(), { cache: "no-store" })
+      .then((r) => (r.ok ? r.text() : ""))
+      .then((html) => {
+        const m = /js\/app\.js\?v=([0-9.]+)/.exec(html);
+        let jaTentou = "";
+        try { jaTentou = sessionStorage.getItem("mm-recarregou-para") || ""; } catch (e) {}
+        if (m && m[1] !== VERSAO_APP && jaTentou !== m[1]) {   // só tenta uma vez por versão (evita recarregar em laço)
+          try { sessionStorage.setItem("mm-recarregou-para", m[1]); } catch (e) {}
+          toast("Nova versão encontrada — atualizando…");
+          if (navigator.serviceWorker && navigator.serviceWorker.getRegistration) {
+            navigator.serviceWorker.getRegistration().then((reg) => reg && reg.update()).catch(() => {});
+          }
+          setTimeout(() => location.reload(), 600);
+          return true;
+        }
+        return false;
+      })
+      .catch(() => false)
+      .then((achou) => { verificandoVersao = false; return achou; });
+  }
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") verificarVersaoNova(); });
+  window.addEventListener("focus", () => verificarVersaoNova());
+  setTimeout(() => verificarVersaoNova(), 4000);
+
   function ligarPuxarParaAtualizar() {
     const ehApp = window.navigator.standalone === true ||
       (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches);
@@ -754,6 +788,7 @@
       shell.style.transform = `translateY(${REPOUSO_CARREGANDO}px)`;
       ind.style.opacity = "1";
       ind.classList.add("girando");
+      verificarVersaoNova();
       const antes = DADOS.atualizadoEm;
       const tarefa = cfgSync().token
         ? sincronizar(true).then(() => { if (DADOS.atualizadoEm === antes) toast("Tudo atualizado."); })
@@ -1210,7 +1245,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.6.1" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.6.2" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
