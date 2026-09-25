@@ -1140,3 +1140,11 @@ table.tab-acoes th.col-atualiz, table.tab-acoes td.col-atualiz { display: none; 
 .kv b .banco-painel-botao:hover { border-color: var(--linha-2); background: var(--bg, #070B12); }
 .kv.kv-editavel { cursor: pointer; }
 .kv.kv-editavel:hover { background: var(--painel-2); }
+
+/* metas: quanto guardar por mês, em destaque dentro do quadro */
+.meta-mensal { display: flex; align-items: center; gap: 12px; margin-top: 14px; padding: 10px 12px; border: 1px solid var(--linha-2); border-radius: 10px; background: var(--painel-2); }
+.meta-mensal-icone { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 9px; background: rgba(255,255,255,.05); flex: none; }
+.meta-mensal-texto { display: flex; flex-direction: column; line-height: 1.25; }
+.meta-mensal-texto small { font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--dim); font-weight: 700; }
+.meta-mensal-texto b { font-size: 15px; font-weight: 700; }
+.meta-mensal-texto b.dim { font-size: 13px; font-weight: 600; }

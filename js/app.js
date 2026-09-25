@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "1.6.2";
+  const VERSAO_APP = "1.6.3";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -1245,7 +1245,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.6.2" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.6.3" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -3858,6 +3858,10 @@
             </div>
             <div class="progresso"><i style="width:${progresso}%;background:${m.cor || "var(--up)"}"></i></div>
             <div class="progresso-legenda"><span>${progresso.toFixed(1)}%</span><span>${brl(Math.max(0, m.objetivo - m.atual))} restantes</span></div>
+            <div class="meta-mensal" title="Quanto guardar por mês — clique para editar">
+              <span class="meta-mensal-icone" style="color:${m.cor || "var(--up)"}"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M12 13.2v5M9.8 15.4h4.4"/></svg></span>
+              <span class="meta-mensal-texto"><small>Guardar por mês</small>${Number(m.aporteMensal) > 0 ? `<b class="num">${brl(m.aporteMensal)}</b>` : `<b class="dim">Definir valor</b>`}</span>
+            </div>
             <button class="btn pequeno" style="margin-top:12px;width:100%;justify-content:center" data-acao="depositar-meta" data-id="${m.id}">+ Adicionar</button>
           </div>
         </div></div>`;
@@ -3881,9 +3885,11 @@
         <div class="campo"><label for="f_atual">Valor Atual</label>${campoMoeda("f_atual", m ? m.atual : 0)}</div>
       </div>
       <div class="par">
+        <div class="campo"><label for="f_mensal">Guardar por mês</label>${campoMoeda("f_mensal", m && m.aporteMensal ? m.aporteMensal : "", "R$ 500,00")}</div>
         <div class="campo"><label for="f_prazo">Prazo</label><input id="f_prazo" type="date" value="${m ? m.prazo || "" : ""}"></div>
-        <div class="campo"><label for="f_cor">Cor</label><input id="f_cor" type="color" value="${m ? m.cor || "#22E08A" : CORES_META[DADOS.metas.length % CORES_META.length]}"></div>
       </div>
+      <div class="campo ajuda" style="margin-top:-6px">Quanto você pretende adicionar a esta meta todo mês.</div>
+      <div class="campo"><label for="f_cor">Cor</label><input id="f_cor" type="color" value="${m ? m.cor || "#22E08A" : CORES_META[DADOS.metas.length % CORES_META.length]}"></div>
       <div class="modal-acoes">
         <button class="btn primario salvar" id="btnSalvar">Salvar</button>
         ${m ? `<button class="btn perigo" id="btnExcluir">Excluir</button>` : ""}
@@ -3897,6 +3903,7 @@
         nome, objetivo: numIn(document.getElementById("f_obj").value),
         atual: numIn(document.getElementById("f_atual").value),
         prazo: document.getElementById("f_prazo").value,
+        aporteMensal: numIn(document.getElementById("f_mensal").value),
         cor: document.getElementById("f_cor").value
       };
       if (m) Object.assign(m, registro); else DADOS.metas.push(registro);
