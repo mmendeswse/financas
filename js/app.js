@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "1.9.0";
+  const VERSAO_APP = "1.9.2";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -1248,7 +1248,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.9.0" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.9.2" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1362,7 +1362,7 @@
       const p = Math.max(0, (i.valor / soma) * 100);   // quanto este item representa do total
       const clic = i.id ? ` data-acao="explicar-banco" data-id="${i.id}" title="Ver detalhes deste banco"` : "";
       return `<${i.id ? "button" : "div"} class="barlist-linha${i.id ? " clicavel" : ""}"${clic}>
-        <span class="barlist-nome">${i.id ? marcaBanco(i.nome, 18) : ""}${esc(i.nome)}</span>
+        <span class="barlist-nome">${i.id ? marcaBanco(i.nome, 24) : ""}${esc(i.nome)}</span>
         <span class="barlist-trilho"><i style="width:${p.toFixed(1)}%;background:${i.cor || cor || "var(--azul)"}"></i><b class="barlist-pct">${p.toFixed(1).replace(".", ",")}%</b></span>
         <b class="barlist-valor ${i.valor < 0 ? "down" : ""}">${brl(i.valor)}</b>
       </${i.id ? "button" : "div"}>`;
@@ -2188,7 +2188,7 @@
     } else {
       listaHtml = `<div class="grade-bancos">` + bancos.map((b) => `
           <div class="cartao-item" style="border-left-color:${esc(b.cor || "#3FC1E0")}" data-acao="editar-banco" data-id="${b.id}">
-            <div class="linha1"><div class="nome-com-marca">${marcaBanco(b.nome, 26)}<div><div class="nome">${esc(b.nome)}</div><div class="tipo">${esc(b.tipo || "—")}</div>${b.agencia || b.conta ? `<div class="tipo">${b.agencia ? "Ag " + esc(b.agencia) : ""}${b.agencia && b.conta ? " · " : ""}${b.conta ? "Cc " + esc(b.conta) : ""}</div>` : ""}</div></div></div>
+            <div class="linha1"><div class="nome-com-marca">${marcaBanco(b.nome, 36)}<div><div class="nome">${esc(b.nome)}</div><div class="tipo">${esc(b.tipo || "—")}</div>${b.agencia || b.conta ? `<div class="tipo">${b.agencia ? "Ag " + esc(b.agencia) : ""}${b.agencia && b.conta ? " · " : ""}${b.conta ? "Cc " + esc(b.conta) : ""}</div>` : ""}</div></div></div>
             <div class="saldo ${corSinal(b.valor)}">${brl(b.valor)}</div>
             <div class="rodape"><span>${mesesBancos ? `Saldo Atual ${brl(b.saldoAtual)}` : ""}</span>
               <button class="btn pequeno" data-acao="entrada-banco" data-id="${b.id}" title="Lançar uma entrada nesta conta">+ Adicionar</button>
@@ -2499,7 +2499,7 @@
 
   function bancoPainel(nome, item) {
     const n = nome && nome !== "—" ? nome : "";
-    const miolo = n ? marcaBanco(n, 16) + `<span class="dim">${esc(n)}</span>` : '<span class="dim">—</span>';
+    const miolo = n ? marcaBanco(n, 22) + `<span class="dim">${esc(n)}</span>` : '<span class="dim">—</span>';
     if (item && item.acaoBanco) {
       return `<button class="col-banco banco-painel-botao" data-acao-banco="${item.acaoBanco}" data-id="${esc(item.id)}" title="Clique para trocar o banco">${miolo}</button>`;
     }
@@ -2631,7 +2631,7 @@
         <div class="rw clicavel${e.prevista ? " linha-prevista" : ""}" style="${grid}" data-acao="${e.prevista ? "editar-previsao-entrada" : "editar-entrada"}" data-id="${e.id}" data-data="${e.data}" title="${e.prevista ? "Abre este mês para edição (o valor muda só aqui)" : "Abrir para editar"}">
           <div class="dim" style="font-size:12px">${fmtDataCurta(e.data)}</div>
           <div><div class="nm">${esc(e.descricao)}${seloFreq(e)}</div><div class="sub">${esc(e.categoria)} · ${esc(e.tipo || "")}</div></div>
-          <div><button class="cel-banco cel-banco-botao" data-acao="trocar-banco-entrada" data-id="${e.id}" title="${e.prevista ? "Troca o banco do lançamento original (vale para todas as repetições)" : "Trocar o banco desta entrada"}">${marcaBanco(e.banco, 18)}<span class="dim">${esc(e.banco)}</span></button></div>
+          <div><button class="cel-banco cel-banco-botao" data-acao="trocar-banco-entrada" data-id="${e.id}" title="${e.prevista ? "Troca o banco do lançamento original (vale para todas as repetições)" : "Trocar o banco desta entrada"}">${marcaBanco(e.banco, 26)}<span class="dim">${esc(e.banco)}</span></button></div>
           <div>${e.prevista
             ? `<button class="selo-tag ${e.recebidaNoMes ? "selo-pago" : "selo-prevista"} selo-botao" data-acao="quitar-mes-entrada" data-id="${e.id}" data-mes="${e.mesRef}" title="${e.recebidaNoMes ? "Marcar como prevista" : "Marcar como paga"}">${e.status}</button>`
             : `<button class="selo-tag ${e.previsto ? "selo-prevista" : "selo-pago"} selo-botao" data-acao="alternar-prevista-entrada" data-id="${e.id}" title="${e.previsto ? "Marcar como paga" : "Marcar como prevista"}">${e.status}</button>`}</div>
@@ -2799,8 +2799,8 @@
           <div class="dim" style="font-size:12px">${fmtData(x.data)}</div>
           <div><div class="nm">${esc(x.descricao)}${x.recorrencia && x.recorrencia !== FREQUENCIAS[0] ? ` <span class="selo-tag selo-cat">${esc(x.recorrencia.toLowerCase())}</span>` : ""}</div><div class="sub">${esc(x.categoria || "—")} · ${esc(x.tipo || "Variável")}</div></div>
           <div>${x.origem === "despesa" || x.pagoCom !== "—"
-            ? `<button class="cel-banco cel-banco-botao" data-acao="${x.origem === "despesa" ? "trocar-banco" : "trocar-banco-conta"}" data-id="${x.id}" title="Trocar o banco (nas repetições, altera o lançamento original)">${marcaBanco(x.pagoCom, 18)}<span class="dim">${esc(x.pagoCom)}</span></button>`
-            : `<span class="cel-banco">${x.pagoCom && x.pagoCom !== "—" ? marcaBanco(x.pagoCom, 18) + `<span class="dim">${esc(x.pagoCom)}</span>` : '<span class="dim">—</span>'}</span>`}</div>
+            ? `<button class="cel-banco cel-banco-botao" data-acao="${x.origem === "despesa" ? "trocar-banco" : "trocar-banco-conta"}" data-id="${x.id}" title="Trocar o banco (nas repetições, altera o lançamento original)">${marcaBanco(x.pagoCom, 26)}<span class="dim">${esc(x.pagoCom)}</span></button>`
+            : `<span class="cel-banco">${x.pagoCom && x.pagoCom !== "—" ? marcaBanco(x.pagoCom, 26) + `<span class="dim">${esc(x.pagoCom)}</span>` : '<span class="dim">—</span>'}</span>`}</div>
           <div>${x.prevista
             ? `<button class="selo-tag ${x.status === "Pago" ? "selo-pago" : "selo-prevista"} selo-botao" data-acao="${x.origem === "conta" ? "quitar-mes-conta" : "quitar-mes"}" data-id="${x.id}" data-mes="${x.mesRef}" title="Confirmar: cria o lançamento deste mês">${x.status}</button>`
             : `<button class="selo-tag selo-${x.status.toLowerCase()} selo-botao" data-acao="${x.origem === "conta" ? "alternar-pago" : "tornar-pendente"}" data-id="${x.id}" title="${x.origem === "conta" ? (x.status === "Pago" ? "Marcar como prevista" : "Marcar como paga") : "Marcar como prevista (vira conta a pagar)"}">${x.status}</button>`}</div>
@@ -3636,19 +3636,19 @@
           : `<span class="${forte}">${brl(a.precoAtual)}</span>`;
         return `<tr data-acao="ir" data-secao="detalhe-acao" data-id="${a.id}">
           <td class="papel">${esc(a.ticker)}<small>${esc(a.categoria)}${a.banco ? " · " + esc(a.banco) : ""}</small></td>
+          <td class="r">${brl(a.valorInvestido)}</td>
           <td class="r">${ultima}</td>
           <td class="r"><span class="${v.valor >= 0 ? "cel-up" : "cel-down"}">${v.valor >= 0 ? "+" : "−"}${brl(Math.abs(v.valor))}</span></td>
           <td class="r">${fp(v.pct)}</td>
           <td class="r">${fn(a.quantidade)}</td>
-          <td class="r">${brl(a.precoMedio)}</td>
-          <td class="r">${brl(a.valorInvestido)}</td>
-          <td class="r creme">${brl(a.valorAtual)}</td>
-          <td class="r ${corSinal(a.resultado)}">${a.resultado >= 0 ? "+" : "−"}${brl(Math.abs(a.resultado))}</td>
+          <td class="r col-oculta">${brl(a.precoMedio)}</td>
+          <td class="r creme col-oculta">${brl(a.valorAtual)}</td>
           <td class="r">${fp(a.rentabilidade)}</td>
           <td class="r dim">${brl(mm.min)}</td>
           <td class="r dim">${brl(mm.max)}</td>
           <td class="r">${fp(m30)}</td>
           <td class="r">${fp(m365)}</td>
+          <td class="r ${corSinal(a.resultado)}">${a.resultado >= 0 ? "+" : "−"}${brl(Math.abs(a.resultado))}</td>
           <td class="r col-oculta">${brl(a.dividendos || 0)}</td>
           <td class="r col-oculta">${f2(a.peso)}%</td>
           <td class="r dim col-atualiz">${fmtDataCurta(a.atualizadoEm)}</td>
@@ -3657,18 +3657,18 @@
       const tInv = I.totalInvestidoAcoes(d), tAt = I.totalCarteiraAcoes(d), tRes = tAt - tInv;
       corpo = `<div class="terminal-scroll"><table class="terminal tab-acoes">
         <thead><tr>
-          <th>Papel</th><th class="r">Última</th><th class="r">Var.</th><th class="r">Var. %</th><th class="r">Qtd.</th><th class="r">PM</th>
-          <th class="r">Investido</th><th class="r">Atual</th><th class="r">Resultado</th><th class="r">Rent. %</th>
-          <th class="r">Mínima</th><th class="r">Máxima</th><th class="r">Mensal %</th><th class="r">Anual %</th>
+          <th>Papel</th><th class="r">Investido</th><th class="r">Última</th><th class="r">Var.</th><th class="r">Var. %</th><th class="r">Qtd.</th>
+          <th class="r col-oculta">PM</th><th class="r col-oculta">Atual</th><th class="r">Rent. %</th>
+          <th class="r">Mínima</th><th class="r">Máxima</th><th class="r">Mensal %</th><th class="r">Anual %</th><th class="r">Resultado</th>
           <th class="r col-oculta">Divid.</th><th class="r col-oculta">Peso</th><th class="r col-atualiz">Atualiz.</th>
         </tr></thead>
         <tbody>${linhas}</tbody>
         <tfoot><tr>
-          <td>CARTEIRA</td><td></td><td></td><td></td><td></td><td></td>
-          <td class="r">${brl(tInv)}</td><td class="r creme">${brl(tAt)}</td>
-          <td class="r ${corSinal(tRes)}">${tRes >= 0 ? "+" : "−"}${brl(Math.abs(tRes))}</td>
+          <td>CARTEIRA</td><td class="r">${brl(tInv)}</td><td></td><td></td><td></td><td></td>
+          <td class="col-oculta"></td><td class="r creme col-oculta">${brl(tAt)}</td>
           <td class="r">${fp(I.rentabilidadeCarteiraAcoes(d))}</td>
-          <td></td><td></td><td></td><td></td><td class="r col-oculta">${brl(I.totalDividendosAcoes(d))}</td><td class="r col-oculta">100%</td><td class="col-atualiz"></td>
+          <td></td><td></td><td></td><td></td>
+          <td class="r ${corSinal(tRes)}">${tRes >= 0 ? "+" : "−"}${brl(Math.abs(tRes))}</td><td class="r col-oculta">${brl(I.totalDividendosAcoes(d))}</td><td class="r col-oculta">100%</td><td class="col-atualiz"></td>
         </tr></tfoot>
       </table></div>`;
     }

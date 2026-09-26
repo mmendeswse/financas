@@ -1175,3 +1175,4 @@ table.tab-acoes th.col-atualiz, table.tab-acoes td.col-atualiz { display: none; 
 .kv.kv-total > span { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); font-weight: 700; }
 .kv.kv-total { align-items: center; }
 table.tab-acoes .col-oculta { display: none; }   /* Divid. e Peso ocultas */
+table.terminal.tab-acoes { min-width: 1000px; }   /* com menos colunas, cabe inteira em telas comuns */
