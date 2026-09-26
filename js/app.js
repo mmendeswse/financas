@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "1.8.8";
+  const VERSAO_APP = "1.9.0";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -1248,7 +1248,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.8.8" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.9.0" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -3328,7 +3328,7 @@
           `<button class="btn" data-acao="buscar-investimentos" title="Atualizar os investimentos pelos índices do Banco Central (CDI, Selic, IPCA)">↻ Buscar</button>
            <button class="btn primario" data-acao="novo-investimento"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`,
           corpo,
-          `<span class="dim">Total líquido</span><b class="creme" style="font-size:14px;font-weight:800">${brl(t.liquido)}</b>`)}</div>
+          `<span class="dim">Total líquido</span><b class="creme" style="font-size:14px;font-weight:800">${brlSinal(t.liquido)}</b>`)}</div>
       </div>
     `;
   }
@@ -3649,8 +3649,8 @@
           <td class="r dim">${brl(mm.max)}</td>
           <td class="r">${fp(m30)}</td>
           <td class="r">${fp(m365)}</td>
-          <td class="r">${brl(a.dividendos || 0)}</td>
-          <td class="r">${f2(a.peso)}%</td>
+          <td class="r col-oculta">${brl(a.dividendos || 0)}</td>
+          <td class="r col-oculta">${f2(a.peso)}%</td>
           <td class="r dim col-atualiz">${fmtDataCurta(a.atualizadoEm)}</td>
         </tr>`;
       }).join("");
@@ -3660,7 +3660,7 @@
           <th>Papel</th><th class="r">Última</th><th class="r">Var.</th><th class="r">Var. %</th><th class="r">Qtd.</th><th class="r">PM</th>
           <th class="r">Investido</th><th class="r">Atual</th><th class="r">Resultado</th><th class="r">Rent. %</th>
           <th class="r">Mínima</th><th class="r">Máxima</th><th class="r">Mensal %</th><th class="r">Anual %</th>
-          <th class="r">Divid.</th><th class="r">Peso</th><th class="r col-atualiz">Atualiz.</th>
+          <th class="r col-oculta">Divid.</th><th class="r col-oculta">Peso</th><th class="r col-atualiz">Atualiz.</th>
         </tr></thead>
         <tbody>${linhas}</tbody>
         <tfoot><tr>
@@ -3668,7 +3668,7 @@
           <td class="r">${brl(tInv)}</td><td class="r creme">${brl(tAt)}</td>
           <td class="r ${corSinal(tRes)}">${tRes >= 0 ? "+" : "−"}${brl(Math.abs(tRes))}</td>
           <td class="r">${fp(I.rentabilidadeCarteiraAcoes(d))}</td>
-          <td></td><td></td><td></td><td></td><td class="r">${brl(I.totalDividendosAcoes(d))}</td><td class="r">100%</td><td class="col-atualiz"></td>
+          <td></td><td></td><td></td><td></td><td class="r col-oculta">${brl(I.totalDividendosAcoes(d))}</td><td class="r col-oculta">100%</td><td class="col-atualiz"></td>
         </tr></tfoot>
       </table></div>`;
     }
@@ -3680,7 +3680,7 @@
            <button class="btn" data-acao="buscar-cotacoes" title="Buscar cotações na internet agora">↻ Buscar</button>
            <button class="btn primario" data-acao="novo-ativo"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`,
           corpo,
-          `<span class="dim">Total Carteira</span><b class="creme" style="font-size:14px;font-weight:800">${brl(I.totalCarteiraAcoes(d))}</b>`)}</div>
+          `<span class="dim">Total Carteira</span><b class="creme" style="font-size:14px;font-weight:800">${brlSinal(I.totalCarteiraAcoes(d))}</b>`)}</div>
       </div>
     `;
   }
