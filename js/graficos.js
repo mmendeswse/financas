@@ -303,14 +303,17 @@
         responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
         scales: { x: eixoX({ ticks: { color: CORES.texto, font: fonte(10.5), maxTicksLimit: 6 } }), y: eixoY({ ticks: { color: CORES.texto, font: fonte(10.5), maxTicksLimit: 14, callback: function (v) { return "R$ " + v.toFixed(2); } } }) },
         plugins: {
-          legend: { position: "top", align: "end", labels: { color: CORES.texto, font: fonte(10.5), boxWidth: 8, usePointStyle: true, pointStyle: "circle",
+          legend: { position: "top", align: "end", labels: { color: CORES.texto, font: fonte(10.5), boxWidth: 8, boxHeight: 8, usePointStyle: true, pointStyle: "circle",
             // a bolinha de cada item usa a cor da própria linha (a área azul não "vaza" para o Retorno)
             generateLabels: function (ch) {
               return Chart.defaults.plugins.legend.labels.generateLabels(ch).map(function (l) {
                 var ds = ch.data.datasets[l.datasetIndex];
-                // estilo original: só o contorno da bolinha, na cor que o item representa
+                // mesmo estilo da legenda de Receitas x despesas: bolinha com a cor
+                // translúcida por dentro e contorno fino na cor que o item representa
                 var cor = (ds && (ds.corLegenda || ds.borderColor)) || l.strokeStyle;
-                l.fillStyle = "transparent"; l.strokeStyle = cor; l.lineDash = []; l.lineWidth = 2;
+                var m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(cor);
+                l.fillStyle = m ? "rgba(" + parseInt(m[1], 16) + "," + parseInt(m[2], 16) + "," + parseInt(m[3], 16) + ",0.28)" : cor;
+                l.strokeStyle = cor; l.lineDash = []; l.lineWidth = 1.5;
                 return l;
               });
             } } },
