@@ -234,7 +234,63 @@
   // ---------------------------------------------------------------------
   // exportação
   // ---------------------------------------------------------------------
+
+  // =========================================================================
+  // DIAS ÚTEIS E DATA DE PAGAMENTO ("Mensal – 4º dia útil")
+  // =========================================================================
+  // Domingo de Páscoa pelo algoritmo de Meeus/Jones/Butcher (calendário gregoriano)
+  function pascoa(ano) {
+    var a = ano % 19, b = Math.floor(ano / 100), c = ano % 100;
+    var d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25);
+    var g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30;
+    var i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7;
+    var m = Math.floor((a + 11 * h + 22 * l) / 451);
+    var mes = Math.floor((h + l - 7 * m + 114) / 31), dia = ((h + l - 7 * m + 114) % 31) + 1;
+    return new Date(ano, mes - 1, dia);
+  }
+  function isoLocal(dt) {
+    return dt.getFullYear() + "-" + String(dt.getMonth() + 1).padStart(2, "0") + "-" + String(dt.getDate()).padStart(2, "0");
+  }
+  // feriados nacionais do ano: fixos + Sexta-feira Santa (Páscoa − 2 dias)
+  var cacheFeriados = {};
+  function feriadosNacionais(ano) {
+    if (cacheFeriados[ano]) return cacheFeriados[ano];
+    var fixos = ["01-01", "04-21", "05-01", "09-07", "10-12", "11-02", "11-15", "11-20", "12-25"];
+    var lista = {};
+    fixos.forEach(function (md) { lista[ano + "-" + md] = true; });
+    var p = pascoa(ano);
+    lista[isoLocal(new Date(p.getFullYear(), p.getMonth(), p.getDate() - 2))] = true;
+    cacheFeriados[ano] = lista;
+    return lista;
+  }
+  function ehFeriado(dt) { return !!feriadosNacionais(dt.getFullYear())[isoLocal(dt)]; }
+
+  // enésimo dia do mês que passa no filtro (dias da semana aceitos, sem feriados)
+  function enesimoDia(ano, mes, n, diasAceitos) {
+    var cont = 0;
+    for (var dia = 1; dia <= 31; dia++) {
+      var dt = new Date(ano, mes - 1, dia);
+      if (dt.getMonth() !== mes - 1) break;
+      if (diasAceitos.indexOf(dt.getDay()) === -1 || ehFeriado(dt)) continue;
+      if (++cont === n) return dt;
+    }
+    return null;
+  }
+
+  // Data de pagamento de um mês (mes = 1..12):
+  //  - data: 4º dia útil (segunda a sexta, sem feriados nacionais)
+  //  - alertaSabado: contando de segunda a sábado (sem domingos e feriados),
+  //    se o 4º dia cair num sábado, o dinheiro já pode ser resgatado nesse sábado
+  function calcularDataPagamento(ano, mes) {
+    var util = enesimoDia(ano, mes, 4, [1, 2, 3, 4, 5]);
+    var comSabado = enesimoDia(ano, mes, 4, [1, 2, 3, 4, 5, 6]);
+    var alerta = !!comSabado && comSabado.getDay() === 6;
+    return { data: isoLocal(util), alertaSabado: alerta, dataSabado: alerta ? isoLocal(comSabado) : null };
+  }
+
   global.Financeiro = {
+    calcularDataPagamento: calcularDataPagamento,
+    feriadosNacionais: feriadosNacionais,
     mesAtual: mesAtual,
     mesAnterior: mesAnterior,
     mesDe: mesDe,

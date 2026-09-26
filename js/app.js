@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "1.9.2";
+  const VERSAO_APP = "1.9.4";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -38,9 +38,24 @@
     if (reg && reg.recorrencia) return reg.recorrencia;
     return reg && reg.recorrente ? "Mensal" : FREQUENCIAS[0];
   }
+  // "Mensal – 4º dia útil": só para entradas; a data de cada mês é calculada
+  // por F.calcularDataPagamento e o lançamento do mês é criado sozinho
+  const FREQ_4DU = "Mensal – 4º dia útil";
+  const FREQUENCIAS_ENTRADA = [...FREQUENCIAS, FREQ_4DU];
+  const eh4DU = (reg) => !!reg && reg.recorrencia === FREQ_4DU;
   function seloFreq(reg) {
     const f = freqDe(reg);
+    if (f === FREQ_4DU) return ` <span class="selo-tag selo-cat">mensal</span>${seloSabado(reg)}`;
     return f === FREQUENCIAS[0] ? "" : ` <span class="selo-tag selo-cat">${esc(f.toLowerCase())}</span>`;
+  }
+  // selo extra quando, contando também os sábados, o 4º dia cai num sábado
+  function seloSabado(reg) {
+    if (!eh4DU(reg) || !reg.data) return "";
+    const [a, m] = String(reg.data).split("-").map(Number);
+    const c = F.calcularDataPagamento(a, m);
+    if (!c.alertaSabado) return "";
+    const dm = c.dataSabado.slice(8, 10) + "/" + c.dataSabado.slice(5, 7);
+    return ` <span class="selo-tag selo-sabado" title="É possível resgatar o dinheiro no sábado (${dm}).">⚠️ sábado</span>`;
   }
 
   const CORES_META = ["#22E08A", "#3FC1E0", "#FFB020", "#B487F0", "#FF6F91", "#7C9CF0"];
@@ -120,7 +135,7 @@
   let mesesBancos = 0;
   let anoBancos = null;   // período do gráfico da guia Bancos (0 = saldo atual)
   let mesesRelA = 12;   // período do quadro Receitas x despesas
-  let mesesRelB = 0;    // período do quadro Evolução patrimonial (0 = tudo)
+  let mesesRelB = 12;   // período do quadro Evolução patrimonial (abre em 12 meses)
   let anoRelA = null;
   let anoRelB = null;
 
@@ -874,7 +889,7 @@
     }
     if (secao === "relatorios") {
       anoRelA = String(new Date().getFullYear()); mesesRelA = 12;
-      anoRelB = String(new Date().getFullYear()); mesesRelB = 0;
+      anoRelB = String(new Date().getFullYear()); mesesRelB = 12;
     }
     document.querySelectorAll("#navPrincipal button").forEach((b) => b.classList.toggle("ativo", b.dataset.secao === secao));
     fecharSidebarMobile();
@@ -1248,7 +1263,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.9.2" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.9.4" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1856,23 +1871,23 @@
     const meses = mesesRelA || Math.max(1, new Set(entradas.concat(despesas).map((m) => String(m.data).slice(0, 7))).size);
     const periodo = mesesRelA ? `últimos ${mesesRelA} meses` : "todo histórico";
     const linha = (r, v, c) => `<div class="kv"><span class="dim">${rotuloPainel(r)}</span><b class="${c || ""}">${v}</b></div>`;
-    const porCategoria = (lista) => {
+    const porCategoria = (lista, sinal) => {
       const mapa = {};
       lista.forEach((m) => { const k = m.categoria || "Outros"; mapa[k] = (mapa[k] || 0) + Number(m.valor || 0); });
       return Object.keys(mapa).sort((a, b) => mapa[b] - mapa[a])
-        .map((k) => linha("· " + esc(k), brl(mapa[k]))).join("");
+        .map((k) => linha("· " + esc(k), (sinal || "") + brl(mapa[k]))).join("");
     };
 
     if (chave === "rel-receitas") {
       painelSimples("Receitas", totE > 0 ? 100 : 0, `do que entrou no período (${periodo})`, "soma das entradas no período",
-        porCategoria(entradas) + linha("Média mensal", brl(totE / meses)) +
-        linha("Lançamentos", plural(entradas.length, "entrada")) + linha("Total", brl(totE), "up"), "entradas");
+        porCategoria(entradas, "+") + linha("Média mensal", "+" + brl(totE / meses)) +
+        linha("Lançamentos", plural(entradas.length, "entrada")) + linha("Total", "+" + brl(totE), "up"), "entradas");
       return;
     }
     if (chave === "rel-despesas") {
       painelSimples("Despesas", totE > 0 ? (totD / totE) * 100 : 0, "das receitas do período foram gastas", "soma das despesas ÷ receitas",
-        porCategoria(despesas) + linha("Média mensal", brl(totD / meses)) +
-        linha("Lançamentos", plural(despesas.length, "despesa")) + linha("Total", brl(totD), "down"), "despesas");
+        porCategoria(despesas, "−") + linha("Média mensal", "−" + brl(totD / meses)) +
+        linha("Lançamentos", plural(despesas.length, "despesa")) + linha("Total", "−" + brl(totD), "down"), "despesas");
       return;
     }
     if (chave === "rel-resultado") {
@@ -2312,6 +2327,14 @@
   function ocorrenciasNoMes(reg, mes) {
     const freq = freqDe(reg);
     if (freq === FREQUENCIAS[0] || !reg.data) return [];
+    if (freq === FREQ_4DU) {
+      if (reg.origemRecorrente) return [];                          // é o lançamento de um mês, não a origem
+      if (mes <= String(reg.data).slice(0, 7)) return [];            // começa no mês seguinte ao da origem
+      if (reg.ateMes && mes > reg.ateMes) return [];                 // série encerrada ("este e os próximos")
+      if (reg.pulados && reg.pulados[mes]) return [];                // mês excluído ("somente este mês")
+      const [a, m] = mes.split("-").map(Number);
+      return [F.calcularDataPagamento(a, m).data];
+    }
     // âncora vigente: a data original ou a última reancoragem que já vale neste mês
     let ancora = reg.data, desde = null;
     (reg.reancoragens || []).forEach((r) => { if (r.desde <= mes && (!desde || r.desde >= desde)) { desde = r.desde; ancora = r.data; } });
@@ -2607,8 +2630,117 @@
     return saida;
   }
 
+
+  // Cria de verdade o lançamento do mês de cada entrada "Mensal – 4º dia útil"
+  // que ainda não tenha sido criado, com os dados da origem e status Prevista
+  // (pendente). Devolve quantos criou.
+  function materializar4DU(mes) {
+    let criados = 0;
+    DADOS.entradas.filter((r) => eh4DU(r) && !r.origemRecorrente).forEach((orig) => {
+      const datas = ocorrenciasNoMes(orig, mes);
+      if (!datas.length) return;
+      const jaExiste = DADOS.entradas.some((x) => x.origemRecorrente === orig.id && String(x.data || "").slice(0, 7) === mes);
+      if (jaExiste) return;
+      DADOS.entradas.push({
+        id: A.novoId(), origemRecorrente: orig.id, data: datas[0],
+        descricao: orig.descricao, categoria: orig.categoria, bancoId: orig.bancoId, tipo: orig.tipo, obs: orig.obs || "",
+        valor: valorDoMes(orig, mes), previsto: !mesQuitado(orig, mes),
+        recorrencia: FREQ_4DU, recorrente: false
+      });
+      criados++;
+    });
+    if (criados) { A.salvarDados(DADOS, true); agendarEnvioSync(); }   // grava sem redesenhar a tela em laço
+    return criados;
+  }
+
+  // Pergunta o alcance de uma alteração ou exclusão numa entrada 4º dia útil
+  function escolherAlcance4DU(titulo, aoEscolher) {
+    abrirModal(`
+      <h3>${esc(titulo)}</h3>
+      <p class="campo ajuda" style="margin:0 0 14px">Esta entrada se repete todo mês no 4º dia útil.</p>
+      <div class="modal-acoes" style="flex-wrap:wrap">
+        <button class="btn primario" id="btnAlcanceMes">Somente este mês</button>
+        <button class="btn primario" id="btnAlcanceProximos">Este e os próximos</button>
+        <button class="btn" id="btnAlcanceCancelar">Cancelar</button>
+      </div>`);
+    document.getElementById("btnAlcanceMes").onclick = () => { fecharModal(); aoEscolher("mes"); };
+    document.getElementById("btnAlcanceProximos").onclick = () => { fecharModal(); aoEscolher("proximos"); };
+    document.getElementById("btnAlcanceCancelar").onclick = fecharModal;
+  }
+  const mesDe4DU = (x) => String(x.data || "").slice(0, 7);
+  const proximoMes = (mes) => { const [a, m] = mes.split("-").map(Number); const d2 = new Date(a, m, 1); return `${d2.getFullYear()}-${String(d2.getMonth() + 1).padStart(2, "0")}`; };
+  const mesAnterior = (mes) => { const [a, m] = mes.split("-").map(Number); const d2 = new Date(a, m - 2, 1); return `${d2.getFullYear()}-${String(d2.getMonth() + 1).padStart(2, "0")}`; };
+  const dataDoMes4DU = (mes) => { const [a, m] = mes.split("-").map(Number); return F.calcularDataPagamento(a, m).data; };
+  const CAMPOS_4DU = ["descricao", "categoria", "bancoId", "tipo", "obs", "valor"];
+
+  // A origem deixa de existir num mês: o mês seguinte vira a nova origem da série
+  function passarOrigemAdiante(orig) {
+    const prox = proximoMes(mesDe4DU(orig));
+    let nova = DADOS.entradas.find((x) => x.origemRecorrente === orig.id && mesDe4DU(x) === prox);
+    if (nova) { delete nova.origemRecorrente; }
+    else if (!orig.ateMes || prox <= orig.ateMes) {
+      nova = { ...orig, id: A.novoId(), data: dataDoMes4DU(prox), previsto: !mesQuitado(orig, prox), valor: valorDoMes(orig, prox) };
+      DADOS.entradas.push(nova);
+    }
+    if (nova) {
+      Object.assign(nova, { recorrencia: FREQ_4DU, recorrente: true, meses: orig.meses, pulados: orig.pulados, ateMes: orig.ateMes, valorRepeticao: orig.valorRepeticao });
+      DADOS.entradas.forEach((x) => { if (x.origemRecorrente === orig.id) x.origemRecorrente = nova.id; });
+    }
+    return nova || null;
+  }
+
+  function salvar4DU(e, registro, alcance) {
+    const mes = mesDe4DU(e);
+    const novos = {}; CAMPOS_4DU.forEach((k) => { novos[k] = registro[k]; });
+    if (e.origemRecorrente) {
+      const orig = achar(DADOS.entradas, e.origemRecorrente);
+      Object.assign(e, novos);                                          // o mês editado sempre muda
+      if (alcance === "proximos" && orig) {
+        // encerra a série antiga no mês anterior e começa uma nova a partir deste
+        orig.ateMes = mesAnterior(mes);
+        delete e.origemRecorrente;
+        Object.assign(e, { recorrencia: FREQ_4DU, recorrente: true, meses: {}, pulados: {}, valorRepeticao: undefined });
+        DADOS.entradas.forEach((x) => {
+          if (x.origemRecorrente === orig.id && mesDe4DU(x) > mes) { x.origemRecorrente = e.id; Object.assign(x, novos); }
+        });
+      }
+    } else if (alcance === "mes") {
+      // só o mês da origem muda: a série continua com os dados antigos a partir do mês seguinte
+      const nova = passarOrigemAdiante(e);
+      Object.assign(e, novos, { meses: undefined, pulados: undefined, ateMes: undefined, valorRepeticao: undefined });
+      // continua fazendo parte da série (com o selo MENSAL), agora como um mês comum dela
+      if (nova) Object.assign(e, { origemRecorrente: nova.id, recorrencia: FREQ_4DU, recorrente: false });
+      else Object.assign(e, { recorrencia: FREQUENCIAS[0], recorrente: false });
+    } else {
+      Object.assign(e, novos);
+      DADOS.entradas.forEach((x) => { if (x.origemRecorrente === e.id && mesDe4DU(x) > mes) Object.assign(x, novos); });
+    }
+  }
+
+  function excluir4DU(e, alcance) {
+    const mes = mesDe4DU(e);
+    if (e.origemRecorrente) {
+      const orig = achar(DADOS.entradas, e.origemRecorrente);
+      if (orig) {
+        if (alcance === "mes") { orig.pulados = { ...(orig.pulados || {}), [mes]: true }; }
+        else {
+          orig.ateMes = mesAnterior(mes);
+          DADOS.entradas = DADOS.entradas.filter((x) => !(x.origemRecorrente === orig.id && mesDe4DU(x) > mes));
+        }
+      }
+      DADOS.entradas = DADOS.entradas.filter((x) => x.id !== e.id);
+    } else if (alcance === "mes") {
+      passarOrigemAdiante(e);
+      DADOS.entradas = DADOS.entradas.filter((x) => x.id !== e.id);
+    } else {
+      DADOS.entradas = DADOS.entradas.filter((x) => x.id !== e.id && x.origemRecorrente !== e.id);
+    }
+  }
+
   function renderEntradas(d) {
     if (!mesEntradas) mesEntradas = F.mesAtual();
+    materializar4DU(mesEntradas);          // cria o lançamento do mês das entradas "4º dia útil"
+    d = DADOS;
     const previstasEnt = repeticoesPrevistas(d.entradas, mesEntradas, (reg, data) => ({
       ...reg, data, valor: valorDoMes(reg, data.slice(0, 7)), prevista: true,
       recebidaNoMes: mesQuitado(reg, data.slice(0, 7)), mesRef: data.slice(0, 7)
@@ -2673,7 +2805,14 @@
   // "previsao" indica que estamos editando a repetição de um mês: o
   // registro daquele mês só é criado quando o usuário salva.
   function abrirModalEntrada(id, bancoIdPadrao, previsao) {
-    const e = id ? achar(DADOS.entradas, id) : null;
+    let e = id ? achar(DADOS.entradas, id) : null;
+    // repetição "4º dia útil" vista de outro lugar (ex.: painel): cria o mês e abre o lançamento real
+    if (e && previsao && eh4DU(e)) {
+      const mes = String(previsao.data).slice(0, 7);
+      materializar4DU(mes);
+      const inst = DADOS.entradas.find((x) => x.origemRecorrente === e.id && String(x.data).slice(0, 7) === mes);
+      if (inst) { e = inst; previsao = null; }
+    }
     abrirModal(`
       <h3>${e ? "Editar entrada" : "Nova entrada"}</h3>
       <div class="par">
@@ -2686,13 +2825,32 @@
         <div class="campo"><label for="f_banco">Banco</label><select id="f_banco">${opcoesBancos(DADOS.bancos, e ? e.bancoId : (bancoIdPadrao || ""), true)}</select></div>
       </div>
       <div class="campo"><label for="f_tipo">Tipo</label><select id="f_tipo">${opcoes(["Fixa", "Variável"], e ? e.tipo : "Fixa")}</select></div>
-      <div class="campo"><label for="f_rec">Repetição</label><select id="f_rec">${opcoes(FREQUENCIAS, freqDe(e))}</select>
-        <div class="ajuda">Serve para identificar entradas que se repetem; o lançamento seguinte continua sendo feito por você.</div></div>
+      <div class="campo"><label for="f_rec">Repetição</label><select id="f_rec">${opcoes(FREQUENCIAS_ENTRADA, freqDe(e))}</select>
+        <div class="ajuda" id="ajudaRec">Serve para identificar entradas que se repetem; o lançamento seguinte continua sendo feito por você.</div></div>
       <div class="campo"><label for="f_obs">Observação</label><textarea id="f_obs" placeholder="Opcional">${e ? esc(e.obs || "") : ""}</textarea></div>
       <div class="modal-acoes">
         <button class="btn primario salvar" id="btnSalvar">Salvar</button>
         ${e ? `<button class="btn perigo" id="btnExcluir">Excluir</button>` : ""}
       </div>`);
+
+    // "Mensal – 4º dia útil": a data vira calculada (somente leitura) para o mês escolhido
+    const campoData = document.getElementById("f_data"), campoRec = document.getElementById("f_rec");
+    const ajudaRecPadrao = document.getElementById("ajudaRec").textContent;
+    const mesDoForm = e ? String(e.data).slice(0, 7) : (mesEntradas || (campoData.value || hojeISO()).slice(0, 7));   // mês aberto na guia
+    let ajudaData = null;
+    const atualizarData4DU = () => {
+      const ativo = campoRec.value === FREQ_4DU;
+      campoData.readOnly = ativo;
+      campoData.classList.toggle("somente-leitura", ativo);
+      if (ativo) campoData.value = dataDoMes4DU(mesDoForm);
+      if (!ajudaData) { ajudaData = document.createElement("div"); ajudaData.className = "ajuda"; campoData.parentNode.appendChild(ajudaData); }
+      ajudaData.textContent = ativo ? "A data é calculada todo mês pelo 4º dia útil." : "";
+      document.getElementById("ajudaRec").textContent = ativo
+        ? "O lançamento de cada mês é criado sozinho, com status Prevista, para você marcar como Pago depois."
+        : ajudaRecPadrao;
+    };
+    campoRec.addEventListener("change", atualizarData4DU);
+    atualizarData4DU();
 
     document.getElementById("btnSalvar").onclick = () => {
       const banco = document.getElementById("f_banco").value;
@@ -2711,6 +2869,13 @@
         recorrente: document.getElementById("f_rec").value !== FREQUENCIAS[0],
         obs: document.getElementById("f_obs").value.trim()
       };
+      if (registro.recorrencia === FREQ_4DU) registro.data = dataDoMes4DU(registro.data.slice(0, 7));
+      if (e && eh4DU(e) && registro.recorrencia === FREQ_4DU) {
+        // entrada já existente da série: pergunta se vale só para este mês ou também para os próximos
+        escolherAlcance4DU("Salvar alteração", (alcance) => { salvar4DU(e, registro, alcance); salvarEAtualizar("Entrada atualizada."); });
+        return;
+      }
+      if (!e && registro.recorrencia === FREQ_4DU) registro.previsto = true;   // o mês da origem também começa pendente
       if (previsao) {
         // muda só o mês editado, dentro do próprio lançamento recorrente
         gravarAjuste(e, previsao.data.slice(0, 7), { valor: registro.valor });
@@ -2722,6 +2887,10 @@
     };
     if (e) document.getElementById("btnExcluir").onclick = () => {
       fecharModal();
+      if (eh4DU(e)) {
+        escolherAlcance4DU("Excluir entrada", (alcance) => { excluir4DU(e, alcance); salvarEAtualizar("Entrada excluída."); });
+        return;
+      }
       confirmarExclusao("Excluir esta entrada?", () => {
         DADOS.entradas = DADOS.entradas.filter((x) => x.id !== e.id);
         salvarEAtualizar("Entrada excluída.");
@@ -4060,8 +4229,8 @@
 
     return `
       <div class="grid g-top">
-        <div class="c3">${metricCard("Receitas", brl(entradasP), ICONES_STRIP.poupanca, "var(--up)", "", rotuloPeriodo, null, "0 0 24 24", "rel-receitas")}</div>
-        <div class="c3">${metricCard("Despesas", brl(despesasP), ICONES_STRIP.maiorgasto, "var(--down)", "", rotuloPeriodo, null, "0 0 24 24", "rel-despesas")}</div>
+        <div class="c3">${metricCard("Receitas", "+" + brl(entradasP), ICONES_STRIP.poupanca, "var(--up)", "", rotuloPeriodo, null, "0 0 24 24", "rel-receitas")}</div>
+        <div class="c3">${metricCard("Despesas", "−" + brl(despesasP), ICONES_STRIP.maiorgasto, "var(--down)", "", rotuloPeriodo, null, "0 0 24 24", "rel-despesas")}</div>
         <div class="c3">${metricCard("Resultado", brlSinal(entradasP - despesasP), ICONES_STRIP.projecao, corSinal(entradasP - despesasP) === "up" ? "var(--up)" : "var(--down)", "", "", null, "0 0 24 24", "rel-resultado")}</div>
         <div class="c3">${metricCard("Rentabilidade", pct(I.rentabilidadeCarteiraAcoes(d)), ICONES_STRIP.melhorativo, "var(--vi)", "", "Acumulada · Preço Médio", null, "0 0 24 24", "rel-rentabilidade")}</div>
       </div>

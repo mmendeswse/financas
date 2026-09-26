@@ -1176,3 +1176,6 @@ table.tab-acoes th.col-atualiz, table.tab-acoes td.col-atualiz { display: none; 
 .kv.kv-total { align-items: center; }
 table.tab-acoes .col-oculta { display: none; }   /* Divid. e Peso ocultas */
 table.terminal.tab-acoes { min-width: 1000px; }   /* com menos colunas, cabe inteira em telas comuns */
+/* entrada "4º dia útil": aviso de que dá para resgatar no sábado */
+.selo-sabado { background: rgba(255,167,38,.14); color: #FFA726; border: 1px solid rgba(255,167,38,.4); cursor: help; }
+input.somente-leitura { opacity: .75; cursor: not-allowed; }
