@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "1.8.4";
+  const VERSAO_APP = "1.8.5";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -1248,7 +1248,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.8.4" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.8.5" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1913,10 +1913,10 @@
 
     painelSimples(nomeMes.charAt(0).toUpperCase() + nomeMes.slice(1),
       totE > 0 ? (saldo / totE) * 100 : 0, "das receitas sobraram neste mês", "receitas − despesas do mês",
-      linha("Lançamentos", `${plural(itensR.length, "entrada")} · ${plural(itensD.length, "despesa")}`) + cabecalhoColunasPainel() +
+      cabecalhoColunasPainel() +
       todos.map((it) => linhaEditavel(it, linha(fmtDataCurta(it.data) + " · " + esc(it.descricao),
         bancoPainel(it.banco, it) + seloStatusPainel(it.status, it) + `<span class="col-valor valor-guia ${it.cor}">${it.sinal}${brl(it.valor)}</span>`))).join("") +
-      linha("Saldo", `<span class="col-valor">${brlSinal(saldo)}</span>`),
+      linhaTotalPainel(plural(todos.length, "Lançamento"), brlSinal(saldo), "Saldo"),
       "despesas");
   }
 
@@ -2477,8 +2477,8 @@
 
   // títulos das colunas nos painéis de lançamentos, no mesmo padrão das guias
   // última linha dos painéis: "Total · N lançamentos" e o valor, no padrão das linhas da lista
-  function linhaTotalPainel(qtd, valor) {
-    return `<div class="kv kv-total"><span class="dim">Total · ${esc(qtd)}</span><b><span class="col-valor">${valor}</span></b></div>`;
+  function linhaTotalPainel(qtd, valor, rotulo) {
+    return `<div class="kv kv-total"><span class="dim">${esc(rotulo || "Total")} · ${esc(qtd)}</span><b><span class="col-valor">${valor}</span></b></div>`;
   }
 
   // resumo do mês ao lado do título das guias Entradas/Despesas, com ícone e na cor de cada status
