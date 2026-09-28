@@ -325,7 +325,26 @@
           tooltip: tooltipPadrao({ callbacks: { label: function (c) { return " " + c.dataset.label + ": R$ " + c.parsed.y.toFixed(2); } } })
         }
       },
-      plugins: (precoMedio > 0 && precoAtual > 0 ? [{
+      plugins: (opcoes.linhaAtual > 0 ? [{
+        // gráfico do dólar: caixa amarela com o valor atual, na ponta da linha pontilhada
+        id: "rotuloValorAtual",
+        afterDatasetsDraw: function (grafico) {
+          var ca = grafico.chartArea;
+          var y = grafico.scales.y.getPixelForValue(opcoes.linhaAtual);
+          if (y < ca.top || y > ca.bottom) return;
+          // logo acima da linha (ou abaixo, se não couber), sem cobrir o encontro das linhas
+          y = (y - 24 >= ca.top) ? y - 16 : y + 16;
+          var c = grafico.ctx, txt = "Atual " + moeda(opcoes.linhaAtual);
+          c.save();
+          c.font = "700 10.5px 'Segoe UI', Roboto, sans-serif";
+          var larg = c.measureText(txt).width + 12, x = ca.right - larg - 18;
+          c.fillStyle = "#0B1420"; c.fillRect(x, y - 10, larg, 20);
+          c.fillStyle = "rgba(255,214,51,0.14)"; c.fillRect(x, y - 10, larg, 20);
+          c.strokeStyle = "#FFD633"; c.lineWidth = 1; c.strokeRect(x + 0.5, y - 9.5, larg - 1, 19);
+          c.fillStyle = "#FFD633"; c.textBaseline = "middle"; c.fillText(txt, x + 6, y + 0.5);
+          c.restore();
+        }
+      }] : []).concat(precoMedio > 0 && precoAtual > 0 ? [{
         // caixa com a diferença entre o preço atual e o valor de compra,
         // entre as duas linhas tracejadas, ligada a elas por um traço vertical
         id: "diferencaCompra",

@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "2.0.0";
+  const VERSAO_APP = "2.0.2";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -1264,7 +1264,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.0.0" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.0.2" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -4475,6 +4475,13 @@
         carregarSerieDolar();
         const serie = filtrarPeriodo((serieDolar || []).map((p) => ({ data: p.data, preco: p.preco })), periodoGrafico);
         const atualDolar = dolar ? dolar.valor : (serie.length ? serie[serie.length - 1].preco : 0);
+        // a linha de preço termina exatamente no valor atual: as duas linhas se
+        // encontram no fim, como a linha do valor aplicado nos investimentos
+        if (atualDolar > 0 && serie.length) {
+          const hj = hojeISO();
+          if (serie[serie.length - 1].data === hj) serie[serie.length - 1] = { ...serie[serie.length - 1], preco: atualDolar };
+          else serie.push({ data: hj, preco: atualDolar });
+        }
         if (serie.length >= 2) G.renderPrecoAcao("graf-dolar", serie, 0, 0, { linhaAtual: atualDolar });
         break;
       }
