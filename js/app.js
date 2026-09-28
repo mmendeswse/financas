@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "1.9.5";
+  const VERSAO_APP = "2.0.0";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -879,6 +879,7 @@
     // (em Ações, sempre abre nos últimos 7 dias)
     if (secao === "acoes") periodoGrafico = "7d";
     if (secao === "investimentos") periodoGrafico = "7d";
+    if (secao === "detalhe-dolar") periodoGrafico = "7d";   // o gráfico do dólar também abre em 7 dias
     // a guia Bancos sempre abre mostrando o saldo atual ("Tudo")
     if (secao === "bancos") { mesesBancos = 0; anoBancos = String(new Date().getFullYear()); }
     // Dashboard e Relatórios abrem sempre no ano atual: receitas x despesas
@@ -1263,7 +1264,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=1.9.5" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.0.0" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1377,7 +1378,7 @@
       const p = Math.max(0, (i.valor / soma) * 100);   // quanto este item representa do total
       const clic = i.id ? ` data-acao="explicar-banco" data-id="${i.id}" title="Ver detalhes deste banco"` : "";
       return `<${i.id ? "button" : "div"} class="barlist-linha${i.id ? " clicavel" : ""}"${clic}>
-        <span class="barlist-nome">${i.id ? marcaBanco(i.nome, 20) : ""}${esc(i.nome)}</span>
+        <span class="barlist-nome">${i.id ? marcaBanco(i.nome, 26) : ""}${esc(i.nome)}</span>
         <span class="barlist-trilho"><i style="width:${p.toFixed(1)}%;background:${i.cor || cor || "var(--azul)"}"></i><b class="barlist-pct">${p.toFixed(1).replace(".", ",")}%</b></span>
         <b class="barlist-valor ${i.valor < 0 ? "down" : ""}">${brl(i.valor)}</b>
       </${i.id ? "button" : "div"}>`;
@@ -1764,10 +1765,10 @@
       secao = "acoes";
     } else {
       detalhe = d.investimentos.filter((i) => i.categoria === rotulo)
-        .map((i) => linha(esc(i.nome), brl(i.valorAtual))).join("");
+        .map((i) => linha(esc(i.nome), brl(I.valorLiquidoInvestimento(i)))).join("");
     }
-    painelSimples(rotulo, total > 0 ? (item.valor / total) * 100 : 0, "do seu patrimônio bruto",
-      "valor deste grupo ÷ patrimônio bruto",
+    painelSimples(rotulo, total > 0 ? (item.valor / total) * 100 : 0, "do seu patrimônio líquido",
+      "valor deste grupo ÷ patrimônio líquido",
       detalhe + linha("Total", brl(item.valor), "up"), secao);
   }
 
@@ -2003,7 +2004,8 @@
     })();
     const pctDespesas = entradasMes > 0 ? (despesasMes / entradasMes) * 100 : 0;
     const taxaPoupanca = entradasMes > 0 ? (resultadoMes / entradasMes) * 100 : 0;
-    const pctInvestido = I.percentualInvestido(d);
+    const baseLiquida = p.bancos + I.totalLiquidoOutros(d) + p.acoes;
+    const pctInvestido = baseLiquida > 0 ? ((I.totalLiquidoOutros(d) + p.acoes) / baseLiquida) * 100 : 0;
     const pctLivre = p.bruto > 0 ? (p.liquido / p.bruto) * 100 : 0;
     const pctBancos = p.bruto > 0 ? (p.bancos / p.bruto) * 100 : 0;
     const rentCarteira = I.rentabilidadeCarteiraAcoes(d);
@@ -2045,7 +2047,7 @@
 
       <div class="grid">
         <div class="c3">${card("card-centrado", "Saldo banco", "mapa ativos", `<span class="acc-laranja" style="font-size:12px;font-weight:700">Total: ${brlSinal(p.bancos)}</span>`, `<div class="body pad">${barList(bancos)}</div>`)}</div>
-        <div class="c3">${card("card-centrado", "Composição patrimônio", "ativos brutos", `<span class="acc-laranja" style="font-size:12px;font-weight:700">Total: ${brlSinal(p.bancos + I.totalLiquidoOutros(d) + p.acoes)}</span>`, `
+        <div class="c3">${card("card-centrado", "Composição patrimônio", "ativos líquidos", `<span class="acc-laranja" style="font-size:12px;font-weight:700">Total: ${brlSinal(p.bancos + I.totalLiquidoOutros(d) + p.acoes)}</span>`, `
           <div class="donut-wrap">
             <div class="donut-centro"><canvas id="graf-dash-composicao" width="150" height="150" style="width:150px;height:150px"></canvas>
               <button class="donut-rotulo clicavel" data-acao="explicar-kpi" data-kpi="investido" title="Ver como este percentual é calculado"><b>${pctInvestido.toFixed(1).replace(".", ",")}%</b><span class="acc-laranja">INVESTIDO</span></button>
@@ -2120,7 +2122,11 @@
     if (acoesPorCat["Ação"]) itens.push({ rotulo: "Ações", valor: acoesPorCat["Ação"], cor: G.CORES.up });
     if (acoesPorCat["FII"]) itens.push({ rotulo: "FIIs", valor: acoesPorCat["FII"], cor: G.CORES.vi });
     if (acoesPorCat["ETF"]) itens.push({ rotulo: "ETFs", valor: acoesPorCat["ETF"], cor: G.CORES.acc });
-    I.investimentosPorCategoria(d).forEach((c, i) => itens.push({ rotulo: c.categoria, valor: c.valor, cor: G.PALETA_CATEGORIAS[(i + 4) % G.PALETA_CATEGORIAS.length] }));
+    // investimentos pelo valor LÍQUIDO (já sem o IR), agrupados por categoria
+    const invLiq = {};
+    d.investimentos.forEach((inv) => { const c = inv.categoria || "Outros"; invLiq[c] = (invLiq[c] || 0) + I.valorLiquidoInvestimento(inv); });
+    Object.keys(invLiq).sort((a, b) => invLiq[b] - invLiq[a])
+      .forEach((c, i) => itens.push({ rotulo: c, valor: invLiq[c], cor: G.PALETA_CATEGORIAS[(i + 4) % G.PALETA_CATEGORIAS.length] }));
     return itens.filter((i) => i.valor > 0);
   }
 
@@ -2174,7 +2180,7 @@
       </div>
 
       <div class="grid">
-        <div class="c6">${card("card-centrado", "Composição patrimônio", "ativos brutos", `<span class="acc-laranja" style="font-size:12px;font-weight:700">Total: ${brlSinal(p.bancos + I.totalLiquidoOutros(d) + p.acoes)}</span>`, `<div class="donut-wrap"><div class="donut-centro"><canvas id="graf-patrimonio-divisao" width="150" height="150" style="width:150px;height:150px"></canvas><div class="donut-rotulo"><b>${brl(p.bruto).replace("R$", "").trim()}</b><span class="acc-laranja">BRUTO</span></div></div><div class="legenda">${legendaHtml}</div></div>`)}</div>
+        <div class="c6">${card("card-centrado", "Composição patrimônio", "ativos líquidos", `<span class="acc-laranja" style="font-size:12px;font-weight:700">Total: ${brlSinal(p.bancos + I.totalLiquidoOutros(d) + p.acoes)}</span>`, `<div class="donut-wrap"><div class="donut-centro"><canvas id="graf-patrimonio-divisao" width="150" height="150" style="width:150px;height:150px"></canvas><div class="donut-rotulo"><b>${brl(p.bruto).replace("R$", "").trim()}</b><span class="acc-laranja">BRUTO</span></div></div><div class="legenda">${legendaHtml}</div></div>`)}</div>
         <div class="c6">${card("", "Resumo patrimonial", "", "", `
           <div class="kv"><span class="dim">Dinheiro em bancos</span><b>${brl(p.bancos)}</b></div>
           <div class="kv"><span class="dim">+ Ações e FIIs</span><b>${brl(p.acoes)}</b></div>
@@ -2219,8 +2225,8 @@
     } else {
       listaHtml = `<div class="grade-bancos">` + bancos.map((b) => `
           <div class="cartao-item" style="border-left-color:${esc(b.cor || "#3FC1E0")}" data-acao="editar-banco" data-id="${b.id}">
-            <div class="linha1"><div class="nome-com-marca">${marcaBanco(b.nome, 20)}<div><div class="nome">${esc(b.nome)}</div><div class="tipo">${esc(b.tipo || "—")}</div>${b.agencia || b.conta ? `<div class="tipo">${b.agencia ? "Ag " + esc(b.agencia) : ""}${b.agencia && b.conta ? " · " : ""}${b.conta ? "Cc " + esc(b.conta) : ""}</div>` : ""}</div></div></div>
-            <div class="saldo ${corSinal(b.valor)}">${brlSinal(b.valor)}</div>
+            <div class="linha1"><div class="nome-com-marca">${marcaBanco(b.nome, 26)}<div><div class="nome">${esc(b.nome)}</div><div class="tipo">${esc(b.tipo || "—")}</div>${b.agencia || b.conta ? `<div class="tipo">${b.agencia ? "Ag " + esc(b.agencia) : ""}${b.agencia && b.conta ? " · " : ""}${b.conta ? "Cc " + esc(b.conta) : ""}</div>` : ""}</div></div></div>
+            <div class="saldo saldo-branco">${brlSinal(b.valor)}</div>
             <div class="rodape"><span>${mesesBancos ? `Saldo Atual ${brl(b.saldoAtual)}` : ""}</span>
               <button class="btn pequeno" data-acao="entrada-banco" data-id="${b.id}" title="Lançar uma entrada nesta conta">+ Adicionar</button>
             </div>
@@ -2229,7 +2235,7 @@
     return `
       ${faixaDemo(d)}
       <div class="grid g-top">
-        <div class="c12">${card("c12", "Meus bancos", `${bancos.length} ${bancos.length === 1 ? "Conta Cadastrada" : "Contas Cadastradas"}`, `<span class="total-meus-bancos">Total: ${brlSinal(total)}</span><button class="btn primario" data-acao="nova-banco"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`, listaHtml, `<span class="dim">Total</span><b class="${corSinal(total)}" style="font-size:14px;font-weight:800">${brl(total)}</b>`)}</div>
+        <div class="c12">${card("c12", "Meus bancos", `${bancos.length} ${bancos.length === 1 ? "Conta Cadastrada" : "Contas Cadastradas"}`, `<button class="btn primario" data-acao="nova-banco"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`, listaHtml, `<span class="dim">Total</span><b style="font-size:14px;font-weight:800;color:#FFFFFF">${brlSinal(total)}</b>`)}</div>
       </div>
       <div class="grid">
         <div class="c12">${card("", "Saldo banco", mesesBancos ? `Movimentação · ${mesesBancos} ${mesesBancos === 1 ? "mês" : "meses"} de ${anoBancos}` : "comparação entre contas",
@@ -2538,7 +2544,7 @@
 
   function bancoPainel(nome, item) {
     const n = nome && nome !== "—" ? nome : "";
-    const miolo = n ? marcaBanco(n, 20) + `<span class="dim">${esc(n)}</span>` : '<span class="dim">—</span>';
+    const miolo = n ? marcaBanco(n, 26) + `<span class="dim">${esc(n)}</span>` : '<span class="dim">—</span>';
     if (item && item.acaoBanco) {
       return `<button class="col-banco banco-painel-botao" data-acao-banco="${item.acaoBanco}" data-id="${esc(item.id)}" title="Clique para trocar o banco">${miolo}</button>`;
     }
@@ -2791,7 +2797,7 @@
         <div class="rw clicavel${e.prevista ? " linha-prevista" : ""}" style="${grid}" data-acao="${e.prevista ? "editar-previsao-entrada" : "editar-entrada"}" data-id="${e.id}" data-data="${e.data}" title="${e.prevista ? "Abre este mês para edição (o valor muda só aqui)" : "Abrir para editar"}">
           <div class="dim" style="font-size:12px">${fmtDataCurta(e.data)}</div>
           <div><div class="nm">${esc(e.descricao)}${seloFreq(e)}</div><div class="sub">${esc(e.categoria)} · ${esc(e.tipo || "")}</div></div>
-          <div><button class="cel-banco cel-banco-botao" data-acao="trocar-banco-entrada" data-id="${e.id}" title="${e.prevista ? "Troca o banco do lançamento original (vale para todas as repetições)" : "Trocar o banco desta entrada"}">${marcaBanco(e.banco, 20)}<span class="dim">${esc(e.banco)}</span></button></div>
+          <div><button class="cel-banco cel-banco-botao" data-acao="trocar-banco-entrada" data-id="${e.id}" title="${e.prevista ? "Troca o banco do lançamento original (vale para todas as repetições)" : "Trocar o banco desta entrada"}">${marcaBanco(e.banco, 26)}<span class="dim">${esc(e.banco)}</span></button></div>
           <div>${e.prevista
             ? `<button class="selo-tag ${e.recebidaNoMes ? "selo-pago" : "selo-prevista"} selo-botao" data-acao="quitar-mes-entrada" data-id="${e.id}" data-mes="${e.mesRef}" title="${e.recebidaNoMes ? "Marcar como prevista" : "Marcar como paga"}">${e.status}</button>`
             : `<button class="selo-tag ${e.previsto ? "selo-prevista" : "selo-pago"} selo-botao" data-acao="alternar-prevista-entrada" data-id="${e.id}" title="${e.previsto ? "Marcar como paga" : "Marcar como prevista"}">${e.status}</button>`}</div>
@@ -2996,8 +3002,8 @@
           <div class="dim" style="font-size:12px">${fmtData(x.data)}</div>
           <div><div class="nm">${esc(x.descricao)}${x.recorrencia && x.recorrencia !== FREQUENCIAS[0] ? ` <span class="selo-tag selo-cat">${esc(x.recorrencia.toLowerCase())}</span>` : ""}</div><div class="sub">${esc(x.categoria || "—")} · ${esc(x.tipo || "Variável")}</div></div>
           <div>${x.origem === "despesa" || x.pagoCom !== "—"
-            ? `<button class="cel-banco cel-banco-botao" data-acao="${x.origem === "despesa" ? "trocar-banco" : "trocar-banco-conta"}" data-id="${x.id}" title="Trocar o banco (nas repetições, altera o lançamento original)">${marcaBanco(x.pagoCom, 20)}<span class="dim">${esc(x.pagoCom)}</span></button>`
-            : `<span class="cel-banco">${x.pagoCom && x.pagoCom !== "—" ? marcaBanco(x.pagoCom, 20) + `<span class="dim">${esc(x.pagoCom)}</span>` : '<span class="dim">—</span>'}</span>`}</div>
+            ? `<button class="cel-banco cel-banco-botao" data-acao="${x.origem === "despesa" ? "trocar-banco" : "trocar-banco-conta"}" data-id="${x.id}" title="Trocar o banco (nas repetições, altera o lançamento original)">${marcaBanco(x.pagoCom, 26)}<span class="dim">${esc(x.pagoCom)}</span></button>`
+            : `<span class="cel-banco">${x.pagoCom && x.pagoCom !== "—" ? marcaBanco(x.pagoCom, 26) + `<span class="dim">${esc(x.pagoCom)}</span>` : '<span class="dim">—</span>'}</span>`}</div>
           <div>${x.prevista
             ? `<button class="selo-tag ${x.status === "Pago" ? "selo-pago" : "selo-prevista"} selo-botao" data-acao="${x.origem === "conta" ? "quitar-mes-conta" : "quitar-mes"}" data-id="${x.id}" data-mes="${x.mesRef}" title="Confirmar: cria o lançamento deste mês">${x.status}</button>`
             : `<button class="selo-tag selo-${x.status.toLowerCase()} selo-botao" data-acao="${x.origem === "conta" ? "alternar-pago" : "tornar-pendente"}" data-id="${x.id}" title="${x.origem === "conta" ? (x.status === "Pago" ? "Marcar como prevista" : "Marcar como paga") : "Marcar como prevista (vira conta a pagar)"}">${x.status}</button>`}</div>
@@ -3790,7 +3796,7 @@
           "dólar comercial · AwesomeAPI",
           `${abasPeriodo()}<button class="btn" data-acao="buscar-cotacoes">↻ Buscar</button>`,
           filtrada.length >= 2
-            ? `<div style="padding:10px 16px;height:260px"><canvas id="graf-dolar"></canvas></div>`
+            ? `<div class="grafico-acao-area"><canvas id="graf-dolar"></canvas></div>`
             : `<div class="empty">${buscandoSerieDolar ? "Carregando o histórico do dólar…" : "Não foi possível carregar o histórico agora. Verifique a internet e toque em ↻ Buscar."}</div>`)}</div>
         <div class="c4">${card("", "Resumo da cotação", "", "", `
           <div class="kv"><span class="dim">Cotação atual</span><b class="creme">${brl(atual)}</b></div>
@@ -4468,7 +4474,8 @@
       case "detalhe-dolar": {
         carregarSerieDolar();
         const serie = filtrarPeriodo((serieDolar || []).map((p) => ({ data: p.data, preco: p.preco })), periodoGrafico);
-        if (serie.length >= 2) G.renderPrecoAcao("graf-dolar", serie, 0);
+        const atualDolar = dolar ? dolar.valor : (serie.length ? serie[serie.length - 1].preco : 0);
+        if (serie.length >= 2) G.renderPrecoAcao("graf-dolar", serie, 0, 0, { linhaAtual: atualDolar });
         break;
       }
       case "detalhe-investimento": {

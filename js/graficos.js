@@ -274,7 +274,8 @@
   // ---------------------------------------------------------------------
   // Preço de uma ação (detalhe do ativo)
   // ---------------------------------------------------------------------
-  function renderPrecoAcao(canvasId, historicoPrecos, precoMedio, precoAtual) {
+  function renderPrecoAcao(canvasId, historicoPrecos, precoMedio, precoAtual, opcoes) {
+    opcoes = opcoes || {};
     destruir(canvasId);
     var ctx = ctxOf(canvasId); if (!ctx) return;
     // no gráfico de uma ação, a linha principal se chama "Resultado" e fica verde
@@ -289,6 +290,10 @@
       corLegenda: corLinha,   // bolinha da legenda "Resultado": verde com lucro, vermelha com prejuízo
       tension: 0.25, pointRadius: 0, pointHoverRadius: 4, borderWidth: 2
     }];
+    if (opcoes.linhaAtual > 0) {
+      // gráfico do dólar: linha pontilhada amarela na altura do valor atual
+      datasets.push({ label: "Valor Atual", data: historicoPrecos.map(function () { return opcoes.linhaAtual; }), borderColor: "#FFD633", backgroundColor: "transparent", borderDash: [3, 4], borderWidth: 1.6, pointRadius: 0, pointHoverRadius: 0, fill: false });
+    }
     if (precoAtual > 0) {
       // linha tracejada no preço atual, na mesma cor da linha de preço
       datasets.push({ label: "Preço Atual", data: historicoPrecos.map(function () { return precoAtual; }), borderColor: CORES.cy, backgroundColor: "transparent", borderDash: [6, 4], borderWidth: 1.5, pointRadius: 0, pointHoverRadius: 0, fill: false });
