@@ -1,0 +1,7 @@
+Esta pasta existe para seguir a estrutura de projeto pedida, mas está vazia
+de propósito: todos os ícones do sistema são desenhados como SVG embutido
+diretamente no HTML e no JavaScript (não são arquivos de imagem separados).
+Isso evita requisições extras e mantém o app funcionando 100% offline.
+
+Se um dia quiser trocar para arquivos de ícone (.svg, .png), basta colocá-los
+aqui e referenciá-los normalmente com <img src="assets/icons/nome.svg">.

@@ -1,0 +1,4 @@
+Pasta reservada para imagens futuras (por exemplo, uma logo em PNG/JPG ou
+ilustrações de telas vazias). A versão atual não usa nenhuma imagem — a
+identidade visual é feita só com CSS e SVG — mas a pasta já está aqui,
+pronta para quando você quiser adicionar alguma.

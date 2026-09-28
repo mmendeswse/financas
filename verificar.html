@@ -1,0 +1,44 @@
+<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Verificar instalação — Muller Mendes Finanças</title>
+<style>
+body{background:#070D14;color:#E8F1F5;font-family:-apple-system,system-ui,sans-serif;margin:0;padding:24px;line-height:1.5}
+h1{font-size:20px;margin:0 0 6px}p{margin:6px 0;font-size:14px;color:#9FB3C4}
+.item{display:flex;align-items:center;gap:12px;background:#0B141C;border:1px solid #17262F;border-radius:8px;padding:12px;margin:10px 0}
+.item img{width:44px;height:44px;border-radius:10px;background:#142430;flex:none}
+.ok{color:#2EE59D;font-weight:700}.erro{color:#FF5C6A;font-weight:700}
+code{background:#142430;padding:2px 6px;border-radius:4px;font-size:12px;word-break:break-all}
+</style></head><body>
+<h1>Verificação da instalação</h1>
+<p>Abra esta página no <b>Safari do iPad</b>, pelo mesmo endereço do sistema.</p>
+<div id="r"></div>
+<h1 style="margin-top:26px">Consertar o ícone</h1>
+<p>Se aparece uma letra em vez do ícone, toque no botão abaixo, depois remova o app da Tela de Início e adicione de novo pelo endereço que aparecer.</p>
+<button id="limpar" style="background:#00E5FF;color:#06222B;border:none;border-radius:8px;padding:14px 18px;font-size:15px;font-weight:700;width:100%;margin:8px 0">Limpar cache do app neste iPad</button>
+<div id="msg" style="font-size:14px;margin-top:10px"></div>
+<div class="item"><div><b>Endereço para adicionar à Tela de Início:</b><br><code id="novoEndereco"></code><br><span style="font-size:12px;color:#9FB3C4">Abra este endereço, espere carregar, e use Compartilhar → Adicionar à Tela de Início.</span></div></div>
+<script>
+const arquivos=["apple-touch-icon.png","apple-touch-icon-180.png","apple-touch-icon-167.png","apple-touch-icon-152.png","manifest.json","manifest.webmanifest","index.html"];
+const r=document.getElementById("r");
+r.innerHTML='<div class="item"><div><b>Endereço:</b> <code>'+location.href+'</code><br><b>Protocolo:</b> <span class="'+(location.protocol==="https:"?"ok":"erro")+'">'+location.protocol+'</span> '+(location.protocol==="https:"?"(correto)":"— precisa ser https:// para instalar na tela inicial")+'</div></div>';
+arquivos.forEach(f=>{
+  const d=document.createElement("div");d.className="item";
+  const img=f.endsWith(".png")?'<img src="'+f+'" alt="">':'';
+  d.innerHTML=img+'<div><code>'+f+'</code><br><span id="s_'+f+'">verificando…</span></div>';
+  r.appendChild(d);
+  fetch(f,{cache:"no-store"}).then(x=>{document.getElementById("s_"+f).outerHTML=x.ok?'<span class="ok">OK ('+x.status+') · '+(x.headers.get("content-type")||"")+'</span>':'<span class="erro">NÃO ENCONTRADO ('+x.status+')</span>';})
+  .catch(e=>{document.getElementById("s_"+f).outerHTML='<span class="erro">ERRO: '+e.message+'</span>';});
+});
+
+const base=location.href.replace(/verificar\.html.*$/,"index.html");
+const novo=base+"?v="+Date.now().toString().slice(-5);
+document.getElementById("novoEndereco").textContent=novo;
+document.getElementById("limpar").onclick=async()=>{
+  const m=document.getElementById("msg");
+  try{
+    if("serviceWorker" in navigator){const rs=await navigator.serviceWorker.getRegistrations();for(const r of rs) await r.unregister();}
+    if(window.caches){const ks=await caches.keys();for(const k of ks) await caches.delete(k);}
+    m.innerHTML='<span class="ok">Cache limpo. Agora: remova o app da Tela de Início, abra o endereço acima e adicione de novo.</span>';
+  }catch(e){m.innerHTML='<span class="erro">Erro: '+e.message+'</span>';}
+};
+</script></body></html>
