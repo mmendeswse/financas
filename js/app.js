@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "2.1.6";
+  const VERSAO_APP = "2.1.8";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -1294,7 +1294,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.1.6" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.1.8" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1633,7 +1633,7 @@
           const totalLiquido = p.bancos + investLiq + p.acoes - p.dividas;
           return linha("+ Bancos", brl(p.bancos)) + linha("+ Investimentos", brl(investLiq)) +
             linha("+ Ações e FIIs", brl(p.acoes)) + linha("− Dívidas", brl(p.dividas), "down") +
-            linha("Total Líquido", brl(totalLiquido), corSinal(totalLiquido));
+            linha("Total", brl(totalLiquido), corSinal(totalLiquido));
         })(),
         secao: "bancos"
       },
@@ -1835,17 +1835,17 @@
       return;
     }
     if (chave === "projecao") {
-      // todas as despesas (lançadas e programadas) de hoje até os próximos 30 dias
+      // sempre as contas previstas do mês que vem
       painelReabrir = () => explicarStrip("projecao");
-      const itens = despesasProximos30Dias(d);
+      const itens = despesasPrevistasMesQueVem(d);
       const aVir = itens.reduce((t, x) => t + Number(x.valor || 0), 0);
       const saldo = F.totalBancos(d);
-      painelSimples("Projeção de despesas", saldo > 0 ? (aVir / saldo) * 100 : 0,
-        "do seu saldo em bancos já está comprometido", "despesas de hoje até os próximos 30 dias",
+      painelSimples(`Projeção de despesas · ${nomeMesQueVem()}`, saldo > 0 ? (aVir / saldo) * 100 : 0,
+        "do seu saldo em bancos já está comprometido", "contas previstas do mês que vem",
         (itens.length
           ? cabecalhoColunasPainel() + itens.map((x) => linhaEditavel(x, linha(fmtDataCurta(x.data) + " · " + esc(x.descricao),
               bancoPainel(x.banco, x) + seloStatusPainel(x.status, x) + `<span class="col-valor valor-guia down">−${brl(x.valor)}</span>`))).join("")
-          : `<div class="kv"><span class="dim">Nenhuma despesa nos próximos 30 dias</span><b>—</b></div>`) +
+          : `<div class="kv"><span class="dim">Nenhuma conta prevista para o mês que vem</span><b>—</b></div>`) +
         linhaTotalPainel(plural(itens.length, "Lançamento"), "−" + brl(aVir)), "despesas");
       return;
     }
@@ -2099,7 +2099,7 @@
 
       ${stripKpis([
         { rotulo: "TAXA POUPANÇA", valor: taxaPoupanca.toFixed(1).replace(".", ",") + "%", sub: `Resultado: ${brlSinal(resultadoMes)}`, cor: "#22E39A", icone: ICONES_STRIP.poupanca, chave: "poupanca" },
-        { rotulo: "PROJEÇÃO DESPESAS", valor: "−" + brl(despesasProximos30Dias(d).reduce((t, x) => t + Number(x.valor || 0), 0)), sub: `Próximos 30 dias`, cor: "#FF7A1A", icone: ICONES_STRIP.projecao, chave: "projecao" },
+        { rotulo: "PROJEÇÃO DESPESAS", valor: "−" + brl(despesasPrevistasMesQueVem(d).reduce((t, x) => t + Number(x.valor || 0), 0)), sub: nomeMesQueVem(), cor: "#FF7A1A", icone: ICONES_STRIP.projecao, chave: "projecao" },
         { rotulo: "MAIOR GASTO", valor: maiorDesp ? brl(maiorDesp.valor) : "—", sub: maiorDesp ? esc(maiorDesp.descricao) : "Sem Despesas", cor: "#FF4D7A", icone: ICONES_STRIP.maiorgasto, chave: "maiorgasto" },
         { rotulo: "MELHOR ATIVO", valor: melhor ? esc(melhor.ticker) : "—", sub: melhor ? `<b class="${corSinal(melhor.rentabilidade)}">${pct(melhor.rentabilidade)}</b> Preço Médio` : "sem ativos", cor: "#FFC233", icone: ICONES_STRIP.melhorativo, chave: "melhorativo" },
         { rotulo: "CONTAS PENDENTES", valor: brl(totalVencendo), sub: `${vencendo.length} ${vencendo.length === 1 ? "Conta" : "Contas"}`, cor: "#2F8BFF", icone: ICONES_STRIP.avencer, chave: "avencer" }
@@ -2602,6 +2602,15 @@
     const meses = [...new Set([hoje.slice(0, 7), fim.slice(0, 7)])];
     return meses.flatMap((m) => listaDespesasTodasMes(d, m))
       .filter((x) => (x.data || "") >= hoje && (x.data || "") <= fim)
+      .sort((a, b) => (a.data || "").localeCompare(b.data || ""));
+  }
+
+
+  // Contas previstas (ainda não pagas) do mês que vem — usadas na Projeção de despesas
+  function mesQueVem() { const [a, m] = F.mesAtual().split("-").map(Number); const d2 = new Date(a, m, 1); return `${d2.getFullYear()}-${String(d2.getMonth() + 1).padStart(2, "0")}`; }
+  function nomeMesQueVem() { const t = new Date(mesQueVem() + "-01T00:00:00").toLocaleDateString("pt-BR", { month: "long", year: "numeric" }); return t.charAt(0).toUpperCase() + t.slice(1); }
+  function despesasPrevistasMesQueVem(d) {
+    return listaDespesasTodasMes(d, mesQueVem()).filter((x) => x.status !== "Pago")
       .sort((a, b) => (a.data || "").localeCompare(b.data || ""));
   }
 
