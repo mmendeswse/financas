@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "2.0.2";
+  const VERSAO_APP = "2.1.0";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -38,24 +38,52 @@
     if (reg && reg.recorrencia) return reg.recorrencia;
     return reg && reg.recorrente ? "Mensal" : FREQUENCIAS[0];
   }
-  // "Mensal – 4º dia útil": só para entradas; a data de cada mês é calculada
-  // por F.calcularDataPagamento e o lançamento do mês é criado sozinho
-  const FREQ_4DU = "Mensal – 4º dia útil";
-  const FREQUENCIAS_ENTRADA = [...FREQUENCIAS, FREQ_4DU];
-  const eh4DU = (reg) => !!reg && reg.recorrencia === FREQ_4DU;
+  // Repetição "Personalizar" (entradas e despesas): a data de cada mês segue uma
+  // regra (Nº dia útil, último dia útil ou dia fixo), a cada N meses, e o
+  // lançamento do mês é criado sozinho quando o mês é aberto.
+  const FREQ_PERS = "Personalizar";
+  const FREQ_4DU_ANTIGA = "Mensal – 4º dia útil";           // versão anterior, convertida ao carregar
+  const FREQUENCIAS_REP = [...FREQUENCIAS, FREQ_PERS];
+  const REGRA_PADRAO = { tipo: "diaUtil", n: 4, ajuste: "proximo", intervalo: 1 };
+  const ehPers = (reg) => !!reg && reg.recorrencia === FREQ_PERS;
+  const regraDe = (reg) => ({ ...REGRA_PADRAO, ...((reg && reg.regraRep) || {}) });
+  const dataReg = (x) => String((x && (x.data || x.vencimento)) || "");
+  const mesReg = (x) => dataReg(x).slice(0, 7);
+  const dataDoMesRegra = (regra, mes) => { const [a, m] = mes.split("-").map(Number); return F.calcularDataRegra(a, m, regra).data; };
+  function rotuloRegra(regra) {
+    if (regra.tipo === "ultimoDiaUtil") return "último dia útil";
+    if (regra.tipo === "diaFixo") return `dia ${regra.n}` + (regra.ajuste === "anterior" ? " (ou dia útil anterior)" : regra.ajuste === "manter" ? "" : " (ou próximo dia útil)");
+    return `${regra.n}º dia útil`;
+  }
+  function rotuloIntervalo(n) {
+    return ({ 1: "mensal", 2: "bimestral", 3: "trimestral", 6: "semestral", 12: "anual" })[Number(n) || 1] || `a cada ${n} meses`;
+  }
   function seloFreq(reg) {
     const f = freqDe(reg);
-    if (f === FREQ_4DU) return ` <span class="selo-tag selo-cat">mensal</span>${seloSabado(reg)}`;
+    if (f === FREQ_PERS) {
+      const regra = regraDe(reg);
+      return ` <span class="selo-tag selo-cat" title="Personalizar: ${esc(rotuloRegra(regra))}, ${esc(rotuloIntervalo(regra.intervalo))}">${esc(rotuloIntervalo(regra.intervalo))}</span>${seloSabado(reg)}`;
+    }
     return f === FREQUENCIAS[0] ? "" : ` <span class="selo-tag selo-cat">${esc(f.toLowerCase())}</span>`;
   }
-  // selo extra quando, contando também os sábados, o 4º dia cai num sábado
+  // selo extra quando, na regra de dia útil, contando também os sábados, o dia cai num sábado
   function seloSabado(reg) {
-    if (!eh4DU(reg) || !reg.data) return "";
-    const [a, m] = String(reg.data).split("-").map(Number);
-    const c = F.calcularDataPagamento(a, m);
+    if (!ehPers(reg) || !dataReg(reg)) return "";
+    const regra = regraDe(reg);
+    if (regra.tipo !== "diaUtil") return "";
+    const [a, m] = dataReg(reg).split("-").map(Number);
+    const c = F.calcularDataRegra(a, m, regra);
     if (!c.alertaSabado) return "";
     const dm = c.dataSabado.slice(8, 10) + "/" + c.dataSabado.slice(5, 7);
     return ` <span class="selo-tag selo-sabado" title="É possível resgatar o dinheiro no sábado (${dm}).">⚠️ sábado</span>`;
+  }
+  // converte séries antigas "Mensal – 4º dia útil" para "Personalizar" com a mesma regra
+  function migrarRecorrenciasAntigas() {
+    let mudou = false;
+    ["entradas", "despesas", "contasPagar"].forEach((col) => (DADOS[col] || []).forEach((x) => {
+      if (x.recorrencia === FREQ_4DU_ANTIGA) { x.recorrencia = FREQ_PERS; x.regraRep = { ...REGRA_PADRAO }; mudou = true; }
+    }));
+    if (mudou) A.salvarDados(DADOS, true, true);
   }
 
   const CORES_META = ["#22E08A", "#3FC1E0", "#FFB020", "#B487F0", "#FF6F91", "#7C9CF0"];
@@ -827,9 +855,10 @@
   function iniciar() {
     if (A.definirAparelho) A.definirAparelho(rotuloAparelho());
     DADOS = A.carregarDados();
+    migrarRecorrenciasAntigas();
     I.registrarPontoPatrimonio(DADOS);
     A.salvarDados(DADOS, true, true);   // automático: não conta como alteração sua
-    A.aoMudar(() => { DADOS = A.carregarDados(); renderRota(); });
+    A.aoMudar(() => { DADOS = A.carregarDados(); migrarRecorrenciasAntigas(); renderRota(); });
 
     ligarTopbar();
     ligarSidebar();
@@ -1264,7 +1293,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.0.2" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.1.0" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1756,20 +1785,20 @@
     let detalhe = "";
     let secao = "investimentos";
     if (rotulo === "Bancos") {
-      detalhe = bancosNaOrdem(F.listaBancosComSaldo(d)).map((b) => linha(esc(b.nome), brl(b.saldoAtual))).join("");
+      detalhe = bancosNaOrdem(F.listaBancosComSaldo(d)).map((b) => linha(esc(b.nome), brlSinal(b.saldoAtual))).join("");
       secao = "bancos";
     } else if (["Ações", "FIIs", "ETFs"].indexOf(rotulo) > -1) {
       const cat = rotulo === "Ações" ? "Ação" : rotulo === "FIIs" ? "FII" : "ETF";
       detalhe = I.listaAcoesComCalculo(d).filter((a) => a.categoria === cat)
-        .map((a) => linha(esc(a.ticker) + " · " + a.quantidade + " un.", brl(a.valorAtual))).join("");
+        .map((a) => linha(esc(a.ticker) + " · " + a.quantidade + " un.", brlSinal(a.valorAtual))).join("");
       secao = "acoes";
     } else {
       detalhe = d.investimentos.filter((i) => i.categoria === rotulo)
-        .map((i) => linha(esc(i.nome), brl(I.valorLiquidoInvestimento(i)))).join("");
+        .map((i) => linha(esc(i.nome), brlSinal(I.valorLiquidoInvestimento(i)))).join("");
     }
     painelSimples(rotulo, total > 0 ? (item.valor / total) * 100 : 0, "do seu patrimônio líquido",
       "valor deste grupo ÷ patrimônio líquido",
-      detalhe + linha("Total", brl(item.valor), "up"), secao);
+      detalhe + linha("Total", brlSinal(item.valor), "up"), secao);
   }
 
   function explicarMeta(id) {
@@ -2013,7 +2042,7 @@
     const bancos = bancosNaOrdem(F.listaBancosComSaldo(d)).map((b) => ({ id: b.id, nome: b.nome, valor: b.saldoAtual, cor: b.cor }));
     const composicao = itensPatrimonio(d);
     const totalComp = composicao.reduce((s, i) => s + i.valor, 0);
-    const legendaComp = composicao.length ? composicao.map((i) => `<button class="legenda-linha clicavel" data-acao="explicar-classe" data-rotulo="${esc(i.rotulo)}" title="Ver detalhes"><span class="legenda-nome"><span class="legenda-ponto" style="background:${i.cor}"></span>${esc(i.rotulo)}</span><span class="legenda-pct" style="color:${i.cor}">${(totalComp > 0 ? (i.valor / totalComp) * 100 : 0).toFixed(1).replace(".", ",")}%</span><span class="legenda-val">${brl(i.valor)}</span></button>`).join("") : `<div class="empty">Sem ativos ainda.</div>`;
+    const legendaComp = composicao.length ? composicao.map((i) => `<button class="legenda-linha clicavel" data-acao="explicar-classe" data-rotulo="${esc(i.rotulo)}" title="Ver detalhes"><span class="legenda-nome"><span class="legenda-ponto" style="background:${i.cor}"></span>${esc(i.rotulo)}</span><span class="legenda-pct" style="color:${i.cor}">${(totalComp > 0 ? (i.valor / totalComp) * 100 : 0).toFixed(1).replace(".", ",")}%</span><span class="legenda-val">${brlSinal(i.valor)}</span></button>`).join("") : `<div class="empty">Sem ativos ainda.</div>`;
 
     if (!anoRD) anoRD = String(new Date().getFullYear());
     if (!anoEvo) anoEvo = String(new Date().getFullYear());
@@ -2047,7 +2076,7 @@
 
       <div class="grid">
         <div class="c3">${card("card-centrado", "Saldo banco", "mapa ativos", `<span class="acc-laranja" style="font-size:12px;font-weight:700">Total: ${brlSinal(p.bancos)}</span>`, `<div class="body pad">${barList(bancos)}</div>`)}</div>
-        <div class="c3">${card("card-centrado", "Composição patrimônio", "ativos líquidos", `<span class="acc-laranja" style="font-size:12px;font-weight:700">Total: ${brlSinal(p.bancos + I.totalLiquidoOutros(d) + p.acoes)}</span>`, `
+        <div class="c3">${card("card-centrado", "Composição patrimônio", "ativos líquidos", `<span class="acc-laranja" style="font-size:12px;font-weight:700">Total: ${brlSinal(I.totalLiquidoOutros(d) + p.acoes)}</span>`, `
           <div class="donut-wrap">
             <div class="donut-centro"><canvas id="graf-dash-composicao" width="150" height="150" style="width:150px;height:150px"></canvas>
               <button class="donut-rotulo clicavel" data-acao="explicar-kpi" data-kpi="investido" title="Ver como este percentual é calculado"><b>${pctInvestido.toFixed(1).replace(".", ",")}%</b><span class="acc-laranja">INVESTIDO</span></button>
@@ -2135,7 +2164,7 @@
     const itens = itensPatrimonio(d);
     const total = itens.reduce((s, i) => s + i.valor, 0);
     const legendaHtml = itens.length
-      ? itens.map((i) => `<div class="legenda-linha"><span class="legenda-nome"><span class="legenda-ponto" style="background:${i.cor}"></span>${esc(i.rotulo)}</span><span class="legenda-pct" style="color:${i.cor}">${(total > 0 ? (i.valor / total) * 100 : 0).toFixed(0)}%</span><span class="legenda-val">${brl(i.valor)}</span></div>`).join("")
+      ? itens.map((i) => `<div class="legenda-linha"><span class="legenda-nome"><span class="legenda-ponto" style="background:${i.cor}"></span>${esc(i.rotulo)}</span><span class="legenda-pct" style="color:${i.cor}">${(total > 0 ? (i.valor / total) * 100 : 0).toFixed(0)}%</span><span class="legenda-val">${brlSinal(i.valor)}</span></div>`).join("")
       : `<div class="empty">Cadastre bancos, ações ou investimentos para ver a composição.</div>`;
 
     const serie = F.serieMensal(d, 12);
@@ -2180,7 +2209,7 @@
       </div>
 
       <div class="grid">
-        <div class="c6">${card("card-centrado", "Composição patrimônio", "ativos líquidos", `<span class="acc-laranja" style="font-size:12px;font-weight:700">Total: ${brlSinal(p.bancos + I.totalLiquidoOutros(d) + p.acoes)}</span>`, `<div class="donut-wrap"><div class="donut-centro"><canvas id="graf-patrimonio-divisao" width="150" height="150" style="width:150px;height:150px"></canvas><div class="donut-rotulo"><b>${brl(p.bruto).replace("R$", "").trim()}</b><span class="acc-laranja">BRUTO</span></div></div><div class="legenda">${legendaHtml}</div></div>`)}</div>
+        <div class="c6">${card("card-centrado", "Composição patrimônio", "ativos líquidos", `<span class="acc-laranja" style="font-size:12px;font-weight:700">Total: ${brlSinal(I.totalLiquidoOutros(d) + p.acoes)}</span>`, `<div class="donut-wrap"><div class="donut-centro"><canvas id="graf-patrimonio-divisao" width="150" height="150" style="width:150px;height:150px"></canvas><div class="donut-rotulo"><b>${brl(p.bruto).replace("R$", "").trim()}</b><span class="acc-laranja">BRUTO</span></div></div><div class="legenda">${legendaHtml}</div></div>`)}</div>
         <div class="c6">${card("", "Resumo patrimonial", "", "", `
           <div class="kv"><span class="dim">Dinheiro em bancos</span><b>${brl(p.bancos)}</b></div>
           <div class="kv"><span class="dim">+ Ações e FIIs</span><b>${brl(p.acoes)}</b></div>
@@ -2348,15 +2377,18 @@
 
   function ocorrenciasNoMes(reg, mes) {
     const freq = freqDe(reg);
-    if (freq === FREQUENCIAS[0] || !reg.data) return [];
-    if (freq === FREQ_4DU) {
-      if (reg.origemRecorrente) return [];                          // é o lançamento de um mês, não a origem
-      if (mes <= String(reg.data).slice(0, 7)) return [];            // começa no mês seguinte ao da origem
+    if (freq === FREQ_PERS) {
+      if (reg.origemRecorrente || !dataReg(reg)) return [];         // é o lançamento de um mês, não a origem
+      const inicio = mesReg(reg);
+      if (mes <= inicio) return [];                                  // começa no mês seguinte ao da origem
       if (reg.ateMes && mes > reg.ateMes) return [];                 // série encerrada ("este e os próximos")
       if (reg.pulados && reg.pulados[mes]) return [];                // mês excluído ("somente este mês")
-      const [a, m] = mes.split("-").map(Number);
-      return [F.calcularDataPagamento(a, m).data];
+      const regra = regraDe(reg);
+      const [a0, m0] = inicio.split("-").map(Number), [a1, m1] = mes.split("-").map(Number);
+      if (((a1 - a0) * 12 + (m1 - m0)) % Math.max(1, Number(regra.intervalo) || 1) !== 0) return [];
+      return [dataDoMesRegra(regra, mes)];
     }
+    if (freq === FREQUENCIAS[0] || !reg.data) return [];
     // âncora vigente: a data original ou a última reancoragem que já vale neste mês
     let ancora = reg.data, desde = null;
     (reg.reancoragens || []).forEach((r) => { if (r.desde <= mes && (!desde || r.desde >= desde)) { desde = r.desde; ancora = r.data; } });
@@ -2665,33 +2697,47 @@
   }
 
 
-  // Cria de verdade o lançamento do mês de cada entrada "Mensal – 4º dia útil"
-  // que ainda não tenha sido criado, com os dados da origem e status Prevista
-  // (pendente). Devolve quantos criou.
-  function materializar4DU(mes) {
+  // ---- séries "Personalizar": funcionam para entradas e para despesas ----
+  // entradas ficam em DADOS.entradas; despesas em DADOS.despesas (pagas) ou
+  // DADOS.contasPagar (previstas) — os meses criados sozinhos entram como contas previstas
+  const COLECOES_SERIE = { entrada: ["entradas"], despesa: ["despesas", "contasPagar"] };
+  const registrosSerie = (tipo) => COLECOES_SERIE[tipo].flatMap((c) => DADOS[c]);
+  const removerRegistro = (tipo, id) => COLECOES_SERIE[tipo].forEach((c) => { DADOS[c] = DADOS[c].filter((x) => x.id !== id); });
+  const definirData = (x, iso) => { if (x.vencimento !== undefined) x.vencimento = iso; else x.data = iso; };
+  const CAMPOS_SERIE = ["descricao", "categoria", "bancoId", "tipo", "obs", "valor"];
+
+  // cria (sem gravar) o lançamento de um mês da série
+  function novaOcorrencia(tipo, orig, mes) {
+    const base = {
+      id: A.novoId(), origemRecorrente: orig.id, descricao: orig.descricao, categoria: orig.categoria,
+      bancoId: orig.bancoId, tipo: orig.tipo, obs: orig.obs || "", valor: valorDoMes(orig, mes),
+      recorrencia: FREQ_PERS, regraRep: regraDe(orig), recorrente: false
+    };
+    const data = dataDoMesRegra(regraDe(orig), mes);
+    if (tipo === "entrada") { const o = { ...base, data, previsto: !mesQuitado(orig, mes) }; DADOS.entradas.push(o); return o; }
+    const o = { ...base, vencimento: data, status: mesQuitado(orig, mes) ? "Pago" : "Pendente", formaPagamento: orig.formaPagamento || "" };
+    DADOS.contasPagar.push(o); return o;
+  }
+
+  // Cria de verdade o lançamento do mês de cada série "Personalizar" que ainda
+  // não tenha sido criado, com os dados da origem e status Prevista.
+  function materializarPers(tipo, mes) {
     let criados = 0;
-    DADOS.entradas.filter((r) => eh4DU(r) && !r.origemRecorrente).forEach((orig) => {
-      const datas = ocorrenciasNoMes(orig, mes);
-      if (!datas.length) return;
-      const jaExiste = DADOS.entradas.some((x) => x.origemRecorrente === orig.id && String(x.data || "").slice(0, 7) === mes);
-      if (jaExiste) return;
-      DADOS.entradas.push({
-        id: A.novoId(), origemRecorrente: orig.id, data: datas[0],
-        descricao: orig.descricao, categoria: orig.categoria, bancoId: orig.bancoId, tipo: orig.tipo, obs: orig.obs || "",
-        valor: valorDoMes(orig, mes), previsto: !mesQuitado(orig, mes),
-        recorrencia: FREQ_4DU, recorrente: false
-      });
-      criados++;
+    const todos = registrosSerie(tipo);
+    todos.filter((r) => ehPers(r) && !r.origemRecorrente).forEach((orig) => {
+      if (!ocorrenciasNoMes(orig, mes).length) return;
+      if (registrosSerie(tipo).some((x) => x.origemRecorrente === orig.id && mesReg(x) === mes)) return;
+      novaOcorrencia(tipo, orig, mes); criados++;
     });
     if (criados) { A.salvarDados(DADOS, true); agendarEnvioSync(); }   // grava sem redesenhar a tela em laço
     return criados;
   }
 
-  // Pergunta o alcance de uma alteração ou exclusão numa entrada 4º dia útil
-  function escolherAlcance4DU(titulo, aoEscolher) {
+  // Pergunta o alcance de uma alteração ou exclusão numa série "Personalizar"
+  function escolherAlcance(titulo, aoEscolher) {
     abrirModal(`
       <h3>${esc(titulo)}</h3>
-      <p class="campo ajuda" style="margin:0 0 14px">Esta entrada se repete todo mês no 4º dia útil.</p>
+      <p class="campo ajuda" style="margin:0 0 14px">Este lançamento faz parte de uma repetição personalizada.</p>
       <div class="modal-acoes" style="flex-wrap:wrap">
         <button class="btn primario" id="btnAlcanceMes">Somente este mês</button>
         <button class="btn primario" id="btnAlcanceProximos">Este e os próximos</button>
@@ -2701,79 +2747,142 @@
     document.getElementById("btnAlcanceProximos").onclick = () => { fecharModal(); aoEscolher("proximos"); };
     document.getElementById("btnAlcanceCancelar").onclick = fecharModal;
   }
-  const mesDe4DU = (x) => String(x.data || "").slice(0, 7);
   const proximoMes = (mes) => { const [a, m] = mes.split("-").map(Number); const d2 = new Date(a, m, 1); return `${d2.getFullYear()}-${String(d2.getMonth() + 1).padStart(2, "0")}`; };
   const mesAnterior = (mes) => { const [a, m] = mes.split("-").map(Number); const d2 = new Date(a, m - 2, 1); return `${d2.getFullYear()}-${String(d2.getMonth() + 1).padStart(2, "0")}`; };
-  const dataDoMes4DU = (mes) => { const [a, m] = mes.split("-").map(Number); return F.calcularDataPagamento(a, m).data; };
-  const CAMPOS_4DU = ["descricao", "categoria", "bancoId", "tipo", "obs", "valor"];
-
-  // A origem deixa de existir num mês: o mês seguinte vira a nova origem da série
-  function passarOrigemAdiante(orig) {
-    const prox = proximoMes(mesDe4DU(orig));
-    let nova = DADOS.entradas.find((x) => x.origemRecorrente === orig.id && mesDe4DU(x) === prox);
-    if (nova) { delete nova.origemRecorrente; }
-    else if (!orig.ateMes || prox <= orig.ateMes) {
-      nova = { ...orig, id: A.novoId(), data: dataDoMes4DU(prox), previsto: !mesQuitado(orig, prox), valor: valorDoMes(orig, prox) };
-      DADOS.entradas.push(nova);
-    }
-    if (nova) {
-      Object.assign(nova, { recorrencia: FREQ_4DU, recorrente: true, meses: orig.meses, pulados: orig.pulados, ateMes: orig.ateMes, valorRepeticao: orig.valorRepeticao });
-      DADOS.entradas.forEach((x) => { if (x.origemRecorrente === orig.id) x.origemRecorrente = nova.id; });
-    }
-    return nova || null;
+  // próximo mês em que a série acontece (respeita o intervalo e os meses excluídos)
+  function proximaOcorrencia(orig, depoisDe) {
+    let mes = depoisDe;
+    for (let i = 0; i < 60; i++) { mes = proximoMes(mes); if (ocorrenciasNoMes({ ...orig, data: dataReg(orig), vencimento: undefined }, mes).length) return mes; if (orig.ateMes && mes > orig.ateMes) return null; }
+    return null;
   }
 
-  function salvar4DU(e, registro, alcance) {
-    const mes = mesDe4DU(e);
-    const novos = {}; CAMPOS_4DU.forEach((k) => { novos[k] = registro[k]; });
+  // A origem deixa de valer num mês: a próxima ocorrência vira a nova origem da série
+  function passarOrigemAdiante(tipo, orig) {
+    const prox = proximaOcorrencia(orig, mesReg(orig));
+    if (!prox) return null;
+    let nova = registrosSerie(tipo).find((x) => x.origemRecorrente === orig.id && mesReg(x) === prox);
+    if (!nova) nova = novaOcorrencia(tipo, orig, prox);
+    delete nova.origemRecorrente;
+    Object.assign(nova, { recorrencia: FREQ_PERS, recorrente: true, regraRep: regraDe(orig), meses: orig.meses, pulados: orig.pulados, ateMes: orig.ateMes, valorRepeticao: orig.valorRepeticao });
+    registrosSerie(tipo).forEach((x) => { if (x.origemRecorrente === orig.id) x.origemRecorrente = nova.id; });
+    return nova;
+  }
+
+  function salvarPers(tipo, e, registro, alcance) {
+    const mes = mesReg(e);
+    const novos = {}; CAMPOS_SERIE.forEach((k) => { if (registro[k] !== undefined) novos[k] = registro[k]; });
+    const regraNova = registro.regraRep ? { ...registro.regraRep } : null;
     if (e.origemRecorrente) {
-      const orig = achar(DADOS.entradas, e.origemRecorrente);
+      const orig = registrosSerie(tipo).find((x) => x.id === e.origemRecorrente);
       Object.assign(e, novos);                                          // o mês editado sempre muda
       if (alcance === "proximos" && orig) {
         // encerra a série antiga no mês anterior e começa uma nova a partir deste
         orig.ateMes = mesAnterior(mes);
         delete e.origemRecorrente;
-        Object.assign(e, { recorrencia: FREQ_4DU, recorrente: true, meses: {}, pulados: {}, valorRepeticao: undefined });
-        DADOS.entradas.forEach((x) => {
-          if (x.origemRecorrente === orig.id && mesDe4DU(x) > mes) { x.origemRecorrente = e.id; Object.assign(x, novos); }
+        Object.assign(e, { recorrencia: FREQ_PERS, recorrente: true, regraRep: regraNova || regraDe(orig), meses: {}, pulados: {}, valorRepeticao: undefined });
+        if (regraNova) definirData(e, dataDoMesRegra(regraNova, mes));
+        registrosSerie(tipo).forEach((x) => {
+          if (x.origemRecorrente === orig.id && mesReg(x) > mes) {
+            x.origemRecorrente = e.id; Object.assign(x, novos);
+            if (regraNova) { x.regraRep = { ...regraNova }; definirData(x, dataDoMesRegra(regraNova, mesReg(x))); }
+          }
         });
       }
     } else if (alcance === "mes") {
-      // só o mês da origem muda: a série continua com os dados antigos a partir do mês seguinte
-      const nova = passarOrigemAdiante(e);
+      // só o mês da origem muda: a série continua com os dados antigos a partir da próxima ocorrência
+      const nova = passarOrigemAdiante(tipo, e);
       Object.assign(e, novos, { meses: undefined, pulados: undefined, ateMes: undefined, valorRepeticao: undefined });
-      // continua fazendo parte da série (com o selo MENSAL), agora como um mês comum dela
-      if (nova) Object.assign(e, { origemRecorrente: nova.id, recorrencia: FREQ_4DU, recorrente: false });
+      if (nova) Object.assign(e, { origemRecorrente: nova.id, recorrencia: FREQ_PERS, recorrente: false });
       else Object.assign(e, { recorrencia: FREQUENCIAS[0], recorrente: false });
     } else {
       Object.assign(e, novos);
-      DADOS.entradas.forEach((x) => { if (x.origemRecorrente === e.id && mesDe4DU(x) > mes) Object.assign(x, novos); });
+      if (regraNova) { e.regraRep = { ...regraNova }; definirData(e, dataDoMesRegra(regraNova, mes)); }
+      registrosSerie(tipo).forEach((x) => {
+        if (x.origemRecorrente === e.id && mesReg(x) > mes) {
+          Object.assign(x, novos);
+          if (regraNova) { x.regraRep = { ...regraNova }; definirData(x, dataDoMesRegra(regraNova, mesReg(x))); }
+        }
+      });
     }
   }
 
-  function excluir4DU(e, alcance) {
-    const mes = mesDe4DU(e);
+  function excluirPers(tipo, e, alcance) {
+    const mes = mesReg(e);
     if (e.origemRecorrente) {
-      const orig = achar(DADOS.entradas, e.origemRecorrente);
+      const orig = registrosSerie(tipo).find((x) => x.id === e.origemRecorrente);
       if (orig) {
-        if (alcance === "mes") { orig.pulados = { ...(orig.pulados || {}), [mes]: true }; }
+        if (alcance === "mes") orig.pulados = { ...(orig.pulados || {}), [mes]: true };
         else {
           orig.ateMes = mesAnterior(mes);
-          DADOS.entradas = DADOS.entradas.filter((x) => !(x.origemRecorrente === orig.id && mesDe4DU(x) > mes));
+          registrosSerie(tipo).filter((x) => x.origemRecorrente === orig.id && mesReg(x) > mes).forEach((x) => removerRegistro(tipo, x.id));
         }
       }
-      DADOS.entradas = DADOS.entradas.filter((x) => x.id !== e.id);
+      removerRegistro(tipo, e.id);
     } else if (alcance === "mes") {
-      passarOrigemAdiante(e);
-      DADOS.entradas = DADOS.entradas.filter((x) => x.id !== e.id);
+      passarOrigemAdiante(tipo, e);
+      removerRegistro(tipo, e.id);
     } else {
-      DADOS.entradas = DADOS.entradas.filter((x) => x.id !== e.id && x.origemRecorrente !== e.id);
+      registrosSerie(tipo).filter((x) => x.origemRecorrente === e.id).forEach((x) => removerRegistro(tipo, x.id));
+      removerRegistro(tipo, e.id);
     }
+  }
+
+  // Campos da repetição "Personalizar" dentro dos formulários
+  function htmlPersonalizar(regra) {
+    const r = { ...REGRA_PADRAO, ...(regra || {}) };
+    const op = (lista, atual) => lista.map(([v, t]) => `<option value="${v}"${String(v) === String(atual) ? " selected" : ""}>${t}</option>`).join("");
+    return `<div class="bloco-personalizar" id="blocoPers" style="display:none">
+        <div class="par">
+          <div class="campo"><label for="p_tipo">Regra da data</label><select id="p_tipo">${op([["diaUtil", "Nº dia útil do mês"], ["ultimoDiaUtil", "Último dia útil do mês"], ["diaFixo", "Dia fixo do mês"]], r.tipo)}</select></div>
+          <div class="campo" id="p_campoN"><label for="p_n" id="p_rotuloN">Qual dia útil</label><input id="p_n" type="number" min="1" max="31" value="${r.n}"></div>
+        </div>
+        <div class="par">
+          <div class="campo" id="p_campoAjuste"><label for="p_ajuste">Se cair em fim de semana ou feriado</label><select id="p_ajuste">${op([["proximo", "Próximo dia útil"], ["anterior", "Dia útil anterior"], ["manter", "Manter a data"]], r.ajuste)}</select></div>
+          <div class="campo"><label for="p_intervalo">Repetir</label><select id="p_intervalo">${op([[1, "Todo mês"], [2, "A cada 2 meses"], [3, "A cada 3 meses"], [6, "A cada 6 meses"], [12, "Uma vez por ano"]], r.intervalo)}</select></div>
+        </div>
+        <div class="ajuda" id="p_previa"></div>
+      </div>`;
+  }
+  // liga os campos: mostra o bloco, calcula a data (somente leitura) e a prévia das próximas datas
+  function ligarPersonalizar(mesDoForm, ajudaRepetição) {
+    const campoRec = document.getElementById("f_rec"), campoData = document.getElementById("f_data");
+    const bloco = document.getElementById("blocoPers");
+    const ajudaRec = document.getElementById("ajudaRec");
+    const textoPadrao = ajudaRec ? ajudaRec.textContent : "";
+    let ajudaData = null;
+    const ler = () => ({
+      tipo: document.getElementById("p_tipo").value,
+      n: Math.max(1, Math.min(31, Number(document.getElementById("p_n").value) || 1)),
+      ajuste: document.getElementById("p_ajuste").value,
+      intervalo: Number(document.getElementById("p_intervalo").value) || 1
+    });
+    const atualizar = () => {
+      const ativo = campoRec.value === FREQ_PERS;
+      bloco.style.display = ativo ? "" : "none";
+      campoData.readOnly = ativo;
+      campoData.classList.toggle("somente-leitura", ativo);
+      if (!ajudaData) { ajudaData = document.createElement("div"); ajudaData.className = "ajuda"; campoData.parentNode.appendChild(ajudaData); }
+      if (ajudaRec) ajudaRec.textContent = ativo ? ajudaRepetição : textoPadrao;
+      if (!ativo) { ajudaData.textContent = ""; return; }
+      const r = ler();
+      document.getElementById("p_campoN").style.display = r.tipo === "ultimoDiaUtil" ? "none" : "";
+      document.getElementById("p_rotuloN").textContent = r.tipo === "diaFixo" ? "Dia do mês" : "Qual dia útil";
+      document.getElementById("p_campoAjuste").style.display = r.tipo === "diaFixo" ? "" : "none";
+      campoData.value = dataDoMesRegra(r, mesDoForm);
+      ajudaData.textContent = `A data é calculada todo mês pela regra: ${rotuloRegra(r)}.`;
+      const prox = []; let mes = mesDoForm;
+      for (let i = 0; i < 4; i++) { const [a, m] = mes.split("-").map(Number); const c = F.calcularDataRegra(a, m, r); prox.push(fmtData(c.data) + (c.alertaSabado ? " ⚠️" : "")); for (let k = 0; k < r.intervalo; k++) mes = proximoMes(mes); }
+      document.getElementById("p_previa").textContent = "Próximas datas: " + prox.join(" · ");
+    };
+    ["change", "input"].forEach((ev) => bloco.addEventListener(ev, atualizar));
+    campoRec.addEventListener("change", atualizar);
+    atualizar();
+    return () => (campoRec.value === FREQ_PERS ? ler() : null);
   }
 
   function renderEntradas(d) {
     if (!mesEntradas) mesEntradas = F.mesAtual();
-    materializar4DU(mesEntradas);          // cria o lançamento do mês das entradas "4º dia útil"
+    materializarPers("entrada", mesEntradas);   // cria o lançamento do mês das séries "Personalizar"
     d = DADOS;
     const previstasEnt = repeticoesPrevistas(d.entradas, mesEntradas, (reg, data) => ({
       ...reg, data, valor: valorDoMes(reg, data.slice(0, 7)), prevista: true,
@@ -2841,9 +2950,9 @@
   function abrirModalEntrada(id, bancoIdPadrao, previsao) {
     let e = id ? achar(DADOS.entradas, id) : null;
     // repetição "4º dia útil" vista de outro lugar (ex.: painel): cria o mês e abre o lançamento real
-    if (e && previsao && eh4DU(e)) {
+    if (e && previsao && ehPers(e)) {
       const mes = String(previsao.data).slice(0, 7);
-      materializar4DU(mes);
+      materializarPers("entrada", mes);
       const inst = DADOS.entradas.find((x) => x.origemRecorrente === e.id && String(x.data).slice(0, 7) === mes);
       if (inst) { e = inst; previsao = null; }
     }
@@ -2859,32 +2968,18 @@
         <div class="campo"><label for="f_banco">Banco</label><select id="f_banco">${opcoesBancos(DADOS.bancos, e ? e.bancoId : (bancoIdPadrao || ""), true)}</select></div>
       </div>
       <div class="campo"><label for="f_tipo">Tipo</label><select id="f_tipo">${opcoes(["Fixa", "Variável"], e ? e.tipo : "Fixa")}</select></div>
-      <div class="campo"><label for="f_rec">Repetição</label><select id="f_rec">${opcoes(FREQUENCIAS_ENTRADA, freqDe(e))}</select>
+      <div class="campo"><label for="f_rec">Repetição</label><select id="f_rec">${opcoes(FREQUENCIAS_REP, freqDe(e))}</select>
         <div class="ajuda" id="ajudaRec">Serve para identificar entradas que se repetem; o lançamento seguinte continua sendo feito por você.</div></div>
+      ${htmlPersonalizar(e && e.regraRep)}
       <div class="campo"><label for="f_obs">Observação</label><textarea id="f_obs" placeholder="Opcional">${e ? esc(e.obs || "") : ""}</textarea></div>
       <div class="modal-acoes">
         <button class="btn primario salvar" id="btnSalvar">Salvar</button>
         ${e ? `<button class="btn perigo" id="btnExcluir">Excluir</button>` : ""}
       </div>`);
 
-    // "Mensal – 4º dia útil": a data vira calculada (somente leitura) para o mês escolhido
-    const campoData = document.getElementById("f_data"), campoRec = document.getElementById("f_rec");
-    const ajudaRecPadrao = document.getElementById("ajudaRec").textContent;
-    const mesDoForm = e ? String(e.data).slice(0, 7) : (mesEntradas || (campoData.value || hojeISO()).slice(0, 7));   // mês aberto na guia
-    let ajudaData = null;
-    const atualizarData4DU = () => {
-      const ativo = campoRec.value === FREQ_4DU;
-      campoData.readOnly = ativo;
-      campoData.classList.toggle("somente-leitura", ativo);
-      if (ativo) campoData.value = dataDoMes4DU(mesDoForm);
-      if (!ajudaData) { ajudaData = document.createElement("div"); ajudaData.className = "ajuda"; campoData.parentNode.appendChild(ajudaData); }
-      ajudaData.textContent = ativo ? "A data é calculada todo mês pelo 4º dia útil." : "";
-      document.getElementById("ajudaRec").textContent = ativo
-        ? "O lançamento de cada mês é criado sozinho, com status Prevista, para você marcar como Pago depois."
-        : ajudaRecPadrao;
-    };
-    campoRec.addEventListener("change", atualizarData4DU);
-    atualizarData4DU();
+    // "Personalizar": a data vira calculada (somente leitura) para o mês escolhido
+    const mesDoForm = e ? String(e.data).slice(0, 7) : (mesEntradas || (document.getElementById("f_data").value || hojeISO()).slice(0, 7));   // mês aberto na guia
+    const regraDoForm = ligarPersonalizar(mesDoForm, "O lançamento de cada mês é criado sozinho, com status Prevista, para você marcar como Pago depois.");
 
     document.getElementById("btnSalvar").onclick = () => {
       const banco = document.getElementById("f_banco").value;
@@ -2903,13 +2998,13 @@
         recorrente: document.getElementById("f_rec").value !== FREQUENCIAS[0],
         obs: document.getElementById("f_obs").value.trim()
       };
-      if (registro.recorrencia === FREQ_4DU) registro.data = dataDoMes4DU(registro.data.slice(0, 7));
-      if (e && eh4DU(e) && registro.recorrencia === FREQ_4DU) {
-        // entrada já existente da série: pergunta se vale só para este mês ou também para os próximos
-        escolherAlcance4DU("Salvar alteração", (alcance) => { salvar4DU(e, registro, alcance); salvarEAtualizar("Entrada atualizada."); });
+      if (registro.recorrencia === FREQ_PERS) { registro.regraRep = regraDoForm(); registro.data = dataDoMesRegra(registro.regraRep, mesDoForm); }
+      if (e && ehPers(e) && registro.recorrencia === FREQ_PERS) {
+        // lançamento já existente da série: pergunta se vale só para este mês ou também para os próximos
+        escolherAlcance("Salvar alteração", (alcance) => { salvarPers("entrada", e, registro, alcance); salvarEAtualizar("Entrada atualizada."); });
         return;
       }
-      if (!e && registro.recorrencia === FREQ_4DU) registro.previsto = true;   // o mês da origem também começa pendente
+      if (!e && registro.recorrencia === FREQ_PERS) registro.previsto = true;   // o mês da origem também começa pendente
       if (previsao) {
         // muda só o mês editado, dentro do próprio lançamento recorrente
         gravarAjuste(e, previsao.data.slice(0, 7), { valor: registro.valor });
@@ -2921,8 +3016,8 @@
     };
     if (e) document.getElementById("btnExcluir").onclick = () => {
       fecharModal();
-      if (eh4DU(e)) {
-        escolherAlcance4DU("Excluir entrada", (alcance) => { excluir4DU(e, alcance); salvarEAtualizar("Entrada excluída."); });
+      if (ehPers(e)) {
+        escolherAlcance("Excluir entrada", (alcance) => { excluirPers("entrada", e, alcance); salvarEAtualizar("Entrada excluída."); });
         return;
       }
       confirmarExclusao("Excluir esta entrada?", () => {
@@ -2945,6 +3040,9 @@
   }
 
   function renderDespesas(d) {
+    if (!mesDespesas) mesDespesas = F.mesAtual();
+    materializarPers("despesa", mesDespesas);   // cria o lançamento do mês das séries "Personalizar"
+    d = DADOS;
     // a tela reúne o que já saiu (despesas lançadas) e o que ainda vai
     // sair (contas a pagar), com o status de cada linha
     const lancadas = d.despesas.map((x) => ({
@@ -3000,7 +3098,7 @@
         lista.map((x) => `
         <div class="rw clicavel${x.prevista ? " linha-prevista" : ""}" style="${gridD}" data-acao="${x.prevista ? (x.origem === "conta" ? "editar-previsao-conta" : "editar-previsao") : (x.origem === "despesa" ? "editar-despesa" : "editar-conta")}" data-id="${x.id}" data-data="${x.data}" title="${x.prevista ? "Abre este mês para edição (o valor muda só aqui)" : "Abrir para editar"}">
           <div class="dim" style="font-size:12px">${fmtData(x.data)}</div>
-          <div><div class="nm">${esc(x.descricao)}${x.recorrencia && x.recorrencia !== FREQUENCIAS[0] ? ` <span class="selo-tag selo-cat">${esc(x.recorrencia.toLowerCase())}</span>` : ""}</div><div class="sub">${esc(x.categoria || "—")} · ${esc(x.tipo || "Variável")}</div></div>
+          <div><div class="nm">${esc(x.descricao)}${seloFreq({ ...(registrosSerie("despesa").find((y) => y.id === x.id) || {}), recorrencia: x.recorrencia, data: x.data })}</div><div class="sub">${esc(x.categoria || "—")} · ${esc(x.tipo || "Variável")}</div></div>
           <div>${x.origem === "despesa" || x.pagoCom !== "—"
             ? `<button class="cel-banco cel-banco-botao" data-acao="${x.origem === "despesa" ? "trocar-banco" : "trocar-banco-conta"}" data-id="${x.id}" title="Trocar o banco (nas repetições, altera o lançamento original)">${marcaBanco(x.pagoCom, 26)}<span class="dim">${esc(x.pagoCom)}</span></button>`
             : `<span class="cel-banco">${x.pagoCom && x.pagoCom !== "—" ? marcaBanco(x.pagoCom, 26) + `<span class="dim">${esc(x.pagoCom)}</span>` : '<span class="dim">—</span>'}</span>`}</div>
@@ -3037,7 +3135,14 @@
   // conta a pagar com a data informada como vencimento.
   function abrirModalDespesa(id, origem, previsao) {
     origem = origem || "despesa";
-    const x = id ? achar(origem === "conta" ? DADOS.contasPagar : DADOS.despesas, id) : null;
+    let x = id ? achar(origem === "conta" ? DADOS.contasPagar : DADOS.despesas, id) : null;
+    // mês de uma série "Personalizar" visto de outro lugar: cria o mês e abre o lançamento real
+    if (x && previsao && ehPers(x)) {
+      const mesP = String(previsao.data).slice(0, 7);
+      materializarPers("despesa", mesP);
+      const inst = registrosSerie("despesa").find((y) => y.origemRecorrente === x.id && mesReg(y) === mesP);
+      if (inst) { x = inst; origem = DADOS.contasPagar.includes(inst) ? "conta" : "despesa"; previsao = null; }
+    }
     const ehConta = origem === "conta";
     const statusAtual = x ? (ehConta ? (F.statusReal(x) === "Pago" ? "Pago" : "Prevista") : "Pago") : "Pago";
     const dataAtual = previsao ? previsao.data : (x ? (ehConta ? x.vencimento : x.data) : hojeISO());
@@ -3059,7 +3164,9 @@
           <div class="campo"><label for="f_pagarcom">Banco</label><select id="f_pagarcom">${opcoesPagarCom(DADOS, x ? x.bancoId : "", x && !ehConta ? x.cartaoId : "")}</select></div>
           <div class="campo"><label for="f_forma">Forma</label><select id="f_forma">${opcoes(FORMAS_PAGAMENTO, x ? x.formaPagamento : FORMAS_PAGAMENTO[0])}</select></div>
         </div>
-        <div class="campo"><label for="f_rec">Repetição</label><select id="f_rec">${opcoes(FREQUENCIAS, freqDe(x))}</select></div>
+        <div class="campo"><label for="f_rec">Repetição</label><select id="f_rec">${opcoes(FREQUENCIAS_REP, freqDe(x))}</select>
+          <div class="ajuda" id="ajudaRec"></div></div>
+      ${htmlPersonalizar(x && x.regraRep)}
       </div>
       <div class="campo"><label for="f_obs">Observação</label><textarea id="f_obs" placeholder="Opcional">${x ? esc(x.obs || "") : ""}</textarea></div>
       <div class="modal-acoes">
@@ -3074,11 +3181,29 @@
       document.getElementById("rotuloData").textContent = pago ? "Data" : "Data de vencimento";
     });
 
+    const mesDoFormD = x ? String(ehConta ? x.vencimento : x.data).slice(0, 7) : (mesDespesas || hojeISO().slice(0, 7));   // mês aberto na guia
+    const regraDoFormD = ligarPersonalizar(mesDoFormD, "O lançamento de cada mês é criado sozinho, com status Prevista, para você marcar como Pago depois.");
+
     document.getElementById("btnSalvar").onclick = () => {
       const status = selStatus.value;
       const desc = document.getElementById("f_desc").value.trim();
       if (!desc) { toast("Descreva o lançamento."); return; }
-      const data = document.getElementById("f_data").value || hojeISO();
+      const regraLida = regraDoFormD();
+      const data = regraLida ? dataDoMesRegra(regraLida, mesDoFormD) : (document.getElementById("f_data").value || hojeISO());
+      if (x && ehPers(x) && regraLida) {
+        // lançamento já existente da série: pergunta o alcance e aplica o status só no mês editado
+        const pagarCom = document.getElementById("f_pagarcom") ? document.getElementById("f_pagarcom").value : "";
+        const [tipoPg, idPg] = String(pagarCom || ":").split(":");
+        const reg = { descricao: desc, categoria: document.getElementById("f_cat").value, tipo: document.getElementById("f_tipo").value,
+          obs: document.getElementById("f_obs").value.trim(), valor: numIn(document.getElementById("f_valor").value), regraRep: regraLida };
+        if (tipoPg === "banco" && idPg) reg.bancoId = idPg;
+        escolherAlcance("Salvar alteração", (alcance) => {
+          salvarPers("despesa", x, reg, alcance);
+          if (DADOS.contasPagar.includes(x)) x.status = status === "Pago" ? "Pago" : "Pendente";
+          salvarEAtualizar("Lançamento atualizado.");
+        });
+        return;
+      }
       const valor = numIn(document.getElementById("f_valor").value);
       const categoria = document.getElementById("f_cat").value;
       const tipo = document.getElementById("f_tipo").value;
@@ -3093,7 +3218,7 @@
           bancoId: tipoPg === "banco" ? idPg : "", cartaoId: tipoPg === "cartao" ? idPg : "",
           valor, formaPagamento: document.getElementById("f_forma").value,
           recorrencia: document.getElementById("f_rec").value,
-          recorrente: document.getElementById("f_rec").value !== FREQUENCIAS[0], obs
+          recorrente: document.getElementById("f_rec").value !== FREQUENCIAS[0], regraRep: regraLida || undefined, obs
         };
         if (previsao) {
           gravarAjuste(x, previsao.data.slice(0, 7), { valor: registro.valor, pago: true });
@@ -3112,7 +3237,7 @@
           bancoId: tipoP === "banco" ? idP : "",
           formaPagamento: document.getElementById("f_forma").value,
           recorrencia: document.getElementById("f_rec").value,
-          recorrente: document.getElementById("f_rec").value !== FREQUENCIAS[0]
+          recorrente: document.getElementById("f_rec").value !== FREQUENCIAS[0], regraRep: regraLida || undefined
         };
         if (previsao) {
           gravarAjuste(x, previsao.data.slice(0, 7), { valor: registro.valor, pago: false });
@@ -3129,6 +3254,10 @@
 
     if (x && !previsao) document.getElementById("btnExcluir").onclick = () => {
       fecharModal();
+      if (ehPers(x)) {
+        escolherAlcance("Excluir lançamento", (alcance) => { excluirPers("despesa", x, alcance); salvarEAtualizar("Lançamento excluído."); });
+        return;
+      }
       confirmarExclusao("Excluir este lançamento?", () => {
         if (ehConta) DADOS.contasPagar = DADOS.contasPagar.filter((r) => r.id !== x.id);
         else DADOS.despesas = DADOS.despesas.filter((r) => r.id !== x.id);

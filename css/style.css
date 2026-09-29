@@ -1185,3 +1185,7 @@ input.somente-leitura { opacity: .75; cursor: not-allowed; }
 .kv.kv-secao > span { font-size: 11px; letter-spacing: .09em; text-transform: uppercase; font-weight: 800; }
 .kv.kv-secao-up > span { color: var(--up); } .kv.kv-secao-down > span { color: var(--down); }
 .cartao-item .saldo.saldo-branco { color: #FFFFFF; }
+/* repetição "Personalizar": opções da regra dentro do formulário */
+.bloco-personalizar { border: 1px solid var(--linha-2); border-radius: 10px; padding: 12px 12px 4px; margin: -4px 0 14px; background: var(--painel-2); }
+.bloco-personalizar .campo { margin-bottom: 10px; }
+.bloco-personalizar #p_previa { margin: 0 0 8px; color: var(--cy); }

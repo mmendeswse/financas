@@ -282,14 +282,42 @@
   //  - alertaSabado: contando de segunda a sábado (sem domingos e feriados),
   //    se o 4º dia cair num sábado, o dinheiro já pode ser resgatado nesse sábado
   function calcularDataPagamento(ano, mes) {
-    var util = enesimoDia(ano, mes, 4, [1, 2, 3, 4, 5]);
-    var comSabado = enesimoDia(ano, mes, 4, [1, 2, 3, 4, 5, 6]);
+    return calcularDataRegra(ano, mes, { tipo: "diaUtil", n: 4 });
+  }
+
+  var ehDiaUtil = function (dt) { var s = dt.getDay(); return s >= 1 && s <= 5 && !ehFeriado(dt); };
+
+  // Data de um mês segundo uma regra de repetição "Personalizar":
+  //  { tipo: "diaUtil", n }        → n-ésimo dia útil (seg–sex, sem feriados);
+  //                                  alerta de sábado se, contando seg–sáb, o n-ésimo cair num sábado
+  //  { tipo: "ultimoDiaUtil" }     → último dia útil do mês
+  //  { tipo: "diaFixo", n, ajuste } → dia n do mês (ou o último, se o mês for mais curto);
+  //                                  se cair em fim de semana/feriado: "proximo" dia útil,
+  //                                  "anterior" dia útil ou "manter" a data
+  function calcularDataRegra(ano, mes, regra) {
+    regra = regra || { tipo: "diaUtil", n: 4 };
+    var n = Math.max(1, Number(regra.n) || 1);
+    var ultimoDia = new Date(ano, mes, 0).getDate();
+    if (regra.tipo === "ultimoDiaUtil") {
+      for (var d = ultimoDia; d >= 1; d--) { var dt = new Date(ano, mes - 1, d); if (ehDiaUtil(dt)) return { data: isoLocal(dt), alertaSabado: false, dataSabado: null }; }
+    }
+    if (regra.tipo === "diaFixo") {
+      var alvo = new Date(ano, mes - 1, Math.min(n, ultimoDia));
+      var passo = regra.ajuste === "anterior" ? -1 : 1;
+      if (regra.ajuste !== "manter") { while (!ehDiaUtil(alvo)) alvo.setDate(alvo.getDate() + passo); }
+      return { data: isoLocal(alvo), alertaSabado: false, dataSabado: null };
+    }
+    // "diaUtil" (padrão); se o mês não tiver n dias úteis, usa o último
+    var util = enesimoDia(ano, mes, n, [1, 2, 3, 4, 5]);
+    if (!util) return calcularDataRegra(ano, mes, { tipo: "ultimoDiaUtil" });
+    var comSabado = enesimoDia(ano, mes, n, [1, 2, 3, 4, 5, 6]);
     var alerta = !!comSabado && comSabado.getDay() === 6;
     return { data: isoLocal(util), alertaSabado: alerta, dataSabado: alerta ? isoLocal(comSabado) : null };
   }
 
   global.Financeiro = {
     calcularDataPagamento: calcularDataPagamento,
+    calcularDataRegra: calcularDataRegra,
     feriadosNacionais: feriadosNacionais,
     mesAtual: mesAtual,
     mesAnterior: mesAnterior,
