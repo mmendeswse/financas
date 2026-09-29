@@ -354,11 +354,19 @@
           var topo = Math.max(ca.top, Math.min(yA, yC)), base = Math.min(ca.bottom, Math.max(yA, yC));
           var dif = precoAtual - precoMedio, pctDif = precoMedio ? (dif / precoMedio) * 100 : 0;
           var cor = dif >= 0 ? CORES.up : CORES.down;
-          var txt = (dif >= 0 ? "+" : "−") + moeda(Math.abs(dif)) + " (" + (dif >= 0 ? "+" : "−") + Math.abs(pctDif).toFixed(1).replace(".", ",") + "%)";
+          var sinal = dif >= 0 ? "+" : "−";
+          var pctTxt = " (" + sinal + Math.abs(pctDif).toFixed(1).replace(".", ",") + "%)";
+          // 1ª linha: resultado total (diferença × cotas); 2ª: diferença por cota × quantidade
+          var qtd = Number(opcoes.quantidade) || 0;
+          var txt = qtd > 0 ? sinal + moeda(Math.abs(dif * qtd)) + pctTxt : sinal + moeda(Math.abs(dif)) + pctTxt;
+          var txt2 = qtd > 0 ? sinal + moeda(Math.abs(dif)) + " por cota × " + qtd.toLocaleString("pt-BR") + (qtd === 1 ? " cota" : " cotas") : "";
           var c = grafico.ctx;
           c.save();
           c.font = "700 11px 'Segoe UI', Roboto, sans-serif";
-          var larg = c.measureText(txt).width + 16, alt = 22;
+          var larg1 = c.measureText(txt).width;
+          c.font = "600 9.5px 'Segoe UI', Roboto, sans-serif";
+          var larg2 = txt2 ? c.measureText(txt2).width : 0;
+          var larg = Math.max(larg1, larg2) + 16, alt = txt2 ? 34 : 22;
           var xc = ca.left + ca.width * 0.62;
           // traço vertical entre as linhas
           c.strokeStyle = cor; c.lineWidth = 1.2; c.setLineDash([3, 3]);
@@ -371,7 +379,13 @@
           c.fillStyle = "#0B1420"; c.fillRect(x, ym - alt / 2, larg, alt);
           c.fillStyle = dif >= 0 ? "rgba(34,227,154,0.14)" : "rgba(255,77,122,0.16)"; c.fillRect(x, ym - alt / 2, larg, alt);
           c.strokeStyle = cor; c.lineWidth = 1; c.strokeRect(x + 0.5, ym - alt / 2 + 0.5, larg - 1, alt - 1);
-          c.fillStyle = cor; c.textBaseline = "middle"; c.textAlign = "center"; c.fillText(txt, xc, ym + 0.5);
+          c.fillStyle = cor; c.textBaseline = "middle"; c.textAlign = "center";
+          if (txt2) {
+            c.font = "700 11px 'Segoe UI', Roboto, sans-serif"; c.fillText(txt, xc, ym - 6);
+            c.font = "600 9.5px 'Segoe UI', Roboto, sans-serif"; c.globalAlpha = 0.85; c.fillText(txt2, xc, ym + 8); c.globalAlpha = 1;
+          } else {
+            c.font = "700 11px 'Segoe UI', Roboto, sans-serif"; c.fillText(txt, xc, ym + 0.5);
+          }
           c.restore();
         }
       }] : []).concat(precoAtual > 0 ? [{
