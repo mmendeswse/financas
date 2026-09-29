@@ -1189,9 +1189,8 @@ input.somente-leitura { opacity: .75; cursor: not-allowed; }
 .bloco-personalizar { border: 1px solid var(--linha-2); border-radius: 10px; padding: 12px 12px 4px; margin: -4px 0 14px; background: var(--painel-2); }
 .bloco-personalizar .campo { margin-bottom: 10px; }
 .bloco-personalizar #p_previa { margin: 0 0 8px; color: var(--cy); }
-/* status Atrasado com o mesmo destaque visual de Pago e Prevista:
-   o vermelho é uma cor mais escura, então ganha um tom mais claro e negrito reforçado */
-.selo-atrasado { color: #FF7C8C; font-weight: 800; }
-.rp-atrasado, .rp-atrasado small { color: #FF7C8C; }
+/* status Atrasado: mesmo vermelho de sempre, com negrito reforçado para ter
+   o mesmo destaque visual de Pago e Prevista */
+.selo-atrasado { font-weight: 800; }
 .rp-atrasado small { font-weight: 800; }
 .rp-atrasado b { font-weight: 900; }
