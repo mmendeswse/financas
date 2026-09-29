@@ -1194,3 +1194,9 @@ input.somente-leitura { opacity: .75; cursor: not-allowed; }
 .selo-atrasado { font-weight: 800; }
 .rp-atrasado small { font-weight: 800; }
 .rp-atrasado b { font-weight: 900; }
+/* caixas do resumo funcionam como filtro da tabela */
+button.resumo-pill { font: inherit; text-align: left; cursor: pointer; transition: opacity .15s, box-shadow .15s, transform .1s; }
+button.resumo-pill:hover { filter: brightness(1.15); }
+button.resumo-pill:active { transform: scale(.98); }
+.resumo-pill.ativo { box-shadow: 0 0 0 2px currentColor; }
+.resumo-pills.com-filtro .resumo-pill:not(.ativo) { opacity: .45; }

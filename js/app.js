@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "2.1.3";
+  const VERSAO_APP = "2.1.4";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -130,6 +130,7 @@
   const ORDEM_ENTRADAS_PADRAO = { campo: "cronologica", dir: "asc" };   // por data (do dia 1 ao fim do mês), sem coluna destacada
   const ORDEM_DESPESAS_PADRAO = { campo: "cronologica", dir: "asc" };   // por data (do dia 1 ao fim do mês), sem coluna destacada
   let ordemEntradas = { ...ORDEM_ENTRADAS_PADRAO };
+  let filtroEntradas = null, filtroDespesas = null;   // status escolhido nas caixas do resumo (null = todos)
   let ordemDespesas = { ...ORDEM_DESPESAS_PADRAO };
 
   // título de coluna que ordena ao ser clicado
@@ -901,8 +902,8 @@
   function navegarPara(secao, param) {
     ROTA = { secao, param: param || null };
     // ao entrar na guia, o filtro volta sempre para o mês e o ano atuais
-    if (secao === "entradas") { mesEntradas = F.mesAtual(); ordemEntradas = { ...ORDEM_ENTRADAS_PADRAO }; }
-    if (secao === "despesas") { mesDespesas = F.mesAtual(); ordemDespesas = { ...ORDEM_DESPESAS_PADRAO }; }
+    if (secao === "entradas") { mesEntradas = F.mesAtual(); ordemEntradas = { ...ORDEM_ENTRADAS_PADRAO }; filtroEntradas = null; }
+    if (secao === "despesas") { mesDespesas = F.mesAtual(); ordemDespesas = { ...ORDEM_DESPESAS_PADRAO }; filtroDespesas = null; }
     // ao entrar em Ações ou Investimentos (e nas telas de detalhe delas),
     // o período dos gráficos volta ao padrão, em vez de guardar a escolha
     // (em Ações, sempre abre nos últimos 7 dias)
@@ -1293,7 +1294,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.1.3" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.1.4" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2564,10 +2565,11 @@
     prevista: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
     atrasado: '<path d="M12 3.5 2.8 19.5h18.4Z"/><path d="M12 10v4.2M12 17h.01"/>'
   };
-  function resumoPills(itens) {
-    // status com valor zero não aparece
-    return `<span class="resumo-pills">${itens.filter((it) => Math.abs(Number(it[3]) || 0) >= 0.005).map(([tipo, rotulo, valor]) =>
-      `<span class="resumo-pill rp-${tipo}"><span class="rp-ic"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${ICONES_RESUMO[tipo]}</svg></span><span class="rp-txt"><small>${rotulo}</small><b>${valor}</b></span></span>`).join("")}</span>`;
+  const STATUS_DO_RESUMO = { pago: "Pago", prevista: "Prevista", atrasado: "Atrasado" };
+  function resumoPills(itens, acao, ativo) {
+    // status com valor zero não aparece; clicar filtra a tabela por aquele status
+    return `<span class="resumo-pills${ativo ? " com-filtro" : ""}">${itens.filter((it) => Math.abs(Number(it[3]) || 0) >= 0.005).map(([tipo, rotulo, valor]) =>
+      `<button type="button" class="resumo-pill rp-${tipo}${ativo === STATUS_DO_RESUMO[tipo] ? " ativo" : ""}" data-acao="${acao}" data-status="${STATUS_DO_RESUMO[tipo]}" title="${ativo === STATUS_DO_RESUMO[tipo] ? "Mostrar todos os lançamentos" : "Mostrar só " + rotulo.toLowerCase()}"><span class="rp-ic"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${ICONES_RESUMO[tipo]}</svg></span><span class="rp-txt"><small>${rotulo}</small><b>${valor}</b></span></button>`).join("")}</span>`;
   }
 
   function cabecalhoColunasPainel() {
@@ -2898,11 +2900,14 @@
     const totalPrevisto = previstasEnt.filter((e) => !e.recebidaNoMes).reduce((t, e) => t + Number(e.valor || 0), 0) + F.totalEntradasPrevistasMes(d, mesEntradas);
     const grid = GRID_LANCAMENTOS;
     let corpo;
+    // filtro pelas caixas do resumo (some sozinho se o status não existir mais no mês)
+    if (filtroEntradas && !lista.some((x) => x.status === filtroEntradas)) filtroEntradas = null;
+    const listaTabela = filtroEntradas ? lista.filter((x) => x.status === filtroEntradas) : lista;
     if (!lista.length) {
       corpo = `<div class="empty">Nenhuma entrada cadastrada. Use "+ Nova entrada" para lançar seu salário ou outra receita.</div>`;
     } else {
       corpo = `<div class="hd" style="${grid}">${thOrdem("ordenar-entradas", "data", "Data", ordemEntradas)}${thOrdem("ordenar-entradas", "descricao", "Descrição", ordemEntradas)}${thOrdem("ordenar-entradas", "banco", "Banco", ordemEntradas)}${thOrdem("ordenar-entradas", "status", "Status", ordemEntradas)}${thOrdem("ordenar-entradas", "valor", "Valor", ordemEntradas, "hd-valor")}</div>` +
-        lista.map((e) => `
+        listaTabela.map((e) => `
         <div class="rw clicavel${e.prevista ? " linha-prevista" : ""}" style="${grid}" data-acao="${e.prevista ? "editar-previsao-entrada" : "editar-entrada"}" data-id="${e.id}" data-data="${e.data}" title="${e.prevista ? "Abre este mês para edição (o valor muda só aqui)" : "Abrir para editar"}">
           <div class="dim" style="font-size:12px">${fmtDataCurta(e.data)}</div>
           <div><div class="nm">${esc(e.descricao)}${seloFreq(e)}</div><div class="sub">${esc(e.categoria)} · ${esc(e.tipo || "")}</div></div>
@@ -2915,7 +2920,7 @@
     }
     return `
       <div class="grid g-top">
-        <div class="c12">${card("c12", `Entradas ${resumoPills([["pago", "Recebidas", "+" + brl(totalMes), totalMes], ["prevista", "Previstas", "+" + brl(totalPrevisto), totalPrevisto]])}`, "", `${abasMeses12("mes-entradas", mesEntradas, "anoEntradas", anosDisponiveis(d))}<button class="btn primario" data-acao="nova-entrada"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`, corpo)}</div>
+        <div class="c12">${card("c12", `Entradas ${resumoPills([["pago", "Recebidas", "+" + brl(totalMes), totalMes], ["prevista", "Previstas", "+" + brl(totalPrevisto), totalPrevisto]], "filtrar-entradas", filtroEntradas)}`, "", `${abasMeses12("mes-entradas", mesEntradas, "anoEntradas", anosDisponiveis(d))}<button class="btn primario" data-acao="nova-entrada"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`, corpo)}</div>
       </div>
     `;
   }
@@ -3091,11 +3096,14 @@
     const gridD = GRID_LANCAMENTOS;
 
     let corpo;
+    // filtro pelas caixas do resumo (some sozinho se o status não existir mais no mês)
+    if (filtroDespesas && !lista.some((x) => x.status === filtroDespesas)) filtroDespesas = null;
+    const listaTabela = filtroDespesas ? lista.filter((x) => x.status === filtroDespesas) : lista;
     if (!lista.length) {
       corpo = `<div class="empty">Nenhum lançamento em ${NOMES_MES[Number(mesDespesas.slice(5, 7)) - 1]}/${mesDespesas.slice(0, 4)}. Use NOVO para lançar uma despesa ou uma conta a pagar.</div>`;
     } else {
       corpo = `<div class="hd" style="${gridD}">${thOrdem("ordenar-despesas", "data", "Data", ordemDespesas)}${thOrdem("ordenar-despesas", "descricao", "Descrição", ordemDespesas)}${thOrdem("ordenar-despesas", "pagoCom", "Banco", ordemDespesas)}${thOrdem("ordenar-despesas", "status", "Status", ordemDespesas)}${thOrdem("ordenar-despesas", "valor", "Valor", ordemDespesas, "hd-valor")}</div>` +
-        lista.map((x) => `
+        listaTabela.map((x) => `
         <div class="rw clicavel${x.prevista ? " linha-prevista" : ""}" style="${gridD}" data-acao="${x.prevista ? (x.origem === "conta" ? "editar-previsao-conta" : "editar-previsao") : (x.origem === "despesa" ? "editar-despesa" : "editar-conta")}" data-id="${x.id}" data-data="${x.data}" title="${x.prevista ? "Abre este mês para edição (o valor muda só aqui)" : "Abrir para editar"}">
           <div class="dim" style="font-size:12px">${fmtData(x.data)}</div>
           <div><div class="nm">${esc(x.descricao)}${seloFreq({ ...(registrosSerie("despesa").find((y) => y.id === x.id) || {}), recorrencia: x.recorrencia, data: x.data })}</div><div class="sub">${esc(x.categoria || "—")} · ${esc(x.tipo || "Variável")}</div></div>
@@ -3111,7 +3119,7 @@
 
     return `
       <div class="grid g-top">
-        <div class="c12">${card("c12", `Despesas ${resumoPills([["pago", "Pagas", "−" + brl(totalMes), totalMes], ["prevista", "Previstas", "−" + brl(emAberto), emAberto], ["atrasado", "Atrasadas", "−" + brl(atrasadas), atrasadas]])}`, "",
+        <div class="c12">${card("c12", `Despesas ${resumoPills([["pago", "Pagas", "−" + brl(totalMes), totalMes], ["prevista", "Previstas", "−" + brl(emAberto), emAberto], ["atrasado", "Atrasadas", "−" + brl(atrasadas), atrasadas]], "filtrar-despesas", filtroDespesas)}`, "",
           `${abasMeses12("mes-despesas", mesDespesas, "anoDespesas", anosDisponiveis(d))}<button class="btn primario" data-acao="nova-despesa"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`,
           corpo)}</div>
       </div>
@@ -4726,8 +4734,10 @@
           ordemDespesas = { campo, dir: ordemDespesas.campo === campo && ordemDespesas.dir === "asc" ? "desc" : "asc" };
           renderRota(); break;
         }
-        case "mes-entradas": mesEntradas = b.dataset.mes; renderRota(); break;
-        case "mes-despesas": mesDespesas = b.dataset.mes; renderRota(); break;
+        case "mes-entradas": mesEntradas = b.dataset.mes; filtroEntradas = null; renderRota(); break;
+        case "mes-despesas": mesDespesas = b.dataset.mes; filtroDespesas = null; renderRota(); break;
+        case "filtrar-entradas": filtroEntradas = filtroEntradas === b.dataset.status ? null : b.dataset.status; renderRota(); break;
+        case "filtrar-despesas": filtroDespesas = filtroDespesas === b.dataset.status ? null : b.dataset.status; renderRota(); break;
         case "ir-dolar": navegarPara("detalhe-dolar"); break;
         case "explicar-relatorio": explicarRelatorio(b.dataset.chave); break;
         case "explicar-strip": explicarStrip(b.dataset.chave); break;
@@ -4850,8 +4860,8 @@
       if (id === "anoBancos") { anoBancos = e.target.value; renderRota(); return; }
       if (id === "anoRD") { anoRD = e.target.value; renderRota(); return; }
       if (id === "anoEvo") { anoEvo = e.target.value; renderRota(); return; }
-      if (id === "anoEntradas") { mesEntradas = e.target.value + mesEntradas.slice(4); renderRota(); return; }
-      if (id === "anoDespesas") { mesDespesas = e.target.value + mesDespesas.slice(4); renderRota(); return; }
+      if (id === "anoEntradas") { mesEntradas = e.target.value + mesEntradas.slice(4); filtroEntradas = null; renderRota(); return; }
+      if (id === "anoDespesas") { mesDespesas = e.target.value + mesDespesas.slice(4); filtroDespesas = null; renderRota(); return; }
       if (id === "filtroPeriodo") { filtrosHistorico.periodo = e.target.value; renderRota(); }
       else if (id === "filtroTipo") { filtrosHistorico.tipo = e.target.value; renderRota(); }
       else if (id === "filtroBanco") { filtrosHistorico.banco = e.target.value; renderRota(); }
