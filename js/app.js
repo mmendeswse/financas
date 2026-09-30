@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "2.2.2";
+  const VERSAO_APP = "2.2.3";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -1311,7 +1311,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.2.2" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.2.3" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2162,21 +2162,29 @@
   // nome da categoria como aparece no quadro Composição patrimônio (só a exibição muda)
   const rotuloCategoriaComp = (c) => (String(c).toLowerCase() === "renda fixa" ? "Renda Fixa" : c);
 
+  // cada classe do patrimônio com uma cor própria e fixa (sem repetir e sem
+  // vermelho, que no programa indica valor negativo)
+  const CORES_COMPOSICAO = {
+    "Bancos": "#00E5FF", "Ações": "#2EE59D", "FIIs": "#A78BFA", "ETFs": "#FFD633",
+    "Renda Fixa": "#FF8A3D", "Tesouro Direto": "#3B82F6", "Fundos": "#F472B6",
+    "Criptomoedas": "#FACC15", "Outros": "#94A3B8"
+  };
+  const CORES_COMPOSICAO_EXTRA = ["#14B8A6", "#E879F9", "#84CC16", "#60A5FA", "#FDBA74"];
   function itensPatrimonio(d) {
     const acoesPorCat = {};
     d.acoes.forEach((a) => {
       const v = I.valorAtualAcao(a);
       acoesPorCat[a.categoria] = (acoesPorCat[a.categoria] || 0) + v;
     });
-    const itens = [{ rotulo: "Bancos", valor: F.totalBancos(d), cor: G.CORES.cy }];
-    if (acoesPorCat["Ação"]) itens.push({ rotulo: "Ações", valor: acoesPorCat["Ação"], cor: G.CORES.up });
-    if (acoesPorCat["FII"]) itens.push({ rotulo: "FIIs", valor: acoesPorCat["FII"], cor: G.CORES.vi });
-    if (acoesPorCat["ETF"]) itens.push({ rotulo: "ETFs", valor: acoesPorCat["ETF"], cor: G.CORES.acc });
+    const itens = [{ rotulo: "Bancos", valor: F.totalBancos(d), cor: CORES_COMPOSICAO["Bancos"] }];
+    if (acoesPorCat["Ação"]) itens.push({ rotulo: "Ações", valor: acoesPorCat["Ação"], cor: CORES_COMPOSICAO["Ações"] });
+    if (acoesPorCat["FII"]) itens.push({ rotulo: "FIIs", valor: acoesPorCat["FII"], cor: CORES_COMPOSICAO["FIIs"] });
+    if (acoesPorCat["ETF"]) itens.push({ rotulo: "ETFs", valor: acoesPorCat["ETF"], cor: CORES_COMPOSICAO["ETFs"] });
     // investimentos pelo valor LÍQUIDO (já sem o IR), agrupados por categoria
     const invLiq = {};
     d.investimentos.forEach((inv) => { const c = inv.categoria || "Outros"; invLiq[c] = (invLiq[c] || 0) + I.valorLiquidoInvestimento(inv); });
     Object.keys(invLiq).sort((a, b) => invLiq[b] - invLiq[a])
-      .forEach((c, i) => itens.push({ rotulo: rotuloCategoriaComp(c), valor: invLiq[c], cor: G.PALETA_CATEGORIAS[(i + 4) % G.PALETA_CATEGORIAS.length] }));
+      .forEach((c, i) => { const r = rotuloCategoriaComp(c); itens.push({ rotulo: r, valor: invLiq[c], cor: CORES_COMPOSICAO[r] || CORES_COMPOSICAO_EXTRA[i % CORES_COMPOSICAO_EXTRA.length] }); });
     return itens.filter((i) => i.valor > 0);
   }
 
