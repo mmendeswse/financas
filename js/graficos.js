@@ -359,7 +359,7 @@
           if (y < ca.top || y > ca.bottom) return;
           // logo acima da linha (ou abaixo, se não couber), sem cobrir o encontro das linhas
           y = (y - 24 >= ca.top) ? y - 16 : y + 16;
-          var c = grafico.ctx, txt = "Atual " + moeda(opcoes.linhaAtual);
+          var c = grafico.ctx, txt = "📍 Atual " + moeda(opcoes.linhaAtual);
           c.save();
           c.font = "700 10.5px 'Segoe UI', Roboto, sans-serif";
           var larg = c.measureText(txt).width + 12, x = ca.right - larg - 18;
@@ -427,7 +427,7 @@
             if (Math.abs(y - yC) < 22) y = y <= yC ? yC - 22 : yC + 22;
             y = Math.max(ca.top + 10, Math.min(ca.bottom - 10, y));
           }
-          var c = grafico.ctx, txt = "Atual " + moeda(precoAtual);
+          var c = grafico.ctx, txt = "📍 Atual " + moeda(precoAtual);
           c.save();
           c.font = "700 10.5px 'Segoe UI', Roboto, sans-serif";
           var larg = c.measureText(txt).width + 12, x = ca.right - larg - 4;
@@ -443,7 +443,7 @@
         afterDatasetsDraw: function (grafico) {
           var y = grafico.scales.y.getPixelForValue(precoMedio);
           if (y < grafico.chartArea.top || y > grafico.chartArea.bottom) return;
-          var c = grafico.ctx, txt = "Compra " + moeda(precoMedio);
+          var c = grafico.ctx, txt = "🛒 Compra " + moeda(precoMedio);
           c.save();
           c.font = "700 10.5px 'Segoe UI', Roboto, sans-serif";
           var larg = c.measureText(txt).width + 12, x = grafico.chartArea.right - larg - 4;
