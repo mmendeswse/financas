@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "2.2.1";
+  const VERSAO_APP = "2.2.2";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -1311,7 +1311,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.2.1" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.2.2" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1811,7 +1811,7 @@
         .map((a) => linha(esc(a.ticker) + " · " + a.quantidade + " un.", brlSinal(a.valorAtual))).join("");
       secao = "acoes";
     } else {
-      detalhe = d.investimentos.filter((i) => i.categoria === rotulo)
+      detalhe = d.investimentos.filter((i) => rotuloCategoriaComp(i.categoria || "Outros") === rotulo)
         .map((i) => linha(esc(i.nome), brlSinal(I.valorLiquidoInvestimento(i)))).join("");
     }
     painelSimples(rotulo, total > 0 ? (item.valor / total) * 100 : 0, "do seu patrimônio líquido",
@@ -2159,6 +2159,9 @@
   // =========================================================================
   // FINANÇAS — resumo patrimonial (item 15)
   // =========================================================================
+  // nome da categoria como aparece no quadro Composição patrimônio (só a exibição muda)
+  const rotuloCategoriaComp = (c) => (String(c).toLowerCase() === "renda fixa" ? "Renda Fixa" : c);
+
   function itensPatrimonio(d) {
     const acoesPorCat = {};
     d.acoes.forEach((a) => {
@@ -2173,7 +2176,7 @@
     const invLiq = {};
     d.investimentos.forEach((inv) => { const c = inv.categoria || "Outros"; invLiq[c] = (invLiq[c] || 0) + I.valorLiquidoInvestimento(inv); });
     Object.keys(invLiq).sort((a, b) => invLiq[b] - invLiq[a])
-      .forEach((c, i) => itens.push({ rotulo: c, valor: invLiq[c], cor: G.PALETA_CATEGORIAS[(i + 4) % G.PALETA_CATEGORIAS.length] }));
+      .forEach((c, i) => itens.push({ rotulo: rotuloCategoriaComp(c), valor: invLiq[c], cor: G.PALETA_CATEGORIAS[(i + 4) % G.PALETA_CATEGORIAS.length] }));
     return itens.filter((i) => i.valor > 0);
   }
 
