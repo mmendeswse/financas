@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "2.2.8";
+  const VERSAO_APP = "2.2.9";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -1311,7 +1311,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.2.8" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.2.9" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2128,11 +2128,7 @@
       </div>
 
       <div class="grid">
-        <div class="c12">${card("", "Evolução patrimonial", `patrimônio líquido · ${mesesEvo ? mesesEvo + " meses de " + anoEvo : "todo histórico"}`,
-          (histPeriodo.length >= 2 ? `<span class="pill-periodo ${corSinal(histPeriodo[histPeriodo.length - 1].valor - histPeriodo[0].valor)}">PERÍODO ${brlSinal(histPeriodo[histPeriodo.length - 1].valor - histPeriodo[0].valor)}</span>` : "") +
-          `<div class="filtro-mes">${seletorAnoDash("anoEvo", anoEvo, anosDashboard(d))}${abasMeses("periodo-evo", mesesEvo, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }, { meses: 0, rotulo: "Tudo" }])}</div>`, histPeriodo.length >= 2
-            ? `<div style="padding:8px 14px 12px;height:280px"><canvas id="graf-evolucao"></canvas></div>`
-            : `<div class="empty">Sem registros de patrimônio em ${mesesEvo ? `${mesesEvo} ${mesesEvo === 1 ? "mês" : "meses"} de ${anoEvo}` : "todo histórico"}. O patrimônio é registrado a cada dia que você abre o sistema.</div>`)}</div>
+        <div class="c12">${cardEvolucaoPatrimonial(d, { canvas: "graf-evolucao", idAno: "anoEvo", acao: "periodo-evo", meses: mesesEvo, ano: anoEvo })}</div>
       </div>
 
       ${stripKpis([
@@ -4260,13 +4256,28 @@
     return pontos;
   }
 
-  function historicoEvo(d) {
-    const h = histPatrimonio(d) || [];
-    if (!mesesEvo) return h;
-    const fx = intervaloAnoMeses(anoEvo, mesesEvo);
-    // devolve só o que existe no período; se não houver, o quadro avisa
+
+  // Quadro "Evolução patrimonial": montado pela mesma função no Dashboard e nos
+  // Relatórios, para os dois ficarem sempre idênticos (cada guia guarda o seu
+  // próprio ano e período)
+  function histEvolucao(d, meses, ano) {
+    const h = histPatrimonio(d);
+    if (!meses) return h;
+    const fx = intervaloAnoMeses(ano, meses);
     return h.filter((x) => x.data >= fx.ini && x.data <= fx.fim);
   }
+  function cardEvolucaoPatrimonial(d, cfg) {
+    const hist = histEvolucao(d, cfg.meses, cfg.ano);
+    const varPer = hist.length >= 2 ? hist[hist.length - 1].valor - hist[0].valor : 0;
+    return card("", "Evolução patrimonial", `patrimônio líquido · ${cfg.meses ? cfg.meses + " meses de " + cfg.ano : "todo histórico"}`,
+      (hist.length >= 2 ? `<span class="pill-periodo ${corSinal(varPer)}">PERÍODO ${brlSinal(varPer)}</span>` : "") +
+      `<div class="filtro-mes">${seletorAnoDash(cfg.idAno, cfg.ano, anosDashboard(d))}${abasMeses(cfg.acao, cfg.meses, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }, { meses: 0, rotulo: "Tudo" }])}</div>`,
+      hist.length >= 2
+        ? `<div style="padding:8px 14px 12px;height:280px"><canvas id="${cfg.canvas}"></canvas></div>`
+        : `<div class="empty">Sem registros de patrimônio em ${cfg.meses ? `${cfg.meses} ${cfg.meses === 1 ? "mês" : "meses"} de ${cfg.ano}` : "todo histórico"}.</div>`);
+  }
+
+  function historicoEvo(d) { return histEvolucao(d, mesesEvo, anoEvo); }
 
 
   // Lista de anos dos seletores: do ano mais antigo com dados (ou do ano
@@ -4534,9 +4545,7 @@
         <div class="c12">${card("", "Receitas x despesas", `${rotulo(mesesRelA, anoRelA)}`, `<div class="filtro-mes">${seletorAnoDash("anoRelA", anoRelA, anosDashboard(d))}${abasMeses("periodo-rel-a", mesesRelA, OPC)}</div>`, `<div style="padding:10px 16px;height:220px"><canvas id="graf-rel-mensal"></canvas></div>`)}</div>
       </div>
       <div class="grid">
-        <div class="c12">${card("", "Evolução patrimonial", `${rotulo(mesesRelB, anoRelB)}`,
-          (picoB ? `<span class="pill-pico">PICO ${brl(picoB)}</span>` : "") +
-          `<div class="filtro-mes">${seletorAnoDash("anoRelB", anoRelB, anosDashboard(d))}${abasMeses("periodo-rel-b", mesesRelB, OPC)}</div>`, historicoP.length >= 2 ? `<div style="padding:10px 16px;height:220px"><canvas id="graf-rel-evolucao"></canvas></div>` : `<div class="empty">Ainda não há histórico suficiente para este período.</div>`)}</div>
+        <div class="c12">${cardEvolucaoPatrimonial(d, { canvas: "graf-rel-evolucao", idAno: "anoRelB", acao: "periodo-rel-b", meses: mesesRelB, ano: anoRelB })}</div>
       </div>
     `;
   }
@@ -4625,7 +4634,7 @@
   // =========================================================================
   function montarGraficosRelatorio(d) {
     const fxA = intervaloRel(mesesRelA, anoRelA), fxB = intervaloRel(mesesRelB, anoRelB);
-    const historicoP = histPatrimonio(d).filter((h) => h.data >= fxB.ini && h.data <= fxB.fim);
+    const historicoP = histEvolucao(d, mesesRelB, anoRelB);
     if (historicoP.length >= 2) G.renderEvolucaoPatrimonio("graf-rel-evolucao", historicoP, { aoClicar: explicarPatrimonio });
     const primeiro = histPatrimonio(d).length ? histPatrimonio(d)[0].data : fxA.ini;
     G.renderReceitasDespesas("graf-rel-mensal", serieMensalPeriodo(d, mesesRelA ? fxA.ini : primeiro, fxA.fim), { aoClicar: explicarMes });
