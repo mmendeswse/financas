@@ -183,11 +183,12 @@
           data: serie.map(function (p) { return p.valor; }),
           borderColor: CORES.azul, backgroundColor: gradiente(ctx, CORES.azul, 240), fill: true, tension: 0.3,
           borderWidth: 2.5,
-          // o ponto de maior valor do período fica sempre em destaque
-          pointRadius: serie.map(function (p, i) { return i === iPico ? 6 : (serie.length <= 14 ? 4 : 0); }),
-          pointHoverRadius: 6,
-          pointBackgroundColor: serie.map(function (p, i) { return i === iPico ? CORES.up : "#FFFFFF"; }),
-          pointBorderColor: serie.map(function (p, i) { return i === iPico ? CORES.up : CORES.azul; }),
+          // pico em dourado; os demais pontos em verde quando o patrimônio subiu
+          // em relação ao mês anterior e em vermelho quando caiu
+          pointRadius: serie.map(function (p, i) { return i === iPico ? 7 : (serie.length <= 14 ? 4.5 : 2.5); }),
+          pointHoverRadius: 8,
+          pointBackgroundColor: serie.map(function (p, i) { return i === iPico ? "#FFD633" : (i === 0 ? "#FFFFFF" : (p.valor >= serie[i - 1].valor ? CORES.up : CORES.down)); }),
+          pointBorderColor: serie.map(function (p, i) { return i === iPico ? "#FFD633" : "#0B1420"; }),
           pointBorderWidth: 2
         }]
       },
@@ -201,8 +202,32 @@
           if (evt && evt.native && evt.native.target) evt.native.target.style.cursor = (opcoes.aoClicar && elementos.length) ? "pointer" : "default";
         },
         scales: { x: eixoX({ ticks: { color: CORES.texto, font: fonte(10.5), maxTicksLimit: 12 } }), y: eixoY() },
-        plugins: { legend: { display: false }, tooltip: tooltipPadrao({ callbacks: { label: function (c) { return " " + moeda(c.parsed.y) + (c.dataIndex === iPico ? "  ·  pico do período" : ""); } } }) }
+        plugins: { legend: { display: false }, tooltip: tooltipPadrao({ callbacks: {
+          label: function (c) { return " Patrimônio: " + moeda(c.parsed.y) + (c.dataIndex === iPico ? "  🏆 pico" : ""); },
+          afterLabel: function (c) {
+            if (c.dataIndex === 0) return " Clique para ver os detalhes";
+            var dif = serie[c.dataIndex].valor - serie[c.dataIndex - 1].valor;
+            var pct = serie[c.dataIndex - 1].valor ? (dif / Math.abs(serie[c.dataIndex - 1].valor)) * 100 : 0;
+            return " No mês: " + (dif >= 0 ? "+" : "−") + moeda(Math.abs(dif)) + " (" + (dif >= 0 ? "+" : "−") + Math.abs(pct).toFixed(1).replace(".", ",") + "%)\n Clique para ver os detalhes";
+          } } }) }
       },
+      plugins: [{
+        // etiqueta dourada em cima do pico
+        id: "rotuloPico",
+        afterDatasetsDraw: function (grafico) {
+          var pt = grafico.getDatasetMeta(0).data[iPico]; if (!pt) return;
+          var c = grafico.ctx, txt = "🏆 Pico " + moeda(serie[iPico].valor), ca = grafico.chartArea;
+          c.save(); c.font = "700 10.5px 'Segoe UI', Roboto, sans-serif";
+          var larg = c.measureText(txt).width + 12, alt = 19;
+          var x = Math.min(ca.right - larg, Math.max(ca.left, pt.x - larg / 2));
+          var y = pt.y - 14 - alt; if (y < ca.top) y = pt.y + 12;
+          c.fillStyle = "#0B1420"; c.fillRect(x, y, larg, alt);
+          c.fillStyle = "rgba(255,214,51,0.14)"; c.fillRect(x, y, larg, alt);
+          c.strokeStyle = "#FFD633"; c.lineWidth = 1; c.strokeRect(x + 0.5, y + 0.5, larg - 1, alt - 1);
+          c.fillStyle = "#FFD633"; c.textBaseline = "middle"; c.fillText(txt, x + 6, y + alt / 2 + 0.5);
+          c.restore();
+        }
+      }]
     });
   }
 

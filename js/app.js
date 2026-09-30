@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "2.2.3";
+  const VERSAO_APP = "2.2.5";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -1311,7 +1311,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.2.3" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.2.5" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2010,27 +2010,48 @@
     const idx = serie.indexOf(ponto);
     const anterior = idx > 0 ? serie[idx - 1] : null;
     const primeiro = serie[0];
+    const pico = serie[iPico];
+    const iMin = serie.reduce((m, x, i) => (x.valor < serie[m].valor ? i : m), 0);
     const varMes = anterior ? ponto.valor - anterior.valor : 0;
+    const pctMes = anterior && anterior.valor ? (varMes / Math.abs(anterior.valor)) * 100 : 0;
     const varPeriodo = ponto.valor - primeiro.valor;
-    const pctPeriodo = primeiro.valor > 0 ? (varPeriodo / primeiro.valor) * 100 : 0;
-    const p = I.patrimonio(d);
-    const linha = (r, v, c) => `<div class="kv"><span class="dim">${rotuloPainel(r)}</span><b class="${c || ""}">${v}</b></div>`;
+    const pctPeriodo = primeiro.valor ? (varPeriodo / Math.abs(primeiro.valor)) * 100 : 0;
+    const mes = String(ponto.data).slice(0, 7);
+    const entradasMes = totalEntradasEfetivas(d, mes), despesasMes = totalDespesasPagasMes(d, mes);
+    // rótulos escritos exatamente como devem aparecer (sem a capitalização automática)
+    const linha = (r, v, c) => `<div class="kv"><span class="dim">${r}</span><b class="${c || ""}">${v}</b></div>`;
+    const secao = (t, cor) => `<div class="kv kv-secao ${cor ? "kv-secao-" + cor : ""}"><span>${t}</span></div>`;
+    const pctTxt = (v) => (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(1).replace(".", ",") + "%";
     const quando = new Date(ponto.data + "T00:00:00").toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
-    const ehPico = idx === iPico;
+    // marco do ponto, em uma frase curta
+    let marco = "";
+    if (idx === iPico) marco = `<div class="marco-evo marco-pico">🏆 Maior patrimônio do período</div>`;
+    else if (idx === iMin && serie.length > 2) marco = `<div class="marco-evo marco-min">📉 Menor patrimônio do período</div>`;
+    else if (anterior && varMes > 0) marco = `<div class="marco-evo marco-sobe">▲ Patrimônio cresceu ${brl(varMes)} no mês</div>`;
+    else if (anterior && varMes < 0) marco = `<div class="marco-evo marco-cai">▼ Patrimônio caiu ${brl(Math.abs(varMes))} no mês</div>`;
+    const temComp = ponto.bancos !== undefined;
 
-    painelSimples(quando.charAt(0).toUpperCase() + quando.slice(1), pctPeriodo,
-      "de variação desde o início do período", "valor do mês ÷ valor do primeiro mês",
-      linha("Patrimônio", brl(ponto.valor), "creme") +
-      (ehPico ? linha("Situação", "maior valor do período · " + brl(ponto.valor), "up") : "") +
-      (anterior ? linha("Mês anterior", brl(anterior.valor)) : "") +
-      (anterior ? linha("Variação", brlSinal(varMes), corSinal(varMes)) : "") +
-      linha("Início", brl(primeiro.valor)) +
-      linha("Variação", brlSinal(varPeriodo), corSinal(varPeriodo)) +
-      linha("Bancos", brl(p.bancos)) +
-      linha("Investimentos", brl(p.investimentos + p.acoes)) +
-      linha("Dívidas", brl(p.dividas), p.dividas > 0 ? "down" : ""),
+    painelSimples(quando.charAt(0).toUpperCase() + quando.slice(1) + (ponto.hoje ? " · hoje" : ""),
+      anterior ? pctMes : pctPeriodo, anterior ? "em relação ao mês anterior" : "desde o início do período",
+      "bancos + investimentos + ações − dívidas",
+      marco +
+      secao("Resumo") +
+      linha("Patrimônio", brlSinal(ponto.valor)) +
+      (anterior ? linha("Variação no mês", `${brlSinal(varMes)} (${pctTxt(pctMes)})`, corSinal(varMes)) : "") +
+      linha("Desde o início", `${brlSinal(varPeriodo)} (${pctTxt(pctPeriodo)})`, corSinal(varPeriodo)) +
+      (idx !== iPico ? linha("Distância do pico", brlSinal(ponto.valor - pico.valor), "down") : "") +
+      (temComp ? secao("Composição") +
+        linha("+ Bancos", brlSinal(ponto.bancos)) +
+        linha("+ Investimentos", brlSinal(ponto.investimentos)) +
+        linha("+ Ações e FIIs", brlSinal(ponto.acoes)) +
+        (ponto.dividas > 0 ? linha("− Dívidas", "−" + brl(ponto.dividas), "down") : "") : "") +
+      secao("Movimento do mês") +
+      linha("+ Entradas", "+" + brl(entradasMes), "up") +
+      linha("− Despesas", "−" + brl(despesasMes), "down") +
+      linha("Sobra do mês", brlSinal(entradasMes - despesasMes), corSinal(entradasMes - despesasMes)),
       "bancos");
   }
+
 
   // =========================================================================
   // DASHBOARD
@@ -2085,11 +2106,11 @@
     return `
       ${faixaDemo(d)}
       <div class="kpi-row">
-        ${kpiCard("Patrimônio líquido", brlSinal(p.bancos + I.totalLiquidoOutros(d) + p.acoes - p.dividas), pctLivre, "var(--laranja)", delta(F.variacaoPercentual(p.liquido, patrimonioAnt), "vs mês anterior"), `Dívidas: ${brl(p.dividas)}`, "patrimonio")}
-        ${kpiCard("Saldo bancário", brlSinal(p.bancos), pctBancos, "var(--azul)", delta(pctBancos, "do patrimônio"), `${bancos.length} ${bancos.length === 1 ? "Conta Cadastrada" : "Contas Cadastradas"}`, "bancos")}
-        ${kpiCard("Investimentos Líquidos", brlSinal(I.totalLiquidoOutros(d) + p.acoes), pctInvestido, "var(--vi)", delta(rentCarteira, "rent. carteira"), `${pctInvestido.toFixed(0)}% do patrimônio investido`, "investido")}
-        ${kpiCard("Receitas mês", "+" + brl(entradasMes), entradasMes + despesasMes > 0 ? (entradasMes / (entradasMes + despesasMes)) * 100 : 0, "var(--up)", delta(F.variacaoPercentual(entradasMes, entradasAnt), "vs mês anterior"), `Mês anterior: ${brl(entradasAnt)}`, "receitas")}
-        ${kpiCard("Despesas mês", "−" + brl(despesasMes), pctDespesas, "var(--down)", delta(F.variacaoPercentual(despesasMes, despesasAnt), "vs mês anterior", true), `${pctDespesas.toFixed(0)}% das receitas`, "despesas")}
+        ${kpiCard("Patrimônio líquido", brlSinal(p.bancos + I.totalLiquidoOutros(d) + p.acoes - p.dividas), pctLivre, "var(--cy)", delta(F.variacaoPercentual(p.liquido, patrimonioAnt), "vs mês anterior"), `Dívidas: ${brl(p.dividas)}`, "patrimonio")}
+        ${kpiCard("Saldo bancário", brlSinal(p.bancos), pctBancos, "var(--cy)", delta(pctBancos, "do patrimônio"), `${bancos.length} ${bancos.length === 1 ? "Conta Cadastrada" : "Contas Cadastradas"}`, "bancos")}
+        ${kpiCard("Investimentos Líquidos", brlSinal(I.totalLiquidoOutros(d) + p.acoes), pctInvestido, "var(--cy)", delta(rentCarteira, "rent. carteira"), `${pctInvestido.toFixed(0)}% do patrimônio investido`, "investido")}
+        ${kpiCard("Receitas mês", "+" + brl(entradasMes), entradasMes + despesasMes > 0 ? (entradasMes / (entradasMes + despesasMes)) * 100 : 0, "var(--cy)", delta(F.variacaoPercentual(entradasMes, entradasAnt), "vs mês anterior"), `Mês anterior: ${brl(entradasAnt)}`, "receitas")}
+        ${kpiCard("Despesas mês", "−" + brl(despesasMes), pctDespesas, "var(--cy)", delta(F.variacaoPercentual(despesasMes, despesasAnt), "vs mês anterior", true), `${pctDespesas.toFixed(0)}% das receitas`, "despesas")}
       </div>
 
       <div class="grid">
@@ -2109,8 +2130,9 @@
       <div class="grid">
         <div class="c12">${card("", "Evolução patrimonial", `patrimônio líquido · ${mesesEvo ? mesesEvo + " meses de " + anoEvo : "todo histórico"}`,
           (pico ? `<span class="pill-pico">PICO ${brl(pico)}</span>` : "") +
+          (histPeriodo.length >= 2 ? `<span class="pill-periodo ${corSinal(histPeriodo[histPeriodo.length - 1].valor - histPeriodo[0].valor)}">NO PERÍODO ${brlSinal(histPeriodo[histPeriodo.length - 1].valor - histPeriodo[0].valor)}</span>` : "") +
           `<div class="filtro-mes">${seletorAnoDash("anoEvo", anoEvo, anosDashboard(d))}${abasMeses("periodo-evo", mesesEvo, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }, { meses: 0, rotulo: "Tudo" }])}</div>`, histPeriodo.length >= 2
-            ? `<div style="padding:8px 14px 12px;height:236px"><canvas id="graf-evolucao"></canvas></div>`
+            ? `<div style="padding:8px 14px 12px;height:280px"><canvas id="graf-evolucao"></canvas></div>`
             : `<div class="empty">Sem registros de patrimônio em ${mesesEvo ? `${mesesEvo} ${mesesEvo === 1 ? "mês" : "meses"} de ${anoEvo}` : "todo histórico"}. O patrimônio é registrado a cada dia que você abre o sistema.</div>`)}</div>
       </div>
 
@@ -4221,7 +4243,7 @@
         return s + (i.dataAplicacao && i.dataAplicacao <= fim ? Number(i.valorInvestido || 0) : 0);
       }, 0);
       const acoes = d.acoes.reduce((s, a) => { const pr = ultimoAte(a.historicoPrecos, "preco", fim); return s + (pr !== null ? pr * Number(a.quantidade || 0) : 0); }, 0);
-      return bancos + invest + acoes;
+      return { bancos, investimentos: invest, acoes, dividas: 0 };
     };
     let inicio = (validas[0] || hoje).slice(0, 7);
     const limite = `${Number(hoje.slice(0, 4)) - 10}${hoje.slice(4, 7)}`;
@@ -4230,10 +4252,11 @@
     for (let mes = inicio; mes < hoje.slice(0, 7); ) {
       const [a, m] = mes.split("-").map(Number);
       const fim = `${mes}-${String(new Date(a, m, 0).getDate()).padStart(2, "0")}`;
-      pontos.push({ data: fim, valor: Math.round(valorEm(fim)) });
+      const c = valorEm(fim);
+      pontos.push({ data: fim, valor: Math.round(c.bancos + c.investimentos + c.acoes), ...c });
       const prox = new Date(a, m, 1); mes = `${prox.getFullYear()}-${String(prox.getMonth() + 1).padStart(2, "0")}`;
     }
-    pontos.push({ data: hoje, valor: Math.round(p.liquido) });     // hoje: o patrimônio líquido exato
+    pontos.push({ data: hoje, valor: Math.round(p.liquido), bancos: p.bancos, investimentos: p.investimentos, acoes: p.acoes, dividas: p.dividas, hoje: true });     // hoje: o patrimônio líquido exato
     cacheHistPat = { chave, pontos };
     return pontos;
   }

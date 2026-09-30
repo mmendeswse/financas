@@ -1200,3 +1200,12 @@ button.resumo-pill:hover { filter: brightness(1.15); }
 button.resumo-pill:active { transform: scale(.98); }
 .resumo-pill.ativo { box-shadow: 0 0 0 2px currentColor; }
 .resumo-pills.com-filtro .resumo-pill:not(.ativo) { opacity: .45; }
+/* Evolução patrimonial: resumo do período e marco de cada ponto */
+.pill-periodo { font-size: 10.5px; font-weight: 800; letter-spacing: .06em; padding: 5px 10px; border-radius: 8px; border: 1px solid currentColor; margin-right: 8px; white-space: nowrap; }
+.pill-periodo.up { color: var(--up); background: rgba(34,227,154,.08); } .pill-periodo.down { color: var(--down); background: rgba(255,77,122,.08); }
+.marco-evo { font-weight: 700; font-size: 13px; padding: 9px 12px; border-radius: 9px; margin-bottom: 10px; border: 1px solid; }
+.marco-pico { color: #FFD633; border-color: rgba(255,214,51,.4); background: rgba(255,214,51,.08); }
+.marco-min { color: var(--down); border-color: rgba(255,77,122,.4); background: rgba(255,77,122,.07); }
+.marco-sobe { color: var(--up); border-color: rgba(34,227,154,.35); background: rgba(34,227,154,.07); }
+.marco-cai { color: var(--down); border-color: rgba(255,77,122,.35); background: rgba(255,77,122,.07); }
+.pill-pico { color: #FFD633 !important; background: rgba(255,214,51,.1) !important; border: 1px solid rgba(255,214,51,.4) !important; }
