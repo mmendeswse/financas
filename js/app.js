@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "2.2.5";
+  const VERSAO_APP = "2.2.7";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -1311,7 +1311,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.2.5" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.2.7" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2129,8 +2129,7 @@
 
       <div class="grid">
         <div class="c12">${card("", "Evolução patrimonial", `patrimônio líquido · ${mesesEvo ? mesesEvo + " meses de " + anoEvo : "todo histórico"}`,
-          (pico ? `<span class="pill-pico">PICO ${brl(pico)}</span>` : "") +
-          (histPeriodo.length >= 2 ? `<span class="pill-periodo ${corSinal(histPeriodo[histPeriodo.length - 1].valor - histPeriodo[0].valor)}">NO PERÍODO ${brlSinal(histPeriodo[histPeriodo.length - 1].valor - histPeriodo[0].valor)}</span>` : "") +
+          (histPeriodo.length >= 2 ? `<span class="pill-periodo ${corSinal(histPeriodo[histPeriodo.length - 1].valor - histPeriodo[0].valor)}">PERÍODO ${brlSinal(histPeriodo[histPeriodo.length - 1].valor - histPeriodo[0].valor)}</span>` : "") +
           `<div class="filtro-mes">${seletorAnoDash("anoEvo", anoEvo, anosDashboard(d))}${abasMeses("periodo-evo", mesesEvo, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }, { meses: 0, rotulo: "Tudo" }])}</div>`, histPeriodo.length >= 2
             ? `<div style="padding:8px 14px 12px;height:280px"><canvas id="graf-evolucao"></canvas></div>`
             : `<div class="empty">Sem registros de patrimônio em ${mesesEvo ? `${mesesEvo} ${mesesEvo === 1 ? "mês" : "meses"} de ${anoEvo}` : "todo histórico"}. O patrimônio é registrado a cada dia que você abre o sistema.</div>`)}</div>

@@ -383,7 +383,9 @@
           var pctTxt = " (" + sinal + Math.abs(pctDif).toFixed(1).replace(".", ",") + "%)";
           // 1ª linha: resultado total (diferença × cotas); 2ª: diferença por cota × quantidade
           var qtd = Number(opcoes.quantidade) || 0;
-          var txt = qtd > 0 ? sinal + moeda(Math.abs(dif * qtd)) + pctTxt : sinal + moeda(Math.abs(dif)) + pctTxt;
+          // ícone de destaque na frente, como nos marcos da Evolução patrimonial
+          var icone = dif >= 0 ? "📈 " : "📉 ";
+          var txt = icone + (qtd > 0 ? sinal + moeda(Math.abs(dif * qtd)) + pctTxt : sinal + moeda(Math.abs(dif)) + pctTxt);
           var txt2 = qtd > 0 ? sinal + moeda(Math.abs(dif)) + " por cota × " + qtd.toLocaleString("pt-BR") + (qtd === 1 ? " cota" : " cotas") : "";
           var c = grafico.ctx;
           c.save();
