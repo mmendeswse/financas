@@ -78,16 +78,30 @@
       return resultado;
     }
 
-    var secao = "";
+    var secao = "", nomeCaixinha = "";
+    var nomesUsados = {};
+    // o Nubank passou a separar as caixinhas pelo nome (Caixinha "Turbo Croma"):
+    // o nome entra no lançamento, para duas caixinhas com o mesmo tipo de RDB
+    // não virarem um só investimento
+    var nomeUnico = function (nome) {
+      var base = nome, n = 2;
+      while (nomesUsados[nome.toLowerCase()]) nome = base + " " + (n++);
+      nomesUsados[nome.toLowerCase()] = true;
+      return nome;
+    };
     todas.forEach(function (l) {
       var s = /^Custódia em (Caixinhas|Renda Fixa|Tesouro Direto|Bolsa de Valores)/.exec(l);
-      if (s) { secao = s[1]; return; }
+      if (s) { secao = s[1]; nomeCaixinha = ""; return; }
+      var cx = /^Caixinha\s+["“”]?(.+?)["“”]?\s*$/.exec(l);
+      if (secao === "Caixinhas" && cx) { nomeCaixinha = cx[1].trim(); return; }
       if (/^Total /.test(l) || /^Tipo de Ativo/.test(l)) return;
       var m;
 
       if (secao === "Caixinhas" && (m = RX_CAIXINHA.exec(l))) {
+        // no formato novo, a coluna Emissor ("Nubank") vem logo depois do tipo
+        var tipoRdb = m[1].replace(/\s+Nubank$/i, "").trim();
         resultado.investimentos.push({
-          nome: m[1] + " (Caixinha)", categoria: "Renda fixa", tipoAtivo: "RDB", emissor: "Nubank",
+          nome: nomeUnico(tipoRdb + (nomeCaixinha ? " (Caixinha " + nomeCaixinha + ")" : " (Caixinha)")), categoria: "Renda fixa", tipoAtivo: "RDB", emissor: "Nubank",
           liquidez: /mesmo dia/i.test(m[6] || "") ? "Liquidez diária" : "No vencimento",
           valorAtual: numero(m[2]), ir: numero(m[3]), liquido: numero(m[5]),
           indexador: "% do CDI"
