@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "2.5.8";
+  const VERSAO_APP = "2.6.1";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -902,7 +902,10 @@
     window.addEventListener("orientationchange", () => setTimeout(ajustarBarraGuias, 300));
 
     navegarPara("dashboard");
-    atualizarCotacoesAutomaticas(true);
+    // depois de buscar as cotações (histórico atualizado), procura as
+    // notícias em segundo plano; e de novo a cada 30 minutos
+    atualizarCotacoesAutomaticas(true).then(() => setTimeout(buscarNoticiasEmSegundoPlano, 3000));
+    setInterval(buscarNoticiasEmSegundoPlano, 30 * 60 * 1000);
     setInterval(() => atualizarCotacoesAutomaticas(true), 5 * 60 * 1000);
     sincronizar(true);                                   // ao abrir/atualizar a página
     setInterval(() => { if (document.visibilityState !== "hidden") sincronizar(true); }, 30 * 1000);
@@ -922,6 +925,8 @@
 
   function navegarPara(secao, param) {
     ROTA = { secao, param: param || null };
+    // cada abertura do gráfico do dólar/ação procura notícias novas
+    if (secao === "detalhe-dolar" || secao === "detalhe-acao") aberturaGrafico++;
     // ao entrar na guia, o filtro volta sempre para o mês e o ano atuais
     if (secao === "entradas") { mesEntradas = F.mesAtual(); ordemEntradas = { ...ORDEM_ENTRADAS_PADRAO }; filtroEntradas = null; }
     if (secao === "despesas") { mesDespesas = F.mesAtual(); ordemDespesas = { ...ORDEM_DESPESAS_PADRAO }; filtroDespesas = null; }
@@ -1316,7 +1321,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.5.8" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.6.1" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -4029,10 +4034,30 @@
   function gravarNoticiasDia(chave, dia, itens) {
     try { localStorage.setItem(`nt2:${chave}:${dia}`, JSON.stringify({ t: Date.now(), itens })); } catch (e) { /* sem espaço */ }
   }
-  let rodadaNoticias = 0;
+  // Uma busca por ativo ("dolar", "acao:PETR4"…) que continua mesmo quando a
+  // tela é redesenhada (cotações automáticas, sincronização, troca de período):
+  // o redesenho só aponta a busca para o gráfico novo, em vez de recomeçá-la.
+  //
+  // Regras:
+  // - notícia encontrada fica guardada no aparelho e aparece sempre, na hora;
+  // - cada vez que o gráfico é ABERTO, uma busca nova procura as notícias que
+  //   faltam (dias ainda sem notícia e os dias mais recentes, que podem ter
+  //   notícias novas) e junta com as guardadas;
+  // - uma busca em andamento nunca é reiniciada: abrir de novo ou redesenhar
+  //   a tela só faz a busca continuar mostrando no gráfico atual.
+  const buscasNoticias = {};
+  let aberturaGrafico = 0;
   function carregarNoticiasVelas(chave, termos, velas, visiveis, limiar, canvasId, aindaNaTela) {
-    if (!C || !C.buscarNoticiasDia || typeof fetch !== "function") return;
-    const rodada = ++rodadaNoticias;             // trocou de tela/gráfico: a busca anterior para
+    if (!C || !C.buscarNoticiasDia || typeof fetch !== "function") return Promise.resolve();
+    const existente = buscasNoticias[chave];
+    if (existente && (!existente.terminou || existente.abertura === aberturaGrafico)) {
+      existente.alvo = { canvasId, aindaNaTela, limiar };
+      existente.mostrar();
+      return existente.promessa;
+    }
+    const busca = buscasNoticias[chave] = { abertura: aberturaGrafico, alvo: { canvasId, aindaNaTela, limiar }, artigos: [], terminou: false, falhas: 0, dias: 0 };
+    let fim;
+    busca.promessa = new Promise((ok) => { fim = ok; });   // resolve quando a busca termina
     const fortes = [];
     velas.forEach((v, i) => {
       const ant = i > 0 ? velas[i - 1].preco : v.abertura;
@@ -4040,64 +4065,112 @@
     });
     const inicioTela = velas.length - visiveis;
     const ordem = fortes.filter((i) => i >= inicioTela).reverse().concat(fortes.filter((i) => i < inicioTela).reverse()).slice(0, NOTICIAS_MAX_DIAS);
-    const artigos = [];
-    const mostrar = () => { if (rodada === rodadaNoticias && aindaNaTela()) G.definirNoticias(canvasId, artigos.slice(), limiar); };
-    const guardar = (dia, itens) => itens.forEach((n) => artigos.push({ ...n, data: dia }));
-    // primeiro o que já está guardado (aparece na hora)
+    busca.dias = ordem.length;
+    // mostra o que já tem no gráfico que estiver na tela; durante a busca, sem
+    // aviso; no fim, um aviso só se não achou nada
+    busca.mostrar = () => {
+      const alvo = busca.alvo;
+      if (!alvo.aindaNaTela()) return;
+      G.definirNoticias(alvo.canvasId, busca.artigos.slice(), alvo.limiar);
+      let txt = "";
+      if (busca.terminou && !busca.artigos.length) {
+        txt = busca.falhas ? "sem conexão com as fontes" : (busca.dias ? "nenhuma nos dias de maior variação" : "sem dias de grande variação");
+      }
+      G.statusNoticias(alvo.canvasId, txt);
+    };
+    // notícias por dia, sem repetir (a mesma matéria pode vir em várias buscas)
+    const porDia = {};
+    const guardar = (dia, itens) => {
+      const lista = porDia[dia] || (porDia[dia] = []);
+      itens.forEach((n) => { if (!lista.some((x) => x.url === n.url)) lista.push(n); });
+      lista.sort((a, b) => (a.quando < b.quando ? 1 : -1));
+      busca.artigos = Object.keys(porDia).reduce((t, d) => t.concat(porDia[d].map((n) => ({ ...n, data: d }))), []);
+      return lista;
+    };
+    // junta as novas com as guardadas e grava no aparelho
+    const salvar = (dia, itens) => gravarNoticiasDia(chave, dia, guardar(dia, itens).slice(0, 8));
+    // primeiro o que já está guardado no aparelho (aparece na hora); os dias
+    // dos últimos 3 dias são consultados de novo mesmo assim (notícias novas)
+    const limiteRecente = (() => { const d = new Date(); d.setDate(d.getDate() - 3); return d.toISOString().slice(0, 10); })();
     const faltam = [];
     ordem.forEach((i) => {
       const dia = velas[i].data, salvo = lerNoticiasDia(chave, dia);
-      if (salvo) guardar(dia, salvo); else faltam.push(dia);
+      if (salvo) guardar(dia, salvo);
+      if (!salvo || dia >= limiteRecente) faltam.push(dia);
     });
-    if (artigos.length) mostrar();
+    const encerrar = () => { busca.terminou = true; busca.mostrar(); fim(); };
+    if (!faltam.length) { encerrar(); return busca.promessa; }
+    busca.mostrar();
     // depois busca na internet: primeiro UMA busca para o período todo (mostra
     // a maior parte dos "N" de uma vez), depois dia a dia só os que faltarem
-    let falhas = 0, seguidas = 0, ativos = 0, terminou = !faltam.length;
-    const status = () => {
-      if (rodada !== rodadaNoticias || !aindaNaTela()) return;
-      // durante a busca não mostra nada; no fim, um aviso só se não achou nada
-      if (!terminou) { G.statusNoticias(canvasId, ""); return; }
-      let txt = "";
-      if (falhas && !artigos.length) txt = "sem conexão com as fontes";
-      else if (!artigos.length) txt = ordem.length ? "nenhuma nos dias de maior variação" : "sem dias de grande variação";
-      G.statusNoticias(canvasId, txt);
-    };
-    status();
-    if (terminou) return;
     const isoLocal = (q) => { const d = new Date(q); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
     const vespera = (dia) => { const d = new Date(dia + "T12:00:00"); d.setDate(d.getDate() - 1); return isoLocal(d); };
     const fila = faltam.slice();
+    let seguidas = 0, ativos = 0;
     const proximo = () => {
-      if (rodada !== rodadaNoticias || !aindaNaTela()) return Promise.resolve();
       // fontes fora do ar (3 falhas seguidas): para e tenta de novo na próxima vez
       if (!fila.length || seguidas >= 3) {
-        if (--ativos <= 0) { terminou = true; status(); }
+        if (--ativos <= 0) encerrar();
         return Promise.resolve();
       }
       const dia = fila.shift();
       return C.buscarNoticiasDia(termos, dia).then((itens) => {
         seguidas = 0;
-        gravarNoticiasDia(chave, dia, itens);
-        if (itens.length) { guardar(dia, itens); mostrar(); }
-      }).catch(() => { falhas++; seguidas++; })   // falhou: fica para a próxima vez
-        .then(() => new Promise((ok) => setTimeout(ok, 400)))
+        if (itens.length) { salvar(dia, itens); busca.mostrar(); }
+        else if (!porDia[dia]) gravarNoticiasDia(chave, dia, []);   // dia sem notícia (consulta de novo depois)
+      }).catch(() => { busca.falhas++; seguidas++; })   // falhou: fica para a próxima vez
+        .then(() => new Promise((ok) => setTimeout(ok, 300)))
         .then(proximo);
     };
+    const ordenados = faltam.slice().sort();
     const porPeriodo = C.buscarNoticiasPeriodo
-      ? C.buscarNoticiasPeriodo(termos, faltam.slice().sort()[0], faltam.slice().sort().pop()).then((itens) => {
+      ? C.buscarNoticiasPeriodo(termos, ordenados[0], ordenados[ordenados.length - 1]).then((itens) => {
         // cada notícia vale para o dia dela e para o dia seguinte (véspera)
         faltam.forEach((dia) => {
           const doDia = itens.filter((n) => { const d = isoLocal(n.quando); return d === dia || d === vespera(dia); })
             .sort((x, y) => (isoLocal(y.quando) === dia) - (isoLocal(x.quando) === dia) || (x.quando < y.quando ? 1 : -1)).slice(0, 5);
           if (!doDia.length) return;
-          gravarNoticiasDia(chave, dia, doDia);
-          guardar(dia, doDia);
+          salvar(dia, doDia);
           fila.splice(fila.indexOf(dia), 1);
         });
-        if (artigos.length) mostrar();
-      }).catch(() => { falhas++; })
+        busca.mostrar();
+      }).catch(() => { busca.falhas++; })
       : Promise.resolve();
-    porPeriodo.then(() => { ativos = 2; proximo(); proximo(); });
+    porPeriodo.then(() => { ativos = 3; proximo(); proximo(); proximo(); });
+    return busca.promessa;
+  }
+
+  // atalhos: notícias do dólar e de uma ação (usados pelo gráfico e pela
+  // busca em segundo plano)
+  function noticiasDoDolar() {
+    const vd = velasDolarPeriodo();
+    if (vd.velas.length < 2) return Promise.resolve();
+    // "N" nas velas em que o dólar variou 0,35% ou mais e houve notícia
+    return carregarNoticiasVelas("dolar", { google: "dólar", gdelt: "(dólar OR câmbio) real" }, vd.velas, vd.visiveis, 0.35, "graf-dolar",
+      () => ROTA.secao === "detalhe-dolar" && velasDolar);
+  }
+  function noticiasDaAcao(a) {
+    const va = velasPeriodo(a.historicoPrecos, Number(a.precoAtual) || 0);
+    if (va.velas.length < 2) return Promise.resolve();
+    // "N" nas velas em que a ação variou 1% ou mais e houve notícia; só
+    // aparece se estiver no gráfico desta ação, em velas
+    const idAcao = a.id;
+    return carregarNoticiasVelas("acao:" + a.ticker.toUpperCase(), termosNoticiasAcao(a), va.velas, va.visiveis, 1, "graf-preco-acao",
+      () => ROTA.secao === "detalhe-acao" && ROTA.param === idAcao && velasAcao);
+  }
+
+  // Busca em SEGUNDO PLANO: logo depois de abrir o app (e a cada 30 min),
+  // procura as notícias do dólar e de todas as ações, uma de cada vez, e
+  // guarda no aparelho. Ao abrir o gráfico, os "N" já aparecem direto.
+  let noticiasSegundoPlano = false;
+  function buscarNoticiasEmSegundoPlano() {
+    if (noticiasSegundoPlano || !C || typeof fetch !== "function") return;
+    if (typeof navigator !== "undefined" && navigator.onLine === false) return;
+    noticiasSegundoPlano = true;
+    aberturaGrafico++;   // conta como uma "abertura": busca as notícias novas (sem reiniciar as em andamento)
+    let fila = carregarSerieDolar().then(() => noticiasDoDolar()).catch(() => {});
+    (DADOS.acoes || []).forEach((a) => { fila = fila.then(() => noticiasDaAcao(a)).catch(() => {}); });
+    fila.then(() => { noticiasSegundoPlano = false; });
   }
 
   // termos de busca de uma ação: o ticker e o nome da empresa sem a classe
@@ -4126,14 +4199,19 @@
     return velasPeriodo((serieDolar || []).filter((p) => p.abertura > 0), dolar ? dolar.valor : 0);
   }
 
+  let promessaSerieDolar = null;
   function carregarSerieDolar() {
-    if (serieDolar || buscandoSerieDolar || !C || typeof fetch !== "function") return;
+    if (serieDolar) return Promise.resolve(serieDolar);
+    if (buscandoSerieDolar) return promessaSerieDolar;
+    if (!C || typeof fetch !== "function") return Promise.resolve(null);
     buscandoSerieDolar = true;
-    C.buscarSerieDolar(365).then((serie) => {
+    promessaSerieDolar = C.buscarSerieDolar(365).then((serie) => {
       serieDolar = serie;
       buscandoSerieDolar = false;
       if (ROTA.secao === "detalhe-dolar") renderRota();
-    }).catch(() => { buscandoSerieDolar = false; });
+      return serie;
+    }).catch(() => { buscandoSerieDolar = false; return null; });
+    return promessaSerieDolar;
   }
 
   function renderDetalheDolar(d) {
@@ -4857,14 +4935,11 @@
           else serie.push({ data: hj, preco: atualDolar });
         }
         const alternar = () => { velasDolar = !velasDolar; renderRota(); };
-        const vd = velasDolar ? velasDolarPeriodo() : { velas: [] };
-        if (velasDolar && vd.velas.length >= 2) {
-          G.renderVelas("graf-dolar", vd.velas, { visiveis: vd.visiveis, linhaAtual: atualDolar, corAtual: "#FFD633", rotuloAtual: "Valor Atual", aoClicar: alternar, aoMudarJanela: marcarPeriodoDoZoom });
-          // "N" nas velas em que o dólar variou 0,35% ou mais e houve notícia
-          carregarNoticiasVelas("dolar", { google: "dólar", gdelt: "(dólar OR câmbio) real" }, vd.velas, vd.visiveis, 0.35, "graf-dolar",
-            () => ROTA.secao === "detalhe-dolar" && velasDolar);
-        }
+        const vd = velasDolarPeriodo();
+        if (velasDolar && vd.velas.length >= 2) G.renderVelas("graf-dolar", vd.velas, { visiveis: vd.visiveis, linhaAtual: atualDolar, corAtual: "#FFD633", rotuloAtual: "Valor Atual", aoClicar: alternar, aoMudarJanela: marcarPeriodoDoZoom });
         else if (serie.length >= 2) G.renderPrecoAcao("graf-dolar", serie, 0, 0, { linhaAtual: atualDolar, aoClicar: alternar });
+        // notícias: a busca já começa na visão de linha, para estar pronta ao trocar para velas
+        noticiasDoDolar();
         break;
       }
       case "detalhe-investimento": {
@@ -4877,15 +4952,11 @@
       case "detalhe-acao": {
         const a = achar(d.acoes, ROTA.param);
         const alternarAcao = () => { velasAcao = !velasAcao; renderRota(); };
-        const va = a && velasAcao ? velasPeriodo(a.historicoPrecos, Number(a.precoAtual) || 0) : { velas: [] };
-        if (velasAcao && va.velas.length >= 2) {
-          G.renderVelas("graf-preco-acao", va.velas, { visiveis: va.visiveis, linhaAtual: Number(a.precoAtual) || 0, linhaCompra: Number(a.precoMedio) || 0, quantidade: Number(a.quantidade) || 0, casas: 2, aoClicar: alternarAcao, aoMudarJanela: marcarPeriodoDoZoom });
-          // "N" nas velas em que a ação variou 1% ou mais e houve notícia
-          const idAcao = a.id;
-          carregarNoticiasVelas("acao:" + a.ticker.toUpperCase(), termosNoticiasAcao(a), va.velas, va.visiveis, 1, "graf-preco-acao",
-            () => ROTA.secao === "detalhe-acao" && ROTA.param === idAcao && velasAcao);   // só se ainda estiver na mesma ação, em velas
-        }
+        const va = a ? velasPeriodo(a.historicoPrecos, Number(a.precoAtual) || 0) : { velas: [] };
+        if (velasAcao && va.velas.length >= 2) G.renderVelas("graf-preco-acao", va.velas, { visiveis: va.visiveis, linhaAtual: Number(a.precoAtual) || 0, linhaCompra: Number(a.precoMedio) || 0, quantidade: Number(a.quantidade) || 0, casas: 2, aoClicar: alternarAcao, aoMudarJanela: marcarPeriodoDoZoom });
         else if (a && a.historicoPrecos.length) G.renderPrecoAcao("graf-preco-acao", filtrarPeriodo(a.historicoPrecos, periodoGrafico), a.precoMedio, Number(a.precoAtual) || 0, { quantidade: Number(a.quantidade) || 0, aoClicar: alternarAcao });
+        // notícias: a busca já começa na visão de linha
+        if (a) noticiasDaAcao(a);
         break;
       }
       case "carteira": {
