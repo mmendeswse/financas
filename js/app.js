@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "2.4.7";
+  const VERSAO_APP = "2.4.8";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -1316,7 +1316,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.4.7" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.4.8" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -4043,12 +4043,12 @@
     let feitos = 0, falhas = 0;
     const status = () => {
       if (rodada !== rodadaNoticias || !aindaNaTela()) return;
-      // enquanto busca: barrinha de progresso; no fim, um aviso só se não achou nada
-      if (feitos < faltam.length) { G.statusNoticias(canvasId, "", feitos / faltam.length); return; }
+      // durante a busca não mostra nada; no fim, um aviso só se não achou nada
+      if (feitos < faltam.length) { G.statusNoticias(canvasId, ""); return; }
       let txt = "";
       if (falhas && !artigos.length) txt = "sem conexão com as fontes";
       else if (!artigos.length) txt = ordem.length ? "nenhuma nos dias de maior variação" : "sem dias de grande variação";
-      G.statusNoticias(canvasId, txt, null);
+      G.statusNoticias(canvasId, txt);
     };
     status();
     const fila = faltam.slice();

@@ -678,23 +678,11 @@
             c.fillStyle = "#FFFFFF"; c.fillText("N", x, y + 0.5);
             marcas.push({ x: x, y: y, idx: ini + i });
           });
-          var status = g.$statusNoticias || "", progresso = g.$progressoNoticias;
-          var buscando = progresso != null && progresso < 1;
+          var status = g.$statusNoticias || "";
           var xLeg = ca.right;   // onde a legenda das linhas termina (à direita)
-          if (algum || status || buscando) {
-            // legenda no canto direito do cabeçalho; durante a busca, uma
-            // barrinha de progresso fica à direita do texto
+          if (algum || status) {
+            // legenda "Notícias" no canto direito do cabeçalho
             var xr = ca.right, yl = ca.top - 12;
-            if (buscando) {
-              // percentual à direita da barrinha (ex.: "45%")
-              var pctTxt = Math.round(Math.max(0, progresso) * 100) + "%";
-              c.font = "700 10px 'Segoe UI', Roboto, sans-serif"; c.textAlign = "left"; c.textBaseline = "middle";
-              var lb = 54, hb = 4, xb = xr - c.measureText("100%").width - 5 - lb, yb = Math.round(yl - hb / 2);
-              c.fillStyle = "#1E88FF"; c.fillText(pctTxt, xb + lb + 5, yl);
-              c.fillStyle = "rgba(110,132,148,0.28)"; c.fillRect(xb, yb, lb, hb);
-              c.fillStyle = "#1E88FF"; c.fillRect(xb, yb, Math.max(2, lb * Math.max(0, progresso)), hb);
-              xr = xb - 8;
-            }
             var txt = "Notícias" + (status ? " · " + status : "");
             c.font = "600 10.5px 'Segoe UI', Roboto, sans-serif"; c.textAlign = "right";
             c.fillStyle = CORES.texto; c.fillText(txt, xr, yl);
@@ -1122,13 +1110,11 @@
       var g = instancias[canvasId];
       if (g && g.$definirNoticias) g.$definirNoticias(artigos, limiar);
     },
-    // texto curto ao lado da legenda "Notícias" (ex.: "buscando 3/12")
-    // progresso: 0 a 1 enquanto busca (barrinha); null quando terminou
-    statusNoticias: function (canvasId, texto, progresso) {
+    // texto curto ao lado da legenda "Notícias" (ex.: "sem conexão com as fontes")
+    statusNoticias: function (canvasId, texto) {
       var g = instancias[canvasId];
-      if (!g || !g.$definirNoticias) return;
-      if (g.$statusNoticias === texto && g.$progressoNoticias === progresso) return;
-      g.$statusNoticias = texto; g.$progressoNoticias = progresso;
+      if (!g || !g.$definirNoticias || g.$statusNoticias === texto) return;
+      g.$statusNoticias = texto;
       g.update("none");
     },
     renderLinhaMultipla: renderLinhaMultipla,
