@@ -755,9 +755,10 @@
     // roda do mouse: aproxima/afasta mantendo a vela sob o mouse no lugar;
     // pinça (2 dedos) no iPad faz o mesmo; arrastar move no tempo
     var arrastou = false;
-    function zoom(fator, xPixel) {
+    // muda a quantidade de velas na tela, mantendo no lugar a vela sob xPixel
+    function zoomPara(qtdDesejada, xPixel) {
       var ca = grafico.chartArea, qtd = fim - ini;
-      var nova = Math.round(Math.max(MIN_VELAS, Math.min(total, qtd * fator)));
+      var nova = Math.round(Math.max(MIN_VELAS, Math.min(total, qtdDesejada)));
       if (nova === qtd) return;
       var frac = Math.max(0, Math.min(1, (xPixel - ca.left) / (ca.right - ca.left)));
       var ancora = ini + frac * qtd;
@@ -765,6 +766,13 @@
       ini = Math.max(0, Math.min(total - nova, ini));
       fim = ini + nova;
       aplicarJanela(grafico); grafico.update("none");
+      avisarJanela();
+    }
+    function zoom(fator, xPixel) { zoomPara((fim - ini) * fator, xPixel); }
+    // avisa o app qual intervalo está na tela depois do zoom (para marcar a
+    // aba de período); a abertura do gráfico já vem da aba escolhida
+    function avisarJanela() {
+      if (opcoes.aoMudarJanela && serie.length) opcoes.aoMudarJanela(serie[0].data, serie[serie.length - 1].data, ini === 0 && fim === total);
     }
     function deslocar(velas) {
       var qtd = fim - ini;
@@ -772,56 +780,98 @@
       if (novoIni === ini) return;
       ini = novoIni; fim = ini + qtd;
       aplicarJanela(grafico); grafico.update("none");
+      avisarJanela();
     }
+    // arrasto lateral: move uma vela a cada "largura de vela" percorrida
+    function arrastarPara(x) {
+      var ca = grafico.chartArea, porVela = (ca.right - ca.left) / Math.max(1, fim - ini);
+      var dx = x - arrasto.x + arrasto.sobra;
+      var velas = Math.trunc(dx / porVela);
+      if (velas) { deslocar(-velas); arrasto.sobra = dx - velas * porVela; arrasto.x = x; }
+    }
+    function soltouArrasto() {
+      // o clique que vem logo depois do arrasto/pinça não troca para a linha
+      if (arrastou) setTimeout(function () { arrastou = false; }, 350);
+    }
+
     var antigos = canvas._velasEventos;
     if (antigos) Object.keys(antigos).forEach(function (k) { canvas.removeEventListener(k, antigos[k]); });
-    var dedos = {}, pinca = null, arrasto = null;
-    var posX = function (e) { return e.clientX - canvas.getBoundingClientRect().left; };
+    var arrasto = null, pinca = null, toque = null;
+    var rect = function () { return canvas.getBoundingClientRect(); };
+    var posX = function (e) { return e.clientX - rect().left; };
+    // dois dedos: distância real entre eles (em qualquer direção) e o ponto do meio
+    var medirPinca = function (t) {
+      var r = rect(), dx = t[0].clientX - t[1].clientX, dy = t[0].clientY - t[1].clientY;
+      return { dist: Math.max(1, Math.sqrt(dx * dx + dy * dy)), meio: (t[0].clientX + t[1].clientX) / 2 - r.left };
+    };
     var eventos = {
+      // ---- web: roda do mouse = zoom; arrastar com o mouse = mover no tempo
       wheel: function (e) {
-        if (!instancias[canvasId] || instancias[canvasId] !== grafico) return;
+        if (instancias[canvasId] !== grafico) return;
         e.preventDefault();
         zoom(e.deltaY > 0 ? 1.15 : 1 / 1.15, posX(e));
       },
       pointerdown: function (e) {
+        if (e.pointerType === "touch") return;          // toque é tratado abaixo
         try { canvas.setPointerCapture(e.pointerId); } catch (x) { /* sem suporte */ }
-        dedos[e.pointerId] = posX(e);
-        var ids = Object.keys(dedos);
         arrastou = false;
-        if (ids.length === 2) { pinca = { dist: Math.abs(dedos[ids[0]] - dedos[ids[1]]) || 1 }; arrasto = null; }
-        else if (ids.length === 1) arrasto = { x: posX(e), sobra: 0 };
+        arrasto = { x: posX(e), inicio: posX(e), sobra: 0 };
       },
       pointermove: function (e) {
-        if (!(e.pointerId in dedos)) return;
-        dedos[e.pointerId] = posX(e);
-        var ids = Object.keys(dedos);
-        if (pinca && ids.length === 2) {
-          var d = Math.abs(dedos[ids[0]] - dedos[ids[1]]) || 1;
-          if (Math.abs(d - pinca.dist) > 12) {
-            zoom(pinca.dist / d, (dedos[ids[0]] + dedos[ids[1]]) / 2);
-            pinca.dist = d; arrastou = true;
-          }
-        } else if (arrasto) {
-          var ca = grafico.chartArea, porVela = (ca.right - ca.left) / Math.max(1, fim - ini);
-          var dx = posX(e) - arrasto.x + arrasto.sobra;
-          var velas = Math.trunc(dx / porVela);
-          if (Math.abs(posX(e) - arrasto.x) > 4) arrastou = true;
-          if (velas) { deslocar(-velas); arrasto.sobra = dx - velas * porVela; arrasto.x = posX(e); }
-        }
+        if (e.pointerType === "touch" || !arrasto) return;
+        if (Math.abs(posX(e) - arrasto.inicio) > 4) arrastou = true;
+        arrastarPara(posX(e));
       },
       pointerup: function (e) {
-        delete dedos[e.pointerId];
-        if (Object.keys(dedos).length < 2) pinca = null;
-        if (!Object.keys(dedos).length) arrasto = null;
-        // o clique que vem logo depois do arrasto não troca para a linha
-        if (arrastou) setTimeout(function () { arrastou = false; }, 50);
-      }
+        if (e.pointerType === "touch") return;
+        arrasto = null; soltouArrasto();
+      },
+      // ---- iPad: dois dedos afastando/aproximando = zoom (pinça);
+      // um dedo deslizando para o lado = mover no tempo; na vertical, a
+      // página rola normalmente
+      touchstart: function (e) {
+        if (e.touches.length === 2) {
+          var m = medirPinca(e.touches);
+          pinca = { dist0: m.dist, qtd0: fim - ini };
+          arrasto = null; toque = null; arrastou = true;
+          e.preventDefault();
+        } else if (e.touches.length === 1) {
+          arrastou = false;
+          var t = e.touches[0];
+          toque = { x0: t.clientX, y0: t.clientY, decidido: null };
+          arrasto = { x: t.clientX - rect().left, sobra: 0 };
+        }
+      },
+      touchmove: function (e) {
+        if (pinca && e.touches.length >= 2) {
+          e.preventDefault();
+          var m = medirPinca(e.touches);
+          // afastar os dedos aproxima (menos velas, maiores); juntar afasta
+          zoomPara(pinca.qtd0 * pinca.dist0 / m.dist, m.meio);
+          return;
+        }
+        if (!toque || e.touches.length !== 1) return;
+        var t = e.touches[0], dx = t.clientX - toque.x0, dy = t.clientY - toque.y0;
+        if (!toque.decidido && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) toque.decidido = Math.abs(dx) > Math.abs(dy) ? "lado" : "vertical";
+        if (toque.decidido !== "lado") return;            // vertical: deixa a página rolar
+        e.preventDefault();
+        arrastou = true;
+        arrastarPara(t.clientX - rect().left);
+      },
+      touchend: function (e) {
+        if (e.touches.length < 2) pinca = null;
+        if (!e.touches.length) { arrasto = null; toque = null; soltouArrasto(); }
+      },
+      // Safari do iPad: impede o zoom da página inteira durante a pinça
+      gesturestart: function (e) { e.preventDefault(); },
+      gesturechange: function (e) { e.preventDefault(); }
     };
     eventos.pointercancel = eventos.pointerup;
-    Object.keys(eventos).forEach(function (k) { canvas.addEventListener(k, eventos[k], k === "wheel" ? { passive: false } : false); });
+    eventos.touchcancel = eventos.touchend;
+    var passivo = { wheel: 1, touchstart: 1, touchmove: 1, gesturestart: 1, gesturechange: 1 };
+    Object.keys(eventos).forEach(function (k) { canvas.addEventListener(k, eventos[k], passivo[k] ? { passive: false } : false); });
     canvas._velasEventos = eventos;
-    // no iPad, deixa a página rolar na vertical; o resto (arrasto lateral e
-    // pinça) fica com o gráfico
+    // a página continua rolando na vertical; arrasto lateral e pinça ficam com o gráfico
     canvas.style.touchAction = "pan-y";
   }
 
