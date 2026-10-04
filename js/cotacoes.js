@@ -145,24 +145,52 @@
     var d = new Date(iso + "T12:00:00"); d.setDate(d.getDate() + 1);
     return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
   }
+  function diaAnterior(iso) {
+    var d = new Date(iso + "T12:00:00"); d.setDate(d.getDate() - 1);
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+  // item do Google Notícias → { quando, titulo, url, fonte }
+  // (o título termina com " - Nome do site")
+  function itemGoogle(tituloBruto, pubDate, link, fonteBruta, dia) {
+    var titulo = String(tituloBruto || ""), fonte = String(fonteBruta || "");
+    var k = titulo.lastIndexOf(" - ");
+    if (k > 20) { fonte = fonte || titulo.slice(k + 3).trim(); titulo = titulo.slice(0, k).trim(); }
+    var quando = pubDate ? new Date(pubDate) : null;
+    return { quando: quando && !isNaN(quando) ? quando.toISOString() : dia + "T12:00:00.000Z", titulo: titulo, url: String(link || ""), fonte: fonte };
+  }
+  // O movimento de um dia costuma vir de notícia daquele dia ou da noite
+  // anterior: a busca pega os dois dias (after: é o dia anterior).
   function noticiasGoogle(termo, dia) {
     var rss = "https://news.google.com/rss/search?hl=pt-BR&gl=BR&ceid=BR:pt-419&q=" +
-      encodeURIComponent(termo + " after:" + dia + " before:" + diaSeguinte(dia));
-    var url = "https://api.rss2json.com/v1/api.json?rss_url=" + encodeURIComponent(rss);
-    return comTimeout(fetch(url).then(function (r) {
-      if (!r.ok) throw new Error("HTTP " + r.status);
-      return r.json();
-    }).then(function (j) {
-      if (!j || j.status !== "ok") throw new Error((j && j.message) || "rss2json falhou");
-      return (j.items || []).map(function (it) {
-        // o título do Google Notícias termina com " - Nome do site"
-        var titulo = String(it.title || ""), fonte = "";
-        var k = titulo.lastIndexOf(" - ");
-        if (k > 20) { fonte = titulo.slice(k + 3).trim(); titulo = titulo.slice(0, k).trim(); }
-        var quando = it.pubDate ? new Date(String(it.pubDate).replace(" ", "T") + "Z") : null;
-        return { quando: quando && !isNaN(quando) ? quando.toISOString() : dia + "T12:00:00.000Z", titulo: titulo, url: String(it.link || ""), fonte: fonte || String(it.author || "") };
-      }).filter(function (n) { return n.titulo && n.url; });
-    }), 12000);
+      encodeURIComponent(termo + " after:" + diaAnterior(dia) + " before:" + diaSeguinte(dia));
+    // 1º caminho: rss2json (JSON pronto)
+    var viaRss2json = function () {
+      return comTimeout(fetch("https://api.rss2json.com/v1/api.json?rss_url=" + encodeURIComponent(rss)).then(function (r) {
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.json();
+      }).then(function (j) {
+        if (!j || j.status !== "ok") throw new Error((j && j.message) || "rss2json falhou");
+        return (j.items || []).map(function (it) {
+          return itemGoogle(it.title, it.pubDate ? String(it.pubDate).replace(" ", "T") + "Z" : "", it.link, it.author, dia);
+        });
+      }), 12000);
+    };
+    // 2º caminho: o próprio RSS (XML) por um repassador com CORS (allorigins)
+    var viaAllorigins = function () {
+      return comTimeout(fetch("https://api.allorigins.win/raw?url=" + encodeURIComponent(rss)).then(function (r) {
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.text();
+      }).then(function (xml) {
+        var doc = new DOMParser().parseFromString(xml, "text/xml");
+        var itens = Array.prototype.slice.call(doc.getElementsByTagName("item"));
+        if (!itens.length && !/<rss/i.test(xml)) throw new Error("resposta inválida");
+        var txt = function (el, tag) { var x = el.getElementsByTagName(tag)[0]; return x ? x.textContent : ""; };
+        return itens.map(function (el) { return itemGoogle(txt(el, "title"), txt(el, "pubDate"), txt(el, "link"), txt(el, "source"), dia); });
+      }), 12000);
+    };
+    return viaRss2json().catch(viaAllorigins).then(function (lista) {
+      return lista.filter(function (n) { return n.titulo && n.url; });
+    });
   }
   function noticiasGdelt(termo, dia) {
     var d = dia.replace(/-/g, "");
@@ -182,11 +210,19 @@
     }), 15000);
   }
   function buscarNoticiasDia(termos, dia) {
-    var ordenar = function (lista) { return lista.sort(function (a, b) { return a.quando < b.quando ? 1 : -1; }).slice(0, 5); };
+    // notícias do próprio dia primeiro, depois as da véspera; as mais recentes no topo
+    var ordenar = function (lista) {
+      return lista.sort(function (a, b) {
+        var da = a.quando.slice(0, 10) === dia ? 1 : 0, db = b.quando.slice(0, 10) === dia ? 1 : 0;
+        return da !== db ? db - da : (a.quando < b.quando ? 1 : -1);
+      }).slice(0, 5);
+    };
     return noticiasGoogle(termos.google, dia).then(function (lista) {
       if (lista.length) return ordenar(lista);
-      throw new Error("sem notícias no Google");
-    }).catch(function () {
+      return noticiasGdelt(termos.gdelt, dia).then(ordenar).catch(function () { return []; });
+    }, function () {
+      // Google indisponível: tenta o GDELT; se também falhar, a busca falha
+      // (e o dia é consultado de novo na próxima vez)
       return noticiasGdelt(termos.gdelt, dia).then(ordenar);
     });
   }

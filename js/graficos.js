@@ -511,7 +511,6 @@
       });
     }
     function aplicarJanela(grafico) {
-      fecharNoticia();
       serie = serieTotal.slice(ini, fim);
       var e = escala();
       grafico.data.labels = serie.map(rotulo);
@@ -636,9 +635,10 @@
             c.fillStyle = "#FFFFFF"; c.fillText("N", x, y + 0.5);
             marcas.push({ x: x, y: y, idx: ini + i });
           });
-          if (algum) {
-            // legenda no canto direito do cabeçalho
-            var txt = "Notícias", xr = ca.right, yl = ca.top - 12;
+          var status = g.$statusNoticias || "";
+          if (algum || status) {
+            // legenda no canto direito do cabeçalho (com o andamento da busca)
+            var txt = "Notícias" + (status ? " · " + status : ""), xr = ca.right, yl = ca.top - 12;
             c.font = "600 10.5px 'Segoe UI', Roboto, sans-serif"; c.textAlign = "right";
             c.fillStyle = CORES.texto; c.fillText(txt, xr, yl);
             var xc = xr - c.measureText(txt).width - 11;
@@ -765,6 +765,7 @@
       ini = Math.round(ancora - frac * nova);
       ini = Math.max(0, Math.min(total - nova, ini));
       fim = ini + nova;
+      fecharNoticia();
       aplicarJanela(grafico); grafico.update("none");
       avisarJanela();
     }
@@ -779,6 +780,7 @@
       var novoIni = Math.max(0, Math.min(total - qtd, ini + velas));
       if (novoIni === ini) return;
       ini = novoIni; fim = ini + qtd;
+      fecharNoticia();
       aplicarJanela(grafico); grafico.update("none");
       avisarJanela();
     }
@@ -1043,6 +1045,11 @@
     definirNoticias: function (canvasId, artigos, limiar) {
       var g = instancias[canvasId];
       if (g && g.$definirNoticias) g.$definirNoticias(artigos, limiar);
+    },
+    // texto curto ao lado da legenda "Notícias" (ex.: "buscando 3/12")
+    statusNoticias: function (canvasId, texto) {
+      var g = instancias[canvasId];
+      if (g && g.$definirNoticias && g.$statusNoticias !== texto) { g.$statusNoticias = texto; g.update("none"); }
     },
     renderLinhaMultipla: renderLinhaMultipla,
     renderBarrasObjetivo: renderBarrasObjetivo,
