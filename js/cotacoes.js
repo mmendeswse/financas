@@ -161,6 +161,7 @@
   // Lê uma busca do Google Notícias (RSS) pelos caminhos com CORS:
   // rss2json (JSON, até 10 itens), allorigins ou codetabs (XML inteiro, até
   // ~100 itens), cada um com tempo curto.
+  var caminhoRss = 0;
   function rssXml(xml, diaRef) {
     var doc = new DOMParser().parseFromString(xml, "text/xml");
     var itens = Array.prototype.slice.call(doc.getElementsByTagName("item"));
@@ -180,41 +181,36 @@
           return (j.items || []).map(function (it) {
             return itemGoogle(it.title, it.pubDate ? String(it.pubDate).replace(" ", "T") + "Z" : "", it.link, it.author, diaRef);
           });
-        }), 7000);
+        }), 6000);
       },
       function () {
         return comTimeout(fetch("https://api.allorigins.win/raw?url=" + encodeURIComponent(rss)).then(function (r) {
           if (!r.ok) throw new Error("HTTP " + r.status);
           return r.text();
-        }).then(function (xml) { return rssXml(xml, diaRef); }), 8000);
+        }).then(function (xml) { return rssXml(xml, diaRef); }), 7000);
       },
       function () {
-        return comTimeout(fetch("https://api.codetabs.com/v1/proxy/?quest=" + encodeURIComponent(rss)).then(function (r) {
+        return comTimeout(fetch("https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(rss)).then(function (r) {
           if (!r.ok) throw new Error("HTTP " + r.status);
           return r.text();
-        }).then(function (xml) { return rssXml(xml, diaRef); }), 8000);
+        }).then(function (xml) { return rssXml(xml, diaRef); }), 7000);
       }
     ];
-    // os três caminhos saem AO MESMO TEMPO: vale a primeira resposta com
-    // notícias; se todos responderem vazio, o resultado é vazio; só falha se
-    // os três falharem. Assim um caminho lento ou fora do ar não atrasa nada.
-    // Numa busca de período, o rss2json (só 10 itens) só vale se os outros
-    // não trouxerem nada.
-    return new Promise(function (ok, erro) {
-      var pendentes = caminhos.length, algumOk = false, melhor = [], feito = false;
-      caminhos.forEach(function (fn, k) {
-        fn().then(function (lista) {
-          lista = lista.filter(function (n) { return n.titulo && n.url; });
-          algumOk = true;
-          if (lista.length > melhor.length) melhor = lista;
-          if (!feito && lista.length && !(preferirCompleto && k === 0)) { feito = true; ok(lista); }
-        }, function () { /* este caminho falhou; os outros continuam */ }).then(function () {
-          if (--pendentes > 0 || feito) return;
-          feito = true;
-          if (algumOk) ok(melhor); else erro(new Error("Google Notícias indisponível"));
-        });
-      });
-    });
+    // um caminho de cada vez (os serviços gratuitos limitam pedidos por
+    // segundo: disparar todos juntos estourava os limites), começando pelo
+    // que funcionou da última vez. Numa busca de período, os caminhos que
+    // trazem o RSS inteiro (até ~100 itens) vêm antes do rss2json (10 itens).
+    var base = preferirCompleto ? [1, 2, 0] : [0, 1, 2];
+    var primeiro = preferirCompleto && caminhoRss === 0 ? base[0] : caminhoRss;
+    var ordem = [primeiro].concat(base.filter(function (x) { return x !== primeiro; }));
+    var tentar = function (k) {
+      if (k >= ordem.length) return Promise.reject(new Error("Google Notícias indisponível"));
+      return caminhos[ordem[k]]().then(function (lista) {
+        caminhoRss = ordem[k];
+        return lista.filter(function (n) { return n.titulo && n.url; });
+      }, function () { return tentar(k + 1); });
+    };
+    return tentar(0);
   }
   // O movimento de um dia costuma vir de notícia daquele dia ou da noite
   // anterior: a busca pega os dois dias (after: é o dia anterior).
@@ -224,12 +220,14 @@
   // Uma busca só para um período inteiro (até ~100 notícias): mostra a maior
   // parte dos "N" de uma vez, antes da busca dia a dia dos que faltarem.
   function buscarNoticiasPeriodo(termos, inicio, fim) {
-    return lerRssGoogle(termos.google + " after:" + diaAnterior(inicio) + " before:" + diaSeguinte(fim), fim, true);
+    return lerRssGoogle(termos.google + " after:" + diaAnterior(inicio) + " before:" + diaSeguinte(fim), fim, true)
+      .catch(function () { return noticiasGdelt(termos.gdelt, diaAnterior(inicio), fim); });
   }
-  function noticiasGdelt(termo, dia) {
-    var d = dia.replace(/-/g, "");
-    var url = "https://api.gdeltproject.org/api/v2/doc/doc?mode=artlist&format=json&sort=hybridrel&maxrecords=10" +
-      "&startdatetime=" + d + "000000&enddatetime=" + d + "235959&query=" + encodeURIComponent(termo + " sourcelang:portuguese");
+  // GDELT de um dia (ou de um período, com "ate"): reserva quando o Google falha
+  function noticiasGdelt(termo, dia, ate) {
+    var d = dia.replace(/-/g, ""), f = (ate || dia).replace(/-/g, "");
+    var url = "https://api.gdeltproject.org/api/v2/doc/doc?mode=artlist&format=json&" + (ate ? "sort=datedesc&maxrecords=250" : "sort=hybridrel&maxrecords=10") +
+      "&startdatetime=" + d + "000000&enddatetime=" + f + "235959&query=" + encodeURIComponent(termo + " sourcelang:portuguese");
     return comTimeout(fetch(url).then(function (r) {
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.text();
