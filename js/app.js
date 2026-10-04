@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "2.6.4";
+  const VERSAO_APP = "2.6.5";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -936,8 +936,10 @@
     // (em Ações, sempre abre nos últimos 7 dias)
     if (secao === "acoes") periodoGrafico = "7d";
     if (secao === "investimentos") periodoGrafico = "7d";
-    if (secao === "detalhe-dolar") { periodoGrafico = "7d"; velasDolar = false; }   // o gráfico do dólar também abre em 7 dias, em linha
-    if (secao === "detalhe-acao") velasAcao = false;   // o gráfico de cada ação também abre em linha
+    // o gráfico do dólar e o de cada ação abrem sempre em velas (candles);
+    // tocar no gráfico alterna para a linha e de volta
+    if (secao === "detalhe-dolar") { periodoGrafico = "7d"; velasDolar = true; }
+    if (secao === "detalhe-acao") velasAcao = true;
     // a guia Bancos sempre abre mostrando o saldo atual ("Tudo")
     if (secao === "bancos") { mesesBancos = 0; anoBancos = String(new Date().getFullYear()); }
     // Dashboard e Relatórios abrem sempre no ano atual: receitas x despesas
@@ -1322,7 +1324,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.6.4" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.6.5" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -3985,8 +3987,8 @@
   // =========================================================================
   let serieDolar = null;        // série diária vinda da AwesomeAPI
   let buscandoSerieDolar = false;
-  let velasDolar = false;       // true = gráfico em velas (tocar no gráfico alterna)
-  let velasAcao = false;        // o mesmo para o gráfico de cada ação
+  let velasDolar = true;        // true = gráfico em velas (tocar no gráfico alterna para a linha)
+  let velasAcao = true;         // o mesmo para o gráfico de cada ação
 
   // Velas diárias a partir de um histórico de preços. Devolve todas as
   // velas (o zoom do gráfico pode mostrar mais ou menos dias) e quantas
