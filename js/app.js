@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "2.6.1";
+  const VERSAO_APP = "2.6.2";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -1321,7 +1321,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.6.1" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.6.2" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -4108,8 +4108,8 @@
     const fila = faltam.slice();
     let seguidas = 0, ativos = 0;
     const proximo = () => {
-      // fontes fora do ar (3 falhas seguidas): para e tenta de novo na próxima vez
-      if (!fila.length || seguidas >= 3) {
+      // fontes fora do ar (4 falhas seguidas): para e tenta de novo na próxima vez
+      if (!fila.length || seguidas >= 4) {
         if (--ativos <= 0) encerrar();
         return Promise.resolve();
       }
@@ -4119,7 +4119,8 @@
         if (itens.length) { salvar(dia, itens); busca.mostrar(); }
         else if (!porDia[dia]) gravarNoticiasDia(chave, dia, []);   // dia sem notícia (consulta de novo depois)
       }).catch(() => { busca.falhas++; seguidas++; })   // falhou: fica para a próxima vez
-        .then(() => new Promise((ok) => setTimeout(ok, 300)))
+        // pausa entre os dias: os serviços gratuitos limitam pedidos por segundo
+        .then(() => new Promise((ok) => setTimeout(ok, 900)))
         .then(proximo);
     };
     const ordenados = faltam.slice().sort();
@@ -4136,7 +4137,7 @@
         busca.mostrar();
       }).catch(() => { busca.falhas++; })
       : Promise.resolve();
-    porPeriodo.then(() => { ativos = 3; proximo(); proximo(); proximo(); });
+    porPeriodo.then(() => { ativos = 1; proximo(); });   // um dia de cada vez
     return busca.promessa;
   }
 
@@ -4169,7 +4170,9 @@
     noticiasSegundoPlano = true;
     aberturaGrafico++;   // conta como uma "abertura": busca as notícias novas (sem reiniciar as em andamento)
     let fila = carregarSerieDolar().then(() => noticiasDoDolar()).catch(() => {});
-    (DADOS.acoes || []).forEach((a) => { fila = fila.then(() => noticiasDaAcao(a)).catch(() => {}); });
+    // uma de cada vez, com uma pausa entre elas (limites dos serviços gratuitos)
+    const pausa = () => new Promise((ok) => setTimeout(ok, 2000));
+    (DADOS.acoes || []).forEach((a) => { fila = fila.then(pausa).then(() => noticiasDaAcao(a)).catch(() => {}); });
     fila.then(() => { noticiasSegundoPlano = false; });
   }
 
