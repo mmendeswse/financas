@@ -326,7 +326,8 @@
     var txt2 = qtd > 0 ? sinal + moeda(Math.abs(dif)) + " por cota × " + qtd.toLocaleString("pt-BR") + (qtd === 1 ? " cota" : " cotas") : "";
     var c = grafico.ctx;
     if (soTotal) {
-      var xs = ca.left + ca.width * 0.62, total = sinal + moeda(Math.abs(qtd > 0 ? dif * qtd : dif));
+      // mesmo formato das etiquetas do eixo (ex.: "36.42"): sinal + número com ponto, sem "R$"
+      var xs = ca.left + ca.width * 0.62, total = sinal + Math.abs(qtd > 0 ? dif * qtd : dif).toFixed(2);
       c.save();
       c.font = "700 10.5px 'Segoe UI', Roboto, sans-serif";
       var lt = c.measureText(total).width + 10;
