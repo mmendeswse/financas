@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "2.2.9";
+  const VERSAO_APP = "2.3.0";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -886,7 +886,9 @@
     // então precisam do seu próprio tratador de clique
     document.addEventListener("click", (e) => {
       const alvo = e.target.closest('[data-acao="ir-dolar"]');
-      if (alvo) { e.preventDefault(); navegarPara("detalhe-dolar"); }
+      if (alvo) { e.preventDefault(); navegarPara("detalhe-dolar"); return; }
+      const acao = e.target.closest('#tickerTape [data-acao="ir-acao"]');
+      if (acao) { e.preventDefault(); navegarPara("detalhe-acao", acao.dataset.id); }
     });
     ligarDelegacaoConteudo();
     ligarPuxarParaAtualizar();
@@ -926,7 +928,7 @@
     // (em Ações, sempre abre nos últimos 7 dias)
     if (secao === "acoes") periodoGrafico = "7d";
     if (secao === "investimentos") periodoGrafico = "7d";
-    if (secao === "detalhe-dolar") periodoGrafico = "7d";   // o gráfico do dólar também abre em 7 dias
+    if (secao === "detalhe-dolar") { periodoGrafico = "7d"; velasDolar = false; }   // o gráfico do dólar também abre em 7 dias, em linha
     // a guia Bancos sempre abre mostrando o saldo atual ("Tudo")
     if (secao === "bancos") { mesesBancos = 0; anoBancos = String(new Date().getFullYear()); }
     // Dashboard e Relatórios abrem sempre no ano atual: receitas x despesas
@@ -1311,7 +1313,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.2.9" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.3.0" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1501,7 +1503,7 @@
     const itemDolar = dolar ? `<span class="ticker-item clicavel" data-acao="ir-dolar" title="Ver histórico do dólar"><b>USD/BRL</b><span class="tp">${dolar.valor.toFixed(2).replace(".", ",")}</span><span class="tv ${dolar.variacaoPct >= 0 ? "up" : "down"}">${Math.abs(dolar.variacaoPct || 0).toFixed(2).replace(".", ",")}%</span></span>` : "";
     const itens = itemDolar + lista.map((a) => {
       const p = a.fontePreco === "auto" && a.variacaoDiaPct != null ? a.variacaoDiaPct : ((a.historicoPrecos || []).length < 2 ? a.rentabilidade : I.variacaoRecente(a).pct);
-      return `<span class="ticker-item"><b>${esc(a.ticker)}</b><span class="tp">${a.precoAtual.toFixed(2).replace(".", ",")}</span><span class="tv ${p >= 0 ? "up" : "down"}">${Math.abs(p).toFixed(2).replace(".", ",")}%</span></span>`;
+      return `<span class="ticker-item clicavel" data-acao="ir-acao" data-id="${a.id}" title="Ver ${esc(a.ticker)}"><b>${esc(a.ticker)}</b><span class="tp">${a.precoAtual.toFixed(2).replace(".", ",")}</span><span class="tv ${p >= 0 ? "up" : "down"}">${Math.abs(p).toFixed(2).replace(".", ",")}%</span></span>`;
     }).join("");
     track.innerHTML = itens + itens;
     tape.style.display = "";
@@ -3956,6 +3958,29 @@
   // =========================================================================
   let serieDolar = null;        // série diária vinda da AwesomeAPI
   let buscandoSerieDolar = false;
+  let velasDolar = false;       // true = gráfico em velas (tocar no gráfico alterna)
+
+  // velas do período escolhido; o último dia recebe a cotação atual
+  function velasDolarPeriodo() {
+    const serie = (serieDolar || []).filter((p) => p.abertura > 0);
+    const op = PERIODOS_GRAFICO.find((x) => x.chave === periodoGrafico);
+    let lista = serie;
+    if (op && op.dias) {
+      const limite = new Date();
+      limite.setDate(limite.getDate() - op.dias);
+      const corte = limite.toISOString().slice(0, 10);
+      lista = serie.filter((p) => p.data >= corte);
+      if (lista.length < 2) lista = serie;
+    }
+    lista = lista.map((p) => ({ ...p }));
+    const atual = dolar ? dolar.valor : 0;
+    if (atual > 0 && lista.length) {
+      const hj = hojeISO(), ult = lista[lista.length - 1];
+      if (ult.data === hj) { ult.preco = atual; ult.maxima = Math.max(ult.maxima, atual); ult.minima = Math.min(ult.minima, atual); }
+      else lista.push({ data: hj, abertura: ult.preco, preco: atual, maxima: Math.max(ult.preco, atual), minima: Math.min(ult.preco, atual) });
+    }
+    return lista;
+  }
 
   function carregarSerieDolar() {
     if (serieDolar || buscandoSerieDolar || !C || typeof fetch !== "function") return;
@@ -3984,7 +4009,7 @@
       <button class="voltar" data-acao="ir" data-secao="acoes"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONES.voltar}</svg>Voltar para Ações</button>
       <div class="grid g-top grid-detalhe">
         <div class="c8">${card("", `USD/BRL <span class="selo-tag selo-acao">moeda</span>`,
-          "dólar comercial · AwesomeAPI",
+          `dólar comercial · AwesomeAPI · toque no gráfico para ver em ${velasDolar ? "linha" : "velas"}`,
           `${abasPeriodo()}<button class="btn" data-acao="buscar-cotacoes">↻ Buscar</button>`,
           filtrada.length >= 2
             ? `<div class="grafico-acao-area"><canvas id="graf-dolar"></canvas></div>`
@@ -4687,7 +4712,10 @@
           if (serie[serie.length - 1].data === hj) serie[serie.length - 1] = { ...serie[serie.length - 1], preco: atualDolar };
           else serie.push({ data: hj, preco: atualDolar });
         }
-        if (serie.length >= 2) G.renderPrecoAcao("graf-dolar", serie, 0, 0, { linhaAtual: atualDolar });
+        const alternar = () => { velasDolar = !velasDolar; renderRota(); };
+        const velas = velasDolar ? velasDolarPeriodo() : [];
+        if (velasDolar && velas.length >= 2) G.renderVelas("graf-dolar", velas, { linhaAtual: atualDolar, aoClicar: alternar });
+        else if (serie.length >= 2) G.renderPrecoAcao("graf-dolar", serie, 0, 0, { linhaAtual: atualDolar, aoClicar: alternar });
         break;
       }
       case "detalhe-investimento": {
