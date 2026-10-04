@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "2.5.9";
+  const VERSAO_APP = "2.6.0";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -922,6 +922,8 @@
 
   function navegarPara(secao, param) {
     ROTA = { secao, param: param || null };
+    // cada abertura do gráfico do dólar/ação procura notícias novas
+    if (secao === "detalhe-dolar" || secao === "detalhe-acao") aberturaGrafico++;
     // ao entrar na guia, o filtro volta sempre para o mês e o ano atuais
     if (secao === "entradas") { mesEntradas = F.mesAtual(); ordemEntradas = { ...ORDEM_ENTRADAS_PADRAO }; filtroEntradas = null; }
     if (secao === "despesas") { mesDespesas = F.mesAtual(); ordemDespesas = { ...ORDEM_DESPESAS_PADRAO }; filtroDespesas = null; }
@@ -1316,7 +1318,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.5.9" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.6.0" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -4032,16 +4034,25 @@
   // Uma busca por ativo ("dolar", "acao:PETR4"…) que continua mesmo quando a
   // tela é redesenhada (cotações automáticas, sincronização, troca de período):
   // o redesenho só aponta a busca para o gráfico novo, em vez de recomeçá-la.
+  //
+  // Regras:
+  // - notícia encontrada fica guardada no aparelho e aparece sempre, na hora;
+  // - cada vez que o gráfico é ABERTO, uma busca nova procura as notícias que
+  //   faltam (dias ainda sem notícia e os dias mais recentes, que podem ter
+  //   notícias novas) e junta com as guardadas;
+  // - uma busca em andamento nunca é reiniciada: abrir de novo ou redesenhar
+  //   a tela só faz a busca continuar mostrando no gráfico atual.
   const buscasNoticias = {};
+  let aberturaGrafico = 0;
   function carregarNoticiasVelas(chave, termos, velas, visiveis, limiar, canvasId, aindaNaTela) {
     if (!C || !C.buscarNoticiasDia || typeof fetch !== "function") return;
     const existente = buscasNoticias[chave];
-    if (existente && Date.now() - existente.inicio < 30 * 60 * 1000) {
+    if (existente && (!existente.terminou || existente.abertura === aberturaGrafico)) {
       existente.alvo = { canvasId, aindaNaTela, limiar };
       existente.mostrar();
       return;
     }
-    const busca = buscasNoticias[chave] = { inicio: Date.now(), alvo: { canvasId, aindaNaTela, limiar }, artigos: [], terminou: false, falhas: 0, dias: 0 };
+    const busca = buscasNoticias[chave] = { abertura: aberturaGrafico, alvo: { canvasId, aindaNaTela, limiar }, artigos: [], terminou: false, falhas: 0, dias: 0 };
     const fortes = [];
     velas.forEach((v, i) => {
       const ant = i > 0 ? velas[i - 1].preco : v.abertura;
@@ -4062,19 +4073,27 @@
       }
       G.statusNoticias(alvo.canvasId, txt);
     };
-    const guardar = (dia, itens) => itens.forEach((n) => busca.artigos.push({ ...n, data: dia }));
-    // primeiro o que já está guardado no aparelho (aparece na hora)
+    // notícias por dia, sem repetir (a mesma matéria pode vir em várias buscas)
+    const porDia = {};
+    const guardar = (dia, itens) => {
+      const lista = porDia[dia] || (porDia[dia] = []);
+      itens.forEach((n) => { if (!lista.some((x) => x.url === n.url)) lista.push(n); });
+      lista.sort((a, b) => (a.quando < b.quando ? 1 : -1));
+      busca.artigos = Object.keys(porDia).reduce((t, d) => t.concat(porDia[d].map((n) => ({ ...n, data: d }))), []);
+      return lista;
+    };
+    // junta as novas com as guardadas e grava no aparelho
+    const salvar = (dia, itens) => gravarNoticiasDia(chave, dia, guardar(dia, itens).slice(0, 8));
+    // primeiro o que já está guardado no aparelho (aparece na hora); os dias
+    // dos últimos 3 dias são consultados de novo mesmo assim (notícias novas)
+    const limiteRecente = (() => { const d = new Date(); d.setDate(d.getDate() - 3); return d.toISOString().slice(0, 10); })();
     const faltam = [];
     ordem.forEach((i) => {
       const dia = velas[i].data, salvo = lerNoticiasDia(chave, dia);
-      if (salvo) guardar(dia, salvo); else faltam.push(dia);
+      if (salvo) guardar(dia, salvo);
+      if (!salvo || dia >= limiteRecente) faltam.push(dia);
     });
-    const encerrar = () => {
-      busca.terminou = true;
-      // falhou tudo: libera para tentar de novo na próxima abertura da tela
-      if (busca.falhas && !busca.artigos.length) delete buscasNoticias[chave];
-      busca.mostrar();
-    };
+    const encerrar = () => { busca.terminou = true; busca.mostrar(); };
     if (!faltam.length) { encerrar(); return; }
     busca.mostrar();
     // depois busca na internet: primeiro UMA busca para o período todo (mostra
@@ -4092,8 +4111,8 @@
       const dia = fila.shift();
       return C.buscarNoticiasDia(termos, dia).then((itens) => {
         seguidas = 0;
-        gravarNoticiasDia(chave, dia, itens);
-        if (itens.length) { guardar(dia, itens); busca.mostrar(); }
+        if (itens.length) { salvar(dia, itens); busca.mostrar(); }
+        else if (!porDia[dia]) gravarNoticiasDia(chave, dia, []);   // dia sem notícia (consulta de novo depois)
       }).catch(() => { busca.falhas++; seguidas++; })   // falhou: fica para a próxima vez
         .then(() => new Promise((ok) => setTimeout(ok, 300)))
         .then(proximo);
@@ -4106,8 +4125,7 @@
           const doDia = itens.filter((n) => { const d = isoLocal(n.quando); return d === dia || d === vespera(dia); })
             .sort((x, y) => (isoLocal(y.quando) === dia) - (isoLocal(x.quando) === dia) || (x.quando < y.quando ? 1 : -1)).slice(0, 5);
           if (!doDia.length) return;
-          gravarNoticiasDia(chave, dia, doDia);
-          guardar(dia, doDia);
+          salvar(dia, doDia);
           fila.splice(fila.indexOf(dia), 1);
         });
         busca.mostrar();
