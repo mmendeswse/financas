@@ -571,7 +571,8 @@
     var fim = total;
     var ini = Math.max(0, total - Math.max(MIN_VELAS, Math.min(total, opcoes.visiveis || total)));
     var serie = [];        // velas visíveis (usadas pelos plugins e pelo tooltip)
-    var cursor = null;     // posição do mouse/dedo para a cruz
+    var cursor = null;     // posição do mouse para a cruz
+    var ultimoToque = 0;   // hora do último toque na tela (iPad)
     var noticiasPorVela = {};   // índice da vela (na série toda) → notícias do dia
     var marcas = [];            // posição dos "N" desenhados (para o clique)
 
@@ -796,7 +797,9 @@
         afterEvent: function (g, args) {
           var e = args.event;
           if (e.type === "mouseout") cursor = null;
-          else if (e.type === "mousemove") cursor = dentroDaArea(g, e) ? { x: e.x, y: e.y } : null;
+          // a cruz é só para o mouse: no iPad o Safari imita um "mousemove"
+          // depois de cada toque, e a cruz ficava presa em cima de uma vela
+          else if (e.type === "mousemove") cursor = Date.now() - ultimoToque > 1000 && dentroDaArea(g, e) ? { x: e.x, y: e.y } : null;
           else return;
           args.changed = true;
         },
@@ -994,6 +997,8 @@
       // um dedo deslizando para o lado = mover no tempo; na vertical, a
       // página rola normalmente
       touchstart: function (e) {
+        ultimoToque = Date.now();
+        if (cursor) { cursor = null; grafico.draw(); }
         if (e.touches.length === 2) {
           var m = medirPinca(e.touches);
           pinca = { dist0: m.dist, qtd0: fim - ini };
@@ -1030,6 +1035,7 @@
         toque.yAnt = t.clientY; toque.tAnt = agora;
       },
       touchend: function (e) {
+        ultimoToque = Date.now();
         if (e.touches.length < 2) pinca = null;
         if (!e.touches.length) {
           // solta a rolagem vertical com o embalo do dedo, como no iOS

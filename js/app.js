@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "2.6.3";
+  const VERSAO_APP = "2.6.4";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -927,6 +927,7 @@
     ROTA = { secao, param: param || null };
     // cada abertura do gráfico do dólar/ação procura notícias novas
     if (secao === "detalhe-dolar" || secao === "detalhe-acao") aberturaGrafico++;
+    else chaveNaTela = null;   // saiu do gráfico: a busca dele deixa de ter prioridade
     // ao entrar na guia, o filtro volta sempre para o mês e o ano atuais
     if (secao === "entradas") { mesEntradas = F.mesAtual(); ordemEntradas = { ...ORDEM_ENTRADAS_PADRAO }; filtroEntradas = null; }
     if (secao === "despesas") { mesDespesas = F.mesAtual(); ordemDespesas = { ...ORDEM_DESPESAS_PADRAO }; filtroDespesas = null; }
@@ -1321,7 +1322,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.6.3" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.6.4" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -4049,8 +4050,20 @@
   //   a tela só faz a busca continuar mostrando no gráfico atual.
   const buscasNoticias = {};
   let aberturaGrafico = 0;
-  function carregarNoticiasVelas(chave, termos, velas, visiveis, limiar, canvasId, aindaNaTela) {
+  // primeiroPlano: chamada pelo gráfico aberto — essa busca tem prioridade e
+  // as de segundo plano (outros ativos) esperam enquanto ela não termina
+  let chaveNaTela = null;
+  const outraNaFrente = (chave) => {
+    const b = chaveNaTela && chaveNaTela !== chave ? buscasNoticias[chaveNaTela] : null;
+    return !!(b && !b.terminou);
+  };
+  const esperarVez = (chave) => new Promise((ok) => {
+    const ver = () => (outraNaFrente(chave) ? setTimeout(ver, 1000) : ok());
+    ver();
+  });
+  function carregarNoticiasVelas(chave, termos, velas, visiveis, limiar, canvasId, aindaNaTela, primeiroPlano) {
     if (!C || !C.buscarNoticiasDia || typeof fetch !== "function") return Promise.resolve();
+    if (primeiroPlano) chaveNaTela = chave;
     const existente = buscasNoticias[chave];
     if (existente && (!existente.terminou || existente.abertura === aberturaGrafico)) {
       existente.alvo = { canvasId, aindaNaTela, limiar };
@@ -4115,9 +4128,14 @@
     // tentativas) e a pausa cresce a cada falha seguida (as fontes gratuitas
     // recusam quando recebem pedidos demais) — a busca nunca desiste no meio
     const tentativas = {};
-    let seguidas = 0;
+    let seguidas = 0, ativos = 0;
     const proximo = () => {
-      if (!fila.length) { encerrar(); return Promise.resolve(); }
+      if (!fila.length) {
+        if (--ativos <= 0 && !busca.terminou) encerrar();
+        return Promise.resolve();
+      }
+      // outro ativo está aberto na tela e ainda buscando: ele vai primeiro
+      if (outraNaFrente(chave)) return esperarVez(chave).then(proximo);
       const dia = fila.shift();
       tentativas[dia] = (tentativas[dia] || 0) + 1;
       return C.buscarNoticiasDia(termos, dia).then((itens) => {
@@ -4133,7 +4151,7 @@
     };
     const ordenados = faltam.slice().sort();
     const porPeriodo = C.buscarNoticiasPeriodo
-      ? C.buscarNoticiasPeriodo(termos, ordenados[0], ordenados[ordenados.length - 1]).then((itens) => {
+      ? esperarVez(chave).then(() => C.buscarNoticiasPeriodo(termos, ordenados[0], ordenados[ordenados.length - 1])).then((itens) => {
         // cada notícia vale para o dia dela e para o dia seguinte (véspera)
         faltam.forEach((dia) => {
           const doDia = itens.filter((n) => { const d = isoLocal(n.quando); return d === dia || d === vespera(dia); })
@@ -4145,27 +4163,31 @@
         busca.mostrar();
       }).catch(() => { /* sem a busca do período: o dia a dia cobre */ })
       : Promise.resolve();
-    porPeriodo.then(proximo);
+    // o ativo aberto na tela busca dois dias por vez; os de segundo plano, um
+    porPeriodo.then(() => {
+      ativos = chaveNaTela === chave ? 2 : 1;
+      for (let k = 0; k < ativos; k++) proximo();
+    });
     return busca.promessa;
   }
 
   // atalhos: notícias do dólar e de uma ação (usados pelo gráfico e pela
   // busca em segundo plano)
-  function noticiasDoDolar() {
+  function noticiasDoDolar(primeiroPlano) {
     const vd = velasDolarPeriodo();
     if (vd.velas.length < 2) return Promise.resolve();
     // "N" nas velas em que o dólar variou 0,35% ou mais e houve notícia
     return carregarNoticiasVelas("dolar", { google: "dólar", gdelt: "(dólar OR câmbio) real" }, vd.velas, vd.visiveis, 0.35, "graf-dolar",
-      () => ROTA.secao === "detalhe-dolar" && velasDolar);
+      () => ROTA.secao === "detalhe-dolar" && velasDolar, primeiroPlano);
   }
-  function noticiasDaAcao(a) {
+  function noticiasDaAcao(a, primeiroPlano) {
     const va = velasPeriodo(a.historicoPrecos, Number(a.precoAtual) || 0);
     if (va.velas.length < 2) return Promise.resolve();
     // "N" nas velas em que a ação variou 1% ou mais e houve notícia; só
     // aparece se estiver no gráfico desta ação, em velas
     const idAcao = a.id;
     return carregarNoticiasVelas("acao:" + a.ticker.toUpperCase(), termosNoticiasAcao(a), va.velas, va.visiveis, 1, "graf-preco-acao",
-      () => ROTA.secao === "detalhe-acao" && ROTA.param === idAcao && velasAcao);
+      () => ROTA.secao === "detalhe-acao" && ROTA.param === idAcao && velasAcao, primeiroPlano);
   }
 
   // Busca em SEGUNDO PLANO: logo depois de abrir o app (e a cada 30 min),
@@ -4950,7 +4972,7 @@
         if (velasDolar && vd.velas.length >= 2) G.renderVelas("graf-dolar", vd.velas, { visiveis: vd.visiveis, linhaAtual: atualDolar, corAtual: "#FFD633", rotuloAtual: "Valor Atual", aoClicar: alternar, aoMudarJanela: marcarPeriodoDoZoom });
         else if (serie.length >= 2) G.renderPrecoAcao("graf-dolar", serie, 0, 0, { linhaAtual: atualDolar, aoClicar: alternar });
         // notícias: a busca já começa na visão de linha, para estar pronta ao trocar para velas
-        noticiasDoDolar();
+        noticiasDoDolar(true);   // gráfico aberto: tem prioridade sobre o segundo plano
         break;
       }
       case "detalhe-investimento": {
@@ -4967,7 +4989,7 @@
         if (velasAcao && va.velas.length >= 2) G.renderVelas("graf-preco-acao", va.velas, { visiveis: va.visiveis, linhaAtual: Number(a.precoAtual) || 0, linhaCompra: Number(a.precoMedio) || 0, quantidade: Number(a.quantidade) || 0, casas: 2, aoClicar: alternarAcao, aoMudarJanela: marcarPeriodoDoZoom });
         else if (a && a.historicoPrecos.length) G.renderPrecoAcao("graf-preco-acao", filtrarPeriodo(a.historicoPrecos, periodoGrafico), a.precoMedio, Number(a.precoAtual) || 0, { quantidade: Number(a.quantidade) || 0, aoClicar: alternarAcao });
         // notícias: a busca já começa na visão de linha
-        if (a) noticiasDaAcao(a);
+        if (a) noticiasDaAcao(a, true);   // gráfico aberto: tem prioridade sobre o segundo plano
         break;
       }
       case "carteira": {
