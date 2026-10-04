@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "2.6.9";
+  const VERSAO_APP = "2.7.0";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -1323,7 +1323,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.6.9" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.7.0" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -3929,7 +3929,6 @@
             ? `<div class="grafico-acao-area grafico-tela-cheia"><canvas id="graf-valor-investimento"></canvas></div>`
             : `<div class="empty">Ainda não há histórico suficiente para o gráfico.<br>Cada importação do extrato (ou edição do valor atual) acrescenta um ponto na linha.</div>`)}</div>
       </div>
-      ${inv.obs ? card("c12", "Observações", "", "", `<div style="padding:12px 16px;font-size:13px;color:var(--dim)">${esc(inv.obs)}</div>`) : ""}
     `;
   }
 
@@ -4577,7 +4576,6 @@
           `${abasPeriodo()}<button class="btn" data-acao="editar-acao" data-id="${a.id}">Editar</button>`,
           `<div class="grafico-acao-area grafico-tela-cheia"><canvas id="graf-preco-acao"></canvas></div>`)}</div>
       </div>
-      ${a.obs ? card("c12", "Observações", "", "", `<div style="padding:12px 16px;font-size:13px;color:var(--dim)">${esc(a.obs)}</div>`) : ""}
     `;
   }
 
