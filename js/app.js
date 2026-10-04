@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "2.6.5";
+  const VERSAO_APP = "2.6.6";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -1324,7 +1324,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.6.5" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.6.6" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -4249,40 +4249,20 @@
     return promessaSerieDolar;
   }
 
-  function renderDetalheDolar(d) {
+  // o gráfico ocupa a tela inteira (sem o quadro de resumo ao lado)
+  function renderDetalheDolar() {
     const serie = serieDolar || [];
     const filtrada = filtrarPeriodo(serie.map((p) => ({ data: p.data, preco: p.preco })), periodoGrafico);
-    const atual = dolar ? dolar.valor : (serie.length ? serie[serie.length - 1].preco : 0);
-    const variacao = dolar ? (dolar.variacaoPct || 0) : 0;
-    const precos = filtrada.map((p) => p.preco);
-    const min = precos.length ? Math.min(...precos) : atual;
-    const max = precos.length ? Math.max(...precos) : atual;
-    const media = precos.length ? precos.reduce((a, b) => a + b, 0) / precos.length : atual;
-    const primeiro = precos.length ? precos[0] : atual;
-    const noPeriodo = primeiro > 0 ? ((atual / primeiro) - 1) * 100 : 0;
-    const emDolar = I.totalCarteiraAcoes(d) + I.patrimonio(d).investimentos;
 
     return `
       <button class="voltar" data-acao="ir" data-secao="acoes"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONES.voltar}</svg>Voltar para Ações</button>
-      <div class="grid g-top grid-detalhe">
-        <div class="c8">${card("", `USD/BRL <span class="selo-tag selo-acao">moeda</span>`,
+      <div class="grid g-top">
+        <div class="c12">${card("", `USD/BRL <span class="selo-tag selo-acao">moeda</span>`,
           "dólar comercial · AwesomeAPI",
           `${abasPeriodo()}<button class="btn" data-acao="buscar-cotacoes">↻ Buscar</button>`,
           filtrada.length >= 2
-            ? `<div class="grafico-acao-area"><canvas id="graf-dolar"></canvas></div>`
+            ? `<div class="grafico-acao-area grafico-tela-cheia"><canvas id="graf-dolar"></canvas></div>`
             : `<div class="empty">${buscandoSerieDolar ? "Carregando o histórico do dólar…" : "Não foi possível carregar o histórico agora. Verifique a internet e toque em ↻ Buscar."}</div>`)}</div>
-        <div class="c4">${card("", "Resumo da cotação", "", "", `
-          <div class="kv"><span class="dim">Cotação atual</span><b class="creme">${brl(atual)}</b></div>
-          <div class="kv"><span class="dim">Variação do dia</span><b class="${corSinal(variacao)}">${pct(variacao)}</b></div>
-          <div class="kv"><span class="dim">Variação no período</span><b class="${corSinal(noPeriodo)}">${pct(noPeriodo)}</b></div>
-          <div class="kv"><span class="dim">Mínima do período</span><b>${brl(min)}</b></div>
-          <div class="kv"><span class="dim">Máxima do período</span><b>${brl(max)}</b></div>
-          <div class="kv"><span class="dim">Média do período</span><b>${brl(media)}</b></div>
-          <div class="kv"><span class="dim">Dias no gráfico</span><b>${filtrada.length}</b></div>
-          <div class="kv"><span class="dim">Seus investimentos</span><b>${brl(emDolar)}</b></div>
-          <div class="kv"><span class="dim">Equivalente em dólar</span><b>${atual > 0 ? "US$ " + (emDolar / atual).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—"}</b></div>
-          <div class="kv"><span class="dim">Atualizado em</span><b>${dolar && dolar.atualizadoEm ? esc(String(dolar.atualizadoEm).slice(0, 16).replace("T", " ")) : "—"}</b></div>
-        `)}</div>
       </div>
     `;
   }
