@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "2.3.2";
+  const VERSAO_APP = "2.3.3";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -896,6 +896,12 @@
     iniciarRelogio();
     ajustarBarraGuias();
     window.addEventListener("resize", ajustarBarraGuias);
+    // a barra de status é fixa no rodapé: o conteúdo reserva a altura dela
+    const rodape = document.querySelector(".rodape-app");
+    const medirRodape = () => { if (rodape) document.documentElement.style.setProperty("--alt-rodape", rodape.offsetHeight + "px"); };
+    medirRodape();
+    if (rodape && window.ResizeObserver) new ResizeObserver(medirRodape).observe(rodape);
+    else window.addEventListener("resize", medirRodape);
     if (window.visualViewport) window.visualViewport.addEventListener("resize", ajustarBarraGuias);
     window.addEventListener("orientationchange", () => setTimeout(ajustarBarraGuias, 300));
 
@@ -1314,7 +1320,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.3.2" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.3.3" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;

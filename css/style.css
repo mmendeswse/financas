@@ -1216,5 +1216,9 @@ button.resumo-pill:active { transform: scale(.98); }
 .shell { min-height: 100vh; min-height: 100dvh; }
 .main { display: flex; flex-direction: column; flex: 1 0 auto; }
 .scroll { display: flex; flex-direction: column; flex: 1 0 auto; }
-#conteudo { flex: 1 0 auto; }
-.rodape-app { position: sticky; bottom: 0; z-index: 60; margin-top: 8px; }
+/* largura total: num contêiner flex em coluna, margin auto encolheria os itens */
+#conteudo { flex: 1 0 auto; width: 100%; box-sizing: border-box;
+  /* espaço para o conteúdo não ficar escondido atrás da barra fixa */
+  padding-bottom: calc(var(--alt-rodape, 44px) + 16px); }
+.rodape-app { position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
+  width: 100%; max-width: none; box-sizing: border-box; margin: 0; }
