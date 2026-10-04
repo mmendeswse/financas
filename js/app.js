@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "2.5.5";
+  const VERSAO_APP = "2.5.6";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -1316,7 +1316,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.5.5" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.5.6" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -4038,32 +4038,54 @@
       if (salvo) guardar(dia, salvo); else faltam.push(dia);
     });
     if (artigos.length) mostrar();
-    // depois busca o resto na internet, dois dias por vez, mostrando o
-    // andamento ao lado da legenda ("buscando 3/12")
-    let feitos = 0, falhas = 0;
+    // depois busca na internet: primeiro UMA busca para o período todo (mostra
+    // a maior parte dos "N" de uma vez), depois dia a dia só os que faltarem
+    let falhas = 0, seguidas = 0, ativos = 0, terminou = !faltam.length;
     const status = () => {
       if (rodada !== rodadaNoticias || !aindaNaTela()) return;
       // durante a busca não mostra nada; no fim, um aviso só se não achou nada
-      if (feitos < faltam.length) { G.statusNoticias(canvasId, ""); return; }
+      if (!terminou) { G.statusNoticias(canvasId, ""); return; }
       let txt = "";
       if (falhas && !artigos.length) txt = "sem conexão com as fontes";
       else if (!artigos.length) txt = ordem.length ? "nenhuma nos dias de maior variação" : "sem dias de grande variação";
       G.statusNoticias(canvasId, txt);
     };
     status();
+    if (terminou) return;
+    const isoLocal = (q) => { const d = new Date(q); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+    const vespera = (dia) => { const d = new Date(dia + "T12:00:00"); d.setDate(d.getDate() - 1); return isoLocal(d); };
     const fila = faltam.slice();
     const proximo = () => {
-      if (rodada !== rodadaNoticias || !aindaNaTela() || !fila.length) return Promise.resolve();
+      if (rodada !== rodadaNoticias || !aindaNaTela()) return Promise.resolve();
+      // fontes fora do ar (3 falhas seguidas): para e tenta de novo na próxima vez
+      if (!fila.length || seguidas >= 3) {
+        if (--ativos <= 0) { terminou = true; status(); }
+        return Promise.resolve();
+      }
       const dia = fila.shift();
       return C.buscarNoticiasDia(termos, dia).then((itens) => {
+        seguidas = 0;
         gravarNoticiasDia(chave, dia, itens);
         if (itens.length) { guardar(dia, itens); mostrar(); }
-      }).catch(() => { falhas++; })              // falhou: fica para a próxima vez
-        .then(() => { feitos++; status(); })
-        .then(() => new Promise((ok) => setTimeout(ok, 600)))
+      }).catch(() => { falhas++; seguidas++; })   // falhou: fica para a próxima vez
+        .then(() => new Promise((ok) => setTimeout(ok, 400)))
         .then(proximo);
     };
-    proximo(); proximo();
+    const porPeriodo = C.buscarNoticiasPeriodo
+      ? C.buscarNoticiasPeriodo(termos, faltam.slice().sort()[0], faltam.slice().sort().pop()).then((itens) => {
+        // cada notícia vale para o dia dela e para o dia seguinte (véspera)
+        faltam.forEach((dia) => {
+          const doDia = itens.filter((n) => { const d = isoLocal(n.quando); return d === dia || d === vespera(dia); })
+            .sort((x, y) => (isoLocal(y.quando) === dia) - (isoLocal(x.quando) === dia) || (x.quando < y.quando ? 1 : -1)).slice(0, 5);
+          if (!doDia.length) return;
+          gravarNoticiasDia(chave, dia, doDia);
+          guardar(dia, doDia);
+          fila.splice(fila.indexOf(dia), 1);
+        });
+        if (artigos.length) mostrar();
+      }).catch(() => { falhas++; })
+      : Promise.resolve();
+    porPeriodo.then(() => { ativos = 2; proximo(); proximo(); });
   }
 
   // termos de busca de uma ação: o ticker e o nome da empresa sem a classe

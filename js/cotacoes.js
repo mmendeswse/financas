@@ -158,39 +158,67 @@
     var quando = pubDate ? new Date(pubDate) : null;
     return { quando: quando && !isNaN(quando) ? quando.toISOString() : dia + "T12:00:00.000Z", titulo: titulo, url: String(link || ""), fonte: fonte };
   }
+  // Lê uma busca do Google Notícias (RSS) por um dos caminhos com CORS:
+  // rss2json (JSON, até 10 itens), allorigins ou codetabs (XML inteiro, até
+  // ~100 itens). O caminho que funcionou por último é tentado primeiro, e
+  // cada tentativa tem tempo curto, para um caminho fora do ar não travar a busca.
+  var caminhoRss = 0;
+  function rssXml(xml, diaRef) {
+    var doc = new DOMParser().parseFromString(xml, "text/xml");
+    var itens = Array.prototype.slice.call(doc.getElementsByTagName("item"));
+    if (!itens.length && !/<rss/i.test(xml)) throw new Error("resposta inválida");
+    var txt = function (el, tag) { var x = el.getElementsByTagName(tag)[0]; return x ? x.textContent : ""; };
+    return itens.map(function (el) { return itemGoogle(txt(el, "title"), txt(el, "pubDate"), txt(el, "link"), txt(el, "source"), diaRef); });
+  }
+  function lerRssGoogle(consulta, diaRef, preferirCompleto) {
+    var rss = "https://news.google.com/rss/search?hl=pt-BR&gl=BR&ceid=BR:pt-419&q=" + encodeURIComponent(consulta);
+    var caminhos = [
+      function () {
+        return comTimeout(fetch("https://api.rss2json.com/v1/api.json?rss_url=" + encodeURIComponent(rss)).then(function (r) {
+          if (!r.ok) throw new Error("HTTP " + r.status);
+          return r.json();
+        }).then(function (j) {
+          if (!j || j.status !== "ok") throw new Error((j && j.message) || "rss2json falhou");
+          return (j.items || []).map(function (it) {
+            return itemGoogle(it.title, it.pubDate ? String(it.pubDate).replace(" ", "T") + "Z" : "", it.link, it.author, diaRef);
+          });
+        }), 7000);
+      },
+      function () {
+        return comTimeout(fetch("https://api.allorigins.win/raw?url=" + encodeURIComponent(rss)).then(function (r) {
+          if (!r.ok) throw new Error("HTTP " + r.status);
+          return r.text();
+        }).then(function (xml) { return rssXml(xml, diaRef); }), 8000);
+      },
+      function () {
+        return comTimeout(fetch("https://api.codetabs.com/v1/proxy/?quest=" + encodeURIComponent(rss)).then(function (r) {
+          if (!r.ok) throw new Error("HTTP " + r.status);
+          return r.text();
+        }).then(function (xml) { return rssXml(xml, diaRef); }), 8000);
+      }
+    ];
+    // para buscas de um período, os caminhos que trazem o RSS inteiro vêm antes
+    var base = preferirCompleto ? [1, 2, 0] : [0, 1, 2];
+    var primeiro = preferirCompleto && caminhoRss === 0 ? base[0] : caminhoRss;
+    var ordem = [primeiro].concat(base.filter(function (x) { return x !== primeiro; }));
+    var tentar = function (k) {
+      if (k >= ordem.length) return Promise.reject(new Error("Google Notícias indisponível"));
+      return caminhos[ordem[k]]().then(function (lista) {
+        caminhoRss = ordem[k];
+        return lista.filter(function (n) { return n.titulo && n.url; });
+      }, function () { return tentar(k + 1); });
+    };
+    return tentar(0);
+  }
   // O movimento de um dia costuma vir de notícia daquele dia ou da noite
   // anterior: a busca pega os dois dias (after: é o dia anterior).
   function noticiasGoogle(termo, dia) {
-    var rss = "https://news.google.com/rss/search?hl=pt-BR&gl=BR&ceid=BR:pt-419&q=" +
-      encodeURIComponent(termo + " after:" + diaAnterior(dia) + " before:" + diaSeguinte(dia));
-    // 1º caminho: rss2json (JSON pronto)
-    var viaRss2json = function () {
-      return comTimeout(fetch("https://api.rss2json.com/v1/api.json?rss_url=" + encodeURIComponent(rss)).then(function (r) {
-        if (!r.ok) throw new Error("HTTP " + r.status);
-        return r.json();
-      }).then(function (j) {
-        if (!j || j.status !== "ok") throw new Error((j && j.message) || "rss2json falhou");
-        return (j.items || []).map(function (it) {
-          return itemGoogle(it.title, it.pubDate ? String(it.pubDate).replace(" ", "T") + "Z" : "", it.link, it.author, dia);
-        });
-      }), 12000);
-    };
-    // 2º caminho: o próprio RSS (XML) por um repassador com CORS (allorigins)
-    var viaAllorigins = function () {
-      return comTimeout(fetch("https://api.allorigins.win/raw?url=" + encodeURIComponent(rss)).then(function (r) {
-        if (!r.ok) throw new Error("HTTP " + r.status);
-        return r.text();
-      }).then(function (xml) {
-        var doc = new DOMParser().parseFromString(xml, "text/xml");
-        var itens = Array.prototype.slice.call(doc.getElementsByTagName("item"));
-        if (!itens.length && !/<rss/i.test(xml)) throw new Error("resposta inválida");
-        var txt = function (el, tag) { var x = el.getElementsByTagName(tag)[0]; return x ? x.textContent : ""; };
-        return itens.map(function (el) { return itemGoogle(txt(el, "title"), txt(el, "pubDate"), txt(el, "link"), txt(el, "source"), dia); });
-      }), 12000);
-    };
-    return viaRss2json().catch(viaAllorigins).then(function (lista) {
-      return lista.filter(function (n) { return n.titulo && n.url; });
-    });
+    return lerRssGoogle(termo + " after:" + diaAnterior(dia) + " before:" + diaSeguinte(dia), dia, false);
+  }
+  // Uma busca só para um período inteiro (até ~100 notícias): mostra a maior
+  // parte dos "N" de uma vez, antes da busca dia a dia dos que faltarem.
+  function buscarNoticiasPeriodo(termos, inicio, fim) {
+    return lerRssGoogle(termos.google + " after:" + diaAnterior(inicio) + " before:" + diaSeguinte(fim), fim, true);
   }
   function noticiasGdelt(termo, dia) {
     var d = dia.replace(/-/g, "");
@@ -207,7 +235,7 @@
         var quando = m ? new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6])).toISOString() : dia + "T12:00:00.000Z";
         return { quando: quando, titulo: String(a.title || ""), url: String(a.url || ""), fonte: String(a.domain || "") };
       }).filter(function (n) { return n.titulo && n.url; });
-    }), 15000);
+    }), 8000);
   }
   function buscarNoticiasDia(termos, dia) {
     // notícias do próprio dia primeiro, depois as da véspera; as mais recentes no topo
@@ -227,5 +255,5 @@
     });
   }
 
-  global.Cotacoes = { buscarDolar: buscarDolar, buscarSerieDolar: buscarSerieDolar, buscarCotacoes: buscarCotacoes, buscarSerieBCB: buscarSerieBCB, buscarNoticiasDia: buscarNoticiasDia };
+  global.Cotacoes = { buscarDolar: buscarDolar, buscarSerieDolar: buscarSerieDolar, buscarCotacoes: buscarCotacoes, buscarSerieBCB: buscarSerieBCB, buscarNoticiasDia: buscarNoticiasDia, buscarNoticiasPeriodo: buscarNoticiasPeriodo };
 })(window);
