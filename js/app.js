@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "2.3.0";
+  const VERSAO_APP = "2.3.1";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -929,6 +929,7 @@
     if (secao === "acoes") periodoGrafico = "7d";
     if (secao === "investimentos") periodoGrafico = "7d";
     if (secao === "detalhe-dolar") { periodoGrafico = "7d"; velasDolar = false; }   // o gráfico do dólar também abre em 7 dias, em linha
+    if (secao === "detalhe-acao") velasAcao = false;   // o gráfico de cada ação também abre em linha
     // a guia Bancos sempre abre mostrando o saldo atual ("Tudo")
     if (secao === "bancos") { mesesBancos = 0; anoBancos = String(new Date().getFullYear()); }
     // Dashboard e Relatórios abrem sempre no ano atual: receitas x despesas
@@ -1313,7 +1314,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.3.0" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.3.1" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1551,11 +1552,17 @@
         // completa o histórico com os fechamentos diários que ainda não estavam gravados
         if (q.historico && q.historico.length) {
           const porData = {};
-          (a.historicoPrecos || []).forEach((pt) => { porData[pt.data] = pt.preco; });
+          (a.historicoPrecos || []).forEach((pt) => { porData[pt.data] = { ...pt }; });
           let novos = 0;
-          q.historico.forEach((pt) => { if (pt.data < hojeISO() && porData[pt.data] === undefined) { porData[pt.data] = pt.preco; novos++; } });
+          q.historico.forEach((pt) => {
+            if (pt.data >= hojeISO()) return;
+            const ex = porData[pt.data];
+            if (!ex) { porData[pt.data] = { ...pt }; novos++; }
+            // dia já gravado só com o fechamento: completa abertura/máxima/mínima (velas)
+            else if (!(ex.abertura > 0) && pt.abertura > 0) { Object.assign(ex, { abertura: pt.abertura, maxima: pt.maxima, minima: pt.minima }); novos++; }
+          });
           if (novos) {
-            a.historicoPrecos = Object.keys(porData).sort().map((dt) => ({ data: dt, preco: porData[dt] })).slice(-400);
+            a.historicoPrecos = Object.keys(porData).sort().map((dt) => porData[dt]).slice(-400);
             alterados++;
           }
         }
@@ -3959,27 +3966,38 @@
   let serieDolar = null;        // série diária vinda da AwesomeAPI
   let buscandoSerieDolar = false;
   let velasDolar = false;       // true = gráfico em velas (tocar no gráfico alterna)
+  let velasAcao = false;        // o mesmo para o gráfico de cada ação
 
-  // velas do período escolhido; o último dia recebe a cotação atual
-  function velasDolarPeriodo() {
-    const serie = (serieDolar || []).filter((p) => p.abertura > 0);
+  // Velas diárias do período escolhido a partir de um histórico de preços.
+  // Dias sem abertura/máxima/mínima gravadas (preço lançado à mão) usam o
+  // fechamento anterior como abertura, e a máxima/mínima entre os dois.
+  // O último dia recebe o preço atual.
+  function velasPeriodo(historico, atual) {
+    const serie = (historico || []).filter((p) => p.preco > 0).slice().sort((a, b) => (a.data < b.data ? -1 : 1));
+    const velas = serie.map((p, i) => {
+      const abertura = p.abertura > 0 ? p.abertura : (i > 0 ? serie[i - 1].preco : p.preco);
+      return { data: p.data, preco: p.preco, abertura,
+        maxima: Math.max(p.maxima > 0 ? p.maxima : 0, abertura, p.preco),
+        minima: Math.min(p.minima > 0 ? p.minima : Infinity, abertura, p.preco) };
+    });
     const op = PERIODOS_GRAFICO.find((x) => x.chave === periodoGrafico);
-    let lista = serie;
+    let lista = velas;
     if (op && op.dias) {
       const limite = new Date();
       limite.setDate(limite.getDate() - op.dias);
       const corte = limite.toISOString().slice(0, 10);
-      lista = serie.filter((p) => p.data >= corte);
-      if (lista.length < 2) lista = serie;
+      lista = velas.filter((p) => p.data >= corte);
+      if (lista.length < 2) lista = velas;
     }
-    lista = lista.map((p) => ({ ...p }));
-    const atual = dolar ? dolar.valor : 0;
     if (atual > 0 && lista.length) {
       const hj = hojeISO(), ult = lista[lista.length - 1];
       if (ult.data === hj) { ult.preco = atual; ult.maxima = Math.max(ult.maxima, atual); ult.minima = Math.min(ult.minima, atual); }
       else lista.push({ data: hj, abertura: ult.preco, preco: atual, maxima: Math.max(ult.preco, atual), minima: Math.min(ult.preco, atual) });
     }
     return lista;
+  }
+  function velasDolarPeriodo() {
+    return velasPeriodo((serieDolar || []).filter((p) => p.abertura > 0), dolar ? dolar.valor : 0);
   }
 
   function carregarSerieDolar() {
@@ -4360,7 +4378,7 @@
     return `
       <button class="voltar" data-acao="ir" data-secao="acoes"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONES.voltar}</svg>Voltar para Ações</button>
       <div class="grid g-top grid-detalhe">
-        <div class="c8">${card("", `${esc(a.ticker)} <span class="selo-tag selo-${a.categoria.toLowerCase()}">${a.categoria}</span>`, esc(a.empresa),
+        <div class="c8">${card("", `${esc(a.ticker)} <span class="selo-tag selo-${a.categoria.toLowerCase()}">${a.categoria}</span>`, `${a.empresa ? esc(a.empresa) + " · " : ""}toque no gráfico para ver em ${velasAcao ? "linha" : "velas"}`,
           `${abasPeriodo()}<button class="btn" data-acao="editar-acao" data-id="${a.id}">Editar</button>`,
           `<div class="grafico-acao-area"><canvas id="graf-preco-acao"></canvas></div>`)}</div>
         <div class="c4">${card("", "Resumo da posição", "", "", `
@@ -4727,7 +4745,10 @@
       }
       case "detalhe-acao": {
         const a = achar(d.acoes, ROTA.param);
-        if (a && a.historicoPrecos.length) G.renderPrecoAcao("graf-preco-acao", filtrarPeriodo(a.historicoPrecos, periodoGrafico), a.precoMedio, Number(a.precoAtual) || 0, { quantidade: Number(a.quantidade) || 0 });
+        const alternarAcao = () => { velasAcao = !velasAcao; renderRota(); };
+        const velasA = a && velasAcao ? velasPeriodo(a.historicoPrecos, Number(a.precoAtual) || 0) : [];
+        if (velasAcao && velasA.length >= 2) G.renderVelas("graf-preco-acao", velasA, { linhaAtual: Number(a.precoAtual) || 0, linhaCompra: Number(a.precoMedio) || 0, casas: 2, aoClicar: alternarAcao });
+        else if (a && a.historicoPrecos.length) G.renderPrecoAcao("graf-preco-acao", filtrarPeriodo(a.historicoPrecos, periodoGrafico), a.precoMedio, Number(a.precoAtual) || 0, { quantidade: Number(a.quantidade) || 0, aoClicar: alternarAcao });
         break;
       }
       case "carteira": {

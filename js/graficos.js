@@ -478,9 +478,10 @@
     var ctx = ctxOf(canvasId); if (!ctx) return;
     var alta = function (p) { return p.preco >= p.abertura; };
     var cor = function (p) { return alta(p) ? CORES.up : CORES.down; };
-    var f4 = function (v) { return Number(v).toFixed(4); };
-    var minimo = Math.min.apply(null, serie.map(function (p) { return p.minima; }));
-    var maximo = Math.max.apply(null, serie.map(function (p) { return p.maxima; }));
+    var casas = opcoes.casas || 4;   // dólar com 4 casas, ações com 2
+    var f4 = function (v) { return Number(v).toFixed(casas); };
+    var minimo = Math.min.apply(null, serie.map(function (p) { return p.minima; }).concat(opcoes.linhaCompra > 0 ? [opcoes.linhaCompra] : []));
+    var maximo = Math.max.apply(null, serie.map(function (p) { return p.maxima; }).concat(opcoes.linhaCompra > 0 ? [opcoes.linhaCompra] : []));
     var folga = (maximo - minimo) * 0.08 || maximo * 0.01;
     var datasets = [{
       label: "Velas",
@@ -495,6 +496,10 @@
     }];
     if (opcoes.linhaAtual > 0) {
       datasets.push({ type: "line", label: "Valor Atual", data: serie.map(function () { return opcoes.linhaAtual; }), borderColor: "#38B6FF", borderDash: [2, 3], borderWidth: 1.2, pointRadius: 0, pointHoverRadius: 0, fill: false });
+    }
+    if (opcoes.linhaCompra > 0) {
+      // ações: preço de compra (médio) em laranja, como no gráfico de linha
+      datasets.push({ type: "line", label: "Preço Compra", data: serie.map(function () { return opcoes.linhaCompra; }), borderColor: CORES.laranja, borderDash: [6, 4], borderWidth: 1.5, pointRadius: 0, pointHoverRadius: 0, fill: false });
     }
     instancias[canvasId] = new Chart(ctx, {
       type: "bar",
@@ -573,7 +578,20 @@
           c.fillStyle = "#0B1420"; c.textBaseline = "middle"; c.fillText(txt, ca.right + 7, y + 0.5);
           c.restore();
         }
-      } : { id: "semRotulo" }]
+      } : { id: "semRotulo" }, opcoes.linhaCompra > 0 ? {
+        id: "rotuloCompraVelas",
+        afterDatasetsDraw: function (grafico) {
+          var ca = grafico.chartArea, y = grafico.scales.y.getPixelForValue(opcoes.linhaCompra);
+          if (y < ca.top || y > ca.bottom) return;
+          var c = grafico.ctx, txt = f4(opcoes.linhaCompra);
+          c.save();
+          c.font = "700 10.5px 'Segoe UI', Roboto, sans-serif";
+          var larg = c.measureText(txt).width + 10;
+          c.fillStyle = CORES.laranja; c.fillRect(ca.right + 2, y - 9, larg, 18);
+          c.fillStyle = "#0B1420"; c.textBaseline = "middle"; c.fillText(txt, ca.right + 7, y + 0.5);
+          c.restore();
+        }
+      } : { id: "semCompra" }]
     });
   }
 
