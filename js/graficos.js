@@ -765,6 +765,12 @@
       ini = Math.max(0, Math.min(total - nova, ini));
       fim = ini + nova;
       aplicarJanela(grafico); grafico.update("none");
+      avisarJanela();
+    }
+    // avisa o app qual intervalo está na tela depois do zoom (para marcar a
+    // aba de período); a abertura do gráfico já vem da aba escolhida
+    function avisarJanela() {
+      if (opcoes.aoMudarJanela && serie.length) opcoes.aoMudarJanela(serie[0].data, serie[serie.length - 1].data, ini === 0 && fim === total);
     }
     function deslocar(velas) {
       var qtd = fim - ini;

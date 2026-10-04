@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "2.3.7";
+  const VERSAO_APP = "2.3.8";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -1314,7 +1314,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.3.7" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.3.8" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -4023,6 +4023,18 @@
     return partes.length > 1 ? `(${partes.join(" OR ")})` : partes[0];
   }
 
+  // Com o zoom das velas, marca a aba de período que corresponde ao
+  // intervalo na tela: o menor período que cobre do primeiro ao último dia
+  // visível (ou "Tudo" quando o histórico inteiro está na tela).
+  function marcarPeriodoDoZoom(primeira, ultima, tudo) {
+    const dias = Math.round((new Date(ultima + "T00:00:00") - new Date(primeira + "T00:00:00")) / 86400000);
+    const op = tudo ? PERIODOS_GRAFICO.find((x) => !x.dias)
+      : (PERIODOS_GRAFICO.find((x) => x.dias && dias <= x.dias) || PERIODOS_GRAFICO.find((x) => !x.dias));
+    if (!op) return;
+    periodoGrafico = op.chave;
+    document.querySelectorAll('.abas-periodo [data-acao="periodo-grafico"]').forEach((b) => b.classList.toggle("ativo", b.dataset.periodo === op.chave));
+  }
+
   function velasDolarPeriodo() {
     return velasPeriodo((serieDolar || []).filter((p) => p.abertura > 0), dolar ? dolar.valor : 0);
   }
@@ -4760,7 +4772,7 @@
         const alternar = () => { velasDolar = !velasDolar; renderRota(); };
         const vd = velasDolar ? velasDolarPeriodo() : { velas: [] };
         if (velasDolar && vd.velas.length >= 2) {
-          G.renderVelas("graf-dolar", vd.velas, { visiveis: vd.visiveis, linhaAtual: atualDolar, aoClicar: alternar });
+          G.renderVelas("graf-dolar", vd.velas, { visiveis: vd.visiveis, linhaAtual: atualDolar, aoClicar: alternar, aoMudarJanela: marcarPeriodoDoZoom });
           // "N" nas velas em que o dólar variou 0,5% ou mais e houve notícia
           noticiasPara("dolar", "(dólar OR câmbio) real").then((itens) => {
             if (ROTA.secao === "detalhe-dolar" && velasDolar) G.definirNoticias("graf-dolar", itens, 0.5);
@@ -4781,7 +4793,7 @@
         const alternarAcao = () => { velasAcao = !velasAcao; renderRota(); };
         const va = a && velasAcao ? velasPeriodo(a.historicoPrecos, Number(a.precoAtual) || 0) : { velas: [] };
         if (velasAcao && va.velas.length >= 2) {
-          G.renderVelas("graf-preco-acao", va.velas, { visiveis: va.visiveis, linhaAtual: Number(a.precoAtual) || 0, linhaCompra: Number(a.precoMedio) || 0, casas: 2, aoClicar: alternarAcao });
+          G.renderVelas("graf-preco-acao", va.velas, { visiveis: va.visiveis, linhaAtual: Number(a.precoAtual) || 0, linhaCompra: Number(a.precoMedio) || 0, casas: 2, aoClicar: alternarAcao, aoMudarJanela: marcarPeriodoDoZoom });
           // "N" nas velas em que a ação variou 1,5% ou mais e houve notícia
           const idAcao = a.id;
           noticiasPara("acao:" + a.ticker.toUpperCase(), termoNoticiasAcao(a)).then((itens) => {
