@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "2.4.4";
+  const VERSAO_APP = "2.4.5";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -1316,7 +1316,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.4.4" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.4.5" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -4825,7 +4825,7 @@
         const alternar = () => { velasDolar = !velasDolar; renderRota(); };
         const vd = velasDolar ? velasDolarPeriodo() : { velas: [] };
         if (velasDolar && vd.velas.length >= 2) {
-          G.renderVelas("graf-dolar", vd.velas, { visiveis: vd.visiveis, linhaAtual: atualDolar, aoClicar: alternar, aoMudarJanela: marcarPeriodoDoZoom });
+          G.renderVelas("graf-dolar", vd.velas, { visiveis: vd.visiveis, linhaAtual: atualDolar, corAtual: "#FFD633", rotuloAtual: "Valor Atual", aoClicar: alternar, aoMudarJanela: marcarPeriodoDoZoom });
           // "N" nas velas em que o dólar variou 0,35% ou mais e houve notícia
           carregarNoticiasVelas("dolar", { google: "dólar", gdelt: "(dólar OR câmbio) real" }, vd.velas, vd.visiveis, 0.35, "graf-dolar",
             () => ROTA.secao === "detalhe-dolar" && velasDolar);
@@ -4845,7 +4845,7 @@
         const alternarAcao = () => { velasAcao = !velasAcao; renderRota(); };
         const va = a && velasAcao ? velasPeriodo(a.historicoPrecos, Number(a.precoAtual) || 0) : { velas: [] };
         if (velasAcao && va.velas.length >= 2) {
-          G.renderVelas("graf-preco-acao", va.velas, { visiveis: va.visiveis, linhaAtual: Number(a.precoAtual) || 0, linhaCompra: Number(a.precoMedio) || 0, casas: 2, aoClicar: alternarAcao, aoMudarJanela: marcarPeriodoDoZoom });
+          G.renderVelas("graf-preco-acao", va.velas, { visiveis: va.visiveis, linhaAtual: Number(a.precoAtual) || 0, linhaCompra: Number(a.precoMedio) || 0, quantidade: Number(a.quantidade) || 0, casas: 2, aoClicar: alternarAcao, aoMudarJanela: marcarPeriodoDoZoom });
           // "N" nas velas em que a ação variou 1% ou mais e houve notícia
           const idAcao = a.id;
           carregarNoticiasVelas("acao:" + a.ticker.toUpperCase(), termosNoticiasAcao(a), va.velas, va.visiveis, 1, "graf-preco-acao",
