@@ -300,7 +300,15 @@
   // ligando as duas linhas, com uma caixa no meio mostrando o lucro/prejuízo
   // total (diferença × cotas) e a diferença por cota. Usado no gráfico de
   // linha e no de velas das ações.
-  // soTotal: só o valor total, sem percentual nem a linha "por cota" (velas)
+  // ordem das legendas dos gráficos de preço: Preço Atual, Preço Compra, Resultado
+  function ordemLegenda(rotulo) {
+    var ordem = ["Preço Atual", "Valor Atual", "Preço Compra", "Resultado"];
+    var i = ordem.indexOf(rotulo);
+    return i < 0 ? -1 : i;   // outros itens (ex.: "Preço" do dólar) ficam na frente
+  }
+
+  // soTotal: só o valor total, numa caixa cheia igual às etiquetas de
+  // Preço Atual e Preço Compra no eixo (gráfico de velas)
   function desenharDiferencaCompra(grafico, precoAtual, precoMedio, qtd, soTotal) {
     var ca = grafico.chartArea, esc = grafico.scales.y;
     var yA = esc.getPixelForValue(precoAtual), yC = esc.getPixelForValue(precoMedio);
@@ -314,8 +322,23 @@
     var icone = dif >= 0 ? "📈 " : "📉 ";
     var txt = icone + (qtd > 0 ? sinal + moeda(Math.abs(dif * qtd)) + pctTxt : sinal + moeda(Math.abs(dif)) + pctTxt);
     var txt2 = qtd > 0 ? sinal + moeda(Math.abs(dif)) + " por cota × " + qtd.toLocaleString("pt-BR") + (qtd === 1 ? " cota" : " cotas") : "";
-    if (soTotal) { txt = icone + sinal + moeda(Math.abs(qtd > 0 ? dif * qtd : dif)); txt2 = ""; }
     var c = grafico.ctx;
+    if (soTotal) {
+      var xs = ca.left + ca.width * 0.62, total = sinal + moeda(Math.abs(qtd > 0 ? dif * qtd : dif));
+      c.save();
+      // pontilhado vertical entre as duas linhas, com um ponto em cada ponta
+      c.strokeStyle = cor; c.lineWidth = 1.2; c.setLineDash([3, 3]);
+      c.beginPath(); c.moveTo(xs, topo); c.lineTo(xs, base); c.stroke(); c.setLineDash([]);
+      c.fillStyle = cor;
+      [topo, base].forEach(function (yy) { c.beginPath(); c.arc(xs, yy, 2.5, 0, Math.PI * 2); c.fill(); });
+      // caixa cheia na cor do resultado, texto escuro (como "36.42" e "33.10" no eixo)
+      c.font = "700 10.5px 'Segoe UI', Roboto, sans-serif";
+      var lt = c.measureText(total).width + 10, yt = Math.min(ca.bottom - 9, Math.max(ca.top + 9, Math.round((topo + base) / 2)));
+      c.fillRect(Math.round(xs - lt / 2), yt - 9, lt, 18);
+      c.fillStyle = "#0B1420"; c.textBaseline = "middle"; c.textAlign = "center"; c.fillText(total, xs, yt + 0.5);
+      c.restore();
+      return;
+    }
     c.save();
     c.font = "700 11px 'Segoe UI', Roboto, sans-serif";
     var larg1 = c.measureText(txt).width;
@@ -396,7 +419,7 @@
                 l.fillStyle = m ? "rgba(" + parseInt(m[1], 16) + "," + parseInt(m[2], 16) + "," + parseInt(m[3], 16) + ",0.28)" : cor;
                 l.strokeStyle = cor; l.lineDash = []; l.lineWidth = 1.5;
                 return l;
-              });
+              }).sort(function (a, b) { return ordemLegenda(a.text) - ordemLegenda(b.text); });
             } } },
           tooltip: tooltipPadrao({ callbacks: { label: function (c) { return " " + c.dataset.label + ": R$ " + c.parsed.y.toFixed(2); } } })
         }
@@ -489,12 +512,12 @@
     var casas = opcoes.casas || 4;   // dólar com 4 casas, ações com 2
     var corAtual = opcoes.corAtual || CORES.cy;
     // legenda (à esquerda do "Notícias"): as linhas do gráfico e o resultado
-    // mesma ordem do gráfico de linha: Resultado, Preço Atual, Preço Compra
+    // mesma ordem do gráfico de linha: Preço Atual, Preço Compra, Resultado
     // ("curto" é usado quando a legenda inteira não cabe ao lado do Abr/Máx/Mín/Fch)
     var legenda = [];
-    if (opcoes.linhaAtual > 0 && opcoes.linhaCompra > 0) legenda.push({ rotulo: "Resultado", curto: "Result.", cor: opcoes.linhaAtual >= opcoes.linhaCompra ? CORES.up : CORES.down });
     if (opcoes.linhaAtual > 0) legenda.push({ rotulo: opcoes.rotuloAtual || "Preço Atual", curto: "Atual", cor: corAtual });
     if (opcoes.linhaCompra > 0) legenda.push({ rotulo: "Preço Compra", curto: "Compra", cor: CORES.laranja });
+    if (opcoes.linhaAtual > 0 && opcoes.linhaCompra > 0) legenda.push({ rotulo: "Resultado", curto: "Result.", cor: opcoes.linhaAtual >= opcoes.linhaCompra ? CORES.up : CORES.down });
     var fimOHLC = 0;   // onde termina o texto Abr/Máx/Mín/Fch (a legenda não pode passar dele)
     // em telas estreitas (iPad em pé) o cabeçalho vira duas linhas:
     // Abr/Máx/Mín/Fch em cima e a legenda + Notícias embaixo
