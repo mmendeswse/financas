@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "2.6.8";
+  const VERSAO_APP = "2.6.9";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -931,14 +931,13 @@
     // ao entrar na guia, o filtro volta sempre para o mês e o ano atuais
     if (secao === "entradas") { mesEntradas = F.mesAtual(); ordemEntradas = { ...ORDEM_ENTRADAS_PADRAO }; filtroEntradas = null; }
     if (secao === "despesas") { mesDespesas = F.mesAtual(); ordemDespesas = { ...ORDEM_DESPESAS_PADRAO }; filtroDespesas = null; }
-    // ao entrar em Ações ou Investimentos (e nas telas de detalhe delas),
-    // o período dos gráficos volta ao padrão, em vez de guardar a escolha
-    // (em Ações, sempre abre nos últimos 7 dias)
-    if (secao === "acoes") periodoGrafico = "7d";
-    if (secao === "investimentos") periodoGrafico = "7d";
+    // ao entrar em Ações ou Investimentos (e nas telas de detalhe delas:
+    // cada ação, o dólar e cada aplicação), o período dos gráficos abre
+    // sempre em "Tudo", em vez de guardar a escolha anterior
+    if (["acoes", "investimentos", "detalhe-acao", "detalhe-dolar", "detalhe-investimento"].includes(secao)) periodoGrafico = "tudo";
     // o gráfico do dólar e o de cada ação abrem sempre em velas (candles);
     // tocar no gráfico alterna para a linha e de volta
-    if (secao === "detalhe-dolar") { periodoGrafico = "7d"; velasDolar = true; }
+    if (secao === "detalhe-dolar") velasDolar = true;
     if (secao === "detalhe-acao") velasAcao = true;
     // a guia Bancos sempre abre mostrando o saldo atual ("Tudo")
     if (secao === "bancos") { mesesBancos = 0; anoBancos = String(new Date().getFullYear()); }
@@ -1324,7 +1323,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.6.8" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.6.9" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
