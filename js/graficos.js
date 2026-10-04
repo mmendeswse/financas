@@ -309,7 +309,9 @@
 
   // soTotal: só o valor total, numa caixa cheia igual às etiquetas de
   // Preço Atual e Preço Compra no eixo (gráfico de velas)
-  function desenharDiferencaCompra(grafico, precoAtual, precoMedio, qtd, soTotal) {
+  // obstaculos (velas): retângulos { x1, x2, y1, y2 } em pixels que a caixa não
+  // pode cobrir — a posição do traço e da caixa é escolhida para evitá-los
+  function desenharDiferencaCompra(grafico, precoAtual, precoMedio, qtd, soTotal, obstaculos) {
     var ca = grafico.chartArea, esc = grafico.scales.y;
     var yA = esc.getPixelForValue(precoAtual), yC = esc.getPixelForValue(precoMedio);
     var topo = Math.max(ca.top, Math.min(yA, yC)), base = Math.min(ca.bottom, Math.max(yA, yC));
@@ -326,14 +328,48 @@
     if (soTotal) {
       var xs = ca.left + ca.width * 0.62, total = sinal + moeda(Math.abs(qtd > 0 ? dif * qtd : dif));
       c.save();
+      c.font = "700 10.5px 'Segoe UI', Roboto, sans-serif";
+      var lt = c.measureText(total).width + 10;
+      var yMeio = Math.min(ca.bottom - 9, Math.max(ca.top + 9, Math.round((topo + base) / 2)));
+      var yt = yMeio;
+      if (obstaculos && obstaculos.length) {
+        // procura, ao longo do gráfico, um ponto do traço (entre as duas
+        // linhas) onde a caixa não encosta em nenhuma vela (corpo ou pavio);
+        // prefere ficar perto do meio e com o traço passando entre as velas
+        var yMin = Math.max(ca.top + 9, topo + 9), yMax = Math.min(ca.bottom - 9, base - 9);
+        if (yMax < yMin) { yMin = yMax = yMeio; }
+        var melhor = null, folgaX = 3, folgaY = 3;
+        for (var x = ca.left + lt / 2 + 2; x <= ca.right - lt / 2 - 2; x += 3) {
+          var bloq = [], cruza = false;
+          for (var k = 0; k < obstaculos.length; k++) {
+            var o = obstaculos[k];
+            if (o.x2 + folgaX < x - lt / 2 || o.x1 - folgaX > x + lt / 2) continue;
+            bloq.push([o.y1 - 9 - folgaY, o.y2 + 9 + folgaY]);
+            if (x >= o.x1 - 1 && x <= o.x2 + 1) cruza = true;
+          }
+          // o ponto livre (para o centro da caixa) mais perto do meio do traço
+          bloq.sort(function (a, b) { return a[0] - b[0]; });
+          var livres = [], ini = yMin;
+          bloq.forEach(function (b) { if (b[0] > ini) livres.push([ini, Math.min(b[0], yMax)]); ini = Math.max(ini, b[1]); });
+          if (ini <= yMax) livres.push([ini, yMax]);
+          var yBom = null;
+          livres.forEach(function (f) {
+            if (f[1] < f[0]) return;
+            var y = Math.min(f[1], Math.max(f[0], yMeio));
+            if (yBom === null || Math.abs(y - yMeio) < Math.abs(yBom - yMeio)) yBom = y;
+          });
+          if (yBom === null) continue;
+          var nota = Math.abs(x - xs) / ca.width + Math.abs(yBom - yMeio) / ca.height * 0.6 + (cruza ? 0.25 : 0);
+          if (!melhor || nota < melhor.nota) melhor = { nota: nota, x: x, y: yBom };
+        }
+        if (melhor) { xs = melhor.x; yt = Math.round(melhor.y); }
+      }
       // pontilhado vertical entre as duas linhas, com um ponto em cada ponta
       c.strokeStyle = cor; c.lineWidth = 1.2; c.setLineDash([3, 3]);
       c.beginPath(); c.moveTo(xs, topo); c.lineTo(xs, base); c.stroke(); c.setLineDash([]);
       c.fillStyle = cor;
       [topo, base].forEach(function (yy) { c.beginPath(); c.arc(xs, yy, 2.5, 0, Math.PI * 2); c.fill(); });
       // caixa cheia na cor do resultado, texto escuro (como "36.42" e "33.10" no eixo)
-      c.font = "700 10.5px 'Segoe UI', Roboto, sans-serif";
-      var lt = c.measureText(total).width + 10, yt = Math.min(ca.bottom - 9, Math.max(ca.top + 9, Math.round((topo + base) / 2)));
       c.fillRect(Math.round(xs - lt / 2), yt - 9, lt, 18);
       c.fillStyle = "#0B1420"; c.textBaseline = "middle"; c.textAlign = "center"; c.fillText(total, xs, yt + 0.5);
       c.restore();
@@ -682,7 +718,14 @@
           var yA = y.getPixelForValue(opcoes.linhaAtual), yC = y.getPixelForValue(opcoes.linhaCompra);
           // só quando ao menos uma das linhas está na tela (com zoom, podem sair)
           if (Math.max(yA, yC) < ca.top || Math.min(yA, yC) > ca.bottom) return;
-          desenharDiferencaCompra(g, opcoes.linhaAtual, opcoes.linhaCompra, Number(opcoes.quantidade) || 0, true);
+          // as velas na tela (corpo + pavio) são obstáculos para a caixa
+          var meta = g.getDatasetMeta(0), obst = [];
+          meta.data.forEach(function (barra, i) {
+            var p = serie[i]; if (!p) return;
+            var meia = Math.max(2, (barra.width || 0) / 2);
+            obst.push({ x1: barra.x - meia, x2: barra.x + meia, y1: y.getPixelForValue(p.maxima), y2: y.getPixelForValue(p.minima) });
+          });
+          desenharDiferencaCompra(g, opcoes.linhaAtual, opcoes.linhaCompra, Number(opcoes.quantidade) || 0, true, obst);
         }
       } : { id: "semDiferenca" },
       {
