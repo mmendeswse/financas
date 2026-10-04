@@ -133,5 +133,31 @@
     return proximo();
   }
 
-  global.Cotacoes = { buscarDolar: buscarDolar, buscarSerieDolar: buscarSerieDolar, buscarCotacoes: buscarCotacoes, buscarSerieBCB: buscarSerieBCB };
+  // Notícias em português dos últimos dias (até 3 meses), via GDELT DOC 2.0
+  // — gratuita, sem chave e liberada para o navegador (CORS). Usada para
+  // marcar com "N" as velas com variação forte. O GDELT aceita no máximo
+  // uma consulta a cada 5 segundos, então o app guarda o resultado.
+  // termo: sintaxe do GDELT, ex.: '(PETR4 OR "Petrobras")'
+  function buscarNoticias(termo, dias) {
+    var q = termo + " sourcelang:portuguese";
+    var url = "https://api.gdeltproject.org/api/v2/doc/doc?mode=artlist&format=json&sort=datedesc&maxrecords=250" +
+      "&timespan=" + Math.max(1, Math.min(90, dias || 90)) + "d&query=" + encodeURIComponent(q);
+    return comTimeout(fetch(url).then(function (r) {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.text();
+    }).then(function (txt) {
+      var j;
+      try { j = JSON.parse(txt); } catch (e) { throw new Error(txt.slice(0, 120) || "resposta inválida"); }
+      return (j.articles || []).map(function (a) {
+        // seendate vem em UTC: "20261001T202800Z" → data e hora locais
+        var m = /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z$/.exec(a.seendate || "");
+        if (!m || !a.url || !a.title) return null;
+        var dt = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]));
+        var iso = dt.getFullYear() + "-" + String(dt.getMonth() + 1).padStart(2, "0") + "-" + String(dt.getDate()).padStart(2, "0");
+        return { data: iso, quando: dt.toISOString(), titulo: String(a.title), url: String(a.url), fonte: String(a.domain || "") };
+      }).filter(Boolean);
+    }), 15000);
+  }
+
+  global.Cotacoes = { buscarDolar: buscarDolar, buscarSerieDolar: buscarSerieDolar, buscarCotacoes: buscarCotacoes, buscarSerieBCB: buscarSerieBCB, buscarNoticias: buscarNoticias };
 })(window);
