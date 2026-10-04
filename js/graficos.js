@@ -494,12 +494,35 @@
       backgroundColor: serie.map(cor), borderColor: serie.map(cor), borderWidth: 1,
       borderSkipped: false, barPercentage: 0.7, categoryPercentage: 0.9, maxBarThickness: 18
     }];
-    if (opcoes.linhaAtual > 0) {
-      datasets.push({ type: "line", label: "Valor Atual", data: serie.map(function () { return opcoes.linhaAtual; }), borderColor: "#38B6FF", borderDash: [2, 3], borderWidth: 1.2, pointRadius: 0, pointHoverRadius: 0, fill: false });
-    }
-    if (opcoes.linhaCompra > 0) {
-      // ações: preço de compra (médio) em laranja, como no gráfico de linha
-      datasets.push({ type: "line", label: "Preço Compra", data: serie.map(function () { return opcoes.linhaCompra; }), borderColor: CORES.laranja, borderDash: [6, 4], borderWidth: 1.5, pointRadius: 0, pointHoverRadius: 0, fill: false });
+    // linha pontilhada horizontal que vai da borda esquerda até encostar na
+    // caixa do valor, na borda direita (como nos gráficos de corretora)
+    function linhaComEtiqueta(id, valor, cor, traco) {
+      if (!(valor > 0)) return { id: id };
+      var posicao = function (grafico) {
+        var ca = grafico.chartArea, y = Math.round(grafico.scales.y.getPixelForValue(valor)) + 0.5;
+        return (y < ca.top || y > ca.bottom) ? null : { ca: ca, y: y };
+      };
+      return {
+        id: id,
+        beforeDatasetsDraw: function (grafico) {
+          var p = posicao(grafico); if (!p) return;
+          var c = grafico.ctx;
+          c.save();
+          c.strokeStyle = cor; c.lineWidth = 1; c.setLineDash(traco);
+          c.beginPath(); c.moveTo(p.ca.left, p.y); c.lineTo(p.ca.right + 2, p.y); c.stroke();
+          c.restore();
+        },
+        afterDatasetsDraw: function (grafico) {
+          var p = posicao(grafico); if (!p) return;
+          var c = grafico.ctx, txt = f4(valor);
+          c.save();
+          c.font = "700 10.5px 'Segoe UI', Roboto, sans-serif";
+          var larg = c.measureText(txt).width + 10;
+          c.fillStyle = cor; c.fillRect(p.ca.right + 2, p.y - 9.5, larg, 18);
+          c.fillStyle = "#0B1420"; c.textBaseline = "middle"; c.fillText(txt, p.ca.right + 7, p.y);
+          c.restore();
+        }
+      };
     }
     instancias[canvasId] = new Chart(ctx, {
       type: "bar",
@@ -564,34 +587,10 @@
           });
           c.restore();
         }
-      }, opcoes.linhaAtual > 0 ? {
-        // etiqueta do valor atual na borda direita, como no gráfico de linha
-        id: "rotuloValorAtualVelas",
-        afterDatasetsDraw: function (grafico) {
-          var ca = grafico.chartArea, y = grafico.scales.y.getPixelForValue(opcoes.linhaAtual);
-          if (y < ca.top || y > ca.bottom) return;
-          var c = grafico.ctx, txt = f4(opcoes.linhaAtual);
-          c.save();
-          c.font = "700 10.5px 'Segoe UI', Roboto, sans-serif";
-          var larg = c.measureText(txt).width + 10;
-          c.fillStyle = "#38B6FF"; c.fillRect(ca.right + 2, y - 9, larg, 18);
-          c.fillStyle = "#0B1420"; c.textBaseline = "middle"; c.fillText(txt, ca.right + 7, y + 0.5);
-          c.restore();
-        }
-      } : { id: "semRotulo" }, opcoes.linhaCompra > 0 ? {
-        id: "rotuloCompraVelas",
-        afterDatasetsDraw: function (grafico) {
-          var ca = grafico.chartArea, y = grafico.scales.y.getPixelForValue(opcoes.linhaCompra);
-          if (y < ca.top || y > ca.bottom) return;
-          var c = grafico.ctx, txt = f4(opcoes.linhaCompra);
-          c.save();
-          c.font = "700 10.5px 'Segoe UI', Roboto, sans-serif";
-          var larg = c.measureText(txt).width + 10;
-          c.fillStyle = CORES.laranja; c.fillRect(ca.right + 2, y - 9, larg, 18);
-          c.fillStyle = "#0B1420"; c.textBaseline = "middle"; c.fillText(txt, ca.right + 7, y + 0.5);
-          c.restore();
-        }
-      } : { id: "semCompra" }]
+      },
+      // valor atual em azul e, nas ações, o preço de compra em laranja
+      linhaComEtiqueta("linhaValorAtual", opcoes.linhaAtual, "#38B6FF", [3, 3]),
+      linhaComEtiqueta("linhaCompra", opcoes.linhaCompra, CORES.laranja, [6, 4])]
     });
   }
 
