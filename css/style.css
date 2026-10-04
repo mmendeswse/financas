@@ -1210,15 +1210,12 @@ button.resumo-pill:active { transform: scale(.98); }
 .marco-cai { color: var(--down); border-color: rgba(255,77,122,.35); background: rgba(255,77,122,.07); }
 .pill-pico { color: #FFD633 !important; background: rgba(255,214,51,.1) !important; border: 1px solid rgba(255,214,51,.4) !important; }
 
-/* rodapé de status sempre no canto inferior da tela (web e tablet):
-   em páginas curtas o conteúdo estica até o fim da tela; em páginas
-   longas a barra fica presa embaixo enquanto o conteúdo rola */
+/* rodapé de status no fim da página (web e tablet): só aparece ao rolar
+   até o final. Em páginas curtas o conteúdo estica até o fim da tela,
+   para a barra não ficar no meio dela */
 .shell { min-height: 100vh; min-height: 100dvh; }
 .main { display: flex; flex-direction: column; flex: 1 0 auto; }
 .scroll { display: flex; flex-direction: column; flex: 1 0 auto; }
 /* largura total: num contêiner flex em coluna, margin auto encolheria os itens */
-#conteudo { flex: 1 0 auto; width: 100%; box-sizing: border-box;
-  /* espaço para o conteúdo não ficar escondido atrás da barra fixa */
-  padding-bottom: calc(var(--alt-rodape, 44px) + 16px); }
-.rodape-app { position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
-  width: 100%; max-width: none; box-sizing: border-box; margin: 0; }
+#conteudo { flex: 1 0 auto; width: 100%; box-sizing: border-box; }
+.rodape-app { width: 100%; max-width: none; box-sizing: border-box; margin: 8px 0 0; }
