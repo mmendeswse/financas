@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "2.6.2";
+  const VERSAO_APP = "2.6.3";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -1321,7 +1321,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.6.2" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.6.3" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -4022,9 +4022,11 @@
   // recente para o mais antigo), e cada dia fica guardado no aparelho —
   // notícia de um dia que já passou não muda.
   const NOTICIAS_MAX_DIAS = 40;
+  // as notícias guardadas por versões anteriores (nt:, nt2:) são descartadas
+  try { Object.keys(localStorage).forEach((k) => { if (/^nt2?:/.test(k)) localStorage.removeItem(k); }); } catch (e) { /* sem acesso */ }
   function lerNoticiasDia(chave, dia) {
     try {
-      const r = JSON.parse(localStorage.getItem(`nt2:${chave}:${dia}`) || "null");
+      const r = JSON.parse(localStorage.getItem(`nt3:${chave}:${dia}`) || "null");
       if (!r) return null;
       // dia sem notícia (ou hoje) é consultado de novo depois de 2 horas
       if ((!r.itens.length || dia === hojeISO()) && Date.now() - r.t > 2 * 60 * 60 * 1000) return null;
@@ -4032,7 +4034,7 @@
     } catch (e) { return null; }
   }
   function gravarNoticiasDia(chave, dia, itens) {
-    try { localStorage.setItem(`nt2:${chave}:${dia}`, JSON.stringify({ t: Date.now(), itens })); } catch (e) { /* sem espaço */ }
+    try { localStorage.setItem(`nt3:${chave}:${dia}`, JSON.stringify({ t: Date.now(), itens })); } catch (e) { /* sem espaço */ }
   }
   // Uma busca por ativo ("dolar", "acao:PETR4"…) que continua mesmo quando a
   // tela é redesenhada (cotações automáticas, sincronização, troca de período):
@@ -4075,6 +4077,9 @@
       let txt = "";
       if (busca.terminou && !busca.artigos.length) {
         txt = busca.falhas ? "sem conexão com as fontes" : (busca.dias ? "nenhuma nos dias de maior variação" : "sem dias de grande variação");
+      } else if (busca.terminou && busca.semResposta) {
+        // achou algumas, mas parte dos dias ficou sem resposta (tenta de novo na próxima abertura)
+        txt = `${busca.semResposta} ${busca.semResposta === 1 ? "dia" : "dias"} sem resposta das fontes`;
       }
       G.statusNoticias(alvo.canvasId, txt);
     };
@@ -4106,21 +4111,24 @@
     const isoLocal = (q) => { const d = new Date(q); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
     const vespera = (dia) => { const d = new Date(dia + "T12:00:00"); d.setDate(d.getDate() - 1); return isoLocal(d); };
     const fila = faltam.slice();
-    let seguidas = 0, ativos = 0;
+    // um dia de cada vez; dia que falhar volta para o fim da fila (até 3
+    // tentativas) e a pausa cresce a cada falha seguida (as fontes gratuitas
+    // recusam quando recebem pedidos demais) — a busca nunca desiste no meio
+    const tentativas = {};
+    let seguidas = 0;
     const proximo = () => {
-      // fontes fora do ar (4 falhas seguidas): para e tenta de novo na próxima vez
-      if (!fila.length || seguidas >= 4) {
-        if (--ativos <= 0) encerrar();
-        return Promise.resolve();
-      }
+      if (!fila.length) { encerrar(); return Promise.resolve(); }
       const dia = fila.shift();
+      tentativas[dia] = (tentativas[dia] || 0) + 1;
       return C.buscarNoticiasDia(termos, dia).then((itens) => {
         seguidas = 0;
         if (itens.length) { salvar(dia, itens); busca.mostrar(); }
         else if (!porDia[dia]) gravarNoticiasDia(chave, dia, []);   // dia sem notícia (consulta de novo depois)
-      }).catch(() => { busca.falhas++; seguidas++; })   // falhou: fica para a próxima vez
-        // pausa entre os dias: os serviços gratuitos limitam pedidos por segundo
-        .then(() => new Promise((ok) => setTimeout(ok, 900)))
+      }).catch(() => {
+        seguidas++;
+        if (tentativas[dia] < 3) fila.push(dia);
+        else { busca.falhas++; busca.semResposta = (busca.semResposta || 0) + 1; }
+      }).then(() => new Promise((ok) => setTimeout(ok, Math.min(15000, 900 * Math.pow(2, seguidas)))))
         .then(proximo);
     };
     const ordenados = faltam.slice().sort();
@@ -4135,9 +4143,9 @@
           fila.splice(fila.indexOf(dia), 1);
         });
         busca.mostrar();
-      }).catch(() => { busca.falhas++; })
+      }).catch(() => { /* sem a busca do período: o dia a dia cobre */ })
       : Promise.resolve();
-    porPeriodo.then(() => { ativos = 1; proximo(); });   // um dia de cada vez
+    porPeriodo.then(proximo);
     return busca.promessa;
   }
 
