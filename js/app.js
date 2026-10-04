@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "2.3.6";
+  const VERSAO_APP = "2.3.7";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -1314,7 +1314,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.3.6" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.3.7" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -3998,6 +3998,31 @@
     }
     return { velas, visiveis };
   }
+  // Notícias para os "N" nas velas (GDELT). Guardadas por 1 hora para não
+  // repetir a consulta a cada troca de tela (o GDELT limita as consultas).
+  const noticiasCache = {};
+  let filaNoticias = Promise.resolve();
+  function noticiasPara(chave, termo) {
+    const c = noticiasCache[chave];
+    if (c && Date.now() - c.quando < 60 * 60 * 1000) return c.promessa;
+    if (!C || !C.buscarNoticias || typeof fetch !== "function") return Promise.resolve([]);
+    const reg = { quando: Date.now() };
+    const busca = filaNoticias.then(() => C.buscarNoticias(termo, 90));
+    // a próxima consulta só sai 5 s depois desta (limite do GDELT)
+    filaNoticias = busca.catch(() => {}).then(() => new Promise((ok) => setTimeout(ok, 5000)));
+    reg.promessa = busca.catch(() => { reg.quando = 0; return []; });   // falhou: tenta de novo na próxima vez
+    noticiasCache[chave] = reg;
+    return reg.promessa;
+  }
+  // termo de busca de uma ação: o ticker e o nome da empresa sem a classe
+  // (PN, ON, UNT…) — ex.: (PETR4 OR "Petrobras")
+  function termoNoticiasAcao(a) {
+    const nome = String(a.empresa || "").replace(/\b(PN|ON|PNA|PNB|UNT|N1|N2|NM|S\.?A\.?|SA|CI|FII|ER|EJ|ED)\b\.?/gi, "").replace(/\s+/g, " ").trim();
+    const partes = [a.ticker.toUpperCase()];
+    if (nome.length >= 4) partes.push(`"${nome.replace(/"/g, "")}"`);
+    return partes.length > 1 ? `(${partes.join(" OR ")})` : partes[0];
+  }
+
   function velasDolarPeriodo() {
     return velasPeriodo((serieDolar || []).filter((p) => p.abertura > 0), dolar ? dolar.valor : 0);
   }
@@ -4734,7 +4759,13 @@
         }
         const alternar = () => { velasDolar = !velasDolar; renderRota(); };
         const vd = velasDolar ? velasDolarPeriodo() : { velas: [] };
-        if (velasDolar && vd.velas.length >= 2) G.renderVelas("graf-dolar", vd.velas, { visiveis: vd.visiveis, linhaAtual: atualDolar, aoClicar: alternar });
+        if (velasDolar && vd.velas.length >= 2) {
+          G.renderVelas("graf-dolar", vd.velas, { visiveis: vd.visiveis, linhaAtual: atualDolar, aoClicar: alternar });
+          // "N" nas velas em que o dólar variou 0,5% ou mais e houve notícia
+          noticiasPara("dolar", "(dólar OR câmbio) real").then((itens) => {
+            if (ROTA.secao === "detalhe-dolar" && velasDolar) G.definirNoticias("graf-dolar", itens, 0.5);
+          });
+        }
         else if (serie.length >= 2) G.renderPrecoAcao("graf-dolar", serie, 0, 0, { linhaAtual: atualDolar, aoClicar: alternar });
         break;
       }
@@ -4749,7 +4780,15 @@
         const a = achar(d.acoes, ROTA.param);
         const alternarAcao = () => { velasAcao = !velasAcao; renderRota(); };
         const va = a && velasAcao ? velasPeriodo(a.historicoPrecos, Number(a.precoAtual) || 0) : { velas: [] };
-        if (velasAcao && va.velas.length >= 2) G.renderVelas("graf-preco-acao", va.velas, { visiveis: va.visiveis, linhaAtual: Number(a.precoAtual) || 0, linhaCompra: Number(a.precoMedio) || 0, casas: 2, aoClicar: alternarAcao });
+        if (velasAcao && va.velas.length >= 2) {
+          G.renderVelas("graf-preco-acao", va.velas, { visiveis: va.visiveis, linhaAtual: Number(a.precoAtual) || 0, linhaCompra: Number(a.precoMedio) || 0, casas: 2, aoClicar: alternarAcao });
+          // "N" nas velas em que a ação variou 1,5% ou mais e houve notícia
+          const idAcao = a.id;
+          noticiasPara("acao:" + a.ticker.toUpperCase(), termoNoticiasAcao(a)).then((itens) => {
+            // só se ainda estiver na mesma ação, em velas
+            if (ROTA.secao === "detalhe-acao" && ROTA.param === idAcao && velasAcao) G.definirNoticias("graf-preco-acao", itens, 1.5);
+          });
+        }
         else if (a && a.historicoPrecos.length) G.renderPrecoAcao("graf-preco-acao", filtrarPeriodo(a.historicoPrecos, periodoGrafico), a.precoMedio, Number(a.precoAtual) || 0, { quantidade: Number(a.quantidade) || 0, aoClicar: alternarAcao });
         break;
       }

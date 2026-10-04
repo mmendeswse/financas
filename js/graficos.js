@@ -491,12 +491,16 @@
     var ini = Math.max(0, total - Math.max(MIN_VELAS, Math.min(total, opcoes.visiveis || total)));
     var serie = [];        // velas visíveis (usadas pelos plugins e pelo tooltip)
     var cursor = null;     // posição do mouse/dedo para a cruz
+    var noticiasPorVela = {};   // índice da vela (na série toda) → notícias do dia
+    var marcas = [];            // posição dos "N" desenhados (para o clique)
 
     function escala() {
       var mn = Math.min.apply(null, serie.map(function (p) { return p.minima; }));
       var mx = Math.max.apply(null, serie.map(function (p) { return p.maxima; }));
       var folga = (mx - mn) * 0.08 || mx * 0.01;
-      return { min: mn - folga, max: mx + folga, faixa: mx - mn };
+      // com notícias, sobra mais espaço em cima para o "N" acima das velas
+      var folgaTopo = Object.keys(noticiasPorVela).length ? folga * 2 : folga;
+      return { min: mn - folga, max: mx + folgaTopo, faixa: mx - mn };
     }
     function corpos(faixa) {
       return serie.map(function (p) {
@@ -507,6 +511,7 @@
       });
     }
     function aplicarJanela(grafico) {
+      fecharNoticia();
       serie = serieTotal.slice(ini, fim);
       var e = escala();
       grafico.data.labels = serie.map(rotulo);
@@ -558,8 +563,14 @@
         responsive: true, maintainAspectRatio: false, animation: false,
         interaction: { mode: "index", intersect: false },
         layout: { padding: { top: 22 } },   // espaço para o cabeçalho Abr/Máx/Mín/Fch
-        onClick: opcoes.aoClicar ? function (evt, el, ch) { if (!arrastou && dentroDaArea(ch, evt)) opcoes.aoClicar(); } : undefined,
-        onHover: function (evt, el, ch) { evt.native.target.style.cursor = dentroDaArea(ch, evt) ? "crosshair" : "default"; },
+        onClick: function (evt, el, ch) {
+          if (arrastou) return;
+          var m = marcaEm(evt.x, evt.y);
+          if (m) { abrirNoticia(m); return; }      // tocar no "N" abre o resumo
+          if (popover) { fecharNoticia(); return; }
+          if (opcoes.aoClicar && dentroDaArea(ch, evt)) opcoes.aoClicar();
+        },
+        onHover: function (evt, el, ch) { evt.native.target.style.cursor = marcaEm(evt.x, evt.y) ? "pointer" : (dentroDaArea(ch, evt) ? "crosshair" : "default"); },
         scales: {
           x: eixoX({ ticks: { color: CORES.texto, font: fonte(10.5), maxTicksLimit: 8, maxRotation: 0 } }),
           y: eixoY({ position: "right", beginAtZero: false,
@@ -610,6 +621,35 @@
       linhaComEtiqueta("linhaValorAtual", opcoes.linhaAtual, "#38B6FF", [3, 3]),
       linhaComEtiqueta("linhaCompra", opcoes.linhaCompra, CORES.laranja, [6, 4]),
       {
+        // "N" em cima das velas com variação forte que tiveram notícia no dia
+        id: "marcasNoticias",
+        afterDatasetsDraw: function (g) {
+          marcas = [];
+          var meta = g.getDatasetMeta(0), c = g.ctx, ca = g.chartArea, algum = false;
+          c.save();
+          c.font = "800 9.5px 'Segoe UI', Roboto, sans-serif"; c.textAlign = "center"; c.textBaseline = "middle";
+          meta.data.forEach(function (barra, i) {
+            var lista = noticiasPorVela[ini + i]; if (!lista) return;
+            algum = true;
+            var x = Math.round(barra.x), y = Math.max(ca.top - 6, g.scales.y.getPixelForValue(serie[i].maxima) - 14);
+            c.fillStyle = "#1E88FF"; c.beginPath(); c.arc(x, y, 7.5, 0, Math.PI * 2); c.fill();
+            c.fillStyle = "#FFFFFF"; c.fillText("N", x, y + 0.5);
+            marcas.push({ x: x, y: y, idx: ini + i });
+          });
+          if (algum) {
+            // legenda no canto direito do cabeçalho
+            var txt = "Notícias", xr = ca.right, yl = ca.top - 12;
+            c.font = "600 10.5px 'Segoe UI', Roboto, sans-serif"; c.textAlign = "right";
+            c.fillStyle = CORES.texto; c.fillText(txt, xr, yl);
+            var xc = xr - c.measureText(txt).width - 11;
+            c.fillStyle = "#1E88FF"; c.beginPath(); c.arc(xc, yl, 6.5, 0, Math.PI * 2); c.fill();
+            c.font = "800 8.5px 'Segoe UI', Roboto, sans-serif"; c.textAlign = "center";
+            c.fillStyle = "#FFFFFF"; c.fillText("N", xc, yl + 0.5);
+          }
+          c.restore();
+        }
+      },
+      {
         // cruz: linhas tracejadas na posição do mouse, com o preço no eixo
         // da direita e a data embaixo (o valor acompanha o zoom)
         id: "cruz",
@@ -644,6 +684,72 @@
     });
     aplicarJanela(grafico);
     grafico.update("none");
+
+    // ---- notícias ------------------------------------------------------
+    function marcaEm(x, y) {
+      for (var k = 0; k < marcas.length; k++) {
+        if (Math.abs(marcas[k].x - x) <= 10 && Math.abs(marcas[k].y - y) <= 10) return marcas[k];
+      }
+      return null;
+    }
+    var popover = null;
+    function fecharNoticia() {
+      if (popover && popover.parentNode) popover.parentNode.removeChild(popover);
+      popover = null;
+    }
+    function escHtml(t) { return String(t).replace(/[&<>"']/g, function (ch) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]; }); }
+    function abrirNoticia(m) {
+      fecharNoticia();
+      var lista = noticiasPorVela[m.idx] || [];
+      if (!lista.length || !canvas.parentNode) return;
+      var quando = new Date(lista[0].quando);
+      var dataTxt = quando.toLocaleDateString("pt-BR", { day: "numeric", month: "short", year: "numeric" }) + ", " +
+        quando.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+      popover = document.createElement("div");
+      popover.className = "popover-noticias";
+      popover.innerHTML = '<div class="pn-topo"><b>Notícias</b><span>' + escHtml(dataTxt) + '</span></div>' +
+        lista.slice(0, 3).map(function (n) {
+          return '<a href="' + escHtml(n.url) + '" target="_blank" rel="noopener noreferrer">' + escHtml(n.titulo) +
+            (n.fonte ? '<small>' + escHtml(n.fonte) + '</small>' : '') + '</a>';
+        }).join("");
+      popover.addEventListener("click", function (e) { e.stopPropagation(); });
+      canvas.parentNode.appendChild(popover);
+      // logo abaixo do "N", sem sair da área do gráfico
+      var area = canvas.parentNode, larg = popover.offsetWidth, alt = popover.offsetHeight;
+      var x = canvas.offsetLeft + m.x - larg / 2, y = canvas.offsetTop + m.y + 14;
+      if (y + alt > area.clientHeight) y = Math.max(0, canvas.offsetTop + m.y - 14 - alt);
+      popover.style.left = Math.max(4, Math.min(area.clientWidth - larg - 4, x)) + "px";
+      popover.style.top = y + "px";
+      // clicar fora (fora do gráfico) fecha o resumo
+      var aberto = popover;
+      setTimeout(function () {
+        document.addEventListener("click", function fora(e) {
+          if (popover !== aberto) { document.removeEventListener("click", fora, true); return; }
+          if (e.target === canvas || aberto.contains(e.target)) return;
+          document.removeEventListener("click", fora, true);
+          fecharNoticia();
+        }, true);
+      }, 0);
+    }
+    // associa cada notícia à vela do mesmo dia (ou à próxima vela, até 3
+    // dias depois — fim de semana e feriado); só ficam as velas que
+    // variaram pelo menos "limiar" % em relação ao fechamento anterior
+    grafico.$definirNoticias = function (artigos, limiar) {
+      noticiasPorVela = {};
+      var dia = function (iso) { return new Date(iso + "T00:00:00").getTime(); };
+      (artigos || []).forEach(function (a) {
+        for (var i = 0; i < total; i++) {
+          if (serieTotal[i].data < a.data) continue;
+          if ((dia(serieTotal[i].data) - dia(a.data)) / 86400000 > 3) break;
+          var ant = i > 0 ? serieTotal[i - 1].preco : serieTotal[i].abertura;
+          var pct = ant ? Math.abs(serieTotal[i].preco / ant - 1) * 100 : 0;
+          if (pct >= (limiar || 0)) (noticiasPorVela[i] = noticiasPorVela[i] || []).push(a);
+          break;
+        }
+      });
+      Object.keys(noticiasPorVela).forEach(function (k) { noticiasPorVela[k].sort(function (a, b) { return a.quando < b.quando ? 1 : -1; }); });
+      aplicarJanela(grafico); grafico.update("none");
+    };
 
     // ---- zoom e arrasto ------------------------------------------------
     // roda do mouse: aproxima/afasta mantendo a vela sob o mouse no lugar;
@@ -849,6 +955,11 @@
     renderSaldoBancos: renderSaldoBancos,
     renderPrecoAcao: renderPrecoAcao,
     renderVelas: renderVelas,
+    // notícias nas velas: artigos = [{ data, quando, titulo, url, fonte }]
+    definirNoticias: function (canvasId, artigos, limiar) {
+      var g = instancias[canvasId];
+      if (g && g.$definirNoticias) g.$definirNoticias(artigos, limiar);
+    },
     renderLinhaMultipla: renderLinhaMultipla,
     renderBarrasObjetivo: renderBarrasObjetivo,
     renderVariacaoDiaria: renderVariacaoDiaria,
