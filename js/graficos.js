@@ -309,9 +309,7 @@
 
   // soTotal: só o valor total, numa caixa cheia igual às etiquetas de
   // Preço Atual e Preço Compra no eixo (gráfico de velas)
-  // obstaculos (velas): retângulos { x1, x2, y1, y2 } em pixels que a caixa não
-  // pode cobrir — a posição do traço e da caixa é escolhida para evitá-los
-  function desenharDiferencaCompra(grafico, precoAtual, precoMedio, qtd, soTotal, obstaculos) {
+  function desenharDiferencaCompra(grafico, precoAtual, precoMedio, qtd, soTotal) {
     var ca = grafico.chartArea, esc = grafico.scales.y;
     var yA = esc.getPixelForValue(precoAtual), yC = esc.getPixelForValue(precoMedio);
     var topo = Math.max(ca.top, Math.min(yA, yC)), base = Math.min(ca.bottom, Math.max(yA, yC));
@@ -326,53 +324,22 @@
     var txt2 = qtd > 0 ? sinal + moeda(Math.abs(dif)) + " por cota × " + qtd.toLocaleString("pt-BR") + (qtd === 1 ? " cota" : " cotas") : "";
     var c = grafico.ctx;
     if (soTotal) {
-      // mesmo formato das etiquetas do eixo (ex.: "36.42"): sinal + número com ponto, sem "R$"
-      var xs = ca.left + ca.width * 0.62, total = sinal + Math.abs(qtd > 0 ? dif * qtd : dif).toFixed(2);
+      // mesmo formato e mesma coluna das etiquetas do eixo (ex.: "36.42"):
+      // sinal + número com ponto, sem "R$", na borda direita, entre o
+      // Preço Atual e o Preço Compra, ligada a eles por um pontilhado vertical
+      var total = sinal + Math.abs(qtd > 0 ? dif * qtd : dif).toFixed(2);
       c.save();
       c.font = "700 10.5px 'Segoe UI', Roboto, sans-serif";
-      var lt = c.measureText(total).width + 10;
-      var yMeio = Math.min(ca.bottom - 9, Math.max(ca.top + 9, Math.round((topo + base) / 2)));
-      var yt = yMeio;
-      if (obstaculos && obstaculos.length) {
-        // procura, ao longo do gráfico, um ponto do traço (entre as duas
-        // linhas) onde a caixa não encosta em nenhuma vela (corpo ou pavio);
-        // prefere ficar perto do meio e com o traço passando entre as velas
-        var yMin = Math.max(ca.top + 9, topo + 9), yMax = Math.min(ca.bottom - 9, base - 9);
-        if (yMax < yMin) { yMin = yMax = yMeio; }
-        var melhor = null, folgaX = 3, folgaY = 3;
-        for (var x = ca.left + lt / 2 + 2; x <= ca.right - lt / 2 - 2; x += 3) {
-          var bloq = [], cruza = false;
-          for (var k = 0; k < obstaculos.length; k++) {
-            var o = obstaculos[k];
-            if (o.x2 + folgaX < x - lt / 2 || o.x1 - folgaX > x + lt / 2) continue;
-            bloq.push([o.y1 - 9 - folgaY, o.y2 + 9 + folgaY]);
-            if (x >= o.x1 - 1 && x <= o.x2 + 1) cruza = true;
-          }
-          // o ponto livre (para o centro da caixa) mais perto do meio do traço
-          bloq.sort(function (a, b) { return a[0] - b[0]; });
-          var livres = [], ini = yMin;
-          bloq.forEach(function (b) { if (b[0] > ini) livres.push([ini, Math.min(b[0], yMax)]); ini = Math.max(ini, b[1]); });
-          if (ini <= yMax) livres.push([ini, yMax]);
-          var yBom = null;
-          livres.forEach(function (f) {
-            if (f[1] < f[0]) return;
-            var y = Math.min(f[1], Math.max(f[0], yMeio));
-            if (yBom === null || Math.abs(y - yMeio) < Math.abs(yBom - yMeio)) yBom = y;
-          });
-          if (yBom === null) continue;
-          var nota = Math.abs(x - xs) / ca.width + Math.abs(yBom - yMeio) / ca.height * 0.6 + (cruza ? 0.25 : 0);
-          if (!melhor || nota < melhor.nota) melhor = { nota: nota, x: x, y: yBom };
-        }
-        if (melhor) { xs = melhor.x; yt = Math.round(melhor.y); }
-      }
-      // pontilhado vertical entre as duas linhas, com um ponto em cada ponta
+      var lt = c.measureText(total).width + 10, xl = ca.right + 2, xs = Math.round(xl + lt / 2) + 0.5;
+      var yt = Math.round((topo + base) / 2);
+      // não encosta nas etiquetas do Preço Atual e do Preço Compra (18 px de altura)
+      if (base - topo >= 40) yt = Math.min(base - 20, Math.max(topo + 20, yt));
+      yt = Math.min(ca.bottom - 9, Math.max(ca.top + 9, yt));
       c.strokeStyle = cor; c.lineWidth = 1.2; c.setLineDash([3, 3]);
-      c.beginPath(); c.moveTo(xs, topo); c.lineTo(xs, base); c.stroke(); c.setLineDash([]);
-      c.fillStyle = cor;
-      [topo, base].forEach(function (yy) { c.beginPath(); c.arc(xs, yy, 2.5, 0, Math.PI * 2); c.fill(); });
-      // caixa cheia na cor do resultado, texto escuro (como "36.42" e "33.10" no eixo)
-      c.fillRect(Math.round(xs - lt / 2), yt - 9, lt, 18);
-      c.fillStyle = "#0B1420"; c.textBaseline = "middle"; c.textAlign = "center"; c.fillText(total, xs, yt + 0.5);
+      c.beginPath(); c.moveTo(xs, topo + 9); c.lineTo(xs, base - 9); c.stroke(); c.setLineDash([]);
+      // caixa cheia na cor do resultado, texto escuro (como "36.42" e "33.10")
+      c.fillStyle = cor; c.fillRect(xl, yt - 9.5, lt, 18);
+      c.fillStyle = "#0B1420"; c.textBaseline = "middle"; c.textAlign = "left"; c.fillText(total, xl + 5, yt);
       c.restore();
       return;
     }
@@ -555,6 +522,13 @@
     if (opcoes.linhaAtual > 0) legenda.push({ rotulo: opcoes.rotuloAtual || "Preço Atual", curto: "Atual", cor: corAtual });
     if (opcoes.linhaCompra > 0) legenda.push({ rotulo: "Preço Compra", curto: "Compra", cor: CORES.laranja });
     if (opcoes.linhaAtual > 0 && opcoes.linhaCompra > 0) legenda.push({ rotulo: "Resultado", curto: "Result.", cor: opcoes.linhaAtual >= opcoes.linhaCompra ? CORES.up : CORES.down });
+    var larguraColuna = 0;
+    if (opcoes.linhaAtual > 0 && opcoes.linhaCompra > 0) {
+      var difTotal = (opcoes.linhaAtual - opcoes.linhaCompra) * ((Number(opcoes.quantidade) || 0) > 0 ? Number(opcoes.quantidade) : 1);
+      ctx.save(); ctx.font = "700 10.5px 'Segoe UI', Roboto, sans-serif";
+      larguraColuna = ctx.measureText((difTotal >= 0 ? "+" : "−") + Math.abs(difTotal).toFixed(2)).width + 10 + 6;
+      ctx.restore();
+    }
     var fimOHLC = 0;   // onde termina o texto Abr/Máx/Mín/Fch (a legenda não pode passar dele)
     // em telas estreitas (iPad em pé) o cabeçalho vira duas linhas:
     // Abr/Máx/Mín/Fch em cima e a legenda + Notícias embaixo
@@ -656,6 +630,9 @@
         scales: {
           x: eixoX({ ticks: { color: CORES.texto, font: fonte(10.5), maxTicksLimit: 8, maxRotation: 0 } }),
           y: eixoY({ position: "right", beginAtZero: false,
+            // a coluna da direita cabe a caixa do Resultado (ex.: "+996.00"),
+            // que fica junto das etiquetas do Preço Atual e do Preço Compra
+            afterFit: function (escala) { escala.width = Math.max(escala.width, larguraColuna); },
             ticks: { color: CORES.texto, font: fonte(10.5), maxTicksLimit: 12, callback: function (v) { return f4(v); } } })
         },
         plugins: {
@@ -720,20 +697,7 @@
           var yA = y.getPixelForValue(opcoes.linhaAtual), yC = y.getPixelForValue(opcoes.linhaCompra);
           // só quando ao menos uma das linhas está na tela (com zoom, podem sair)
           if (Math.max(yA, yC) < ca.top || Math.min(yA, yC) > ca.bottom) return;
-          // as velas na tela (corpo + pavio) são obstáculos para a caixa
-          var meta = g.getDatasetMeta(0), obst = [];
-          meta.data.forEach(function (barra, i) {
-            var p = serie[i]; if (!p) return;
-            var meia = Math.max(2, (barra.width || 0) / 2);
-            obst.push({ x1: barra.x - meia, x2: barra.x + meia, y1: y.getPixelForValue(p.maxima), y2: y.getPixelForValue(p.minima) });
-            // o "N" de notícias acima da vela também é obstáculo (mesma posição
-            // usada no desenho do "N": 14 px acima da máxima, raio 7,5)
-            if (noticiasPorVela[ini + i]) {
-              var yn = Math.max(ca.top - 6, y.getPixelForValue(p.maxima) - 14);
-              obst.push({ x1: barra.x - 8, x2: barra.x + 8, y1: yn - 8, y2: yn + 8 });
-            }
-          });
-          desenharDiferencaCompra(g, opcoes.linhaAtual, opcoes.linhaCompra, Number(opcoes.quantidade) || 0, true, obst);
+          desenharDiferencaCompra(g, opcoes.linhaAtual, opcoes.linhaCompra, Number(opcoes.quantidade) || 0, true);
         }
       } : { id: "semDiferenca" },
       {
