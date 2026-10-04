@@ -1230,3 +1230,6 @@ button.resumo-pill:active { transform: scale(.98); }
 .popover-noticias a + a { border-top: 1px solid var(--linha, #16242F); }
 .popover-noticias a:hover { text-decoration: underline; }
 .popover-noticias a small { display: block; color: var(--dim); font-weight: 600; font-size: 10.5px; margin-top: 2px; }
+
+/* bandeira do Brasil dentro da pílula do USD/BRL */
+.dolar-pill .bandeira { width: 20px; height: 14px; flex: none; align-self: center; border-radius: 2px; box-shadow: 0 0 0 1px rgba(255,255,255,.12); }
