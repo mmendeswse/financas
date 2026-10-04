@@ -158,11 +158,9 @@
     var quando = pubDate ? new Date(pubDate) : null;
     return { quando: quando && !isNaN(quando) ? quando.toISOString() : dia + "T12:00:00.000Z", titulo: titulo, url: String(link || ""), fonte: fonte };
   }
-  // Lê uma busca do Google Notícias (RSS) por um dos caminhos com CORS:
+  // Lê uma busca do Google Notícias (RSS) pelos caminhos com CORS:
   // rss2json (JSON, até 10 itens), allorigins ou codetabs (XML inteiro, até
-  // ~100 itens). O caminho que funcionou por último é tentado primeiro, e
-  // cada tentativa tem tempo curto, para um caminho fora do ar não travar a busca.
-  var caminhoRss = 0;
+  // ~100 itens), cada um com tempo curto.
   function rssXml(xml, diaRef) {
     var doc = new DOMParser().parseFromString(xml, "text/xml");
     var itens = Array.prototype.slice.call(doc.getElementsByTagName("item"));
@@ -197,18 +195,26 @@
         }).then(function (xml) { return rssXml(xml, diaRef); }), 8000);
       }
     ];
-    // para buscas de um período, os caminhos que trazem o RSS inteiro vêm antes
-    var base = preferirCompleto ? [1, 2, 0] : [0, 1, 2];
-    var primeiro = preferirCompleto && caminhoRss === 0 ? base[0] : caminhoRss;
-    var ordem = [primeiro].concat(base.filter(function (x) { return x !== primeiro; }));
-    var tentar = function (k) {
-      if (k >= ordem.length) return Promise.reject(new Error("Google Notícias indisponível"));
-      return caminhos[ordem[k]]().then(function (lista) {
-        caminhoRss = ordem[k];
-        return lista.filter(function (n) { return n.titulo && n.url; });
-      }, function () { return tentar(k + 1); });
-    };
-    return tentar(0);
+    // os três caminhos saem AO MESMO TEMPO: vale a primeira resposta com
+    // notícias; se todos responderem vazio, o resultado é vazio; só falha se
+    // os três falharem. Assim um caminho lento ou fora do ar não atrasa nada.
+    // Numa busca de período, o rss2json (só 10 itens) só vale se os outros
+    // não trouxerem nada.
+    return new Promise(function (ok, erro) {
+      var pendentes = caminhos.length, algumOk = false, melhor = [], feito = false;
+      caminhos.forEach(function (fn, k) {
+        fn().then(function (lista) {
+          lista = lista.filter(function (n) { return n.titulo && n.url; });
+          algumOk = true;
+          if (lista.length > melhor.length) melhor = lista;
+          if (!feito && lista.length && !(preferirCompleto && k === 0)) { feito = true; ok(lista); }
+        }, function () { /* este caminho falhou; os outros continuam */ }).then(function () {
+          if (--pendentes > 0 || feito) return;
+          feito = true;
+          if (algumOk) ok(melhor); else erro(new Error("Google Notícias indisponível"));
+        });
+      });
+    });
   }
   // O movimento de um dia costuma vir de notícia daquele dia ou da noite
   // anterior: a busca pega os dois dias (after: é o dia anterior).

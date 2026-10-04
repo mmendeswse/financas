@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "2.5.8";
+  const VERSAO_APP = "2.5.9";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -1316,7 +1316,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.5.8" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.5.9" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -4029,10 +4029,19 @@
   function gravarNoticiasDia(chave, dia, itens) {
     try { localStorage.setItem(`nt2:${chave}:${dia}`, JSON.stringify({ t: Date.now(), itens })); } catch (e) { /* sem espaço */ }
   }
-  let rodadaNoticias = 0;
+  // Uma busca por ativo ("dolar", "acao:PETR4"…) que continua mesmo quando a
+  // tela é redesenhada (cotações automáticas, sincronização, troca de período):
+  // o redesenho só aponta a busca para o gráfico novo, em vez de recomeçá-la.
+  const buscasNoticias = {};
   function carregarNoticiasVelas(chave, termos, velas, visiveis, limiar, canvasId, aindaNaTela) {
     if (!C || !C.buscarNoticiasDia || typeof fetch !== "function") return;
-    const rodada = ++rodadaNoticias;             // trocou de tela/gráfico: a busca anterior para
+    const existente = buscasNoticias[chave];
+    if (existente && Date.now() - existente.inicio < 30 * 60 * 1000) {
+      existente.alvo = { canvasId, aindaNaTela, limiar };
+      existente.mostrar();
+      return;
+    }
+    const busca = buscasNoticias[chave] = { inicio: Date.now(), alvo: { canvasId, aindaNaTela, limiar }, artigos: [], terminou: false, falhas: 0, dias: 0 };
     const fortes = [];
     velas.forEach((v, i) => {
       const ant = i > 0 ? velas[i - 1].preco : v.abertura;
@@ -4040,51 +4049,58 @@
     });
     const inicioTela = velas.length - visiveis;
     const ordem = fortes.filter((i) => i >= inicioTela).reverse().concat(fortes.filter((i) => i < inicioTela).reverse()).slice(0, NOTICIAS_MAX_DIAS);
-    const artigos = [];
-    const mostrar = () => { if (rodada === rodadaNoticias && aindaNaTela()) G.definirNoticias(canvasId, artigos.slice(), limiar); };
-    const guardar = (dia, itens) => itens.forEach((n) => artigos.push({ ...n, data: dia }));
-    // primeiro o que já está guardado (aparece na hora)
+    busca.dias = ordem.length;
+    // mostra o que já tem no gráfico que estiver na tela; durante a busca, sem
+    // aviso; no fim, um aviso só se não achou nada
+    busca.mostrar = () => {
+      const alvo = busca.alvo;
+      if (!alvo.aindaNaTela()) return;
+      G.definirNoticias(alvo.canvasId, busca.artigos.slice(), alvo.limiar);
+      let txt = "";
+      if (busca.terminou && !busca.artigos.length) {
+        txt = busca.falhas ? "sem conexão com as fontes" : (busca.dias ? "nenhuma nos dias de maior variação" : "sem dias de grande variação");
+      }
+      G.statusNoticias(alvo.canvasId, txt);
+    };
+    const guardar = (dia, itens) => itens.forEach((n) => busca.artigos.push({ ...n, data: dia }));
+    // primeiro o que já está guardado no aparelho (aparece na hora)
     const faltam = [];
     ordem.forEach((i) => {
       const dia = velas[i].data, salvo = lerNoticiasDia(chave, dia);
       if (salvo) guardar(dia, salvo); else faltam.push(dia);
     });
-    if (artigos.length) mostrar();
+    const encerrar = () => {
+      busca.terminou = true;
+      // falhou tudo: libera para tentar de novo na próxima abertura da tela
+      if (busca.falhas && !busca.artigos.length) delete buscasNoticias[chave];
+      busca.mostrar();
+    };
+    if (!faltam.length) { encerrar(); return; }
+    busca.mostrar();
     // depois busca na internet: primeiro UMA busca para o período todo (mostra
     // a maior parte dos "N" de uma vez), depois dia a dia só os que faltarem
-    let falhas = 0, seguidas = 0, ativos = 0, terminou = !faltam.length;
-    const status = () => {
-      if (rodada !== rodadaNoticias || !aindaNaTela()) return;
-      // durante a busca não mostra nada; no fim, um aviso só se não achou nada
-      if (!terminou) { G.statusNoticias(canvasId, ""); return; }
-      let txt = "";
-      if (falhas && !artigos.length) txt = "sem conexão com as fontes";
-      else if (!artigos.length) txt = ordem.length ? "nenhuma nos dias de maior variação" : "sem dias de grande variação";
-      G.statusNoticias(canvasId, txt);
-    };
-    status();
-    if (terminou) return;
     const isoLocal = (q) => { const d = new Date(q); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
     const vespera = (dia) => { const d = new Date(dia + "T12:00:00"); d.setDate(d.getDate() - 1); return isoLocal(d); };
     const fila = faltam.slice();
+    let seguidas = 0, ativos = 0;
     const proximo = () => {
-      if (rodada !== rodadaNoticias || !aindaNaTela()) return Promise.resolve();
       // fontes fora do ar (3 falhas seguidas): para e tenta de novo na próxima vez
       if (!fila.length || seguidas >= 3) {
-        if (--ativos <= 0) { terminou = true; status(); }
+        if (--ativos <= 0) encerrar();
         return Promise.resolve();
       }
       const dia = fila.shift();
       return C.buscarNoticiasDia(termos, dia).then((itens) => {
         seguidas = 0;
         gravarNoticiasDia(chave, dia, itens);
-        if (itens.length) { guardar(dia, itens); mostrar(); }
-      }).catch(() => { falhas++; seguidas++; })   // falhou: fica para a próxima vez
-        .then(() => new Promise((ok) => setTimeout(ok, 400)))
+        if (itens.length) { guardar(dia, itens); busca.mostrar(); }
+      }).catch(() => { busca.falhas++; seguidas++; })   // falhou: fica para a próxima vez
+        .then(() => new Promise((ok) => setTimeout(ok, 300)))
         .then(proximo);
     };
+    const ordenados = faltam.slice().sort();
     const porPeriodo = C.buscarNoticiasPeriodo
-      ? C.buscarNoticiasPeriodo(termos, faltam.slice().sort()[0], faltam.slice().sort().pop()).then((itens) => {
+      ? C.buscarNoticiasPeriodo(termos, ordenados[0], ordenados[ordenados.length - 1]).then((itens) => {
         // cada notícia vale para o dia dela e para o dia seguinte (véspera)
         faltam.forEach((dia) => {
           const doDia = itens.filter((n) => { const d = isoLocal(n.quando); return d === dia || d === vespera(dia); })
@@ -4094,10 +4110,10 @@
           guardar(dia, doDia);
           fila.splice(fila.indexOf(dia), 1);
         });
-        if (artigos.length) mostrar();
-      }).catch(() => { falhas++; })
+        busca.mostrar();
+      }).catch(() => { busca.falhas++; })
       : Promise.resolve();
-    porPeriodo.then(() => { ativos = 2; proximo(); proximo(); });
+    porPeriodo.then(() => { ativos = 3; proximo(); proximo(); proximo(); });
   }
 
   // termos de busca de uma ação: o ticker e o nome da empresa sem a classe
@@ -4857,14 +4873,13 @@
           else serie.push({ data: hj, preco: atualDolar });
         }
         const alternar = () => { velasDolar = !velasDolar; renderRota(); };
-        const vd = velasDolar ? velasDolarPeriodo() : { velas: [] };
-        if (velasDolar && vd.velas.length >= 2) {
-          G.renderVelas("graf-dolar", vd.velas, { visiveis: vd.visiveis, linhaAtual: atualDolar, corAtual: "#FFD633", rotuloAtual: "Valor Atual", aoClicar: alternar, aoMudarJanela: marcarPeriodoDoZoom });
-          // "N" nas velas em que o dólar variou 0,35% ou mais e houve notícia
-          carregarNoticiasVelas("dolar", { google: "dólar", gdelt: "(dólar OR câmbio) real" }, vd.velas, vd.visiveis, 0.35, "graf-dolar",
-            () => ROTA.secao === "detalhe-dolar" && velasDolar);
-        }
+        const vd = velasDolarPeriodo();
+        if (velasDolar && vd.velas.length >= 2) G.renderVelas("graf-dolar", vd.velas, { visiveis: vd.visiveis, linhaAtual: atualDolar, corAtual: "#FFD633", rotuloAtual: "Valor Atual", aoClicar: alternar, aoMudarJanela: marcarPeriodoDoZoom });
         else if (serie.length >= 2) G.renderPrecoAcao("graf-dolar", serie, 0, 0, { linhaAtual: atualDolar, aoClicar: alternar });
+        // "N" nas velas em que o dólar variou 0,35% ou mais e houve notícia; a
+        // busca já começa na visão de linha, para estar pronta ao trocar para velas
+        if (vd.velas.length >= 2) carregarNoticiasVelas("dolar", { google: "dólar", gdelt: "(dólar OR câmbio) real" }, vd.velas, vd.visiveis, 0.35, "graf-dolar",
+          () => ROTA.secao === "detalhe-dolar" && velasDolar);
         break;
       }
       case "detalhe-investimento": {
@@ -4877,15 +4892,16 @@
       case "detalhe-acao": {
         const a = achar(d.acoes, ROTA.param);
         const alternarAcao = () => { velasAcao = !velasAcao; renderRota(); };
-        const va = a && velasAcao ? velasPeriodo(a.historicoPrecos, Number(a.precoAtual) || 0) : { velas: [] };
-        if (velasAcao && va.velas.length >= 2) {
-          G.renderVelas("graf-preco-acao", va.velas, { visiveis: va.visiveis, linhaAtual: Number(a.precoAtual) || 0, linhaCompra: Number(a.precoMedio) || 0, quantidade: Number(a.quantidade) || 0, casas: 2, aoClicar: alternarAcao, aoMudarJanela: marcarPeriodoDoZoom });
-          // "N" nas velas em que a ação variou 1% ou mais e houve notícia
+        const va = a ? velasPeriodo(a.historicoPrecos, Number(a.precoAtual) || 0) : { velas: [] };
+        if (velasAcao && va.velas.length >= 2) G.renderVelas("graf-preco-acao", va.velas, { visiveis: va.visiveis, linhaAtual: Number(a.precoAtual) || 0, linhaCompra: Number(a.precoMedio) || 0, quantidade: Number(a.quantidade) || 0, casas: 2, aoClicar: alternarAcao, aoMudarJanela: marcarPeriodoDoZoom });
+        else if (a && a.historicoPrecos.length) G.renderPrecoAcao("graf-preco-acao", filtrarPeriodo(a.historicoPrecos, periodoGrafico), a.precoMedio, Number(a.precoAtual) || 0, { quantidade: Number(a.quantidade) || 0, aoClicar: alternarAcao });
+        // "N" nas velas em que a ação variou 1% ou mais e houve notícia (a busca
+        // já começa na visão de linha); só aparece se ainda estiver na mesma ação, em velas
+        if (va.velas.length >= 2) {
           const idAcao = a.id;
           carregarNoticiasVelas("acao:" + a.ticker.toUpperCase(), termosNoticiasAcao(a), va.velas, va.visiveis, 1, "graf-preco-acao",
-            () => ROTA.secao === "detalhe-acao" && ROTA.param === idAcao && velasAcao);   // só se ainda estiver na mesma ação, em velas
+            () => ROTA.secao === "detalhe-acao" && ROTA.param === idAcao && velasAcao);
         }
-        else if (a && a.historicoPrecos.length) G.renderPrecoAcao("graf-preco-acao", filtrarPeriodo(a.historicoPrecos, periodoGrafico), a.precoMedio, Number(a.precoAtual) || 0, { quantidade: Number(a.quantidade) || 0, aoClicar: alternarAcao });
         break;
       }
       case "carteira": {
