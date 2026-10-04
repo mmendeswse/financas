@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "2.7.2";
+  const VERSAO_APP = "2.7.3";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -1323,7 +1323,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.7.2" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.7.3" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -3685,7 +3685,10 @@
       else toast("Nenhuma variação nova dos índices desde a última atualização.");
     }).catch((e) => {
       buscandoInvestimentos = false;
-      toast("Não foi possível buscar os índices agora. Verifique a internet e tente de novo.");
+      // a internet pode estar ok: o problema costuma ser o Banco Central não responder
+      toast(typeof navigator !== "undefined" && navigator.onLine === false
+        ? "Sem internet — tente de novo quando a conexão voltar."
+        : "O Banco Central não respondeu agora (" + ((e && e.message) || "erro") + "). Tente de novo em alguns minutos.");
       console.warn("Banco Central:", e && e.message);
     });
   }
@@ -3891,6 +3894,18 @@
   }
 
 
+  // Histórico usado no gráfico da aplicação: os valores registrados e, se
+  // faltar, o ponto inicial (data da aplicação, valor aplicado) e o valor
+  // atual hoje — assim o gráfico aparece mesmo com só um registro.
+  function historicoGraficoInvestimento(inv) {
+    const hist = (inv.historicoValores || []).filter((p) => p && p.data && Number(p.valor) > 0)
+      .slice().sort((a, b) => (a.data < b.data ? -1 : 1));
+    const aplicado = Number(inv.valorInvestido || 0), atual = Number(inv.valorAtual || 0), hoje = hojeISO();
+    if (inv.dataAplicacao && aplicado > 0 && (!hist.length || inv.dataAplicacao < hist[0].data)) hist.unshift({ data: inv.dataAplicacao, valor: aplicado });
+    if (atual > 0 && (!hist.length || hist[hist.length - 1].data < hoje)) hist.push({ data: hoje, valor: atual });
+    return hist;
+  }
+
   function explicarPontoInvestimento(inv, ponto, idx, historico) {
     if (!inv || !ponto) return;
     const aplicado = Number(inv.valorInvestido || 0);
@@ -3915,7 +3930,7 @@
     if (!inv) return `<div class="empty">Aplicação não encontrada. <button class="link-acao" data-acao="ir" data-secao="investimentos">Voltar para Investimentos</button></div>`;
 
     // o gráfico ocupa a tela inteira (sem o quadro de resumo ao lado)
-    const hist = inv.historicoValores || [];
+    const hist = historicoGraficoInvestimento(inv);
     const f2 = (v) => Number(v || 0).toFixed(2).replace(".", ",");
 
     return `
@@ -4918,7 +4933,7 @@
       }
       case "detalhe-investimento": {
         const inv = achar(d.investimentos, ROTA.param);
-        const h = inv && inv.historicoValores ? inv.historicoValores : [];
+        const h = inv ? historicoGraficoInvestimento(inv) : [];
         if (h.length >= 2) G.renderEvolucaoValor("graf-valor-investimento", filtrarPeriodo(h, periodoGrafico).map((pt) => ({ ...pt, valor: liquidoInvestimentoEm(inv, pt.valor, pt.data) })), Number(inv.valorInvestido || 0), "Valor Aplicado",
           { aoClicar: (ponto, idx, lista) => explicarPontoInvestimento(inv, ponto, idx, lista) });
         break;
