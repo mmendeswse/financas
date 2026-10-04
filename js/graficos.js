@@ -635,10 +635,19 @@
             c.fillStyle = "#FFFFFF"; c.fillText("N", x, y + 0.5);
             marcas.push({ x: x, y: y, idx: ini + i });
           });
-          var status = g.$statusNoticias || "";
-          if (algum || status) {
-            // legenda no canto direito do cabeçalho (com o andamento da busca)
-            var txt = "Notícias" + (status ? " · " + status : ""), xr = ca.right, yl = ca.top - 12;
+          var status = g.$statusNoticias || "", progresso = g.$progressoNoticias;
+          var buscando = progresso != null && progresso < 1;
+          if (algum || status || buscando) {
+            // legenda no canto direito do cabeçalho; durante a busca, uma
+            // barrinha de progresso fica à direita do texto
+            var xr = ca.right, yl = ca.top - 12;
+            if (buscando) {
+              var lb = 54, hb = 4, xb = xr - lb, yb = Math.round(yl - hb / 2);
+              c.fillStyle = "rgba(110,132,148,0.28)"; c.fillRect(xb, yb, lb, hb);
+              c.fillStyle = "#1E88FF"; c.fillRect(xb, yb, Math.max(2, lb * Math.max(0, progresso)), hb);
+              xr = xb - 8;
+            }
+            var txt = "Notícias" + (status ? " · " + status : "");
             c.font = "600 10.5px 'Segoe UI', Roboto, sans-serif"; c.textAlign = "right";
             c.fillStyle = CORES.texto; c.fillText(txt, xr, yl);
             var xc = xr - c.measureText(txt).width - 11;
@@ -1047,9 +1056,13 @@
       if (g && g.$definirNoticias) g.$definirNoticias(artigos, limiar);
     },
     // texto curto ao lado da legenda "Notícias" (ex.: "buscando 3/12")
-    statusNoticias: function (canvasId, texto) {
+    // progresso: 0 a 1 enquanto busca (barrinha); null quando terminou
+    statusNoticias: function (canvasId, texto, progresso) {
       var g = instancias[canvasId];
-      if (g && g.$definirNoticias && g.$statusNoticias !== texto) { g.$statusNoticias = texto; g.update("none"); }
+      if (!g || !g.$definirNoticias) return;
+      if (g.$statusNoticias === texto && g.$progressoNoticias === progresso) return;
+      g.$statusNoticias = texto; g.$progressoNoticias = progresso;
+      g.update("none");
     },
     renderLinhaMultipla: renderLinhaMultipla,
     renderBarrasObjetivo: renderBarrasObjetivo,
