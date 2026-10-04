@@ -133,15 +133,41 @@
     return proximo();
   }
 
-  // Notícias em português dos últimos dias (até 3 meses), via GDELT DOC 2.0
-  // — gratuita, sem chave e liberada para o navegador (CORS). Usada para
-  // marcar com "N" as velas com variação forte. O GDELT aceita no máximo
-  // uma consulta a cada 5 segundos, então o app guarda o resultado.
-  // termo: sintaxe do GDELT, ex.: '(PETR4 OR "Petrobras")'
-  function buscarNoticias(termo, dias) {
-    var q = termo + " sourcelang:portuguese";
-    var url = "https://api.gdeltproject.org/api/v2/doc/doc?mode=artlist&format=json&sort=datedesc&maxrecords=250" +
-      "&timespan=" + Math.max(1, Math.min(90, dias || 90)) + "d&query=" + encodeURIComponent(q);
+  // Notícias de UM dia, para os "N" das velas com variação forte.
+  // 1º) Google Notícias (Brasil, português) lido pelo rss2json — gratuito,
+  //     sem chave e liberado para o navegador (CORS); a busca aceita
+  //     after:/before: para pegar só aquele dia.
+  // 2º) Se falhar, GDELT DOC 2.0 no mesmo dia (também gratuito, mas costuma
+  //     recusar consultas seguidas e responde erro como texto).
+  // termos: { google: 'PETR4 OR "Petrobras"', gdelt: '(PETR4 OR "Petrobras")' }
+  // Devolve [{ quando, titulo, url, fonte }] (até 5, mais recentes primeiro).
+  function diaSeguinte(iso) {
+    var d = new Date(iso + "T12:00:00"); d.setDate(d.getDate() + 1);
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+  function noticiasGoogle(termo, dia) {
+    var rss = "https://news.google.com/rss/search?hl=pt-BR&gl=BR&ceid=BR:pt-419&q=" +
+      encodeURIComponent(termo + " after:" + dia + " before:" + diaSeguinte(dia));
+    var url = "https://api.rss2json.com/v1/api.json?rss_url=" + encodeURIComponent(rss);
+    return comTimeout(fetch(url).then(function (r) {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function (j) {
+      if (!j || j.status !== "ok") throw new Error((j && j.message) || "rss2json falhou");
+      return (j.items || []).map(function (it) {
+        // o título do Google Notícias termina com " - Nome do site"
+        var titulo = String(it.title || ""), fonte = "";
+        var k = titulo.lastIndexOf(" - ");
+        if (k > 20) { fonte = titulo.slice(k + 3).trim(); titulo = titulo.slice(0, k).trim(); }
+        var quando = it.pubDate ? new Date(String(it.pubDate).replace(" ", "T") + "Z") : null;
+        return { quando: quando && !isNaN(quando) ? quando.toISOString() : dia + "T12:00:00.000Z", titulo: titulo, url: String(it.link || ""), fonte: fonte || String(it.author || "") };
+      }).filter(function (n) { return n.titulo && n.url; });
+    }), 12000);
+  }
+  function noticiasGdelt(termo, dia) {
+    var d = dia.replace(/-/g, "");
+    var url = "https://api.gdeltproject.org/api/v2/doc/doc?mode=artlist&format=json&sort=hybridrel&maxrecords=10" +
+      "&startdatetime=" + d + "000000&enddatetime=" + d + "235959&query=" + encodeURIComponent(termo + " sourcelang:portuguese");
     return comTimeout(fetch(url).then(function (r) {
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.text();
@@ -149,15 +175,21 @@
       var j;
       try { j = JSON.parse(txt); } catch (e) { throw new Error(txt.slice(0, 120) || "resposta inválida"); }
       return (j.articles || []).map(function (a) {
-        // seendate vem em UTC: "20261001T202800Z" → data e hora locais
         var m = /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z$/.exec(a.seendate || "");
-        if (!m || !a.url || !a.title) return null;
-        var dt = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]));
-        var iso = dt.getFullYear() + "-" + String(dt.getMonth() + 1).padStart(2, "0") + "-" + String(dt.getDate()).padStart(2, "0");
-        return { data: iso, quando: dt.toISOString(), titulo: String(a.title), url: String(a.url), fonte: String(a.domain || "") };
-      }).filter(Boolean);
+        var quando = m ? new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6])).toISOString() : dia + "T12:00:00.000Z";
+        return { quando: quando, titulo: String(a.title || ""), url: String(a.url || ""), fonte: String(a.domain || "") };
+      }).filter(function (n) { return n.titulo && n.url; });
     }), 15000);
   }
+  function buscarNoticiasDia(termos, dia) {
+    var ordenar = function (lista) { return lista.sort(function (a, b) { return a.quando < b.quando ? 1 : -1; }).slice(0, 5); };
+    return noticiasGoogle(termos.google, dia).then(function (lista) {
+      if (lista.length) return ordenar(lista);
+      throw new Error("sem notícias no Google");
+    }).catch(function () {
+      return noticiasGdelt(termos.gdelt, dia).then(ordenar);
+    });
+  }
 
-  global.Cotacoes = { buscarDolar: buscarDolar, buscarSerieDolar: buscarSerieDolar, buscarCotacoes: buscarCotacoes, buscarSerieBCB: buscarSerieBCB, buscarNoticias: buscarNoticias };
+  global.Cotacoes = { buscarDolar: buscarDolar, buscarSerieDolar: buscarSerieDolar, buscarCotacoes: buscarCotacoes, buscarSerieBCB: buscarSerieBCB, buscarNoticiasDia: buscarNoticiasDia };
 })(window);
