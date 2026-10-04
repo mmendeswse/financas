@@ -796,7 +796,28 @@
 
     var antigos = canvas._velasEventos;
     if (antigos) Object.keys(antigos).forEach(function (k) { canvas.removeEventListener(k, antigos[k]); });
-    var arrasto = null, pinca = null, toque = null;
+    var arrasto = null, pinca = null, toque = null, animacao = null;
+    // área que rola: o primeiro "pai" com rolagem, ou a própria página
+    function areaRolavel() {
+      for (var el = canvas.parentNode; el && el !== document.body; el = el.parentNode) {
+        var oy = getComputedStyle(el).overflowY;
+        if ((oy === "auto" || oy === "scroll") && el.scrollHeight > el.clientHeight) return el;
+      }
+      return document.scrollingElement || document.documentElement;
+    }
+    function rolarPagina(dy) { areaRolavel().scrollTop += dy; }
+    function pararInercia() { if (animacao) cancelAnimationFrame(animacao); animacao = null; }
+    function inercia(vel) {
+      var antes = Date.now();
+      var passo = function () {
+        var agora = Date.now(), dt = agora - antes; antes = agora;
+        vel *= Math.pow(0.995, dt);                   // desacelera aos poucos
+        if (Math.abs(vel) < 0.02) { animacao = null; return; }
+        rolarPagina(vel * dt);
+        animacao = requestAnimationFrame(passo);
+      };
+      animacao = requestAnimationFrame(passo);
+    }
     var rect = function () { return canvas.getBoundingClientRect(); };
     var posX = function (e) { return e.clientX - rect().left; };
     // dois dedos: distância real entre eles (em qualquer direção) e o ponto do meio
@@ -837,8 +858,9 @@
           e.preventDefault();
         } else if (e.touches.length === 1) {
           arrastou = false;
+          pararInercia();
           var t = e.touches[0];
-          toque = { x0: t.clientX, y0: t.clientY, decidido: null };
+          toque = { x0: t.clientX, y0: t.clientY, yAnt: t.clientY, tAnt: Date.now(), vel: 0, decidido: null };
           arrasto = { x: t.clientX - rect().left, sobra: 0 };
         }
       },
@@ -853,14 +875,24 @@
         if (!toque || e.touches.length !== 1) return;
         var t = e.touches[0], dx = t.clientX - toque.x0, dy = t.clientY - toque.y0;
         if (!toque.decidido && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) toque.decidido = Math.abs(dx) > Math.abs(dy) ? "lado" : "vertical";
-        if (toque.decidido !== "lado") return;            // vertical: deixa a página rolar
+        if (!toque.decidido) return;
         e.preventDefault();
         arrastou = true;
-        arrastarPara(t.clientX - rect().left);
+        if (toque.decidido === "lado") { arrastarPara(t.clientX - rect().left); return; }
+        // vertical: o gráfico não deixa o navegador rolar sozinho (senão ele
+        // "rouba" a pinça com os dedos inclinados), então rola a página aqui
+        var agora = Date.now(), passo = toque.yAnt - t.clientY;
+        rolarPagina(passo);
+        toque.vel = passo / Math.max(1, agora - toque.tAnt);
+        toque.yAnt = t.clientY; toque.tAnt = agora;
       },
       touchend: function (e) {
         if (e.touches.length < 2) pinca = null;
-        if (!e.touches.length) { arrasto = null; toque = null; soltouArrasto(); }
+        if (!e.touches.length) {
+          // solta a rolagem vertical com o embalo do dedo, como no iOS
+          if (toque && toque.decidido === "vertical" && Math.abs(toque.vel) > 0.2) inercia(toque.vel);
+          arrasto = null; toque = null; soltouArrasto();
+        }
       },
       // Safari do iPad: impede o zoom da página inteira durante a pinça
       gesturestart: function (e) { e.preventDefault(); },
@@ -871,8 +903,10 @@
     var passivo = { wheel: 1, touchstart: 1, touchmove: 1, gesturestart: 1, gesturechange: 1 };
     Object.keys(eventos).forEach(function (k) { canvas.addEventListener(k, eventos[k], passivo[k] ? { passive: false } : false); });
     canvas._velasEventos = eventos;
-    // a página continua rolando na vertical; arrasto lateral e pinça ficam com o gráfico
-    canvas.style.touchAction = "pan-y";
+    // no iPad o gráfico cuida de todos os toques: pinça em qualquer ângulo
+    // (inclusive com os dedos na vertical/inclinados), arrasto lateral e a
+    // rolagem vertical da página com um dedo
+    canvas.style.touchAction = "none";
   }
 
   // ---------------------------------------------------------------------
