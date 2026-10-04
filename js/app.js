@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "2.5.7";
+  const VERSAO_APP = "2.5.8";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -1316,7 +1316,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.5.7" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.5.8" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1523,13 +1523,14 @@
     return { auto: c.cotacoesAuto !== false, token: (c.brapiToken || "").trim() || TOKEN_BRAPI_PADRAO };
   }
 
-  // bandeira do Brasil (desenhada em SVG, sem depender de imagem externa)
-  const BANDEIRA_BR = `<svg class="bandeira" viewBox="0 0 20 14" aria-label="Brasil" role="img">
-    <rect width="20" height="14" rx="2" fill="#009C3B"/>
-    <path d="M10 1.6 18.2 7 10 12.4 1.8 7z" fill="#FFDF00"/>
-    <circle cx="10" cy="7" r="3.3" fill="#002776"/>
-    <path d="M6.9 6.3c2-.6 4.3-.4 6.1.6" stroke="#fff" stroke-width=".7" fill="none"/>
-  </svg>`;
+  // Mercado de câmbio (dólar comercial) aberto: dias úteis das 9h às 18h no
+  // horário de Brasília. Feriados não são considerados.
+  function mercadoDolarAberto(agora) {
+    const p = new Intl.DateTimeFormat("en-US", { timeZone: "America/Sao_Paulo", weekday: "short", hour: "2-digit", minute: "2-digit", hour12: false })
+      .formatToParts(agora || new Date()).reduce((o, x) => { o[x.type] = x.value; return o; }, {});
+    const min = (Number(p.hour) % 24) * 60 + Number(p.minute);
+    return !["Sat", "Sun"].includes(p.weekday) && min >= 9 * 60 && min < 18 * 60;
+  }
 
   function renderDolar() {
     const el = document.getElementById("dolarTopbar");
@@ -1540,7 +1541,8 @@
     el.style.cursor = "pointer";
     el.setAttribute("data-acao", "ir-dolar");
     el.setAttribute("title", "Ver histórico do dólar");
-    el.innerHTML = `${BANDEIRA_BR}<small>USD/BRL</small><b>R$ ${dolar.valor.toFixed(2).replace(".", ",")}</b><span class="${v >= 0 ? "up" : "down"}">${v >= 0 ? "▲" : "▼"} ${Math.abs(v).toFixed(2).replace(".", ",")}%</span>`;
+    const aberto = mercadoDolarAberto();
+    el.innerHTML = `<i class="status-mercado ${aberto ? "aberto" : "fechado"}" title="${aberto ? "Mercado aberto" : "Mercado fechado"}"></i><small>USD/BRL</small><b>R$ ${dolar.valor.toFixed(2).replace(".", ",")}</b><span class="${v >= 0 ? "up" : "down"}">${v >= 0 ? "▲" : "▼"} ${Math.abs(v).toFixed(2).replace(".", ",")}%</span>`;
   }
 
   function atualizarCotacoesAutomaticas(silencioso) {
@@ -1611,6 +1613,8 @@
     };
     tick();
     setInterval(tick, 1000);
+    // a bolinha de mercado aberto/fechado do USD/BRL muda de cor na hora certa
+    setInterval(renderDolar, 60 * 1000);
   }
 
   function atualizarSidebarMeta() {
