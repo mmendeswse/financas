@@ -472,31 +472,59 @@
   // Cada vela é uma barra flutuante [abertura, fechamento]; o pavio
   // (mínima → máxima) é desenhado por um plugin antes das barras.
   // ---------------------------------------------------------------------
-  function renderVelas(canvasId, serie, opcoes) {
+  function renderVelas(canvasId, serieTotal, opcoes) {
     opcoes = opcoes || {};
     destruir(canvasId);
     var ctx = ctxOf(canvasId); if (!ctx) return;
+    var canvas = ctx.canvas;
     var alta = function (p) { return p.preco >= p.abertura; };
     var cor = function (p) { return alta(p) ? CORES.up : CORES.down; };
     var casas = opcoes.casas || 4;   // dólar com 4 casas, ações com 2
     var f4 = function (v) { return Number(v).toFixed(casas); };
-    var minimo = Math.min.apply(null, serie.map(function (p) { return p.minima; }).concat(opcoes.linhaCompra > 0 ? [opcoes.linhaCompra] : []));
-    var maximo = Math.max.apply(null, serie.map(function (p) { return p.maxima; }).concat(opcoes.linhaCompra > 0 ? [opcoes.linhaCompra] : []));
-    var folga = (maximo - minimo) * 0.08 || maximo * 0.01;
-    var datasets = [{
-      label: "Velas",
-      data: serie.map(function (p) {
+    var rotulo = function (p) { return new Date(p.data + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }); };
+
+    // janela visível [ini, fim) — o zoom e o arrasto mudam só a janela;
+    // a escala de preço (eixo Y) acompanha as velas que estão na tela
+    var total = serieTotal.length;
+    var MIN_VELAS = Math.min(5, total);
+    var fim = total;
+    var ini = Math.max(0, total - Math.max(MIN_VELAS, Math.min(total, opcoes.visiveis || total)));
+    var serie = [];        // velas visíveis (usadas pelos plugins e pelo tooltip)
+    var cursor = null;     // posição do mouse/dedo para a cruz
+
+    function escala() {
+      var mn = Math.min.apply(null, serie.map(function (p) { return p.minima; }));
+      var mx = Math.max.apply(null, serie.map(function (p) { return p.maxima; }));
+      var folga = (mx - mn) * 0.08 || mx * 0.01;
+      return { min: mn - folga, max: mx + folga, faixa: mx - mn };
+    }
+    function corpos(faixa) {
+      return serie.map(function (p) {
         // corpo mínimo visível quando abertura = fechamento (doji)
         var a = p.abertura, f = p.preco;
-        if (Math.abs(a - f) < (maximo - minimo) * 0.002) f = a + (maximo - minimo) * 0.002;
+        if (Math.abs(a - f) < faixa * 0.004) f = a + faixa * 0.004;
         return [Math.min(a, f), Math.max(a, f)];
-      }),
-      backgroundColor: serie.map(cor), borderColor: serie.map(cor), borderWidth: 1,
-      borderSkipped: false, barPercentage: 0.7, categoryPercentage: 0.9, maxBarThickness: 18
-    }];
+      });
+    }
+    function aplicarJanela(grafico) {
+      serie = serieTotal.slice(ini, fim);
+      var e = escala();
+      grafico.data.labels = serie.map(rotulo);
+      var ds = grafico.data.datasets[0];
+      ds.data = corpos(e.faixa);
+      ds.backgroundColor = serie.map(cor); ds.borderColor = serie.map(cor);
+      grafico.options.scales.y.suggestedMin = e.min; grafico.options.scales.y.suggestedMax = e.max;
+    }
+
     // linha pontilhada horizontal que vai da borda esquerda até encostar na
     // caixa do valor, na borda direita (como nos gráficos de corretora)
-    function linhaComEtiqueta(id, valor, cor, traco) {
+    function etiqueta(c, ca, y, txt, fundo, texto) {
+      c.font = "700 10.5px 'Segoe UI', Roboto, sans-serif";
+      var larg = c.measureText(txt).width + 10;
+      c.fillStyle = fundo; c.fillRect(ca.right + 2, y - 9.5, larg, 18);
+      c.fillStyle = texto; c.textBaseline = "middle"; c.fillText(txt, ca.right + 7, y);
+    }
+    function linhaComEtiqueta(id, valor, corLinha, traco) {
       if (!(valor > 0)) return { id: id };
       var posicao = function (grafico) {
         var ca = grafico.chartArea, y = Math.round(grafico.scales.y.getPixelForValue(valor)) + 0.5;
@@ -508,54 +536,45 @@
           var p = posicao(grafico); if (!p) return;
           var c = grafico.ctx;
           c.save();
-          c.strokeStyle = cor; c.lineWidth = 1; c.setLineDash(traco);
+          c.strokeStyle = corLinha; c.lineWidth = 1; c.setLineDash(traco);
           c.beginPath(); c.moveTo(p.ca.left, p.y); c.lineTo(p.ca.right + 2, p.y); c.stroke();
           c.restore();
         },
         afterDatasetsDraw: function (grafico) {
           var p = posicao(grafico); if (!p) return;
-          var c = grafico.ctx, txt = f4(valor);
-          c.save();
-          c.font = "700 10.5px 'Segoe UI', Roboto, sans-serif";
-          var larg = c.measureText(txt).width + 10;
-          c.fillStyle = cor; c.fillRect(p.ca.right + 2, p.y - 9.5, larg, 18);
-          c.fillStyle = "#0B1420"; c.textBaseline = "middle"; c.fillText(txt, p.ca.right + 7, p.y);
-          c.restore();
+          var c = grafico.ctx;
+          c.save(); etiqueta(c, p.ca, p.y, f4(valor), corLinha, "#0B1420"); c.restore();
         }
       };
     }
-    instancias[canvasId] = new Chart(ctx, {
+
+    var grafico = instancias[canvasId] = new Chart(ctx, {
       type: "bar",
-      data: { labels: serie.map(function (p) { return new Date(p.data + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }); }), datasets: datasets },
+      data: { labels: [], datasets: [{
+        label: "Velas", data: [], backgroundColor: [], borderColor: [], borderWidth: 1,
+        borderSkipped: false, barPercentage: 0.7, categoryPercentage: 0.9, maxBarThickness: 40
+      }] },
       options: {
-        responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
+        responsive: true, maintainAspectRatio: false, animation: false,
+        interaction: { mode: "index", intersect: false },
         layout: { padding: { top: 22 } },   // espaço para o cabeçalho Abr/Máx/Mín/Fch
-        onClick: opcoes.aoClicar ? function (evt, el, ch) { if (dentroDaArea(ch, evt)) opcoes.aoClicar(); } : undefined,
-        onHover: opcoes.aoClicar ? function (evt, el, ch) { evt.native.target.style.cursor = dentroDaArea(ch, evt) ? "pointer" : "default"; } : undefined,
+        onClick: opcoes.aoClicar ? function (evt, el, ch) { if (!arrastou && dentroDaArea(ch, evt)) opcoes.aoClicar(); } : undefined,
+        onHover: function (evt, el, ch) { evt.native.target.style.cursor = dentroDaArea(ch, evt) ? "crosshair" : "default"; },
         scales: {
-          x: eixoX({ ticks: { color: CORES.texto, font: fonte(10.5), maxTicksLimit: 8 } }),
-          y: eixoY({ position: "right", beginAtZero: false, suggestedMin: minimo - folga, suggestedMax: maximo + folga,
+          x: eixoX({ ticks: { color: CORES.texto, font: fonte(10.5), maxTicksLimit: 8, maxRotation: 0 } }),
+          y: eixoY({ position: "right", beginAtZero: false,
             ticks: { color: CORES.texto, font: fonte(10.5), maxTicksLimit: 12, callback: function (v) { return f4(v); } } })
         },
         plugins: {
           legend: { display: false },
-          tooltip: tooltipPadrao({
-            displayColors: false,
-            filter: function (c) { return c.datasetIndex === 0; },
-            callbacks: {
-              label: function (c) {
-                var p = serie[c.dataIndex];
-                return ["Abr " + f4(p.abertura), "Máx " + f4(p.maxima), "Mín " + f4(p.minima), "Fch " + f4(p.preco)];
-              }
-            }
-          })
+          tooltip: { enabled: false }   // os valores aparecem no cabeçalho e na cruz
         }
       },
       plugins: [{
         // pavio: linha fina da mínima à máxima, atrás do corpo da vela
         id: "pavios",
-        beforeDatasetsDraw: function (grafico) {
-          var meta = grafico.getDatasetMeta(0), y = grafico.scales.y, c = grafico.ctx;
+        beforeDatasetsDraw: function (g) {
+          var meta = g.getDatasetMeta(0), y = g.scales.y, c = g.ctx;
           c.save();
           c.lineWidth = 1;
           meta.data.forEach(function (barra, i) {
@@ -569,13 +588,12 @@
           c.restore();
         }
       }, {
-        // cabeçalho com Abr / Máx / Mín / Fch da vela em foco (ou da última)
+        // cabeçalho com Abr / Máx / Mín / Fch da vela sob a cruz (ou da última)
         id: "cabecalhoOHLC",
-        afterDatasetsDraw: function (grafico) {
-          var ativos = grafico.tooltip && grafico.tooltip.getActiveElements ? grafico.tooltip.getActiveElements() : [];
-          var i = ativos.length ? ativos[0].index : serie.length - 1;
-          var p = serie[i]; if (!p) return;
-          var c = grafico.ctx, x = grafico.chartArea.left + 4, y = grafico.chartArea.top - 12;
+        afterDatasetsDraw: function (g) {
+          var i = cursor ? g.scales.x.getValueForPixel(cursor.x) : serie.length - 1;
+          var p = serie[Math.max(0, Math.min(serie.length - 1, Math.round(i)))]; if (!p) return;
+          var c = g.ctx, x = g.chartArea.left + 4, y = g.chartArea.top - 12;
           var partes = [["Abr", p.abertura], ["Máx", p.maxima], ["Mín", p.minima], ["Fch", p.preco]];
           c.save();
           c.textBaseline = "middle";
@@ -590,8 +608,115 @@
       },
       // valor atual em azul e, nas ações, o preço de compra em laranja
       linhaComEtiqueta("linhaValorAtual", opcoes.linhaAtual, "#38B6FF", [3, 3]),
-      linhaComEtiqueta("linhaCompra", opcoes.linhaCompra, CORES.laranja, [6, 4])]
+      linhaComEtiqueta("linhaCompra", opcoes.linhaCompra, CORES.laranja, [6, 4]),
+      {
+        // cruz: linhas tracejadas na posição do mouse, com o preço no eixo
+        // da direita e a data embaixo (o valor acompanha o zoom)
+        id: "cruz",
+        afterEvent: function (g, args) {
+          var e = args.event;
+          if (e.type === "mouseout") cursor = null;
+          else if (e.type === "mousemove") cursor = dentroDaArea(g, e) ? { x: e.x, y: e.y } : null;
+          else return;
+          args.changed = true;
+        },
+        afterDraw: function (g) {
+          if (!cursor) return;
+          var ca = g.chartArea, c = g.ctx;
+          var i = Math.max(0, Math.min(serie.length - 1, Math.round(g.scales.x.getValueForPixel(cursor.x))));
+          var x = Math.round(g.scales.x.getPixelForValue(i)) + 0.5, y = Math.round(cursor.y) + 0.5;
+          c.save();
+          c.strokeStyle = "rgba(143,163,179,0.7)"; c.lineWidth = 1; c.setLineDash([4, 4]);
+          c.beginPath(); c.moveTo(ca.left, y); c.lineTo(ca.right + 2, y); c.moveTo(x, ca.top); c.lineTo(x, ca.bottom); c.stroke();
+          c.setLineDash([]);
+          etiqueta(c, ca, y, f4(g.scales.y.getValueForPixel(cursor.y)), "#3A4B5C", "#EDF2FA");
+          if (serie[i]) {
+            var txt = rotulo(serie[i]);
+            c.font = "700 10.5px 'Segoe UI', Roboto, sans-serif";
+            var larg = c.measureText(txt).width + 10;
+            var xl = Math.max(ca.left, Math.min(ca.right - larg, x - larg / 2));
+            c.fillStyle = "#3A4B5C"; c.fillRect(xl, ca.bottom + 2, larg, 18);
+            c.fillStyle = "#EDF2FA"; c.textBaseline = "middle"; c.fillText(txt, xl + 5, ca.bottom + 11);
+          }
+          c.restore();
+        }
+      }]
     });
+    aplicarJanela(grafico);
+    grafico.update("none");
+
+    // ---- zoom e arrasto ------------------------------------------------
+    // roda do mouse: aproxima/afasta mantendo a vela sob o mouse no lugar;
+    // pinça (2 dedos) no iPad faz o mesmo; arrastar move no tempo
+    var arrastou = false;
+    function zoom(fator, xPixel) {
+      var ca = grafico.chartArea, qtd = fim - ini;
+      var nova = Math.round(Math.max(MIN_VELAS, Math.min(total, qtd * fator)));
+      if (nova === qtd) return;
+      var frac = Math.max(0, Math.min(1, (xPixel - ca.left) / (ca.right - ca.left)));
+      var ancora = ini + frac * qtd;
+      ini = Math.round(ancora - frac * nova);
+      ini = Math.max(0, Math.min(total - nova, ini));
+      fim = ini + nova;
+      aplicarJanela(grafico); grafico.update("none");
+    }
+    function deslocar(velas) {
+      var qtd = fim - ini;
+      var novoIni = Math.max(0, Math.min(total - qtd, ini + velas));
+      if (novoIni === ini) return;
+      ini = novoIni; fim = ini + qtd;
+      aplicarJanela(grafico); grafico.update("none");
+    }
+    var antigos = canvas._velasEventos;
+    if (antigos) Object.keys(antigos).forEach(function (k) { canvas.removeEventListener(k, antigos[k]); });
+    var dedos = {}, pinca = null, arrasto = null;
+    var posX = function (e) { return e.clientX - canvas.getBoundingClientRect().left; };
+    var eventos = {
+      wheel: function (e) {
+        if (!instancias[canvasId] || instancias[canvasId] !== grafico) return;
+        e.preventDefault();
+        zoom(e.deltaY > 0 ? 1.15 : 1 / 1.15, posX(e));
+      },
+      pointerdown: function (e) {
+        try { canvas.setPointerCapture(e.pointerId); } catch (x) { /* sem suporte */ }
+        dedos[e.pointerId] = posX(e);
+        var ids = Object.keys(dedos);
+        arrastou = false;
+        if (ids.length === 2) { pinca = { dist: Math.abs(dedos[ids[0]] - dedos[ids[1]]) || 1 }; arrasto = null; }
+        else if (ids.length === 1) arrasto = { x: posX(e), sobra: 0 };
+      },
+      pointermove: function (e) {
+        if (!(e.pointerId in dedos)) return;
+        dedos[e.pointerId] = posX(e);
+        var ids = Object.keys(dedos);
+        if (pinca && ids.length === 2) {
+          var d = Math.abs(dedos[ids[0]] - dedos[ids[1]]) || 1;
+          if (Math.abs(d - pinca.dist) > 12) {
+            zoom(pinca.dist / d, (dedos[ids[0]] + dedos[ids[1]]) / 2);
+            pinca.dist = d; arrastou = true;
+          }
+        } else if (arrasto) {
+          var ca = grafico.chartArea, porVela = (ca.right - ca.left) / Math.max(1, fim - ini);
+          var dx = posX(e) - arrasto.x + arrasto.sobra;
+          var velas = Math.trunc(dx / porVela);
+          if (Math.abs(posX(e) - arrasto.x) > 4) arrastou = true;
+          if (velas) { deslocar(-velas); arrasto.sobra = dx - velas * porVela; arrasto.x = posX(e); }
+        }
+      },
+      pointerup: function (e) {
+        delete dedos[e.pointerId];
+        if (Object.keys(dedos).length < 2) pinca = null;
+        if (!Object.keys(dedos).length) arrasto = null;
+        // o clique que vem logo depois do arrasto não troca para a linha
+        if (arrastou) setTimeout(function () { arrastou = false; }, 50);
+      }
+    };
+    eventos.pointercancel = eventos.pointerup;
+    Object.keys(eventos).forEach(function (k) { canvas.addEventListener(k, eventos[k], k === "wheel" ? { passive: false } : false); });
+    canvas._velasEventos = eventos;
+    // no iPad, deixa a página rolar na vertical; o resto (arrasto lateral e
+    // pinça) fica com o gráfico
+    canvas.style.touchAction = "pan-y";
   }
 
   // ---------------------------------------------------------------------
