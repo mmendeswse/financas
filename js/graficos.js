@@ -724,6 +724,12 @@
             var p = serie[i]; if (!p) return;
             var meia = Math.max(2, (barra.width || 0) / 2);
             obst.push({ x1: barra.x - meia, x2: barra.x + meia, y1: y.getPixelForValue(p.maxima), y2: y.getPixelForValue(p.minima) });
+            // o "N" de notícias acima da vela também é obstáculo (mesma posição
+            // usada no desenho do "N": 14 px acima da máxima, raio 7,5)
+            if (noticiasPorVela[ini + i]) {
+              var yn = Math.max(ca.top - 6, y.getPixelForValue(p.maxima) - 14);
+              obst.push({ x1: barra.x - 8, x2: barra.x + 8, y1: yn - 8, y2: yn + 8 });
+            }
           });
           desenharDiferencaCompra(g, opcoes.linhaAtual, opcoes.linhaCompra, Number(opcoes.quantidade) || 0, true, obst);
         }
