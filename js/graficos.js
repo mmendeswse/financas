@@ -647,7 +647,8 @@
         onClick: function (evt, el, ch) {
           if (arrastou) return;
           var m = marcaEm(evt.x, evt.y);
-          if (m) { abrirNoticia(m); return; }      // tocar no "N" abre o resumo
+          // tocar no "N" abre o resumo; tocar de novo no mesmo "N" fecha
+          if (m) { if (popover && popoverIdx === m.idx) fecharNoticia(); else abrirNoticia(m); return; }
           if (popover) { fecharNoticia(); return; }
           if (opcoes.aoClicar && dentroDaArea(ch, evt)) opcoes.aoClicar();
         },
@@ -829,10 +830,10 @@
       }
       return null;
     }
-    var popover = null;
+    var popover = null, popoverIdx = null;   // resumo aberto e a vela dele
     function fecharNoticia() {
       if (popover && popover.parentNode) popover.parentNode.removeChild(popover);
-      popover = null;
+      popover = null; popoverIdx = null;
     }
     function escHtml(t) { return String(t).replace(/[&<>"']/g, function (ch) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]; }); }
     function abrirNoticia(m) {
@@ -843,6 +844,7 @@
       var dataTxt = quando.toLocaleDateString("pt-BR", { day: "numeric", month: "short", year: "numeric" }) + ", " +
         quando.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
       popover = document.createElement("div");
+      popoverIdx = m.idx;
       popover.className = "popover-noticias";
       popover.innerHTML = '<div class="pn-topo"><b>Notícias</b><span>' + escHtml(dataTxt) + '</span></div>' +
         lista.slice(0, 3).map(function (n) {
