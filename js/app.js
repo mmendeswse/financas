@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "2.7.3";
+  const VERSAO_APP = "2.7.4";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -1323,7 +1323,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.7.3" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.7.4" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -4880,8 +4880,28 @@
 
 
 
+  // Gráfico de tela cheia (dólar, ação, aplicação): a altura é a que sobra
+  // na tela até a linha do rodapé, para o rodapé aparecer inteiro sem
+  // precisar arrastar a tela (mínimo de 260 px)
+  function ajustarAlturaGrafico() {
+    const area = document.querySelector(".grafico-tela-cheia");
+    if (!area) return;
+    const rodape = document.querySelector(".rodape-app");
+    const conteudo = document.getElementById("conteudo");
+    const card = area.closest(".card");
+    const topo = area.getBoundingClientRect().top + (window.scrollY || document.documentElement.scrollTop || 0);
+    const abaixoArea = card ? card.getBoundingClientRect().bottom - area.getBoundingClientRect().bottom : 0;
+    const folgaConteudo = conteudo ? parseFloat(getComputedStyle(conteudo).paddingBottom) || 0 : 0;
+    const folgaRodape = rodape ? (rodape.offsetHeight + (parseFloat(getComputedStyle(rodape).marginTop) || 0)) : 0;
+    const alt = Math.max(260, Math.floor(window.innerHeight - topo - abaixoArea - folgaConteudo - folgaRodape - 2));
+    area.style.minHeight = alt + "px";
+    area.style.height = alt + "px";
+  }
+  window.addEventListener("resize", () => { ajustarAlturaGrafico(); });
+
   function montarGraficosDaRota() {
     const d = DADOS;
+    ajustarAlturaGrafico();   // antes de desenhar, para o gráfico já nascer no tamanho certo
     switch (ROTA.secao) {
       case "dashboard": {
         if (!anoRD) anoRD = String(new Date().getFullYear());
