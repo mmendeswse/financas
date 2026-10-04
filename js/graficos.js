@@ -296,6 +296,52 @@
     });
   }
 
+  // Resultado (preço atual × preço de compra): traço pontilhado vertical
+  // ligando as duas linhas, com uma caixa no meio mostrando o lucro/prejuízo
+  // total (diferença × cotas) e a diferença por cota. Usado no gráfico de
+  // linha e no de velas das ações.
+  function desenharDiferencaCompra(grafico, precoAtual, precoMedio, qtd) {
+    var ca = grafico.chartArea, esc = grafico.scales.y;
+    var yA = esc.getPixelForValue(precoAtual), yC = esc.getPixelForValue(precoMedio);
+    var topo = Math.max(ca.top, Math.min(yA, yC)), base = Math.min(ca.bottom, Math.max(yA, yC));
+    var dif = precoAtual - precoMedio, pctDif = precoMedio ? (dif / precoMedio) * 100 : 0;
+    var cor = dif >= 0 ? CORES.up : CORES.down;
+    var sinal = dif >= 0 ? "+" : "−";
+    var pctTxt = " (" + sinal + Math.abs(pctDif).toFixed(1).replace(".", ",") + "%)";
+    // 1ª linha: resultado total (diferença × cotas); 2ª: diferença por cota × quantidade
+    // ícone de destaque na frente, como nos marcos da Evolução patrimonial
+    var icone = dif >= 0 ? "📈 " : "📉 ";
+    var txt = icone + (qtd > 0 ? sinal + moeda(Math.abs(dif * qtd)) + pctTxt : sinal + moeda(Math.abs(dif)) + pctTxt);
+    var txt2 = qtd > 0 ? sinal + moeda(Math.abs(dif)) + " por cota × " + qtd.toLocaleString("pt-BR") + (qtd === 1 ? " cota" : " cotas") : "";
+    var c = grafico.ctx;
+    c.save();
+    c.font = "700 11px 'Segoe UI', Roboto, sans-serif";
+    var larg1 = c.measureText(txt).width;
+    c.font = "600 9.5px 'Segoe UI', Roboto, sans-serif";
+    var larg2 = txt2 ? c.measureText(txt2).width : 0;
+    var larg = Math.max(larg1, larg2) + 16, alt = txt2 ? 34 : 22;
+    var xc = ca.left + ca.width * 0.62;
+    // traço vertical entre as linhas
+    c.strokeStyle = cor; c.lineWidth = 1.2; c.setLineDash([3, 3]);
+    c.beginPath(); c.moveTo(xc, topo); c.lineTo(xc, base); c.stroke(); c.setLineDash([]);
+    c.fillStyle = cor;
+    [topo, base].forEach(function (yy) { c.beginPath(); c.arc(xc, yy, 2.5, 0, Math.PI * 2); c.fill(); });
+    // caixa no meio do caminho
+    var ym = Math.min(ca.bottom - alt / 2, Math.max(ca.top + alt / 2, (topo + base) / 2));
+    var x = xc - larg / 2;
+    c.fillStyle = "#0B1420"; c.fillRect(x, ym - alt / 2, larg, alt);
+    c.fillStyle = dif >= 0 ? "rgba(34,227,154,0.14)" : "rgba(255,77,122,0.16)"; c.fillRect(x, ym - alt / 2, larg, alt);
+    c.strokeStyle = cor; c.lineWidth = 1; c.strokeRect(x + 0.5, ym - alt / 2 + 0.5, larg - 1, alt - 1);
+    c.fillStyle = cor; c.textBaseline = "middle"; c.textAlign = "center";
+    if (txt2) {
+      c.font = "700 11px 'Segoe UI', Roboto, sans-serif"; c.fillText(txt, xc, ym - 6);
+      c.font = "600 9.5px 'Segoe UI', Roboto, sans-serif"; c.globalAlpha = 0.85; c.fillText(txt2, xc, ym + 8); c.globalAlpha = 1;
+    } else {
+      c.font = "700 11px 'Segoe UI', Roboto, sans-serif"; c.fillText(txt, xc, ym + 0.5);
+    }
+    c.restore();
+  }
+
   // ---------------------------------------------------------------------
   // Preço de uma ação (detalhe do ativo)
   // ---------------------------------------------------------------------
@@ -376,48 +422,7 @@
         // caixa com a diferença entre o preço atual e o valor de compra,
         // entre as duas linhas tracejadas, ligada a elas por um traço vertical
         id: "diferencaCompra",
-        afterDatasetsDraw: function (grafico) {
-          var ca = grafico.chartArea, esc = grafico.scales.y;
-          var yA = esc.getPixelForValue(precoAtual), yC = esc.getPixelForValue(precoMedio);
-          var topo = Math.max(ca.top, Math.min(yA, yC)), base = Math.min(ca.bottom, Math.max(yA, yC));
-          var dif = precoAtual - precoMedio, pctDif = precoMedio ? (dif / precoMedio) * 100 : 0;
-          var cor = dif >= 0 ? CORES.up : CORES.down;
-          var sinal = dif >= 0 ? "+" : "−";
-          var pctTxt = " (" + sinal + Math.abs(pctDif).toFixed(1).replace(".", ",") + "%)";
-          // 1ª linha: resultado total (diferença × cotas); 2ª: diferença por cota × quantidade
-          var qtd = Number(opcoes.quantidade) || 0;
-          // ícone de destaque na frente, como nos marcos da Evolução patrimonial
-          var icone = dif >= 0 ? "📈 " : "📉 ";
-          var txt = icone + (qtd > 0 ? sinal + moeda(Math.abs(dif * qtd)) + pctTxt : sinal + moeda(Math.abs(dif)) + pctTxt);
-          var txt2 = qtd > 0 ? sinal + moeda(Math.abs(dif)) + " por cota × " + qtd.toLocaleString("pt-BR") + (qtd === 1 ? " cota" : " cotas") : "";
-          var c = grafico.ctx;
-          c.save();
-          c.font = "700 11px 'Segoe UI', Roboto, sans-serif";
-          var larg1 = c.measureText(txt).width;
-          c.font = "600 9.5px 'Segoe UI', Roboto, sans-serif";
-          var larg2 = txt2 ? c.measureText(txt2).width : 0;
-          var larg = Math.max(larg1, larg2) + 16, alt = txt2 ? 34 : 22;
-          var xc = ca.left + ca.width * 0.62;
-          // traço vertical entre as linhas
-          c.strokeStyle = cor; c.lineWidth = 1.2; c.setLineDash([3, 3]);
-          c.beginPath(); c.moveTo(xc, topo); c.lineTo(xc, base); c.stroke(); c.setLineDash([]);
-          c.fillStyle = cor;
-          [topo, base].forEach(function (yy) { c.beginPath(); c.arc(xc, yy, 2.5, 0, Math.PI * 2); c.fill(); });
-          // caixa no meio do caminho
-          var ym = Math.min(ca.bottom - alt / 2, Math.max(ca.top + alt / 2, (topo + base) / 2));
-          var x = xc - larg / 2;
-          c.fillStyle = "#0B1420"; c.fillRect(x, ym - alt / 2, larg, alt);
-          c.fillStyle = dif >= 0 ? "rgba(34,227,154,0.14)" : "rgba(255,77,122,0.16)"; c.fillRect(x, ym - alt / 2, larg, alt);
-          c.strokeStyle = cor; c.lineWidth = 1; c.strokeRect(x + 0.5, ym - alt / 2 + 0.5, larg - 1, alt - 1);
-          c.fillStyle = cor; c.textBaseline = "middle"; c.textAlign = "center";
-          if (txt2) {
-            c.font = "700 11px 'Segoe UI', Roboto, sans-serif"; c.fillText(txt, xc, ym - 6);
-            c.font = "600 9.5px 'Segoe UI', Roboto, sans-serif"; c.globalAlpha = 0.85; c.fillText(txt2, xc, ym + 8); c.globalAlpha = 1;
-          } else {
-            c.font = "700 11px 'Segoe UI', Roboto, sans-serif"; c.fillText(txt, xc, ym + 0.5);
-          }
-          c.restore();
-        }
+        afterDatasetsDraw: function (grafico) { desenharDiferencaCompra(grafico, precoAtual, precoMedio, Number(opcoes.quantidade) || 0); }
       }] : []).concat(precoAtual > 0 ? [{
         id: "rotuloAtual",
         afterDatasetsDraw: function (grafico) {
@@ -480,6 +485,12 @@
     var alta = function (p) { return p.preco >= p.abertura; };
     var cor = function (p) { return alta(p) ? CORES.up : CORES.down; };
     var casas = opcoes.casas || 4;   // dólar com 4 casas, ações com 2
+    var corAtual = opcoes.corAtual || CORES.cy;
+    // legenda (à esquerda do "Notícias"): as linhas do gráfico e o resultado
+    var legenda = [];
+    if (opcoes.linhaAtual > 0) legenda.push({ rotulo: opcoes.rotuloAtual || "Preço Atual", cor: corAtual });
+    if (opcoes.linhaCompra > 0) legenda.push({ rotulo: "Preço Compra", cor: CORES.laranja });
+    if (opcoes.linhaAtual > 0 && opcoes.linhaCompra > 0) legenda.push({ rotulo: "Resultado", cor: opcoes.linhaAtual >= opcoes.linhaCompra ? CORES.up : CORES.down });
     var f4 = function (v) { return Number(v).toFixed(casas); };
     var rotulo = function (p) { return new Date(p.data + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }); };
 
@@ -495,8 +506,11 @@
     var marcas = [];            // posição dos "N" desenhados (para o clique)
 
     function escala() {
-      var mn = Math.min.apply(null, serie.map(function (p) { return p.minima; }));
-      var mx = Math.max.apply(null, serie.map(function (p) { return p.maxima; }));
+      // a escala cobre as velas na tela e, nas ações, também o preço de
+      // compra, para o Resultado (atual × compra) ficar sempre visível
+      var extras = opcoes.linhaCompra > 0 ? [opcoes.linhaCompra] : [];
+      var mn = Math.min.apply(null, serie.map(function (p) { return p.minima; }).concat(extras));
+      var mx = Math.max.apply(null, serie.map(function (p) { return p.maxima; }).concat(extras));
       var folga = (mx - mn) * 0.08 || mx * 0.01;
       // com notícias, sobra mais espaço em cima para o "N" acima das velas
       var folgaTopo = Object.keys(noticiasPorVela).length ? folga * 2 : folga;
@@ -617,8 +631,21 @@
         }
       },
       // valor atual em azul e, nas ações, o preço de compra em laranja
-      linhaComEtiqueta("linhaValorAtual", opcoes.linhaAtual, "#38B6FF", [3, 3]),
+      // mesmas cores do gráfico de linha: ação = Preço Atual em ciano e
+      // Preço Compra em laranja; dólar = Valor Atual em amarelo
+      linhaComEtiqueta("linhaValorAtual", opcoes.linhaAtual, corAtual, opcoes.corAtual ? [3, 4] : [6, 4]),
       linhaComEtiqueta("linhaCompra", opcoes.linhaCompra, CORES.laranja, [6, 4]),
+      opcoes.linhaAtual > 0 && opcoes.linhaCompra > 0 ? {
+        // Resultado: pontilhado entre o preço atual e o de compra, com a caixa do valor
+        id: "diferencaCompraVelas",
+        afterDatasetsDraw: function (g) {
+          var y = g.scales.y, ca = g.chartArea;
+          var yA = y.getPixelForValue(opcoes.linhaAtual), yC = y.getPixelForValue(opcoes.linhaCompra);
+          // só quando ao menos uma das linhas está na tela (com zoom, podem sair)
+          if (Math.max(yA, yC) < ca.top || Math.min(yA, yC) > ca.bottom) return;
+          desenharDiferencaCompra(g, opcoes.linhaAtual, opcoes.linhaCompra, Number(opcoes.quantidade) || 0);
+        }
+      } : { id: "semDiferenca" },
       {
         // "N" em cima das velas com variação forte que tiveram notícia no dia
         id: "marcasNoticias",
@@ -637,6 +664,7 @@
           });
           var status = g.$statusNoticias || "", progresso = g.$progressoNoticias;
           var buscando = progresso != null && progresso < 1;
+          var xLeg = ca.right;   // onde a legenda das linhas termina (à direita)
           if (algum || status || buscando) {
             // legenda no canto direito do cabeçalho; durante a busca, uma
             // barrinha de progresso fica à direita do texto
@@ -654,6 +682,22 @@
             c.fillStyle = "#1E88FF"; c.beginPath(); c.arc(xc, yl, 6.5, 0, Math.PI * 2); c.fill();
             c.font = "800 8.5px 'Segoe UI', Roboto, sans-serif"; c.textAlign = "center";
             c.fillStyle = "#FFFFFF"; c.fillText("N", xc, yl + 0.5);
+            xLeg = xc - 6.5 - 14;
+          }
+          // Preço Atual · Preço Compra · Resultado, no mesmo estilo da legenda
+          // do gráfico de linha (bolinha translúcida com contorno na cor)
+          var yLeg = ca.top - 12, limite = ca.left + 290;   // não cobre o Abr/Máx/Mín/Fch
+          c.font = "600 10.5px 'Segoe UI', Roboto, sans-serif"; c.textBaseline = "middle";
+          for (var k = legenda.length - 1; k >= 0; k--) {
+            var it = legenda[k], lt = c.measureText(it.rotulo).width;
+            var xTexto = xLeg - lt, xBola = xTexto - 9;
+            if (xBola - 5 < limite) break;
+            c.textAlign = "left"; c.fillStyle = CORES.texto; c.fillText(it.rotulo, xTexto, yLeg);
+            var m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(it.cor);
+            c.fillStyle = m ? "rgba(" + parseInt(m[1], 16) + "," + parseInt(m[2], 16) + "," + parseInt(m[3], 16) + ",0.28)" : it.cor;
+            c.strokeStyle = it.cor; c.lineWidth = 1.5;
+            c.beginPath(); c.arc(xBola, yLeg, 4, 0, Math.PI * 2); c.fill(); c.stroke();
+            xLeg = xBola - 5 - 14;
           }
           c.restore();
         }
