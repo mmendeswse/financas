@@ -670,7 +670,11 @@
             // barrinha de progresso fica à direita do texto
             var xr = ca.right, yl = ca.top - 12;
             if (buscando) {
-              var lb = 54, hb = 4, xb = xr - lb, yb = Math.round(yl - hb / 2);
+              // percentual à direita da barrinha (ex.: "45%")
+              var pctTxt = Math.round(Math.max(0, progresso) * 100) + "%";
+              c.font = "700 10px 'Segoe UI', Roboto, sans-serif"; c.textAlign = "left"; c.textBaseline = "middle";
+              var lb = 54, hb = 4, xb = xr - c.measureText("100%").width - 5 - lb, yb = Math.round(yl - hb / 2);
+              c.fillStyle = "#1E88FF"; c.fillText(pctTxt, xb + lb + 5, yl);
               c.fillStyle = "rgba(110,132,148,0.28)"; c.fillRect(xb, yb, lb, hb);
               c.fillStyle = "#1E88FF"; c.fillRect(xb, yb, Math.max(2, lb * Math.max(0, progresso)), hb);
               xr = xb - 8;
