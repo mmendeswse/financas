@@ -331,6 +331,9 @@
       data: { labels: historicoPrecos.map(function (p) { return new Date(p.data + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }); }), datasets: datasets },
       options: {
         responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
+        // gráfico do dólar: tocar na área do gráfico troca para a visão em velas
+        onClick: opcoes.aoClicar ? function (evt, el, ch) { if (dentroDaArea(ch, evt)) opcoes.aoClicar(); } : undefined,
+        onHover: opcoes.aoClicar ? function (evt, el, ch) { evt.native.target.style.cursor = dentroDaArea(ch, evt) ? "pointer" : "default"; } : undefined,
         scales: { x: eixoX({ ticks: { color: CORES.texto, font: fonte(10.5), maxTicksLimit: 6 } }), y: eixoY({ ticks: { color: CORES.texto, font: fonte(10.5), maxTicksLimit: 14, callback: function (v) { return "R$ " + v.toFixed(2); } } }) },
         plugins: {
           legend: { position: "top", align: "end", labels: { color: CORES.texto, font: fonte(10.5), boxWidth: 8, boxHeight: 8, usePointStyle: true, pointStyle: "circle",
@@ -455,6 +458,122 @@
           c.restore();
         }
       }] : [])
+    });
+  }
+
+  function dentroDaArea(ch, evt) {
+    var ca = ch.chartArea;
+    return ca && evt.x >= ca.left && evt.x <= ca.right && evt.y >= ca.top && evt.y <= ca.bottom;
+  }
+
+  // ---------------------------------------------------------------------
+  // Velas diárias (candlestick) — visão alternativa do gráfico do dólar
+  // serie = [{ data, abertura, maxima, minima, preco }]  (preco = fechamento)
+  // Cada vela é uma barra flutuante [abertura, fechamento]; o pavio
+  // (mínima → máxima) é desenhado por um plugin antes das barras.
+  // ---------------------------------------------------------------------
+  function renderVelas(canvasId, serie, opcoes) {
+    opcoes = opcoes || {};
+    destruir(canvasId);
+    var ctx = ctxOf(canvasId); if (!ctx) return;
+    var alta = function (p) { return p.preco >= p.abertura; };
+    var cor = function (p) { return alta(p) ? CORES.up : CORES.down; };
+    var f4 = function (v) { return Number(v).toFixed(4); };
+    var minimo = Math.min.apply(null, serie.map(function (p) { return p.minima; }));
+    var maximo = Math.max.apply(null, serie.map(function (p) { return p.maxima; }));
+    var folga = (maximo - minimo) * 0.08 || maximo * 0.01;
+    var datasets = [{
+      label: "Velas",
+      data: serie.map(function (p) {
+        // corpo mínimo visível quando abertura = fechamento (doji)
+        var a = p.abertura, f = p.preco;
+        if (Math.abs(a - f) < (maximo - minimo) * 0.002) f = a + (maximo - minimo) * 0.002;
+        return [Math.min(a, f), Math.max(a, f)];
+      }),
+      backgroundColor: serie.map(cor), borderColor: serie.map(cor), borderWidth: 1,
+      borderSkipped: false, barPercentage: 0.7, categoryPercentage: 0.9, maxBarThickness: 18
+    }];
+    if (opcoes.linhaAtual > 0) {
+      datasets.push({ type: "line", label: "Valor Atual", data: serie.map(function () { return opcoes.linhaAtual; }), borderColor: "#38B6FF", borderDash: [2, 3], borderWidth: 1.2, pointRadius: 0, pointHoverRadius: 0, fill: false });
+    }
+    instancias[canvasId] = new Chart(ctx, {
+      type: "bar",
+      data: { labels: serie.map(function (p) { return new Date(p.data + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }); }), datasets: datasets },
+      options: {
+        responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
+        layout: { padding: { top: 22 } },   // espaço para o cabeçalho Abr/Máx/Mín/Fch
+        onClick: opcoes.aoClicar ? function (evt, el, ch) { if (dentroDaArea(ch, evt)) opcoes.aoClicar(); } : undefined,
+        onHover: opcoes.aoClicar ? function (evt, el, ch) { evt.native.target.style.cursor = dentroDaArea(ch, evt) ? "pointer" : "default"; } : undefined,
+        scales: {
+          x: eixoX({ ticks: { color: CORES.texto, font: fonte(10.5), maxTicksLimit: 8 } }),
+          y: eixoY({ position: "right", beginAtZero: false, suggestedMin: minimo - folga, suggestedMax: maximo + folga,
+            ticks: { color: CORES.texto, font: fonte(10.5), maxTicksLimit: 12, callback: function (v) { return f4(v); } } })
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: tooltipPadrao({
+            displayColors: false,
+            filter: function (c) { return c.datasetIndex === 0; },
+            callbacks: {
+              label: function (c) {
+                var p = serie[c.dataIndex];
+                return ["Abr " + f4(p.abertura), "Máx " + f4(p.maxima), "Mín " + f4(p.minima), "Fch " + f4(p.preco)];
+              }
+            }
+          })
+        }
+      },
+      plugins: [{
+        // pavio: linha fina da mínima à máxima, atrás do corpo da vela
+        id: "pavios",
+        beforeDatasetsDraw: function (grafico) {
+          var meta = grafico.getDatasetMeta(0), y = grafico.scales.y, c = grafico.ctx;
+          c.save();
+          c.lineWidth = 1;
+          meta.data.forEach(function (barra, i) {
+            var p = serie[i]; if (!p) return;
+            c.strokeStyle = cor(p);
+            c.beginPath();
+            c.moveTo(Math.round(barra.x) + 0.5, y.getPixelForValue(p.maxima));
+            c.lineTo(Math.round(barra.x) + 0.5, y.getPixelForValue(p.minima));
+            c.stroke();
+          });
+          c.restore();
+        }
+      }, {
+        // cabeçalho com Abr / Máx / Mín / Fch da vela em foco (ou da última)
+        id: "cabecalhoOHLC",
+        afterDatasetsDraw: function (grafico) {
+          var ativos = grafico.tooltip && grafico.tooltip.getActiveElements ? grafico.tooltip.getActiveElements() : [];
+          var i = ativos.length ? ativos[0].index : serie.length - 1;
+          var p = serie[i]; if (!p) return;
+          var c = grafico.ctx, x = grafico.chartArea.left + 4, y = grafico.chartArea.top - 12;
+          var partes = [["Abr", p.abertura], ["Máx", p.maxima], ["Mín", p.minima], ["Fch", p.preco]];
+          c.save();
+          c.textBaseline = "middle";
+          partes.forEach(function (par) {
+            c.font = "600 10.5px 'Segoe UI', Roboto, sans-serif"; c.fillStyle = CORES.texto;
+            c.fillText(par[0], x, y); x += c.measureText(par[0] + " ").width;
+            c.font = "700 10.5px 'Segoe UI', Roboto, sans-serif"; c.fillStyle = cor(p);
+            var v = f4(par[1]); c.fillText(v, x, y); x += c.measureText(v).width + 10;
+          });
+          c.restore();
+        }
+      }, opcoes.linhaAtual > 0 ? {
+        // etiqueta do valor atual na borda direita, como no gráfico de linha
+        id: "rotuloValorAtualVelas",
+        afterDatasetsDraw: function (grafico) {
+          var ca = grafico.chartArea, y = grafico.scales.y.getPixelForValue(opcoes.linhaAtual);
+          if (y < ca.top || y > ca.bottom) return;
+          var c = grafico.ctx, txt = f4(opcoes.linhaAtual);
+          c.save();
+          c.font = "700 10.5px 'Segoe UI', Roboto, sans-serif";
+          var larg = c.measureText(txt).width + 10;
+          c.fillStyle = "#38B6FF"; c.fillRect(ca.right + 2, y - 9, larg, 18);
+          c.fillStyle = "#0B1420"; c.textBaseline = "middle"; c.fillText(txt, ca.right + 7, y + 0.5);
+          c.restore();
+        }
+      } : { id: "semRotulo" }]
     });
   }
 
@@ -587,6 +706,7 @@
     renderEvolucaoPatrimonio: renderEvolucaoPatrimonio,
     renderSaldoBancos: renderSaldoBancos,
     renderPrecoAcao: renderPrecoAcao,
+    renderVelas: renderVelas,
     renderLinhaMultipla: renderLinhaMultipla,
     renderBarrasObjetivo: renderBarrasObjetivo,
     renderVariacaoDiaria: renderVariacaoDiaria,

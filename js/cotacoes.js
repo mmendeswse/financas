@@ -48,8 +48,18 @@
       return r.json();
     }).then(function (lista) {
       if (!Array.isArray(lista)) throw new Error("Resposta inesperada");
+      // além do fechamento, guarda abertura, máxima e mínima de cada dia
+      // (para o gráfico de velas). A API não traz a abertura: usamos o
+      // fechamento do dia anterior (bid − varBid), limitado à faixa do dia.
       return lista.map(function (d) {
-        return { data: new Date(Number(d.timestamp) * 1000).toISOString().slice(0, 10), preco: Number(d.bid) };
+        var fch = Number(d.bid), max = Number(d.high), min = Number(d.low);
+        var abr = fch - Number(d.varBid || 0);
+        if (!(abr > 0)) abr = fch;
+        if (!(max > 0)) max = Math.max(abr, fch);
+        if (!(min > 0)) min = Math.min(abr, fch);
+        abr = Math.min(Math.max(abr, min), max);
+        return { data: new Date(Number(d.timestamp) * 1000).toISOString().slice(0, 10), preco: fch,
+                 abertura: abr, maxima: Math.max(max, fch, abr), minima: Math.min(min, fch, abr) };
       }).filter(function (p) { return p.preco > 0; }).reverse();
     }), 10000);
   }
