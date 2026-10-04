@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "2.6.9";
+  const VERSAO_APP = "2.7.2";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -931,10 +931,10 @@
     // ao entrar na guia, o filtro volta sempre para o mês e o ano atuais
     if (secao === "entradas") { mesEntradas = F.mesAtual(); ordemEntradas = { ...ORDEM_ENTRADAS_PADRAO }; filtroEntradas = null; }
     if (secao === "despesas") { mesDespesas = F.mesAtual(); ordemDespesas = { ...ORDEM_DESPESAS_PADRAO }; filtroDespesas = null; }
-    // ao entrar em Ações ou Investimentos (e nas telas de detalhe delas:
-    // cada ação, o dólar e cada aplicação), o período dos gráficos abre
-    // sempre em "Tudo", em vez de guardar a escolha anterior
-    if (["acoes", "investimentos", "detalhe-acao", "detalhe-dolar", "detalhe-investimento"].includes(secao)) periodoGrafico = "tudo";
+    // o período dos gráficos abre sempre no padrão, em vez de guardar a
+    // escolha anterior: ações e moeda (USD/BRL) em "3 meses"; investimentos em "Tudo"
+    if (["acoes", "detalhe-acao", "detalhe-dolar"].includes(secao)) periodoGrafico = "90d";
+    if (["investimentos", "detalhe-investimento"].includes(secao)) periodoGrafico = "tudo";
     // o gráfico do dólar e o de cada ação abrem sempre em velas (candles);
     // tocar no gráfico alterna para a linha e de volta
     if (secao === "detalhe-dolar") velasDolar = true;
@@ -1323,7 +1323,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.6.9" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.7.2" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -3704,7 +3704,7 @@
     } else {
       const linhas = lista.map((inv) => `
         <tr data-acao="ir" data-secao="detalhe-investimento" data-id="${inv.id}">
-          <td class="papel">${esc(inv.nome)}<small>${esc(inv.tipoAtivo || inv.categoria)}${inv.banco ? " · " + esc(inv.banco) : ""}</small></td>
+          <td class="papel">${esc(inv.nome)}<small>${esc(inv.tipoAtivo || inv.categoria)}</small></td>
           <td class="col-contratada">${esc(inv.indexador || "—")}${inv.taxaContratada ? " " + f2(inv.taxaContratada) + "%" : ""}</td>
           <td class="r">${fmtData(inv.dataAplicacao)}</td>
           <td class="r">${inv.quantidade ? f2(inv.quantidade) : "—"}</td>
@@ -3804,7 +3804,6 @@
       <label class="chk-linha"><input type="checkbox" id="f_isento" ${inv && inv.isentoIR ? "checked" : ""}> Isento de imposto de renda (LCI, LCA, CRI, CRA, poupança…)</label>
       <div id="previaIR" class="previa-ir"></div>
 
-      <div class="campo"><label for="f_obs">Observações</label><textarea id="f_obs" placeholder="Opcional">${inv ? esc(inv.obs || "") : ""}</textarea></div>
       <div class="modal-acoes">
         <button class="btn primario salvar" id="btnSalvar">Salvar</button>
         ${inv ? `<button class="btn perigo" id="btnExcluir">Excluir</button>` : ""}
@@ -3861,7 +3860,7 @@
         valorAtual: numIn(document.getElementById("f_va").value),
         isentoIR: document.getElementById("f_isento").checked,
         historicoValores: adicionarPontoValor(inv ? inv.historicoValores : [], numIn(document.getElementById("f_va").value)),
-        obs: document.getElementById("f_obs").value.trim()
+        obs: inv ? inv.obs || "" : ""   // sem campo na tela: mantém a observação que já existia
       };
       if (inv) { delete inv.irBanco; delete inv.liquidoBanco; Object.assign(inv, registro); }
       else DADOS.investimentos.push(registro);
@@ -3923,13 +3922,12 @@
       <button class="voltar" data-acao="ir" data-secao="investimentos"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONES.voltar}</svg>Voltar para Investimentos</button>
       <div class="grid g-top">
         <div class="c12">${card("", `${esc(inv.nome)} <span class="selo-tag selo-acao">${esc(inv.tipoAtivo || inv.categoria)}</span>`,
-          `${esc(inv.emissor || "emissor não informado")}${inv.banco ? " · custódia: " + esc(inv.banco) : ""}${inv.indexador ? " · " + esc(inv.indexador) + (inv.taxaContratada ? " " + f2(inv.taxaContratada) + "%" : "") : ""}`,
+          `${esc(inv.emissor || "emissor não informado")}${inv.indexador ? " · " + esc(inv.indexador) + (inv.taxaContratada ? " " + f2(inv.taxaContratada) + "%" : "") : ""}`,
           `${abasPeriodo()}<button class="btn" data-acao="editar-investimento" data-id="${inv.id}">Editar</button>`,
           hist.length >= 2
             ? `<div class="grafico-acao-area grafico-tela-cheia"><canvas id="graf-valor-investimento"></canvas></div>`
             : `<div class="empty">Ainda não há histórico suficiente para o gráfico.<br>Cada importação do extrato (ou edição do valor atual) acrescenta um ponto na linha.</div>`)}</div>
       </div>
-      ${inv.obs ? card("c12", "Observações", "", "", `<div style="padding:12px 16px;font-size:13px;color:var(--dim)">${esc(inv.obs)}</div>`) : ""}
     `;
   }
 
@@ -4270,7 +4268,7 @@
           ? `<input class="campo-preco moeda" data-id="${a.id}" type="text" inputmode="decimal" value="${valorCampoMoeda(a.precoAtual)}" onclick="event.stopPropagation()">`
           : `<span class="${forte}">${brl(a.precoAtual)}</span>`;
         return `<tr data-acao="ir" data-secao="detalhe-acao" data-id="${a.id}">
-          <td class="papel">${esc(a.ticker)}<small>${esc(a.categoria)}${a.banco ? " · " + esc(a.banco) : ""}</small></td>
+          <td class="papel">${esc(a.ticker)}<small>${esc(a.categoria)}</small></td>
           <td class="r">${brl(a.valorInvestido)}</td>
           <td class="r">${ultima}</td>
           <td class="r"><span class="${v.valor >= 0 ? "cel-up" : "cel-down"}">${v.valor >= 0 ? "+" : "−"}${brl(Math.abs(v.valor))}</span></td>
@@ -4577,7 +4575,6 @@
           `${abasPeriodo()}<button class="btn" data-acao="editar-acao" data-id="${a.id}">Editar</button>`,
           `<div class="grafico-acao-area grafico-tela-cheia"><canvas id="graf-preco-acao"></canvas></div>`)}</div>
       </div>
-      ${a.obs ? card("c12", "Observações", "", "", `<div style="padding:12px 16px;font-size:13px;color:var(--dim)">${esc(a.obs)}</div>`) : ""}
     `;
   }
 
