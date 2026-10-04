@@ -107,19 +107,31 @@
   // Séries oficiais do Banco Central (SGS): 12 = CDI diário (% a.d.),
   // 11 = Selic diária (% a.d.), 433 = IPCA mensal (% a.m.).
   function dataBR(iso) { var p = iso.split("-"); return p[2] + "/" + p[1] + "/" + p[0]; }
+  // O Banco Central nem sempre responde direto ao navegador (bloqueio de
+  // CORS ou demora fora do Brasil): se a chamada direta falhar, tenta pelos
+  // mesmos repassadores com CORS usados nas notícias (codetabs, allorigins).
   function buscarSerieBCB(codigo, inicioISO, fimISO) {
     var url = "https://api.bcb.gov.br/dados/serie/bcdata.sgs." + codigo + "/dados?formato=json&dataInicial=" +
       dataBR(inicioISO) + "&dataFinal=" + dataBR(fimISO);
-    return comTimeout(fetch(url).then(function (r) {
-      if (r.status === 404) return [];              // período sem dados (ex.: fim de semana)
-      if (!r.ok) throw new Error("Banco Central respondeu " + r.status);
-      return r.json();
-    }).then(function (lista) {
-      return (Array.isArray(lista) ? lista : []).map(function (x) {
-        var p = String(x.data).split("/");
-        return { data: p[2] + "-" + p[1] + "-" + p[0], valor: Number(String(x.valor).replace(",", ".")) };
-      }).filter(function (x) { return isFinite(x.valor); });
-    }), 15000);
+    var ler = function (endereco, tempo) {
+      return comTimeout(fetch(endereco, { headers: { Accept: "application/json" } }).then(function (r) {
+        if (r.status === 404) return "[]";              // período sem dados (ex.: fim de semana)
+        if (!r.ok) throw new Error("Banco Central respondeu " + r.status);
+        return r.text();
+      }).then(function (txt) {
+        var lista;
+        try { lista = JSON.parse(txt); } catch (e) { throw new Error("resposta inválida do Banco Central"); }
+        // o BCB responde {"erro": …} quando não há dados no período
+        if (!Array.isArray(lista)) { if (lista && (lista.erro || lista.error)) return []; throw new Error("resposta inesperada do Banco Central"); }
+        return lista.map(function (x) {
+          var p = String(x.data).split("/");
+          return { data: p[2] + "-" + p[1] + "-" + p[0], valor: Number(String(x.valor).replace(",", ".")) };
+        }).filter(function (x) { return isFinite(x.valor); });
+      }), tempo);
+    };
+    return ler(url, 10000)
+      .catch(function () { return ler("https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(url), 12000); })
+      .catch(function () { return ler("https://api.allorigins.win/raw?url=" + encodeURIComponent(url), 12000); });
   }
 
   function buscarCotacoes(tickers, token) {
