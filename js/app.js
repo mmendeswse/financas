@@ -20,7 +20,7 @@
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
-  const VERSAO_APP = "2.6.6";
+  const VERSAO_APP = "2.6.7";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -1324,7 +1324,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.6.6" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.6.7" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -3910,45 +3910,19 @@
     const inv = achar(d.investimentos, id);
     if (!inv) return `<div class="empty">Aplicação não encontrada. <button class="link-acao" data-acao="ir" data-secao="investimentos">Voltar para Investimentos</button></div>`;
 
-    const aplicado = Number(inv.valorInvestido || 0);
-    const bruto = Number(inv.valorAtual || 0);
-    const resultado = bruto - aplicado;
-    const dias = I.diasCorridos(inv);
-    const diasVenc = I.diasAteVencimento(inv);
-    const aliq = I.aliquotaEfetiva(inv);
-    const imposto = I.impostoInvestimento(inv);
-    const liquido = I.valorLiquidoInvestimento(inv);
-    const rentBruta = I.rentabilidadeInvestimento(inv);
-    const rentLiq = I.rentabilidadeLiquida(inv);
-    const rentAno = I.rentabilidadeAnualizada(inv, true);
+    // o gráfico ocupa a tela inteira (sem o quadro de resumo ao lado)
     const hist = inv.historicoValores || [];
-    const valores = hist.map((p) => p.valor);
-    const min = valores.length ? Math.min(...valores) : bruto;
-    const max = valores.length ? Math.max(...valores) : bruto;
     const f2 = (v) => Number(v || 0).toFixed(2).replace(".", ",");
 
     return `
       <button class="voltar" data-acao="ir" data-secao="investimentos"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONES.voltar}</svg>Voltar para Investimentos</button>
-      <div class="grid g-top grid-detalhe">
-        <div class="c8">${card("", `${esc(inv.nome)} <span class="selo-tag selo-acao">${esc(inv.tipoAtivo || inv.categoria)}</span>`,
+      <div class="grid g-top">
+        <div class="c12">${card("", `${esc(inv.nome)} <span class="selo-tag selo-acao">${esc(inv.tipoAtivo || inv.categoria)}</span>`,
           `${esc(inv.emissor || "emissor não informado")}${inv.banco ? " · custódia: " + esc(inv.banco) : ""}${inv.indexador ? " · " + esc(inv.indexador) + (inv.taxaContratada ? " " + f2(inv.taxaContratada) + "%" : "") : ""}`,
           `${abasPeriodo()}<button class="btn" data-acao="editar-investimento" data-id="${inv.id}">Editar</button>`,
           hist.length >= 2
-            ? `<div class="grafico-acao-area"><canvas id="graf-valor-investimento"></canvas></div>`
+            ? `<div class="grafico-acao-area grafico-tela-cheia"><canvas id="graf-valor-investimento"></canvas></div>`
             : `<div class="empty">Ainda não há histórico suficiente para o gráfico.<br>Cada importação do extrato (ou edição do valor atual) acrescenta um ponto na linha.</div>`)}</div>
-        <div class="c4">${card("", "Resumo da aplicação", "", "", `
-          <div class="kv"><span class="dim">Quantidade de cotas</span><b>${inv.quantidade ? f2(inv.quantidade) : "—"}</b></div>
-          <div class="kv"><span class="dim">Preço por cota (aplicação)</span><b>${inv.quantidade ? brl(aplicado / inv.quantidade) : "—"}</b></div>
-          <div class="kv"><span class="dim">Preço por cota (hoje)</span><b>${inv.quantidade ? brl(bruto / inv.quantidade) : "—"}</b></div>
-          <div class="kv"><span class="dim">Valor Aplicado</span><b>${brl(aplicado)}</b></div>
-          <div class="kv"><span class="dim">Valor bruto atual</span><b>${brl(bruto)}</b></div>
-          <div class="kv"><span class="dim">Lucro / prejuízo</span><b class="${corSinal(resultado)}">${brlSinal(resultado)}</b></div>
-          <div class="kv"><span class="dim">Rentabilidade líquida</span><b class="${corSinal(rentLiq)}">${pct(rentLiq)}</b></div>
-          <div class="kv"><span class="dim">Imposto estimado (${aliq === 0 ? "isento" : f2(aliq) + "%"})</span><b class="down">${imposto > 0 ? "−" + brl(imposto) : brl(0)}</b></div>
-          <div class="kv"><span class="dim">Menor valor (histórico)</span><b>${brl(min)}</b></div>
-          <div class="kv"><span class="dim">Maior valor (histórico)</span><b>${brl(max)}</b></div>
-          <div class="kv"><span class="dim">Vencimento</span><b>${inv.dataVencimento ? fmtData(inv.dataVencimento) : "—"}</b></div>
-        `)}</div>
       </div>
       ${inv.obs ? card("c12", "Observações", "", "", `<div style="padding:12px 16px;font-size:13px;color:var(--dim)">${esc(inv.obs)}</div>`) : ""}
     `;
@@ -4590,30 +4564,13 @@
   function renderDetalheAcao(d, id) {
     const a = achar(d.acoes, id);
     if (!a) return `<div class="empty">Ativo não encontrado. <button class="link-acao" data-acao="ir" data-secao="acoes">Voltar para Ações</button></div>`;
-    const investido = I.valorInvestidoAcao(a), atual = I.valorAtualAcao(a);
-    const resultado = atual - investido, rent = I.rentabilidadeAcao(a);
-    const { min, max } = I.precoMinMax(a);
-
+    // o gráfico ocupa a tela inteira (sem o quadro de resumo ao lado)
     return `
       <button class="voltar" data-acao="ir" data-secao="acoes"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONES.voltar}</svg>Voltar para Ações</button>
-      <div class="grid g-top grid-detalhe">
-        <div class="c8">${card("", `${esc(a.ticker)} <span class="selo-tag selo-${a.categoria.toLowerCase()}">${a.categoria}</span>`, esc(a.empresa),
+      <div class="grid g-top">
+        <div class="c12">${card("", `${esc(a.ticker)} <span class="selo-tag selo-${a.categoria.toLowerCase()}">${a.categoria}</span>`, esc(a.empresa),
           `${abasPeriodo()}<button class="btn" data-acao="editar-acao" data-id="${a.id}">Editar</button>`,
-          `<div class="grafico-acao-area"><canvas id="graf-preco-acao"></canvas></div>`)}</div>
-        <div class="c4">${card("", "Resumo da posição", "", "", `
-          <div class="kv"><span class="dim">Quantidade</span><b>${a.quantidade}</b></div>
-          <div class="kv"><span class="dim">Preço médio</span><b>${brl(a.precoMedio)}</b></div>
-          <div class="kv"><span class="dim">Preço atual</span><b>${brl(a.precoAtual)}</b></div>
-          <div class="kv"><span class="dim">Total investido</span><b>${brl(investido)}</b></div>
-          <div class="kv"><span class="dim">Valor atual</span><b>${brl(atual)}</b></div>
-          <div class="kv"><span class="dim">Lucro / prejuízo</span><b class="${corSinal(resultado)}">${brlSinal(resultado)}</b></div>
-          <div class="kv"><span class="dim">Rentabilidade</span><b class="${corSinal(rent)}">${pct(rent)}</b></div>
-          <div class="kv"><span class="dim">Dividendos recebidos</span><b class="up">${brl(a.dividendos || 0)}</b></div>
-          <div class="kv"><span class="dim">Preço mínimo (histórico)</span><b>${brl(min)}</b></div>
-          <div class="kv"><span class="dim">Preço máximo (histórico)</span><b>${brl(max)}</b></div>
-          <div class="kv"><span class="dim">Atualizado em</span><b>${fmtData(a.atualizadoEm)}</b></div>
-          ${a.banco ? `<div class="kv"><span class="dim">Banco / corretora</span><b>${esc(a.banco)}</b></div>` : ""}
-        `)}</div>
+          `<div class="grafico-acao-area grafico-tela-cheia"><canvas id="graf-preco-acao"></canvas></div>`)}</div>
       </div>
       ${a.obs ? card("c12", "Observações", "", "", `<div style="padding:12px 16px;font-size:13px;color:var(--dim)">${esc(a.obs)}</div>`) : ""}
     `;

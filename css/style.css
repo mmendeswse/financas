@@ -1237,5 +1237,5 @@ button.resumo-pill:active { transform: scale(.98); }
 .dolar-pill .status-mercado.fechado { background: var(--down); box-shadow: 0 0 0 3px rgba(255,92,106,.22); }
 @media (prefers-reduced-motion: reduce) { .dolar-pill .status-mercado { animation: none !important; } }
 
-/* gráfico do USD/BRL ocupando a tela inteira (sem o quadro de resumo) */
+/* gráficos do USD/BRL, das ações e dos investimentos ocupando a tela inteira (sem o quadro de resumo) */
 .grafico-tela-cheia { min-height: clamp(380px, 62vh, 680px); }
