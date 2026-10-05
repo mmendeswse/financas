@@ -1211,8 +1211,7 @@
   function preencherNotificacoes() {
     const pendentes = alertasNaoLidos(DADOS);
     const el = document.getElementById("dropdownNotificacoes");
-    const topo = `<div class="dropdown-topo"><strong>Notificações</strong>
-      <button type="button" class="dropdown-config" data-secao="configuracoes">Configurar</button></div>`;
+    const topo = '<div class="dropdown-topo"><strong>Notificações</strong></div>';
     if (!pendentes.length) {
       el.innerHTML = topo + '<div class="dropdown-vazio">Nenhum alerta pendente. Tudo em ordem.</div>';
       return;
@@ -1231,13 +1230,6 @@
     const drop = document.getElementById("dropdownNotificacoes");
     if (!drop) return;
     drop.addEventListener("click", (e) => {
-      const config = e.target.closest(".dropdown-config");
-      if (config) {
-        e.stopPropagation();
-        drop.classList.remove("on");
-        navegarPara("configuracoes");
-        return;
-      }
       const item = e.target.closest(".dropdown-item[data-chave]");
       if (!item) return;
       e.stopPropagation();
