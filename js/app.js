@@ -1211,11 +1211,13 @@
   function preencherNotificacoes() {
     const pendentes = alertasNaoLidos(DADOS);
     const el = document.getElementById("dropdownNotificacoes");
+    const topo = `<div class="dropdown-topo"><strong>Notificações</strong>
+      <button type="button" class="dropdown-config" data-secao="configuracoes">Configurar</button></div>`;
     if (!pendentes.length) {
-      el.innerHTML = '<div class="dropdown-vazio">Nenhum alerta pendente. Tudo em ordem.</div>';
+      el.innerHTML = topo + '<div class="dropdown-vazio">Nenhum alerta pendente. Tudo em ordem.</div>';
       return;
     }
-    el.innerHTML = pendentes.map((a) => `
+    el.innerHTML = topo + pendentes.map((a) => `
       <button class="dropdown-item" data-chave="${esc(chaveAlerta(a))}" data-secao="${esc(a.rota || "dashboard")}">
         <span class="ic" style="background:${COR_ALERTA[a.tipo]}22;color:${COR_ALERTA[a.tipo]}">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${ICONE_ALERTA[a.tipo]}</svg>
@@ -1229,6 +1231,13 @@
     const drop = document.getElementById("dropdownNotificacoes");
     if (!drop) return;
     drop.addEventListener("click", (e) => {
+      const config = e.target.closest(".dropdown-config");
+      if (config) {
+        e.stopPropagation();
+        drop.classList.remove("on");
+        navegarPara("configuracoes");
+        return;
+      }
       const item = e.target.closest(".dropdown-item[data-chave]");
       if (!item) return;
       e.stopPropagation();
