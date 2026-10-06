@@ -22,7 +22,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "2.8.4";
+  const VERSAO_APP = "2.8.6";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -35,6 +35,7 @@
     "Alimentação": "🍽️", "Moradia": "🏠", "Transporte": "🚗", "Saúde": "🩺", "Educação": "📚", "Lazer": "🎬",
     "Compras": "🛍️", "Assinaturas": "📺", "Cartão de crédito": "💳", "Impostos": "🧾", "Investimentos": "📈", "Outros": "📦"
   };
+  const descEmoji = (x, padrao) => `<span class="emoji-desc">${emojiDe(x)}</span>${esc((x && x.descricao) || padrao || "")}`;
   const emojiDe = (x) => (x && x.emoji) || EMOJI_CATEGORIA[x && x.categoria] || "📦";
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
   const FORMAS_PAGAMENTO = ["Débito", "Pix", "Dinheiro", "Cartão Crédito", "Boleto", "Transferência", "Débito Automático"];
@@ -91,6 +92,21 @@
   }
   // selo "4/16" de um lançamento parcelado, achado pelo id (origem da série ou
   // lançamento do mês) e pela data daquele mês — usado nos painéis e listas
+  // selo de repetição (mensal, 5/16…) de qualquer item de lista, achado pelo
+  // id no lançamento original e calculado para a data mostrada
+  function seloDe(x, data) {
+    const orig = x && x.id ? [...DADOS.entradas, ...DADOS.despesas, ...(DADOS.contasPagar || [])].find((r) => r.id === x.id) : null;
+    return orig ? seloFreq({ ...orig, data: data || dataReg(x) }) : "";
+  }
+  // "Categoria · Tipo", a linha de baixo da descrição
+  function subDe(x) {
+    const orig = x && x.id ? [...DADOS.entradas, ...DADOS.despesas, ...(DADOS.contasPagar || [])].find((r) => r.id === x.id) : null;
+    return esc(x.categoria || (orig && orig.categoria) || "—") + " · " + esc(x.tipo || (orig && orig.tipo) || "Variável");
+  }
+  // descrição completa nos painéis: data · emoji descrição selo, e categoria · tipo embaixo
+  function descPainel(x) {
+    return `<span class="desc-painel"><span class="dp-nm"><span class="dp-data">${fmtDataCurta(x.data)} · </span>${descEmoji(x)}${seloDe(x, x.data)}</span><span class="dp-sub">${subDe(x)}</span></span>`;
+  }
   function seloParcela(id, data) {
     if (!id || !data) return "";
     const reg = [...DADOS.entradas, ...DADOS.despesas, ...(DADOS.contasPagar || [])].find((r) => r.id === id);
@@ -1356,7 +1372,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.8.4" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.8.6" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1754,7 +1770,7 @@
         linhas: (() => {
           const itensR = listaEntradasTodasMes(d, mes);
           return cabecalhoColunasPainel() +
-            itensR.map((e) => linhaEditavel(e, linha(fmtDataCurta(e.data) + " · " + esc(e.descricao) + seloParcela(e.id, e.data), bancoPainel(e.banco, e) + seloStatusPainel(e.status, e) + `<span class="col-valor valor-guia up">+${brl(e.valor)}</span>`))).join("") +
+            itensR.map((e) => linhaEditavel(e, linha(descPainel(e), bancoPainel(e.banco, e) + seloStatusPainel(e.status, e) + `<span class="col-valor valor-guia up">+${brl(e.valor)}</span>`))).join("") +
             linhaTotalPainel(plural(itensR.length, "Lançamento"), `+${brl(entradas)}`);
         })(),
         secao: "entradas"
@@ -1767,7 +1783,7 @@
         linhas: (() => {
           const itensD = listaDespesasTodasMes(d, mes);
           return cabecalhoColunasPainel() +
-            itensD.map((x) => linhaEditavel(x, linha(fmtDataCurta(x.data) + " · " + esc(x.descricao) + seloParcela(x.id, x.data), bancoPainel(x.banco, x) + seloStatusPainel(x.status, x) + `<span class="col-valor valor-guia down">−${brl(x.valor)}</span>`))).join("") +
+            itensD.map((x) => linhaEditavel(x, linha(descPainel(x), bancoPainel(x.banco, x) + seloStatusPainel(x.status, x) + `<span class="col-valor valor-guia down">−${brl(x.valor)}</span>`))).join("") +
             linhaTotalPainel(plural(itensD.length, "Lançamento"), `−${brl(despesas)}`);
         })(),
         secao: "despesas"
@@ -1803,6 +1819,7 @@
   }
 
   function rotuloPainel(texto) {
+    if (String(texto).indexOf("<") !== -1) return texto;
     let palavras = 0;
     return String(texto).split(" ").map((p) => {
       if (!/^[\p{L}]/u.test(p)) return p;            // símbolos (+, −, parênteses) não contam
@@ -1931,7 +1948,7 @@
       painelSimples(`Projeção de despesas · ${nomeMesQueVem()}`, saldo > 0 ? (aVir / saldo) * 100 : 0,
         "do seu saldo em bancos já está comprometido", "despesas previstas para o próximo mês",
         (itens.length
-          ? cabecalhoColunasPainel() + itens.map((x) => linhaEditavel(x, linha(fmtDataCurta(x.data) + " · " + esc(x.descricao) + seloParcela(x.id, x.data),
+          ? cabecalhoColunasPainel() + itens.map((x) => linhaEditavel(x, linha(descPainel(x),
               bancoPainel(x.banco, x) + seloStatusPainel(x.status, x) + `<span class="col-valor valor-guia down">−${brl(x.valor)}</span>`))).join("")
           : `<div class="kv"><span class="dim">Nenhuma conta prevista para o mês que vem</span><b>—</b></div>`) +
         linhaTotalPainel(plural(itens.length, "Lançamento"), "−" + brl(aVir)), "despesas");
@@ -1942,7 +1959,7 @@
       if (!maior) { toast("Nenhuma despesa lançada neste mês."); return; }
       painelSimples("Maior gasto do mês", despesas > 0 ? (Number(maior.valor) / despesas) * 100 : 0,
         "do total gasto no mês veio deste lançamento", "maior valor entre as despesas do mês",
-        linha("Descrição", esc(maior.descricao)) + linha("Valor", "−" + brl(maior.valor), "down") +
+        linha("Descrição", descEmoji(maior)) + linha("Valor", "−" + brl(maior.valor), "down") +
         linha("Categoria", esc(maior.categoria || "—")) + linha("Data", fmtData(maior.data)) +
         linha("Total", brl(despesas)), "despesas");
       return;
@@ -1969,7 +1986,7 @@
         "do seu saldo em bancos está comprometido", "soma de contas pendentes no mês atual",
         (itens.length ? cabecalhoColunasPainel() : "") +
         (itens.length
-          ? itens.map((x) => linhaEditavel(x, linha(fmtDataCurta(x.data) + " · " + esc(x.descricao) + seloParcela(x.id, x.data),
+          ? itens.map((x) => linhaEditavel(x, linha(descPainel(x),
               bancoPainel(x.banco, x) + seloStatusPainel(x.status, x) + `<span class="col-valor valor-guia down">−${brl(x.valor)}</span>`))).join("")
           : `<div class="kv"><span class="dim">Nenhuma conta pendente no mês atual</span><b>—</b></div>`) +
         linhaTotalPainel(plural(itens.length, "Lançamento"), `−${brl(total)}`), "despesas");
@@ -2050,7 +2067,7 @@
     const itensR = listaEntradasTodasMes(d, mes).map((e) => ({ ...e, sinal: "+", cor: "up" }));
     const itensD = listaDespesasTodasMes(d, mes).map((x) => ({ ...x, sinal: "−", cor: "down" }));
     const todos = [...itensR, ...itensD];
-    const linhaItem = (it) => linhaEditavel(it, linha(fmtDataCurta(it.data) + " · " + esc(it.descricao) + seloParcela(it.id, it.data),
+    const linhaItem = (it) => linhaEditavel(it, linha(descPainel(it),
       bancoPainel(it.banco, it) + seloStatusPainel(it.status, it) + `<span class="col-valor valor-guia ${it.cor}">${it.sinal}${brl(it.valor)}</span>`));
     const vazio = (txt) => `<div class="kv"><span class="dim">${txt}</span><b>—</b></div>`;
     const totE = totalEntradasTodasMes(d, mes), totD = totalDespesasTodasMes(d, mes);
@@ -2205,7 +2222,7 @@
       ${stripKpis([
         { rotulo: "TAXA POUPANÇA", valor: taxaPoupanca.toFixed(1).replace(".", ",") + "%", sub: `Resultado: ${brlSinal(resultadoMes)}`, cor: "#22E39A", icone: ICONES_STRIP.poupanca, chave: "poupanca" },
         { rotulo: "PROJEÇÃO DESPESAS", valor: "−" + brl(despesasPrevistasMesQueVem(d).reduce((t, x) => t + Number(x.valor || 0), 0)), sub: nomeMesQueVem(), cor: "#FF7A1A", icone: ICONES_STRIP.projecao, chave: "projecao" },
-        { rotulo: "MAIOR GASTO", valor: maiorDesp ? "−" + brl(maiorDesp.valor) : "—", sub: maiorDesp ? esc(maiorDesp.descricao) : "Sem Despesas", cor: "#FF4D7A", icone: ICONES_STRIP.maiorgasto, chave: "maiorgasto" },
+        { rotulo: "MAIOR GASTO", valor: maiorDesp ? "−" + brl(maiorDesp.valor) : "—", sub: maiorDesp ? descEmoji(maiorDesp) : "Sem Despesas", cor: "#FF4D7A", icone: ICONES_STRIP.maiorgasto, chave: "maiorgasto" },
         { rotulo: "MELHOR ATIVO", valor: melhor ? esc(melhor.ticker) : "—", sub: melhor ? `<b class="${corSinal(melhor.rentabilidade)}">${pct(melhor.rentabilidade)}</b> Preço Médio` : "sem ativos", cor: "#FFC233", icone: ICONES_STRIP.melhorativo, chave: "melhorativo" },
         { rotulo: "CONTAS PENDENTES", valor: brl(totalVencendo), sub: `${vencendo.length} ${vencendo.length === 1 ? "Conta" : "Contas"}`, cor: "#2F8BFF", icone: ICONES_STRIP.avencer, chave: "avencer" }
       ])}
@@ -2238,7 +2255,7 @@
     let html = `<div class="hd" style="${grid}"><i>Descrição</i><i class="r">Valor</i></div>`;
     html += lista.map((m) => `
       <div class="rw" style="${grid}">
-        <div><div class="nm">${esc(m.descricao)}${seloParcela(m.id, m.data)}</div><div class="sub">${fmtDataCurta(m.data)} · ${esc(m.categoria || "—")}</div></div>
+        <div><div class="nm">${descEmoji(m)}${seloDe(m, m.data)}</div><div class="sub">${fmtDataCurta(m.data)} · ${subDe(m)}</div></div>
         <div class="r big ${m.__tipo === "entrada" ? "up" : "down"}">${m.__tipo === "entrada" ? "+" : "−"}${brl(m.valor)}</div>
       </div>`).join("");
     return html;
@@ -2710,7 +2727,7 @@
     const reabrir = painelReabrir;
     abrirModal(`
       <h3>Pagar com qual banco?</h3>
-      <div class="dim" style="margin-bottom:10px">${esc(reg.descricao || "Despesa")}${seloParcela(reg.id, mes ? mes + "-01" : reg.vencimento)} · <b class="down">−${brl(valor)}</b></div>
+      <div class="dim" style="margin-bottom:10px">${descEmoji(reg, "Despesa")}${seloParcela(reg.id, mes ? mes + "-01" : reg.vencimento)} · <b class="down">−${brl(valor)}</b></div>
       <div id="listaBancosPg">${bancos.map((b) => `
         <button type="button" class="kv kv-editavel opcao-banco-pg" data-banco="${b.id}" style="align-items:center;width:100%;text-align:left;cursor:pointer;border-radius:8px">
           <span style="display:flex;align-items:center;gap:8px">${marcaBanco(b.nome, 18)}${esc(b.nome)}</span>
@@ -2835,20 +2852,20 @@
 
   function listaDespesasTodasMes(d, mes) {
     const lancadas = d.despesas.filter((x) => String(x.data || "").slice(0, 7) === mes)
-      .map((x) => ({ descricao: x.descricao, categoria: x.categoria, valor: Number(x.valor || 0), data: x.data, status: "Pago", acao: "tornar-pendente", id: x.id, banco: bancoDoLancamento(d, x), acaoBanco: "trocar-banco", acaoEditar: "editar-despesa" }));
+      .map((x) => ({ descricao: x.descricao, emoji: x.emoji, categoria: x.categoria, valor: Number(x.valor || 0), data: x.data, status: "Pago", acao: "tornar-pendente", id: x.id, banco: bancoDoLancamento(d, x), acaoBanco: "trocar-banco", acaoEditar: "editar-despesa" }));
     const contasDoMes = (d.contasPagar || []).filter((c) => String(c.vencimento || "").slice(0, 7) === mes);
     const contasMapeadas = contasDoMes.map((c) => {
       const st = F.statusReal(c);
-      return { descricao: c.descricao, categoria: c.categoria, valor: Number(c.valor || 0), data: c.vencimento, status: st === "Pendente" ? "Prevista" : st, acao: "alternar-pago", id: c.id, banco: c.bancoId ? F.nomeBanco(d, c.bancoId) : "—", acaoBanco: "trocar-banco-conta", acaoEditar: "editar-conta" };
+      return { descricao: c.descricao, emoji: c.emoji, categoria: c.categoria, valor: Number(c.valor || 0), data: c.vencimento, status: st === "Pendente" ? "Prevista" : st, acao: "alternar-pago", id: c.id, banco: c.bancoId ? F.nomeBanco(d, c.bancoId) : "—", acaoBanco: "trocar-banco-conta", acaoEditar: "editar-conta" };
     });
     const contasComoLista = (d.contasPagar || []).map((c) => ({ ...c, data: c.vencimento }));
     const repDespesas = repeticoesPrevistas(d.despesas, mes, (reg, data) => ({
-      descricao: reg.descricao, categoria: reg.categoria, valor: valorDoMes(reg, data.slice(0, 7)), data,
+      descricao: reg.descricao, emoji: reg.emoji, categoria: reg.categoria, valor: valorDoMes(reg, data.slice(0, 7)), data,
       status: mesQuitado(reg, data.slice(0, 7)) ? "Pago" : "Prevista",
       acao: "quitar-mes", id: reg.id, mes: data.slice(0, 7), banco: bancoDoLancamento(d, { ...reg, bancoId: bancoDoMes(reg, data.slice(0, 7)) }), acaoBanco: "trocar-banco", acaoEditar: "editar-previsao"
     }), contasDoMes);
     const repContas = repeticoesPrevistas(contasComoLista, mes, (reg, data) => ({
-      descricao: reg.descricao, categoria: reg.categoria, valor: valorDoMes(reg, data.slice(0, 7)), data,
+      descricao: reg.descricao, emoji: reg.emoji, categoria: reg.categoria, valor: valorDoMes(reg, data.slice(0, 7)), data,
       status: mesQuitado(reg, data.slice(0, 7)) ? "Pago" : "Prevista",
       acao: "quitar-mes-conta", id: reg.id, mes: data.slice(0, 7), banco: bancoDoMes(reg, data.slice(0, 7)) ? F.nomeBanco(d, bancoDoMes(reg, data.slice(0, 7))) : "—", acaoBanco: "trocar-banco-conta", acaoEditar: "editar-previsao-conta"
     }), []);
@@ -2860,9 +2877,9 @@
   // previstas) — usada no painel "Receitas do mês".
   function listaEntradasTodasMes(d, mes) {
     const reais = d.entradas.filter((e) => String(e.data || "").slice(0, 7) === mes)
-      .map((e) => ({ descricao: e.descricao, valor: Number(e.valor || 0), data: e.data, status: e.previsto ? "Prevista" : "Pago", acao: "alternar-prevista-entrada", id: e.id, banco: F.nomeBanco(d, e.bancoId), acaoBanco: "trocar-banco-entrada", acaoEditar: "editar-entrada" }));
+      .map((e) => ({ descricao: e.descricao, emoji: e.emoji, categoria: e.categoria, valor: Number(e.valor || 0), data: e.data, status: e.previsto ? "Prevista" : "Pago", acao: "alternar-prevista-entrada", id: e.id, banco: F.nomeBanco(d, e.bancoId), acaoBanco: "trocar-banco-entrada", acaoEditar: "editar-entrada" }));
     const recorrentes = repeticoesPrevistas(d.entradas, mes, (reg, data) => ({
-      descricao: reg.descricao, valor: valorDoMes(reg, data.slice(0, 7)), data,
+      descricao: reg.descricao, emoji: reg.emoji, categoria: reg.categoria, valor: valorDoMes(reg, data.slice(0, 7)), data,
       status: mesQuitado(reg, data.slice(0, 7)) ? "Pago" : "Prevista",
       acao: "quitar-mes-entrada", id: reg.id, mes: data.slice(0, 7), banco: F.nomeBanco(d, reg.bancoId), acaoBanco: "trocar-banco-entrada", acaoEditar: "editar-previsao-entrada"
     }));
@@ -3248,7 +3265,7 @@
         listaTabela.map((e) => `
         <div class="rw clicavel${e.prevista ? " linha-prevista" : ""}" style="${grid}" data-acao="${e.prevista ? "editar-previsao-entrada" : "editar-entrada"}" data-id="${e.id}" data-data="${e.data}" title="${e.prevista ? "Abre este mês para edição (o valor muda só aqui)" : "Abrir para editar"}">
           <div class="dim" style="font-size:12px">${fmtDataCurta(e.data)}</div>
-          <div><div class="nm"><span class="emoji-desc">${emojiDe(e)}</span>${esc(e.descricao)}${seloFreq(e)}</div><div class="sub">${esc(e.categoria)} · ${esc(e.tipo || "")}</div></div>
+          <div><div class="nm">${descEmoji(e)}${seloFreq(e)}</div><div class="sub">${esc(e.categoria)} · ${esc(e.tipo || "")}</div></div>
           <div><button class="cel-banco cel-banco-botao" data-acao="trocar-banco-entrada" data-id="${e.id}" title="${e.prevista ? "Troca o banco do lançamento original (vale para todas as repetições)" : "Trocar o banco desta entrada"}">${marcaBanco(e.banco, 26)}<span class="dim">${esc(e.banco)}</span></button></div>
           <div>${e.prevista
             ? `<button class="selo-tag ${e.recebidaNoMes ? "selo-pago" : "selo-prevista"} selo-botao" data-acao="quitar-mes-entrada" data-id="${e.id}" data-mes="${e.mesRef}" title="${e.recebidaNoMes ? "Marcar como prevista" : "Marcar como paga"}">${e.status}</button>`
@@ -3448,7 +3465,7 @@
         listaTabela.map((x) => `
         <div class="rw clicavel${x.prevista ? " linha-prevista" : ""}" style="${gridD}" data-acao="${x.prevista ? (x.origem === "conta" ? "editar-previsao-conta" : "editar-previsao") : (x.origem === "despesa" ? "editar-despesa" : "editar-conta")}" data-id="${x.id}" data-data="${x.data}" title="${x.prevista ? "Abre este mês para edição (o valor muda só aqui)" : "Abrir para editar"}">
           <div class="dim" style="font-size:12px">${fmtData(x.data)}</div>
-          <div><div class="nm"><span class="emoji-desc">${emojiDe(x)}</span>${esc(x.descricao)}${seloFreq({ ...(registrosSerie("despesa").find((y) => y.id === x.id) || {}), recorrencia: x.recorrencia, data: x.data })}</div><div class="sub">${esc(x.categoria || "—")} · ${esc(x.tipo || "Variável")}</div></div>
+          <div><div class="nm">${descEmoji(x)}${seloFreq({ ...(registrosSerie("despesa").find((y) => y.id === x.id) || {}), recorrencia: x.recorrencia, data: x.data })}</div><div class="sub">${esc(x.categoria || "—")} · ${esc(x.tipo || "Variável")}</div></div>
           <div>${x.origem === "despesa" || x.pagoCom !== "—"
             ? `<button class="cel-banco cel-banco-botao" data-acao="${x.origem === "despesa" ? "trocar-banco" : "trocar-banco-conta"}" data-id="${x.id}" title="Trocar o banco (nas repetições, altera o lançamento original)">${marcaBanco(x.pagoCom, 26)}<span class="dim">${esc(x.pagoCom)}</span></button>`
             : `<span class="cel-banco">${x.pagoCom && x.pagoCom !== "—" ? marcaBanco(x.pagoCom, 26) + `<span class="dim">${esc(x.pagoCom)}</span>` : '<span class="dim">—</span>'}</span>`}</div>
@@ -3716,7 +3733,7 @@
           <button class="btn fantasma" data-acao="alternar-pago" data-id="${c.id}" title="${c.statusReal === "Pago" ? "Marcar como pendente" : "Marcar como pago"}" style="color:${c.statusReal === "Pago" ? "var(--up)" : "var(--dim)"}">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l3.5 3.5L16 5"/></svg>
           </button>
-          <button data-acao="editar-conta" data-id="${c.id}" style="text-align:left"><div class="nm">${esc(c.descricao)}${seloParcela(c.id, c.vencimento)}</div><div class="sub">${esc(c.categoria || "—")}</div></button>
+          <button data-acao="editar-conta" data-id="${c.id}" style="text-align:left"><div class="nm">${descEmoji(c)}${seloDe(c, c.vencimento)}</div><div class="sub">${subDe(c)}</div></button>
           <div class="dim" style="font-size:12.5px">${fmtData(c.vencimento)}</div>
           <div class="r big">${brl(c.valor)}</div>
           <div class="r" style="display:flex;gap:6px;justify-content:flex-end;align-items:center">${seloStatus(c.statusReal)}
@@ -3839,7 +3856,7 @@
         lista.map((m) => `
         <div class="rw" style="${grid}">
           <div class="dim" style="font-size:12px">${fmtDataCurta(m.data)}</div>
-          <button data-acao="${m.__tipo === "Entrada" ? "editar-entrada" : "editar-despesa"}" data-id="${m.id}" style="text-align:left"><div class="nm">${esc(m.descricao)}${seloParcela(m.id, m.data)}</div></button>
+          <button data-acao="${m.__tipo === "Entrada" ? "editar-entrada" : "editar-despesa"}" data-id="${m.id}" style="text-align:left"><div class="nm">${descEmoji(m)}${seloDe(m, m.data)}</div><div class="sub">${subDe(m)}</div></button>
           <div class="dim" style="font-size:12.5px">${esc(m.categoria || "—")}</div>
           <div class="dim" style="font-size:12.5px">${m.cartaoId ? "💳 " + esc(nomeCartao(d, m.cartaoId)) : esc(F.nomeBanco(d, m.bancoId))}</div>
           <div class="r big ${m.__tipo === "Entrada" ? "up" : "down"}">${m.__tipo === "Entrada" ? "+" : "−"}${brl(m.valor)}</div>
