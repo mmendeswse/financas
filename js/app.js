@@ -22,7 +22,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "2.8.0";
+  const VERSAO_APP = "2.8.2";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
@@ -1149,7 +1149,7 @@
     }
 
     // categorias de despesa com alta em relação à média dos últimos 3 meses
-    const catsAtual = F.despesasPorCategoria(d, F.mesAtual());
+    const catsAtual = despesasPorCategoriaPagas(d, F.mesAtual());
     let avisosCategorias = 0;
     for (const c of catsAtual) {
       if (avisosCategorias >= 2) break;
@@ -1157,8 +1157,7 @@
       for (let i = 1; i <= 3; i++) {
         const dt = new Date(); dt.setMonth(dt.getMonth() - i);
         const chave = dt.toISOString().slice(0, 7);
-        const v = d.despesas.filter((x) => F.mesDe(x.data) === chave && (x.categoria || "Outros") === c.categoria)
-          .reduce((s, x) => s + Number(x.valor || 0), 0);
+        const v = (despesasPorCategoriaPagas(d, chave).find((x) => x.categoria === c.categoria) || {}).valor || 0;
         if (v > 0) { soma += v; meses++; }
       }
       if (meses > 0) {
@@ -1346,7 +1345,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.8.0" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.8.2" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1469,9 +1468,9 @@
 
   // tabela comparativa de despesas por categoria (mês anterior x atual)
   function tabelaCategoriasComparativa(d) {
-    const atual = F.despesasPorCategoria(d, F.mesAtual());
+    const atual = despesasPorCategoriaPagas(d, F.mesAtual());
     const antMap = {};
-    F.despesasPorCategoria(d, F.mesAnterior()).forEach((c) => { antMap[c.categoria] = c.valor; });
+    despesasPorCategoriaPagas(d, F.mesAnterior()).forEach((c) => { antMap[c.categoria] = c.valor; });
     if (!atual.length) return `<div class="empty">Nenhuma despesa neste mês ainda.</div>`;
     const totalAtual = atual.reduce((s, c) => s + c.valor, 0);
     const totalAnt = Object.keys(antMap).reduce((s, k) => s + antMap[k], 0);
@@ -1928,11 +1927,11 @@
       return;
     }
     if (chave === "maiorgasto") {
-      const maior = F.maiorDespesa(d, mes);
+      const maior = maiorDespesaPaga(d, mes);
       if (!maior) { toast("Nenhuma despesa lançada neste mês."); return; }
       painelSimples("Maior gasto do mês", despesas > 0 ? (Number(maior.valor) / despesas) * 100 : 0,
         "do total gasto no mês veio deste lançamento", "maior valor entre as despesas do mês",
-        linha("Descrição", esc(maior.descricao)) + linha("Valor", brl(maior.valor), "down") +
+        linha("Descrição", esc(maior.descricao)) + linha("Valor", "−" + brl(maior.valor), "down") +
         linha("Categoria", esc(maior.categoria || "—")) + linha("Data", fmtData(maior.data)) +
         linha("Total", brl(despesas)), "despesas");
       return;
@@ -2153,7 +2152,7 @@
 
     const acoes = I.listaAcoesComCalculo(d);
     const melhor = acoes.length ? acoes.reduce((a, b) => (a.rentabilidade >= b.rentabilidade ? a : b)) : null;
-    const maiorDesp = F.maiorDespesa(d);
+    const maiorDesp = maiorDespesaPaga(d);
     const hoje = new Date(), diaAtual = hoje.getDate(), diasNoMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).getDate();
     const projecao = diaAtual > 0 ? (despesasMes / diaAtual) * diasNoMes : 0;
     const vencendo = pendentesDoMes(d, F.mesAtual());
@@ -2195,7 +2194,7 @@
       ${stripKpis([
         { rotulo: "TAXA POUPANÇA", valor: taxaPoupanca.toFixed(1).replace(".", ",") + "%", sub: `Resultado: ${brlSinal(resultadoMes)}`, cor: "#22E39A", icone: ICONES_STRIP.poupanca, chave: "poupanca" },
         { rotulo: "PROJEÇÃO DESPESAS", valor: "−" + brl(despesasPrevistasMesQueVem(d).reduce((t, x) => t + Number(x.valor || 0), 0)), sub: nomeMesQueVem(), cor: "#FF7A1A", icone: ICONES_STRIP.projecao, chave: "projecao" },
-        { rotulo: "MAIOR GASTO", valor: maiorDesp ? brl(maiorDesp.valor) : "—", sub: maiorDesp ? esc(maiorDesp.descricao) : "Sem Despesas", cor: "#FF4D7A", icone: ICONES_STRIP.maiorgasto, chave: "maiorgasto" },
+        { rotulo: "MAIOR GASTO", valor: maiorDesp ? "−" + brl(maiorDesp.valor) : "—", sub: maiorDesp ? esc(maiorDesp.descricao) : "Sem Despesas", cor: "#FF4D7A", icone: ICONES_STRIP.maiorgasto, chave: "maiorgasto" },
         { rotulo: "MELHOR ATIVO", valor: melhor ? esc(melhor.ticker) : "—", sub: melhor ? `<b class="${corSinal(melhor.rentabilidade)}">${pct(melhor.rentabilidade)}</b> Preço Médio` : "sem ativos", cor: "#FFC233", icone: ICONES_STRIP.melhorativo, chave: "melhorativo" },
         { rotulo: "CONTAS PENDENTES", valor: brl(totalVencendo), sub: `${vencendo.length} ${vencendo.length === 1 ? "Conta" : "Contas"}`, cor: "#2F8BFF", icone: ICONES_STRIP.avencer, chave: "avencer" }
       ])}
@@ -2274,7 +2273,7 @@
       ? itens.map((i) => `<div class="legenda-linha"><span class="legenda-nome"><span class="legenda-ponto" style="background:${i.cor}"></span>${esc(i.rotulo)}</span><span class="legenda-pct" style="color:${i.cor}">${(total > 0 ? (i.valor / total) * 100 : 0).toFixed(0)}%</span><span class="legenda-val">${brlSinal(i.valor)}</span></div>`).join("")
       : `<div class="empty">Cadastre bancos, ações ou investimentos para ver a composição.</div>`;
 
-    const serie = F.serieMensal(d, 12);
+    const serie = serieMensalEfetiva(d, 12);
     const renda = serie.map((s) => s.entradas), desp = serie.map((s) => s.despesas), poup = serie.map((s) => s.entradas - s.despesas);
     const media = (arr) => { const v = arr.filter((x) => x !== 0); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : 0; };
     const rendaMes = totalEntradasEfetivas(d, F.mesAtual()), despMes = totalDespesasPagasMes(d, F.mesAtual()), poupMes = rendaMes - despMes;
@@ -2825,20 +2824,20 @@
 
   function listaDespesasTodasMes(d, mes) {
     const lancadas = d.despesas.filter((x) => String(x.data || "").slice(0, 7) === mes)
-      .map((x) => ({ descricao: x.descricao, valor: Number(x.valor || 0), data: x.data, status: "Pago", acao: "tornar-pendente", id: x.id, banco: bancoDoLancamento(d, x), acaoBanco: "trocar-banco", acaoEditar: "editar-despesa" }));
+      .map((x) => ({ descricao: x.descricao, categoria: x.categoria, valor: Number(x.valor || 0), data: x.data, status: "Pago", acao: "tornar-pendente", id: x.id, banco: bancoDoLancamento(d, x), acaoBanco: "trocar-banco", acaoEditar: "editar-despesa" }));
     const contasDoMes = (d.contasPagar || []).filter((c) => String(c.vencimento || "").slice(0, 7) === mes);
     const contasMapeadas = contasDoMes.map((c) => {
       const st = F.statusReal(c);
-      return { descricao: c.descricao, valor: Number(c.valor || 0), data: c.vencimento, status: st === "Pendente" ? "Prevista" : st, acao: "alternar-pago", id: c.id, banco: c.bancoId ? F.nomeBanco(d, c.bancoId) : "—", acaoBanco: "trocar-banco-conta", acaoEditar: "editar-conta" };
+      return { descricao: c.descricao, categoria: c.categoria, valor: Number(c.valor || 0), data: c.vencimento, status: st === "Pendente" ? "Prevista" : st, acao: "alternar-pago", id: c.id, banco: c.bancoId ? F.nomeBanco(d, c.bancoId) : "—", acaoBanco: "trocar-banco-conta", acaoEditar: "editar-conta" };
     });
     const contasComoLista = (d.contasPagar || []).map((c) => ({ ...c, data: c.vencimento }));
     const repDespesas = repeticoesPrevistas(d.despesas, mes, (reg, data) => ({
-      descricao: reg.descricao, valor: valorDoMes(reg, data.slice(0, 7)), data,
+      descricao: reg.descricao, categoria: reg.categoria, valor: valorDoMes(reg, data.slice(0, 7)), data,
       status: mesQuitado(reg, data.slice(0, 7)) ? "Pago" : "Prevista",
       acao: "quitar-mes", id: reg.id, mes: data.slice(0, 7), banco: bancoDoLancamento(d, { ...reg, bancoId: bancoDoMes(reg, data.slice(0, 7)) }), acaoBanco: "trocar-banco", acaoEditar: "editar-previsao"
     }), contasDoMes);
     const repContas = repeticoesPrevistas(contasComoLista, mes, (reg, data) => ({
-      descricao: reg.descricao, valor: valorDoMes(reg, data.slice(0, 7)), data,
+      descricao: reg.descricao, categoria: reg.categoria, valor: valorDoMes(reg, data.slice(0, 7)), data,
       status: mesQuitado(reg, data.slice(0, 7)) ? "Pago" : "Prevista",
       acao: "quitar-mes-conta", id: reg.id, mes: data.slice(0, 7), banco: bancoDoMes(reg, data.slice(0, 7)) ? F.nomeBanco(d, bancoDoMes(reg, data.slice(0, 7))) : "—", acaoBanco: "trocar-banco-conta", acaoEditar: "editar-previsao-conta"
     }), []);
@@ -2857,6 +2856,27 @@
       acao: "quitar-mes-entrada", id: reg.id, mes: data.slice(0, 7), banco: F.nomeBanco(d, reg.bancoId), acaoBanco: "trocar-banco-entrada", acaoEditar: "editar-previsao-entrada"
     }));
     return [...reais, ...recorrentes].sort((a, b) => (a.data || "").localeCompare(b.data || ""));
+  }
+
+  // Despesas PAGAS do mês com a mesma regra da guia Despesas: lançadas,
+  // contas a pagar marcadas como Pago e repetições quitadas no mês.
+  // (F.maiorDespesa/F.despesasPorCategoria/F.serieMensal só olhavam as
+  // despesas lançadas e deixavam de fora, por ex., a fatura do cartão.)
+  function despesasPagasMes(d, mes) {
+    return listaDespesasTodasMes(d, mes || F.mesAtual()).filter((x) => x.status === "Pago");
+  }
+  function maiorDespesaPaga(d, mes) {
+    const lista = despesasPagasMes(d, mes);
+    return lista.length ? lista.reduce((a, b) => (Number(b.valor) > Number(a.valor) ? b : a)) : null;
+  }
+  function despesasPorCategoriaPagas(d, mes) {
+    const mapa = {};
+    despesasPagasMes(d, mes).forEach((x) => { const c = x.categoria || "Outros"; mapa[c] = (mapa[c] || 0) + Number(x.valor || 0); });
+    return Object.keys(mapa).map((c) => ({ categoria: c, valor: mapa[c] })).sort((a, b) => b.valor - a.valor);
+  }
+  // série dos últimos meses (gráficos) com receitas e despesas efetivas
+  function serieMensalEfetiva(d, meses) {
+    return F.serieMensal(d, meses).map((s) => ({ ...s, entradas: totalEntradasEfetivas(d, s.mes), despesas: totalDespesasPagasMes(d, s.mes) }));
   }
 
   function totalDespesasPagasMes(d, mes) {
@@ -5107,7 +5127,7 @@
       }
       case "financas": {
         if (itensPatrimonio(d).length) G.renderDoughnutGenerico("graf-patrimonio-divisao", itensPatrimonio(d), { semLegenda: true, aoClicar: (item) => explicarClasse(item.rotulo) });
-        const serie = F.serieMensal(d, 12);
+        const serie = serieMensalEfetiva(d, 12);
         G.renderLinhaMultipla("graf-fin-linhas", serie.map((x) => x.rotulo), [
           { rotulo: "Renda", valores: serie.map((x) => x.entradas), cor: G.CORES.up },
           { rotulo: "Despesas", valores: serie.map((x) => x.despesas), cor: G.CORES.down },
