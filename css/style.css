@@ -1475,3 +1475,6 @@ button.resumo-pill:active { transform: scale(.98); }
 .grafico-cheio { flex: 1 1 0; display: flex; flex-direction: column; box-sizing: border-box; }
 .grafico-cheio-area { position: relative; flex: 1 1 0; min-height: 0; }
 .grafico-cheio-area > canvas { position: absolute; inset: 0; width: 100% !important; height: 100% !important; }
+/* bolinha "falta guardar" em amarelo de verdade (antes puxava para o laranja) */
+.meta-bolinha { background: #FFD60A; box-shadow: 0 0 0 2px rgba(255,214,10,.22); }
+.meta-bolinha.st-ok { background: var(--up); box-shadow: 0 0 0 2px rgba(46,229,157,.18); }
