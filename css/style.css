@@ -1303,3 +1303,21 @@ button.resumo-pill:active { transform: scale(.98); }
   .kv:has(> span > .desc-painel) > b .col-rep:not(:has(.selo-tag)) { display: none; }
   .kv:has(> span > .desc-painel) > b .col-rep:not(:has(.selo-tag)) + .col-status { margin-left: 0; }
 }
+/* quadro de metas do dashboard: cada meta numa caixa, com situação, barra e atual/objetivo */
+.metas-lista { padding: 6px 14px 14px; display: flex; flex-direction: column; gap: 10px; }
+.meta-item { display: block; width: 100%; text-align: left; font: inherit; color: inherit; cursor: pointer;
+  background: var(--painel-2); border: 1px solid var(--linha-2); border-radius: 10px; padding: 11px 13px 10px; }
+.meta-item:hover { border-color: var(--dim); }
+.meta-topo { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 9px; }
+.meta-nome { font-size: 13px; font-weight: 700; color: var(--texto); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.meta-st { --st: var(--up); flex: none; display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; color: var(--st);
+  border: 1px solid color-mix(in srgb, var(--st) 55%, transparent); background: color-mix(in srgb, var(--st) 10%, transparent); border-radius: 20px; padding: 2px 9px; }
+.meta-st i { width: 7px; height: 7px; border-radius: 50%; background: var(--st); }
+.meta-barra { height: 7px; border-radius: 4px; background: var(--linha-2); overflow: hidden; }
+.meta-barra i { display: block; height: 100%; border-radius: 4px; background: var(--meta-cor, var(--up)); }
+.meta-rodape { display: flex; justify-content: space-between; gap: 8px; margin-top: 8px; font-size: 11px; color: var(--dim); white-space: nowrap; }
+.meta-rodape span { overflow: hidden; text-overflow: ellipsis; }
+.meta-rodape b { color: var(--texto); }
+.meta-item.st-atencao { --meta-cor: var(--amarelo); } .meta-item.st-atencao .meta-st { --st: var(--amarelo); }
+.meta-item.st-atrasada { --meta-cor: var(--down); } .meta-item.st-atrasada .meta-st { --st: var(--down); }
+.meta-item.st-ok { --meta-cor: var(--up); }

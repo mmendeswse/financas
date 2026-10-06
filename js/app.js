@@ -22,7 +22,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "2.9.4";
+  const VERSAO_APP = "2.9.5";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1383,7 +1383,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.9.4" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.9.5" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1544,16 +1544,38 @@
   }
   const TITULO_ALERTA = { perigo: "Atenção imediata", aviso: "Aviso", sucesso: "Bom sinal", info: "Informação" };
 
+  // situação da meta: concluída, prazo vencido, ou se o "Guardar Mês" dá
+  // conta do que falta até o prazo (sem prazo, basta ter um valor por mês)
+  function situacaoMeta(m) {
+    const atual = Number(m.atual || 0), objetivo = Number(m.objetivo || 0);
+    if (objetivo > 0 && atual >= objetivo) return { chave: "ok", rotulo: "Concluída" };
+    if (m.prazo && F.diasEntre(m.prazo) < 0) return { chave: "atrasada", rotulo: "Prazo vencido" };
+    const mensal = Number(m.aporteMensal || 0);
+    if (!(mensal > 0)) return { chave: "atencao", rotulo: "Atenção" };
+    if (!m.prazo) return { chave: "ok", rotulo: "No caminho certo" };
+    const meses = Math.max(1, F.diasEntre(m.prazo) / 30.44);
+    return mensal * meses >= objetivo - atual ? { chave: "ok", rotulo: "No caminho certo" } : { chave: "atencao", rotulo: "Atenção" };
+  }
+
+  const brlCurto = (v) => brl(v).replace(/,00$/, "");   // sem centavos quando o valor é redondo
   function metasMini(d) {
     if (!d.metas.length) return `<div class="empty" style="padding:14px">Nenhuma meta cadastrada.</div>`;
-    return `<div class="mix-lista">` + d.metas.slice(0, 4).map((m) => {
+    return `<div class="metas-lista">` + d.metas.slice(0, 4).map((m) => {
       const p = m.objetivo > 0 ? Math.min(100, (m.atual / m.objetivo) * 100) : 0;
-      const vencida = m.prazo && F.diasEntre(m.prazo) < 0 && Number(m.atual || 0) < Number(m.objetivo || 0);
-      return `<button class="mix-item clicavel${vencida ? " meta-vencida" : ""}" data-acao="explicar-meta" data-id="${m.id}" title="Ver detalhes da meta">
-        <div class="mix-topo"><span>${nomeMeta(m)}</span><b style="color:${m.cor || "var(--laranja)"}">${p.toFixed(0)}% (${brl(m.atual)})</b></div>
-        <div class="progresso fina"><i style="width:${p}%;background:${m.cor || "var(--laranja)"}"></i></div>
+      const st = situacaoMeta(m);
+      return `<button class="meta-item clicavel st-${st.chave}" data-acao="explicar-meta" data-id="${m.id}" title="Ver detalhes da meta">
+        <div class="meta-topo"><span class="meta-nome">${nomeMeta(m)}</span><span class="meta-st"><i></i>${st.rotulo}</span></div>
+        <div class="meta-barra"><i style="width:${p}%"></i></div>
+        <div class="meta-rodape"><span>Atual: ${brlCurto(m.atual)}</span><span>Objetivo: ${brlCurto(m.objetivo)} · <b>${p.toFixed(0)}%</b></span></div>
       </button>`;
     }).join("") + `</div>`;
+  }
+
+  // subtítulo do quadro de metas: "N de M no caminho certo"
+  function resumoMetas(d) {
+    if (!d.metas.length) return "progressos";
+    const ok = d.metas.filter((m) => situacaoMeta(m).chave === "ok").length;
+    return `${ok} de ${d.metas.length} no caminho certo`;
   }
 
   function stripKpis(itens) {
@@ -2223,7 +2245,7 @@
           </div>`)}</div>
         <div class="c3">${card("", "Receitas x despesas", `${mesesRD} ${mesesRD === 1 ? "mês" : "meses"} de ${anoRD}`,
           `<div class="filtro-mes">${seletorAnoDash("anoRD", anoRD, anosDashboard(d))}${abasMeses("periodo-rd", mesesRD, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }])}</div>`, `<div style="padding:8px 14px 12px;height:236px"><canvas id="graf-receitas-despesas"></canvas></div>`)}</div>
-        <div class="c3">${card("", "Metas", "progressos", `<button class="btn pequeno" data-acao="ir" data-secao="metas">ver todas →</button>`, metasMini(d))}</div>
+        <div class="c3">${card("", "Metas", resumoMetas(d), `<button class="btn pequeno" data-acao="ir" data-secao="metas">todas →</button>`, metasMini(d))}</div>
       </div>
 
       <div class="grid">
