@@ -1321,9 +1321,15 @@ button.resumo-pill:active { transform: scale(.98); }
 .meta-item.st-atencao { --meta-cor: var(--amarelo); } .meta-item.st-atencao .meta-st { --st: var(--amarelo); }
 .meta-item.st-atrasada { --meta-cor: var(--down); } .meta-item.st-atrasada .meta-st { --st: var(--down); }
 .meta-item.st-ok { --meta-cor: var(--up); }
-/* "Guardar Mês" compacto dentro de cada meta do dashboard */
-.meta-mensal-mini { margin-top: 10px; padding: 7px 10px; gap: 10px; background: var(--painel); }
-.meta-mensal-mini .meta-mensal-icone { width: 30px; height: 30px; border-radius: 8px; color: var(--meta-cor, var(--up)); }
-.meta-mensal-mini .meta-mensal-texto small { font-size: 9.5px; }
-.meta-mensal-mini .meta-mensal-texto b { font-size: 13.5px; }
-.meta-mensal-mini .meta-mensal-texto b.dim { font-size: 12px; }
+/* quadro de metas compacto: mesma altura do quadro Receitas x despesas */
+.metas-lista { padding: 4px 12px 12px; gap: 8px; }
+.meta-item { padding: 9px 11px 8px; border-radius: 9px; }
+.meta-topo { margin-bottom: 7px; }
+.meta-nome { font-size: 12.5px; }
+.meta-st { font-size: 10px; padding: 1px 8px; gap: 5px; }
+.meta-st i { width: 6px; height: 6px; }
+.meta-barra { height: 5px; }
+.meta-rodape { margin-top: 6px; align-items: center; }
+.meta-guardar { display: inline-flex; align-items: center; gap: 5px; }
+.meta-guardar svg { flex: none; color: var(--meta-cor, var(--up)); }
+.meta-guardar b { color: var(--texto); }
