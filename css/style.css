@@ -1488,3 +1488,7 @@ button.resumo-pill:active { transform: scale(.98); }
 /* aviso "⚠️ sábado" embaixo da data nas guias Entradas e Despesas */
 .cel-data { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
 .cel-data .selo-sabado { margin-left: 0; font-size: 9.5px; padding: 1px 6px; white-space: nowrap; }
+/* notificação das metas: uma meta por tópico */
+.notif-lista { display: block; margin-top: 4px; }
+.notif-item { display: block; margin: 2px 0; padding-left: 14px; position: relative; }
+.notif-item::before { content: "•"; position: absolute; left: 3px; }
