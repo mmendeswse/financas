@@ -1251,3 +1251,8 @@ button.resumo-pill:active { transform: scale(.98); }
 .opcao-emoji { height: 36px; border: 1px solid transparent; border-radius: 8px; background: transparent; font-size: 19px; line-height: 1; cursor: pointer; padding: 0; }
 .opcao-emoji:hover { background: var(--painel-3); }
 .opcao-emoji.ativo { border-color: var(--cy); background: var(--painel-3); }
+/* descrição completa nos painéis: nome com emoji e selo, e "categoria · tipo" embaixo */
+.desc-painel { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.desc-painel .dp-nm { color: var(--texto); font-weight: 700; }
+.desc-painel .dp-data { color: var(--dim); font-weight: 400; }
+.desc-painel .dp-sub { color: var(--dim); font-size: 11.5px; font-weight: 400; }
