@@ -22,7 +22,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "2.9.6";
+  const VERSAO_APP = "2.9.7";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1383,7 +1383,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.9.6" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.9.7" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1552,9 +1552,9 @@
     if (m.prazo && F.diasEntre(m.prazo) < 0) return { chave: "atrasada", rotulo: "Prazo Vencido" };
     const mensal = Number(m.aporteMensal || 0);
     if (!(mensal > 0)) return { chave: "atencao", rotulo: "Atenção" };
-    if (!m.prazo) return { chave: "ok", rotulo: "Caminho Certo" };
+    if (!m.prazo) return { chave: "ok", rotulo: "Promissor" };
     const meses = Math.max(1, F.diasEntre(m.prazo) / 30.44);
-    return mensal * meses >= objetivo - atual ? { chave: "ok", rotulo: "Caminho Certo" } : { chave: "atencao", rotulo: "Atenção" };
+    return mensal * meses >= objetivo - atual ? { chave: "ok", rotulo: "Promissor" } : { chave: "atencao", rotulo: "Atenção" };
   }
 
   const brlCurto = (v) => brl(v).replace(/,00$/, "");   // sem centavos quando o valor é redondo
