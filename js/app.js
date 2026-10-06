@@ -22,7 +22,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.1.8";
+  const VERSAO_APP = "3.1.9";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -152,6 +152,7 @@
   let ROTA = { secao: "dashboard", param: null };
   let editandoPrecos = false;
   let periodoGrafico = "tudo";
+  let anoMetas = null;    // quadro de metas: ano de referência (o atual = hoje; anos passados = 31/12)
   let periodoMetas = 0;   // quadro de metas: 0 = Atual (sempre abre assim), -1 = Início, 3/6/12 = meses atrás
   let anoRD = null;    // ano escolhido no quadro Receitas x despesas
   let anoEvo = null;   // ano escolhido no quadro Evolução patrimonial
@@ -1005,6 +1006,7 @@
     // em 12 meses e evolução patrimonial em "Tudo"
     if (secao === "dashboard") {
       anoRD = String(new Date().getFullYear()); mesesRD = 12;
+      anoMetas = String(new Date().getFullYear()); periodoMetas = 0;
       anoEvo = String(new Date().getFullYear()); mesesEvo = 12;
     }
     if (secao === "relatorios") {
@@ -1384,7 +1386,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.1.8" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.1.9" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1579,17 +1581,33 @@
     hist.forEach((h) => { if (h.data <= iso) v = h.valor; });
     return Number(v || 0);
   }
+  // data de referência do ano escolhido: hoje no ano corrente, 31/12 nos anos passados
+  function dataRefAnoMetas() {
+    const anoAtual = String(new Date().getFullYear());
+    return !anoMetas || anoMetas === anoAtual ? hojeISO() : `${anoMetas}-12-31`;
+  }
+  // data cujo valor o quadro mostra: Início = 1º registro; 3/6/12m = meses antes da referência do ano
   function dataInicioPeriodoMetas(m) {
     if (periodoMetas === -1) return (Array.isArray(m.historico) && m.historico.length) ? m.historico[0].data : hojeISO();
-    const d = new Date(); d.setMonth(d.getMonth() - periodoMetas);
+    const d = new Date(dataRefAnoMetas() + "T12:00:00"); d.setMonth(d.getMonth() - periodoMetas);
     return d.toISOString().slice(0, 10);
+  }
+  // anos do seletor: do 1º registro de histórico das metas até o ano atual
+  function anosMetas(d) {
+    const atual = new Date().getFullYear();
+    let primeiro = atual;
+    d.metas.forEach((m) => (m.historico || []).forEach((h) => { const a = Number(String(h.data).slice(0, 4)); if (a > 1900 && a < primeiro) primeiro = a; }));
+    const lista = [];
+    for (let a = primeiro; a <= atual; a++) lista.push(String(a));
+    return lista;
   }
 
   function metasMini(d) {
     if (!d.metas.length) return `<div class="empty" style="padding:14px">Nenhuma meta cadastrada.</div>`;
     return `<div class="metas-lista">` + d.metas.slice(0, 3).map((m) => {   // 3 metas: mesma altura do quadro Receitas x despesas
       // fora de "Atual", os valores e a barra mostram como a meta estava no começo do período escolhido
-      const valor = periodoMetas !== 0 ? valorMetaEm(m, dataInicioPeriodoMetas(m)) : Number(m.atual || 0);
+      const naHoje = periodoMetas === 0 && dataRefAnoMetas() === hojeISO();
+      const valor = naHoje ? Number(m.atual || 0) : valorMetaEm(m, dataInicioPeriodoMetas(m));
       const objetivo = Number(m.objetivo || 0);
       const p = objetivo > 0 ? Math.min(100, (valor / objetivo) * 100) : 0;
       const st = situacaoMeta(m);
@@ -2275,7 +2293,7 @@
           </div>`)}</div>
         <div class="c3">${card("", "Receitas x despesas", `${mesesRD} ${mesesRD === 1 ? "mês" : "meses"} de ${anoRD}`,
           `<div class="filtro-mes">${seletorAnoDash("anoRD", anoRD, anosDashboard(d))}${abasMeses("periodo-rd", mesesRD, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }])}</div>`, `<div style="padding:8px 14px 12px;height:236px"><canvas id="graf-receitas-despesas"></canvas></div>`)}</div>
-        <div class="c3">${card("", "Metas", resumoMetas(d), abasMeses("periodo-metas", periodoMetas, [{ meses: -1, rotulo: "Início" }, { meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }, { meses: 0, rotulo: "Atual" }]), metasMini(d))}</div>
+        <div class="c3">${card("", "Metas", resumoMetas(d), `<div class="filtro-mes">${seletorAnoDash("anoMetas", anoMetas || String(new Date().getFullYear()), anosMetas(d))}` + abasMeses("periodo-metas", periodoMetas, [{ meses: -1, rotulo: "Início" }, { meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }, { meses: 0, rotulo: "Atual" }]) + `</div>`, metasMini(d))}</div>
       </div>
 
       <div class="grid">
@@ -5561,6 +5579,7 @@
       if (id === "anoRelB") { anoRelB = e.target.value; renderRota(); return; }
       if (id === "anoBancos") { anoBancos = e.target.value; renderRota(); return; }
       if (id === "anoRD") { anoRD = e.target.value; renderRota(); return; }
+      if (id === "anoMetas") { anoMetas = e.target.value; renderRota(); return; }
       if (id === "anoEvo") { anoEvo = e.target.value; renderRota(); return; }
       if (id === "anoEntradas") { mesEntradas = e.target.value + mesEntradas.slice(4); filtroEntradas = null; renderRota(); return; }
       if (id === "anoDespesas") { mesDespesas = e.target.value + mesDespesas.slice(4); filtroDespesas = null; renderRota(); return; }
