@@ -22,7 +22,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.3.9";
+  const VERSAO_APP = "3.4.0";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1386,7 +1386,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.3.9" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.4.0" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1550,11 +1550,16 @@
 
   // situação da meta: concluída, prazo vencido, ou se o "Guardar Mês" dá
   // conta do que falta até o prazo (sem prazo, basta ter um valor por mês)
-  // quanto entrou na meta no mês corrente (pelo histórico de valores)
+  const isoLocal = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  // quanto entrou na meta no mês corrente: soma dos depósitos feitos com "+ Adicionar"
+  // (metas sem nenhum depósito registrado usam a diferença do histórico de valores)
   function guardadoNoMes(m) {
-    const h = new Date(), fimMesAnterior = new Date(h.getFullYear(), h.getMonth(), 0);
-    const iso = `${fimMesAnterior.getFullYear()}-${String(fimMesAnterior.getMonth() + 1).padStart(2, "0")}-${String(fimMesAnterior.getDate()).padStart(2, "0")}`;
-    return Number(m.atual || 0) - valorMetaEm(m, iso);
+    const mes = isoLocal(new Date()).slice(0, 7);
+    if (Array.isArray(m.depositos) && m.depositos.length) {
+      return m.depositos.filter((x) => String(x.data).slice(0, 7) === mes).reduce((t, x) => t + Number(x.valor || 0), 0);
+    }
+    const h = new Date();
+    return Number(m.atual || 0) - valorMetaEm(m, isoLocal(new Date(h.getFullYear(), h.getMonth(), 0)));
   }
   // situação da meta pela bolinha, comparando o que entrou no mês com o "Guardar Mês":
   // verde = soma do mês igual ou maior (ou meta concluída), amarela = já houve depósito
@@ -1583,7 +1588,7 @@
       hist.push({ data: `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, "0")}-${String(f.getDate()).padStart(2, "0")}`, valor: Number(valorAnterior || 0) });
     }
     const ultimo = hist[hist.length - 1];
-    if (ultimo && ultimo.data === hoje) ultimo.valor = valor;
+    if (ultimo && ultimo.data === hoje && hist.length > 1) ultimo.valor = valor;
     else if (!ultimo || ultimo.valor !== valor) hist.push({ data: hoje, valor });
   }
   // valor guardado na meta numa data (antes do 1º registro, vale o 1º registro)
@@ -5662,6 +5667,7 @@
       const atualAntes = Number(m.atual || 0);
       m.atual = atualAntes + v;
       registrarHistMeta(m, atualAntes);
+      (m.depositos = Array.isArray(m.depositos) ? m.depositos : []).push({ data: isoLocal(new Date()), valor: v });
       fecharModal();
       salvarEAtualizar(`${brl(v)} adicionado à meta "${m.nome}".`);
     };
