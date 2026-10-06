@@ -1290,3 +1290,5 @@ button.resumo-pill:active { transform: scale(.98); }
   .kv:has(> span > .desc-painel) > b > .col-status:first-child { margin-left: 0; }
   .kv:has(> span > .desc-painel) > b .col-status + .col-banco { margin-left: 10px; }
 }
+/* selo de repetição (MENSAL, 5/16…) na linha de baixo, junto de categoria · tipo */
+.rw .sub .selo-tag, .desc-painel .dp-sub .selo-tag { font-size: 9px; padding: 0 5px; line-height: 15px; margin-left: 4px; vertical-align: 1px; }
