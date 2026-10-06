@@ -22,7 +22,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "2.8.7";
+  const VERSAO_APP = "2.8.8";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -103,9 +103,9 @@
     const orig = x && x.id ? [...DADOS.entradas, ...DADOS.despesas, ...(DADOS.contasPagar || [])].find((r) => r.id === x.id) : null;
     return esc(x.categoria || (orig && orig.categoria) || "—") + " · " + esc(x.tipo || (orig && orig.tipo) || "Variável");
   }
-  // descrição completa nos painéis: data · emoji descrição selo, e categoria · tipo embaixo
+  // descrição completa nos painéis, no padrão das guias: coluna Data, e emoji descrição selo com categoria · tipo embaixo
   function descPainel(x) {
-    return `<span class="desc-painel"><span class="dp-nm"><span class="emoji-desc">${emojiDe(x)}</span><span class="dp-txt">${esc(x.descricao || "")}</span>${seloDe(x, x.data)}</span><span class="dp-sub">${fmtDataCurta(x.data)} · ${subDe(x)}</span></span>`;
+    return `<span class="dp-data-col">${fmtDataCurta(x.data)}</span><span class="desc-painel"><span class="dp-nm"><span class="emoji-desc">${emojiDe(x)}</span><span class="dp-txt">${esc(x.descricao || "")}</span>${seloDe(x, x.data)}</span><span class="dp-sub">${subDe(x)}</span></span>`;
   }
   function seloParcela(id, data) {
     if (!id || !data) return "";
@@ -1372,7 +1372,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.8.7" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.8.8" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2805,7 +2805,7 @@
   }
 
   function cabecalhoColunasPainel() {
-    return `<div class="kv kv-cab"><span>Descrição</span><b><span class="col-banco">Banco</span><span class="col-status">Status</span><span class="col-valor">Valor</span></b></div>`;
+    return `<div class="kv kv-cab"><span class="cab-desc"><span class="dp-data-col">Data</span>Descrição</span><b><span class="col-banco">Banco</span><span class="col-status">Status</span><span class="col-valor">Valor</span></b></div>`;
   }
 
   function bancoPainel(nome, item) {
