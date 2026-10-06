@@ -17,7 +17,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="assets/icons/icon-192.png?v=5">
 <meta name="color-scheme" content="dark">
 <title>Muller Mendes — Gerenciamento de Finanças Pessoais</title>
-<link rel="stylesheet" href="css/style.css?v=2.7.4">
+<link rel="stylesheet" href="css/style.css?v=2.8.0">
 </head>
 <body>
 
@@ -80,19 +80,25 @@
 <script src="js/vendor/chart.umd.min.js"></script>
 
 <!-- módulos do sistema — ordem importa: cada um usa o anterior -->
-<script src="js/bloqueio.js?v=2.7.4"></script>
-<script src="js/armazenamento.js?v=2.7.4"></script>
-<script src="js/financeiro.js?v=2.7.4"></script>
-<script src="js/investimentos.js?v=2.7.4"></script>
-<script src="js/graficos.js?v=2.7.4"></script>
-<script src="js/extrato.js?v=2.7.4"></script>
-<script src="js/cotacoes.js?v=2.7.4"></script>
-<script src="js/sincronizacao.js?v=2.7.4"></script>
-<script src="js/app.js?v=2.7.4"></script>
+<script src="js/bloqueio.js?v=2.8.0"></script>
+<script src="js/armazenamento.js?v=2.8.0"></script>
+<script src="js/financeiro.js?v=2.8.0"></script>
+<script src="js/investimentos.js?v=2.8.0"></script>
+<script src="js/graficos.js?v=2.8.0"></script>
+<script src="js/extrato.js?v=2.8.0"></script>
+<script src="js/cotacoes.js?v=2.8.0"></script>
+<script src="js/sincronizacao.js?v=2.8.0"></script>
+<script src="js/app.js?v=2.8.0"></script>
 <script>
   // registra o service worker (só funciona via http/https — no iPad, depois de publicado)
   if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
-    window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); });
+    window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).catch(function () {}); });
+    // quando uma versão nova do app assume, recarrega uma vez para já usar os arquivos novos
+    var tinhaControle = !!navigator.serviceWorker.controller, recarregou = false;
+    navigator.serviceWorker.addEventListener("controllerchange", function () {
+      if (!tinhaControle || recarregou) { tinhaControle = true; return; }
+      recarregou = true; location.reload();
+    });
   }
 </script>
 </body>
