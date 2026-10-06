@@ -22,7 +22,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.3.5";
+  const VERSAO_APP = "3.3.6";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1386,7 +1386,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.3.5" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.3.6" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1573,9 +1573,15 @@
   // Histórico do valor guardado em cada meta ({ data, valor }), gravado a cada
   // mudança do "Atual" — é dele que sai a evolução por período do quadro.
   // Metas antigas, sem histórico, começam a ser registradas a partir de agora.
-  function registrarHistMeta(m) {
+  // valorAnterior: o que havia antes desta mudança. Se a meta ainda não tem histórico,
+  // ele é gravado no fim do mês passado, para o valor de agora contar como guardado no mês.
+  function registrarHistMeta(m, valorAnterior) {
     const hoje = hojeISO(), valor = Number(m.atual || 0);
     const hist = Array.isArray(m.historico) ? m.historico : (m.historico = []);
+    if (!hist.length && valorAnterior !== undefined && Number(valorAnterior) !== valor) {
+      const h = new Date(), f = new Date(h.getFullYear(), h.getMonth(), 0);
+      hist.push({ data: `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, "0")}-${String(f.getDate()).padStart(2, "0")}`, valor: Number(valorAnterior || 0) });
+    }
     const ultimo = hist[hist.length - 1];
     if (ultimo && ultimo.data === hoje) ultimo.valor = valor;
     else if (!ultimo || ultimo.valor !== valor) hist.push({ data: hoje, valor });
@@ -5107,8 +5113,9 @@
         cor: document.getElementById("f_cor").value,
         emoji: lerEmojiMeta()
       };
+      const atualAntes = m ? Number(m.atual || 0) : undefined;
       if (m) Object.assign(m, registro); else DADOS.metas.push(registro);
-      registrarHistMeta(m || registro);
+      registrarHistMeta(m || registro, atualAntes);
       fecharModal();
       salvarEAtualizar(m ? "Meta atualizada." : "Meta criada.");
     };
@@ -5653,8 +5660,9 @@
     document.getElementById("btnSalvar").onclick = () => {
       const v = numIn(document.getElementById("f_valor").value);
       if (v <= 0) { toast("Informe um valor maior que zero."); return; }
-      m.atual = Number(m.atual || 0) + v;
-      registrarHistMeta(m);
+      const atualAntes = Number(m.atual || 0);
+      m.atual = atualAntes + v;
+      registrarHistMeta(m, atualAntes);
       fecharModal();
       salvarEAtualizar(`${brl(v)} adicionado à meta "${m.nome}".`);
     };
