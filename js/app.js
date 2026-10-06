@@ -22,7 +22,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "2.9.0";
+  const VERSAO_APP = "2.9.1";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -105,7 +105,7 @@
   }
   // descrição completa nos painéis, no padrão das guias: coluna Data, e emoji descrição selo com categoria · tipo embaixo
   function descPainel(x) {
-    return `<span class="dp-data-col">${fmtDataCurta(x.data)}</span><span class="desc-painel"><span class="dp-nm"><span class="emoji-desc">${emojiDe(x)}</span><span class="dp-txt">${esc(x.descricao || "")}</span>${seloDe(x, x.data)}</span><span class="dp-sub">${subDe(x)}</span></span>`;
+    return `<span class="dp-data-col">${fmtDataCurta(x.data)}</span><span class="desc-painel"><span class="dp-nm"><span class="emoji-desc">${emojiDe(x)}</span><span class="dp-txt">${esc(x.descricao || "")}</span></span><span class="dp-sub">${subDe(x)}${seloDe(x, x.data)}</span></span>`;
   }
   function seloParcela(id, data) {
     if (!id || !data) return "";
@@ -1372,7 +1372,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.9.0" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.9.1" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2255,7 +2255,7 @@
     let html = `<div class="hd" style="${grid}"><i>Descrição</i><i class="r">Valor</i></div>`;
     html += lista.map((m) => `
       <div class="rw" style="${grid}">
-        <div><div class="nm">${descEmoji(m)}${seloDe(m, m.data)}</div><div class="sub">${fmtDataCurta(m.data)} · ${subDe(m)}</div></div>
+        <div><div class="nm">${descEmoji(m)}</div><div class="sub">${fmtDataCurta(m.data)} · ${subDe(m)}${seloDe(m, m.data)}</div></div>
         <div class="r big ${m.__tipo === "entrada" ? "up" : "down"}">${m.__tipo === "entrada" ? "+" : "−"}${brl(m.valor)}</div>
       </div>`).join("");
     return html;
@@ -3265,7 +3265,7 @@
         listaTabela.map((e) => `
         <div class="rw clicavel${e.prevista ? " linha-prevista" : ""}" style="${grid}" data-acao="${e.prevista ? "editar-previsao-entrada" : "editar-entrada"}" data-id="${e.id}" data-data="${e.data}" title="${e.prevista ? "Abre este mês para edição (o valor muda só aqui)" : "Abrir para editar"}">
           <div class="dim" style="font-size:12px">${fmtDataCurta(e.data)}</div>
-          <div><div class="nm">${descEmoji(e)}${seloFreq(e)}</div><div class="sub">${esc(e.categoria)} · ${esc(e.tipo || "")}</div></div>
+          <div><div class="nm">${descEmoji(e)}</div><div class="sub">${esc(e.categoria)} · ${esc(e.tipo || "")}${seloFreq(e)}</div></div>
           <div>${e.prevista
             ? `<button class="selo-tag ${e.recebidaNoMes ? "selo-pago" : "selo-prevista"} selo-botao" data-acao="quitar-mes-entrada" data-id="${e.id}" data-mes="${e.mesRef}" title="${e.recebidaNoMes ? "Marcar como prevista" : "Marcar como paga"}">${e.status}</button>`
             : `<button class="selo-tag ${e.previsto ? "selo-prevista" : "selo-pago"} selo-botao" data-acao="alternar-prevista-entrada" data-id="${e.id}" title="${e.previsto ? "Marcar como paga" : "Marcar como prevista"}">${e.status}</button>`}</div>
@@ -3465,7 +3465,7 @@
         listaTabela.map((x) => `
         <div class="rw clicavel${x.prevista ? " linha-prevista" : ""}" style="${gridD}" data-acao="${x.prevista ? (x.origem === "conta" ? "editar-previsao-conta" : "editar-previsao") : (x.origem === "despesa" ? "editar-despesa" : "editar-conta")}" data-id="${x.id}" data-data="${x.data}" title="${x.prevista ? "Abre este mês para edição (o valor muda só aqui)" : "Abrir para editar"}">
           <div class="dim" style="font-size:12px">${fmtData(x.data)}</div>
-          <div><div class="nm">${descEmoji(x)}${seloFreq({ ...(registrosSerie("despesa").find((y) => y.id === x.id) || {}), recorrencia: x.recorrencia, data: x.data })}</div><div class="sub">${esc(x.categoria || "—")} · ${esc(x.tipo || "Variável")}</div></div>
+          <div><div class="nm">${descEmoji(x)}</div><div class="sub">${esc(x.categoria || "—")} · ${esc(x.tipo || "Variável")}${seloFreq({ ...(registrosSerie("despesa").find((y) => y.id === x.id) || {}), recorrencia: x.recorrencia, data: x.data })}</div></div>
           <div>${x.prevista
             ? `<button class="selo-tag ${x.status === "Pago" ? "selo-pago" : "selo-prevista"} selo-botao" data-acao="${x.origem === "conta" ? "quitar-mes-conta" : "quitar-mes"}" data-id="${x.id}" data-mes="${x.mesRef}" title="Confirmar: cria o lançamento deste mês">${x.status}</button>`
             : `<button class="selo-tag selo-${x.status.toLowerCase()} selo-botao" data-acao="${x.origem === "conta" ? "alternar-pago" : "tornar-pendente"}" data-id="${x.id}" title="${x.origem === "conta" ? (x.status === "Pago" ? "Marcar como prevista" : "Marcar como paga") : "Marcar como prevista (vira conta a pagar)"}">${x.status}</button>`}</div>
@@ -3733,7 +3733,7 @@
           <button class="btn fantasma" data-acao="alternar-pago" data-id="${c.id}" title="${c.statusReal === "Pago" ? "Marcar como pendente" : "Marcar como pago"}" style="color:${c.statusReal === "Pago" ? "var(--up)" : "var(--dim)"}">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l3.5 3.5L16 5"/></svg>
           </button>
-          <button data-acao="editar-conta" data-id="${c.id}" style="text-align:left"><div class="nm">${descEmoji(c)}${seloDe(c, c.vencimento)}</div><div class="sub">${subDe(c)}</div></button>
+          <button data-acao="editar-conta" data-id="${c.id}" style="text-align:left"><div class="nm">${descEmoji(c)}</div><div class="sub">${subDe(c)}${seloDe(c, c.vencimento)}</div></button>
           <div class="dim" style="font-size:12.5px">${fmtData(c.vencimento)}</div>
           <div class="r big">${brl(c.valor)}</div>
           <div class="r" style="display:flex;gap:6px;justify-content:flex-end;align-items:center">${seloStatus(c.statusReal)}
@@ -3856,7 +3856,7 @@
         lista.map((m) => `
         <div class="rw" style="${grid}">
           <div class="dim" style="font-size:12px">${fmtDataCurta(m.data)}</div>
-          <button data-acao="${m.__tipo === "Entrada" ? "editar-entrada" : "editar-despesa"}" data-id="${m.id}" style="text-align:left"><div class="nm">${descEmoji(m)}${seloDe(m, m.data)}</div><div class="sub">${subDe(m)}</div></button>
+          <button data-acao="${m.__tipo === "Entrada" ? "editar-entrada" : "editar-despesa"}" data-id="${m.id}" style="text-align:left"><div class="nm">${descEmoji(m)}</div><div class="sub">${subDe(m)}${seloDe(m, m.data)}</div></button>
           <div class="dim" style="font-size:12.5px">${esc(m.categoria || "—")}</div>
           <div class="dim" style="font-size:12.5px">${m.cartaoId ? "💳 " + esc(nomeCartao(d, m.cartaoId)) : esc(F.nomeBanco(d, m.bancoId))}</div>
           <div class="r big ${m.__tipo === "Entrada" ? "up" : "down"}">${m.__tipo === "Entrada" ? "+" : "−"}${brl(m.valor)}</div>
