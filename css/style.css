@@ -1379,3 +1379,6 @@ button.resumo-pill:active { transform: scale(.98); }
 .meta-barra i:first-child:not(:only-child) { border-radius: 4px 0 0 4px; }
 .meta-evolucao { justify-self: center; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
 .meta-evolucao.up { color: var(--up); } .meta-evolucao.down { color: var(--down); }
+/* selo do que falta: 🏁 no lugar da palavra e na cor escolhida da meta */
+.meta-item .meta-st.meta-falta { --st: var(--meta-cor, var(--up)); gap: 4px; }
+.meta-falta-ic { font-size: 11px; line-height: 1; }

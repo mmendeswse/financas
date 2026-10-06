@@ -22,7 +22,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.1.6";
+  const VERSAO_APP = "3.1.7";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1384,7 +1384,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.1.6" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.1.7" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1601,7 +1601,7 @@
         ? `<span class="meta-evolucao ${ganho > 0 ? "up" : ganho < 0 ? "down" : ""}" title="Desde ${fmtData(inicio)}">${ganho > 0 ? "▲" : ganho < 0 ? "▼" : "•"} ${ganho >= 0 ? "+" : "−"}${brlCurto(Math.abs(ganho))} desde ${fmtData(inicio)}</span>`
         : `<span class="meta-guardar" title="Guardar por mês · data final da meta">${ICONE_GUARDAR_MES}${Number(m.aporteMensal) > 0 ? `<b>${brlCurto(m.aporteMensal)}</b>/mês` : "—/mês"}${m.prazo ? ` · ${fmtData(m.prazo)}` : ""}</span>`;
       return `<button class="meta-item clicavel st-${st.chave}" style="--meta-cor:${esc(m.cor || "var(--up)")}" data-acao="explicar-meta" data-id="${m.id}" title="Ver detalhes da meta">
-        <div class="meta-topo"><span class="meta-nome">${nomeMeta(m)}</span><span class="meta-selos">${Number(m.objetivo || 0) > Number(m.atual || 0) ? `<span class="meta-st meta-falta" title="Quanto falta para o objetivo">Falta ${brlCurto(Number(m.objetivo) - Number(m.atual || 0))}</span>` : ""}<span class="meta-st"><i></i>${st.rotulo}</span></span></div>
+        <div class="meta-topo"><span class="meta-nome">${nomeMeta(m)}</span><span class="meta-selos">${Number(m.objetivo || 0) > Number(m.atual || 0) ? `<span class="meta-st meta-falta" title="Quanto falta para o objetivo"><span class="meta-falta-ic">🏁</span>${brlCurto(Number(m.objetivo) - Number(m.atual || 0))}</span>` : ""}<span class="meta-st"><i></i>${st.rotulo}</span></span></div>
         <div class="meta-barra">${comparando ? `<i style="width:${pBase}%"></i><i class="meta-barra-ganho" style="width:${Math.max(0, p - pBase)}%"></i>` : `<i style="width:${p}%"></i>`}</div>
         <div class="meta-rodape meta-rodape-3"><span><i class="rot">${comparando ? "Início: " : "Atual: "}</i>${brlCurto(base)}</span>${meio}<span><i class="rot">Objetivo: </i>${brlCurto(m.objetivo)} · <b>${p.toFixed(0)}%</b></span></div>
       </button>`;
