@@ -2319,7 +2319,7 @@
           <div class="kv"><span class="dim">Dinheiro em bancos</span><b>${brl(p.bancos)}</b></div>
           <div class="kv"><span class="dim">+ Ações e FIIs</span><b>${brl(p.acoes)}</b></div>
           <div class="kv"><span class="dim">+ Investimentos (renda fixa, tesouro, fundos...)</span><b>${brl(p.investimentos)}</b></div>
-          <div class="kv"><span class="dim">− Dívidas (contas em aberto)</span><b class="down">${brl(p.dividas)}</b></div>
+          <div class="kv"><span class="dim">− Dívidas (contas em aberto até este mês)</span><b class="down">${brl(p.dividas)}</b></div>
         `, `<span>PATRIMÔNIO LÍQUIDO</span><span class="${corSinal(p.liquido)}" style="font-size:15px">${brl(p.liquido)}</span>`)}</div>
       </div>
     `;

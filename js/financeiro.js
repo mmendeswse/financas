@@ -259,6 +259,15 @@
       .reduce(function (s, c) { return s + Number(c.valor || 0); }, 0);
   }
 
+  // Dívidas do patrimônio: contas não pagas que já venceram ou vencem até o
+  // fim do mês atual. Parcelas de meses futuros ainda não são dívida de hoje.
+  function totalDividas(d) {
+    var limite = mesAtual();
+    return (d.contasPagar || [])
+      .filter(function (c) { return c.status !== "Pago" && mesDe(c.vencimento) <= limite; })
+      .reduce(function (s, c) { return s + Number(c.valor || 0); }, 0);
+  }
+
   function totalAReceber(d) {
     // não há cadastro próprio de "a receber" no formulário — tratamos
     // entradas futuras (data > hoje) como valores a receber
@@ -389,6 +398,7 @@
     contasVencendoEm: contasVencendoEm,
     contasAtrasadas: contasAtrasadas,
     totalAPagar: totalAPagar,
+    totalDividas: totalDividas,
     totalAReceber: totalAReceber
   };
 })(window);
