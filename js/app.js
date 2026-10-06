@@ -22,7 +22,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "2.9.2";
+  const VERSAO_APP = "2.9.3";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -107,7 +107,7 @@
   function descPainel(x) {
     return `<span class="dp-data-col">${fmtDataCurta(x.data)}</span><span class="desc-painel"><span class="dp-nm"><span class="emoji-desc">${emojiDe(x)}</span><span class="dp-txt">${esc(x.descricao || "")}</span></span><span class="dp-sub">${subDe(x)}</span></span>`;
   }
-  // célula da coluna Repetição (selo MENSAL, 5/16… ou "—")
+  // célula da coluna Recorrência (selo MENSAL, 5/16… ou "—")
   const celRep = (selo) => selo ? selo.trim() : '<span class="dim">—</span>';
   function seloParcela(id, data) {
     if (!id || !data) return "";
@@ -209,7 +209,7 @@
 
   // Entradas e Despesas usam exatamente as mesmas larguras de coluna
   // colunas proporcionais: a descrição não "empurra" banco, status e valor para a borda
-  const GRID_LANCAMENTOS = "grid-template-columns:96px minmax(200px,1fr) 90px 120px 170px 130px";   // repetição, status, banco e valor juntos, encostados à direita
+  const GRID_LANCAMENTOS = "grid-template-columns:96px minmax(200px,1fr) 104px 120px 170px 130px";   // repetição, status, banco e valor juntos, encostados à direita
 
   let mesesBancos = 0;
   let anoBancos = null;   // período do gráfico da guia Bancos (0 = saldo atual)
@@ -1374,7 +1374,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.9.2" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.9.3" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2807,7 +2807,7 @@
   }
 
   function cabecalhoColunasPainel() {
-    return `<div class="kv kv-cab"><span class="cab-desc"><span class="dp-data-col">Data</span>Descrição</span><b><span class="col-rep">Repetição</span><span class="col-status">Status</span><span class="col-banco">Banco</span><span class="col-valor">Valor</span></b></div>`;
+    return `<div class="kv kv-cab"><span class="cab-desc"><span class="dp-data-col">Data</span>Descrição</span><b><span class="col-rep">Recorrência</span><span class="col-status">Status</span><span class="col-banco">Banco</span><span class="col-valor">Valor</span></b></div>`;
   }
 
   function bancoPainel(nome, item) {
@@ -3263,7 +3263,7 @@
     if (!lista.length) {
       corpo = `<div class="empty">Nenhuma entrada cadastrada. Use "+ Nova entrada" para lançar seu salário ou outra receita.</div>`;
     } else {
-      corpo = `<div class="hd" style="${grid}">${thOrdem("ordenar-entradas", "data", "Data", ordemEntradas)}${thOrdem("ordenar-entradas", "descricao", "Descrição", ordemEntradas)}<i>Repetição</i>${thOrdem("ordenar-entradas", "status", "Status", ordemEntradas)}${thOrdem("ordenar-entradas", "banco", "Banco", ordemEntradas)}${thOrdem("ordenar-entradas", "valor", "Valor", ordemEntradas, "hd-valor")}</div>` +
+      corpo = `<div class="hd" style="${grid}">${thOrdem("ordenar-entradas", "data", "Data", ordemEntradas)}${thOrdem("ordenar-entradas", "descricao", "Descrição", ordemEntradas)}<i>Recorrência</i>${thOrdem("ordenar-entradas", "status", "Status", ordemEntradas)}${thOrdem("ordenar-entradas", "banco", "Banco", ordemEntradas)}${thOrdem("ordenar-entradas", "valor", "Valor", ordemEntradas, "hd-valor")}</div>` +
         listaTabela.map((e) => `
         <div class="rw clicavel${e.prevista ? " linha-prevista" : ""}" style="${grid}" data-acao="${e.prevista ? "editar-previsao-entrada" : "editar-entrada"}" data-id="${e.id}" data-data="${e.data}" title="${e.prevista ? "Abre este mês para edição (o valor muda só aqui)" : "Abrir para editar"}">
           <div class="dim" style="font-size:12px">${fmtDataCurta(e.data)}</div>
@@ -3464,7 +3464,7 @@
     if (!lista.length) {
       corpo = `<div class="empty">Nenhum lançamento em ${NOMES_MES[Number(mesDespesas.slice(5, 7)) - 1]}/${mesDespesas.slice(0, 4)}. Use NOVO para lançar uma despesa ou uma conta a pagar.</div>`;
     } else {
-      corpo = `<div class="hd" style="${gridD}">${thOrdem("ordenar-despesas", "data", "Data", ordemDespesas)}${thOrdem("ordenar-despesas", "descricao", "Descrição", ordemDespesas)}<i>Repetição</i>${thOrdem("ordenar-despesas", "status", "Status", ordemDespesas)}${thOrdem("ordenar-despesas", "pagoCom", "Banco", ordemDespesas)}${thOrdem("ordenar-despesas", "valor", "Valor", ordemDespesas, "hd-valor")}</div>` +
+      corpo = `<div class="hd" style="${gridD}">${thOrdem("ordenar-despesas", "data", "Data", ordemDespesas)}${thOrdem("ordenar-despesas", "descricao", "Descrição", ordemDespesas)}<i>Recorrência</i>${thOrdem("ordenar-despesas", "status", "Status", ordemDespesas)}${thOrdem("ordenar-despesas", "pagoCom", "Banco", ordemDespesas)}${thOrdem("ordenar-despesas", "valor", "Valor", ordemDespesas, "hd-valor")}</div>` +
         listaTabela.map((x) => `
         <div class="rw clicavel${x.prevista ? " linha-prevista" : ""}" style="${gridD}" data-acao="${x.prevista ? (x.origem === "conta" ? "editar-previsao-conta" : "editar-previsao") : (x.origem === "despesa" ? "editar-despesa" : "editar-conta")}" data-id="${x.id}" data-data="${x.data}" title="${x.prevista ? "Abre este mês para edição (o valor muda só aqui)" : "Abrir para editar"}">
           <div class="dim" style="font-size:12px">${fmtData(x.data)}</div>
