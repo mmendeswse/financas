@@ -1346,9 +1346,13 @@ button.resumo-pill:active { transform: scale(.98); }
 .meta-rodape-3 > span:first-child { flex: none; }
 /* emoji da classe na frente da porcentagem (legenda da composição) */
 .legenda-pct .emoji-pct { margin-right: 5px; font-size: 12px; }
-.legenda-linha:has(.emoji-pct) { grid-template-columns: minmax(0, 1fr) 70px 92px; }
+.legenda-linha:has(.emoji-pct) { grid-template-columns: minmax(0, 1fr) 66px 92px; }
+/* com o emoji a legenda precisa de mais largura: se não couber ao lado do gráfico, desce para baixo dele (assim o nome da classe aparece) */
+.legenda:has(.emoji-pct) { min-width: 250px; }
 .legenda-pct:has(.emoji-pct) { white-space: nowrap; }
 /* emoji na frente do título dos quadros de KPI, tudo numa linha */
 .kpi-rotulo { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
 .kpi-rotulo .kpi-emoji { flex: none; font-size: 13px; letter-spacing: 0; line-height: 1; }
 .kpi-rotulo .kpi-rotulo-txt { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* o rótulo clicável do centro do donut ocupa só o centro: o clique nas fatias abre o detalhe da classe */
+.donut-rotulo.clicavel { inset: auto; left: 50%; top: 50%; transform: translate(-50%, -50%); }
