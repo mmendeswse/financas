@@ -22,7 +22,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.3.6";
+  const VERSAO_APP = "3.3.7";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -145,7 +145,7 @@
     if (mudou) A.salvarDados(DADOS, true, true);
   }
 
-  const CORES_META = ["#22E08A", "#3FC1E0", "#FFB020", "#B487F0", "#FF6F91", "#7C9CF0"];
+  const COR_META_PADRAO = "#00E5FF";
 
   // Estado da interface (não persistido — só a sessão atual)
   let DADOS = null;
@@ -1386,7 +1386,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.3.6" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.3.7" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -5092,7 +5092,6 @@
         <div class="campo"><label for="f_mensal">Guardar Mês</label>${campoMoeda("f_mensal", m && m.aporteMensal ? m.aporteMensal : "", "R$ 500,00")}</div>
         <div class="campo"><label for="f_prazo">Prazo</label><input id="f_prazo" type="date" value="${m ? m.prazo || "" : ""}"></div>
       </div>
-      <div class="campo"><label for="f_cor">Cor</label><input id="f_cor" type="color" value="${m ? m.cor || "#22E08A" : CORES_META[DADOS.metas.length % CORES_META.length]}"></div>
       <div class="modal-acoes">
         <button class="btn primario salvar" id="btnSalvar">Salvar</button>
         ${m ? `<button class="btn perigo" id="btnExcluir">Excluir</button>` : ""}
@@ -5110,7 +5109,7 @@
         atual: numIn(document.getElementById("f_atual").value),
         prazo: document.getElementById("f_prazo").value,
         aporteMensal: numIn(document.getElementById("f_mensal").value),
-        cor: document.getElementById("f_cor").value,
+        cor: m ? (m.cor || COR_META_PADRAO) : COR_META_PADRAO,   // meta nova sempre em ciano, a cor padrão do sistema
         emoji: lerEmojiMeta()
       };
       const atualAntes = m ? Number(m.atual || 0) : undefined;
