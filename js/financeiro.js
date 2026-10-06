@@ -57,12 +57,12 @@
   function outrosMovimentos(d) {
     var lista = (d.contasPagar || [])
       .filter(function (c) { return c.status === "Pago" && c.bancoId && !c.cartaoId; })
-      .map(function (c) { return { bancoId: c.bancoId, valor: -Number(c.valor || 0), data: c.vencimento }; });
+      .map(function (c) { return { bancoId: c.bancoId, valor: -Number(c.valor || 0), data: c.vencimento, descricao: c.descricao }; });
     // transferência entre contas: sai de uma e entra na outra (não é receita nem despesa)
     (d.transferencias || []).forEach(function (t) {
       var v = Number(t.valor || 0);
-      lista.push({ bancoId: t.deBancoId, valor: -v, data: t.data, transferencia: true });
-      lista.push({ bancoId: t.paraBancoId, valor: v, data: t.data, transferencia: true });
+      lista.push({ bancoId: t.deBancoId, valor: -v, data: t.data, transferencia: true, descricao: "Transferência para " + nomeBanco(d, t.paraBancoId) });
+      lista.push({ bancoId: t.paraBancoId, valor: v, data: t.data, transferencia: true, descricao: "Transferência de " + nomeBanco(d, t.deBancoId) });
     });
     return movimentosExtras ? lista.concat(movimentosExtras(d) || []) : lista;
   }
@@ -83,6 +83,31 @@
   }
 
   var centavos = function (v) { return Math.round(v * 100) / 100; };
+
+  // Extrato da conta: saldo inicial e cada lançamento que mexe no saldo, em
+  // ordem de data, com o saldo acumulado após cada um. Usa exatamente as
+  // mesmas parcelas de saldoProprio, então o último saldo é o saldo atual.
+  function extratoDoBanco(d, bancoId) {
+    var banco = d.bancos.filter(function (b) { return b.id === bancoId; })[0];
+    if (!banco) return { saldoInicial: 0, itens: [], saldoFinal: 0 };
+    var itens = [];
+    entradasDoBanco(d, bancoId).filter(function (e) { return !e.previsto; }).forEach(function (e) {
+      itens.push({ data: e.data || "", descricao: e.descricao || e.categoria || "Entrada", valor: Number(e.valor || 0), tipo: "entrada" });
+    });
+    despesasDoBanco(d, bancoId).forEach(function (x) {
+      itens.push({ data: x.data || "", descricao: x.descricao || x.categoria || "Despesa", valor: -Number(x.valor || 0), tipo: "despesa" });
+    });
+    movimentosDoBanco(d, bancoId).forEach(function (m) {
+      var v = Number(m.valor || 0);
+      itens.push({ data: m.data || "", descricao: m.descricao || (v >= 0 ? "Entrada" : "Despesa"), valor: v,
+        tipo: m.transferencia ? "transferencia" : v >= 0 ? "entrada" : "despesa" });
+    });
+    // mesmo dia: entradas antes das saídas, para o saldo não oscilar à toa
+    itens.sort(function (a, b) { return String(a.data).localeCompare(String(b.data)) || (b.valor - a.valor); });
+    var saldo = Number(banco.saldoInicial || 0);
+    itens.forEach(function (i) { saldo += i.valor; i.saldo = centavos(saldo); });
+    return { saldoInicial: centavos(Number(banco.saldoInicial || 0)), itens: itens, saldoFinal: centavos(saldo) };
+  }
 
   function listaBancosComSaldo(d) {
     var extras = outrosMovimentos(d);
@@ -380,6 +405,7 @@
     saldoBanco: saldoBanco,
     definirMovimentosExtras: definirMovimentosExtras,
     movimentosDoBanco: movimentosDoBanco,
+    extratoDoBanco: extratoDoBanco,
     listaBancosComSaldo: listaBancosComSaldo,
     totalBancos: totalBancos,
     nomeBanco: nomeBanco,
