@@ -1386,3 +1386,5 @@ button.resumo-pill:active { transform: scale(.98); }
 .filtro-mes:has([data-acao="periodo-metas"]) .abas-periodo button { padding-left: 8px; padding-right: 8px; }
 .filtro-mes:has([data-acao="periodo-metas"]) .sel-ano { padding-left: 10px; }
 .card header .acoes:has([data-acao="periodo-metas"]) { flex: 0 1 auto; min-width: 0; max-width: 100%; }
+.meta-selos { flex: 0 1 auto; max-width: 100%; }
+.meta-rodape-3 .meta-data { justify-self: center; font-size: 10.5px; }
