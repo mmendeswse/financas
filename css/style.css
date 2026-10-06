@@ -1303,7 +1303,8 @@ button.resumo-pill:active { transform: scale(.98); }
   .kv:has(> span > .desc-painel) > b .col-rep:not(:has(.selo-tag)) { display: none; }
   .kv:has(> span > .desc-painel) > b .col-rep:not(:has(.selo-tag)) + .col-status { margin-left: 0; }
 }
-/* quadro de metas do dashboard: cada meta numa caixa, com situação, barra e atual/objetivo */
+/* quadro de metas do dashboard: cada meta numa caixa, com situação, barra e atual/objetivo;
+   a barra e o ícone usam a cor escolhida na meta, o selo usa a cor da situação */
 .metas-lista { padding: 6px 14px 14px; display: flex; flex-direction: column; gap: 10px; }
 .meta-item { display: block; width: 100%; text-align: left; font: inherit; color: inherit; cursor: pointer;
   background: var(--painel-2); border: 1px solid var(--linha-2); border-radius: 10px; padding: 11px 13px 10px; }
@@ -1318,9 +1319,8 @@ button.resumo-pill:active { transform: scale(.98); }
 .meta-rodape { display: flex; justify-content: space-between; gap: 8px; margin-top: 8px; font-size: 11px; color: var(--dim); white-space: nowrap; }
 .meta-rodape span { overflow: hidden; text-overflow: ellipsis; }
 .meta-rodape b { color: var(--texto); }
-.meta-item.st-atencao { --meta-cor: var(--amarelo); } .meta-item.st-atencao .meta-st { --st: var(--amarelo); }
-.meta-item.st-atrasada { --meta-cor: var(--down); } .meta-item.st-atrasada .meta-st { --st: var(--down); }
-.meta-item.st-ok { --meta-cor: var(--up); }
+.meta-item.st-atencao .meta-st { --st: var(--amarelo); }
+.meta-item.st-atrasada .meta-st { --st: var(--down); }
 /* quadro de metas compacto: mesma altura do quadro Receitas x despesas */
 .metas-lista { padding: 4px 12px 12px; gap: 8px; }
 .meta-item { padding: 9px 11px 8px; border-radius: 9px; }
@@ -1333,3 +1333,5 @@ button.resumo-pill:active { transform: scale(.98); }
 .meta-guardar { display: inline-flex; align-items: center; gap: 5px; }
 .meta-guardar svg { flex: none; color: var(--meta-cor, var(--up)); }
 .meta-guardar b { color: var(--texto); }
+.meta-rodape > span:last-child { flex: none; }   /* o percentual nunca é cortado; se faltar espaço, encurta o "Guardar Mês" */
+.meta-guardar { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
