@@ -259,13 +259,20 @@
       .reduce(function (s, c) { return s + Number(c.valor || 0); }, 0);
   }
 
-  // Dívidas do patrimônio: contas não pagas que já venceram ou vencem até o
-  // fim do mês atual. Parcelas de meses futuros ainda não são dívida de hoje.
+  // Dívidas do patrimônio:
+  //  - contas não pagas que já venceram ou vencem até o fim do mês atual;
+  //  - saldo devedor das despesas parceladas (todas as parcelas que faltam,
+  //    calculado pelo app.js), que vai diminuindo a cada parcela paga.
+  var dividasParceladas = null;
+  function definirDividasParceladas(fn) { dividasParceladas = fn; }
+  function ehParcela(c) { return c.recorrencia === "Personalizar" && c.regraRep && Number(c.regraRep.parcelas) > 0; }
+
   function totalDividas(d) {
     var limite = mesAtual();
-    return (d.contasPagar || [])
-      .filter(function (c) { return c.status !== "Pago" && mesDe(c.vencimento) <= limite; })
+    var contas = (d.contasPagar || [])
+      .filter(function (c) { return c.status !== "Pago" && !ehParcela(c) && mesDe(c.vencimento) <= limite; })
       .reduce(function (s, c) { return s + Number(c.valor || 0); }, 0);
+    return contas + (dividasParceladas ? Number(dividasParceladas(d)) || 0 : 0);
   }
 
   function totalAReceber(d) {
@@ -399,6 +406,7 @@
     contasAtrasadas: contasAtrasadas,
     totalAPagar: totalAPagar,
     totalDividas: totalDividas,
+    definirDividasParceladas: definirDividasParceladas,
     totalAReceber: totalAReceber
   };
 })(window);

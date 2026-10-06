@@ -2319,7 +2319,7 @@
           <div class="kv"><span class="dim">Dinheiro em bancos</span><b>${brl(p.bancos)}</b></div>
           <div class="kv"><span class="dim">+ Ações e FIIs</span><b>${brl(p.acoes)}</b></div>
           <div class="kv"><span class="dim">+ Investimentos (renda fixa, tesouro, fundos...)</span><b>${brl(p.investimentos)}</b></div>
-          <div class="kv"><span class="dim">− Dívidas (contas em aberto até este mês)</span><b class="down">${brl(p.dividas)}</b></div>
+          <div class="kv"><span class="dim">− Dívidas (contas em aberto e parcelas a pagar)</span><b class="down">${brl(p.dividas)}</b></div>
         `, `<span>PATRIMÔNIO LÍQUIDO</span><span class="${corSinal(p.liquido)}" style="font-size:15px">${brl(p.liquido)}</span>`)}</div>
       </div>
     `;
@@ -2676,10 +2676,9 @@
       const dsp = achar(DADOS.despesas, id);
       if (dsp) {
         DADOS.despesas = DADOS.despesas.filter((r) => r.id !== dsp.id);
-        DADOS.contasPagar.push({
-          id: dsp.id, descricao: dsp.descricao, categoria: dsp.categoria,
-          vencimento: dsp.data, valor: dsp.valor, status: "Pendente", obs: dsp.obs || ""
-        });
+        // mantém banco e os dados da série (parcelas), só troca a data por vencimento
+        const { data: dataDsp, cartaoId, ...resto } = dsp;
+        DADOS.contasPagar.push({ ...resto, vencimento: dataDsp, status: "Pendente", obs: dsp.obs || "" });
         salvarEAtualizar("Marcada como prevista.");
       }
     } else if (acao === "alternar-pago") {
@@ -2935,6 +2934,29 @@
     return saida;
   }
   F.definirMovimentosExtras(movimentosRepeticoesPagas);
+
+  // Saldo devedor das despesas parceladas (repetição Personalizar com
+  // quantidade de parcelas): soma TODAS as parcelas ainda não pagas, também
+  // as de meses que ainda não foram abertos. Diminui a cada parcela paga.
+  function saldoDevedorParcelas(d) {
+    let total = 0;
+    const todos = [...d.despesas, ...(d.contasPagar || [])];
+    const pago = (x) => d.despesas.includes(x) || x.status === "Pago";
+    todos.filter((o) => ehPers(o) && !o.origemRecorrente && Number(regraDe(o).parcelas) > 0).forEach((orig) => {
+      const regra = regraDe(orig);
+      let mes = regra.primeiraParcela || mesReg(orig);
+      for (let k = 0; k < Number(regra.parcelas); k++) {
+        if (k) for (let i = 0; i < Math.max(1, Number(regra.intervalo) || 1); i++) mes = proximoMes(mes);
+        if (mes === mesReg(orig)) { if (!pago(orig)) total += Number(orig.valor || 0); continue; }
+        if (!ocorrenciasNoMes(orig, mes).length) continue;              // mês fora desta série (excluído ou de outra origem)
+        const inst = todos.find((x) => x.origemRecorrente === orig.id && mesReg(x) === mes);
+        if (inst) { if (!pago(inst)) total += Number(inst.valor || 0); }
+        else if (!mesQuitado(orig, mes)) total += valorDoMes(orig, mes);
+      }
+    });
+    return total;
+  }
+  F.definirDividasParceladas(saldoDevedorParcelas);
 
   // ---- séries "Personalizar": funcionam para entradas e para despesas ----
   // entradas ficam em DADOS.entradas; despesas em DADOS.despesas (pagas) ou
