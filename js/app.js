@@ -22,7 +22,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.0.3";
+  const VERSAO_APP = "3.0.6";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1383,7 +1383,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.0.3" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.0.6" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1447,12 +1447,13 @@
   // =========================================================================
   // WIDGETS — KPI com anel, gauge semicircular, barras, alertas, ticker
   // =========================================================================
+  const EMOJI_KPI = { "Patrimônio líquido": "💎", "Saldo bancário": "🏦", "Investimento Líquido": "📈", "Receitas mês": "💰", "Despesas mês": "💸" };
   function kpiCard(rotulo, valor, gaugePct, cor, deltaHtml, sub, chave) {
     const clicavel = chave ? ` data-acao="explicar-kpi" data-kpi="${chave}" title="Ver como este percentual é calculado"` : "";
     const gauge = gaugePct == null ? "" :
       `<button class="kpi-gauge${chave ? " clicavel" : ""}"${clicavel}>${gaugeSVG(gaugePct, cor, 66)}<span class="kpi-gauge-txt">${Math.round(Math.max(0, Math.min(100, gaugePct)))}%</span></button>`;
     return `<div class="kpi">
-      <div class="kpi-rotulo">${rotulo}</div>
+      <div class="kpi-rotulo">${EMOJI_KPI[rotulo] ? `<span class="kpi-emoji">${EMOJI_KPI[rotulo]}</span>` : ""}<span class="kpi-rotulo-txt">${rotulo}</span></div>
       <div class="kpi-corpo">${gauge}<div class="kpi-info">
         <div class="kpi-valor">${valor}</div>
         ${deltaHtml ? `<div class="kpi-delta">${deltaHtml}</div>` : ""}
@@ -2203,7 +2204,7 @@
     const bancos = bancosNaOrdem(F.listaBancosComSaldo(d)).map((b) => ({ id: b.id, nome: b.nome, valor: b.saldoAtual, cor: b.cor }));
     const composicao = itensPatrimonio(d);
     const totalComp = composicao.reduce((s, i) => s + i.valor, 0);
-    const legendaComp = composicao.length ? composicao.map((i) => `<button class="legenda-linha clicavel" data-acao="explicar-classe" data-rotulo="${esc(i.rotulo)}" title="Ver detalhes"><span class="legenda-nome"><span class="legenda-ponto" style="background:${i.cor}"></span>${esc(i.rotulo)}</span><span class="legenda-pct" style="color:${i.cor}">${(totalComp > 0 ? (i.valor / totalComp) * 100 : 0).toFixed(1).replace(".", ",")}%</span><span class="legenda-val">${brlSinal(i.valor)}</span></button>`).join("") : `<div class="empty">Sem ativos ainda.</div>`;
+    const legendaComp = composicao.length ? composicao.map((i) => `<button class="legenda-linha clicavel" data-acao="explicar-classe" data-rotulo="${esc(i.rotulo)}" title="Ver detalhes"><span class="legenda-nome"><span class="legenda-ponto" style="background:${i.cor}"></span>${esc(i.rotulo)}</span><span class="legenda-pct" style="color:${i.cor}"><span class="emoji-pct">${emojiClasse(i.rotulo)}</span>${(totalComp > 0 ? (i.valor / totalComp) * 100 : 0).toFixed(1).replace(".", ",")}%</span><span class="legenda-val">${brlSinal(i.valor)}</span></button>`).join("") : `<div class="empty">Sem ativos ainda.</div>`;
 
     if (!anoRD) anoRD = String(new Date().getFullYear());
     if (!anoEvo) anoEvo = String(new Date().getFullYear());
@@ -2230,7 +2231,7 @@
       <div class="kpi-row">
         ${kpiCard("Patrimônio líquido", brlSinal(p.bancos + I.totalLiquidoOutros(d) + p.acoes - p.dividas), pctLivre, "var(--cy)", delta(F.variacaoPercentual(p.liquido, patrimonioAnt), "vs mês anterior"), `Dívidas: ${brl(p.dividas)}`, "patrimonio")}
         ${kpiCard("Saldo bancário", brlSinal(p.bancos), pctBancos, "var(--cy)", delta(pctBancos, "do patrimônio"), `${bancos.length} ${bancos.length === 1 ? "Conta Cadastrada" : "Contas Cadastradas"}`, "bancos")}
-        ${kpiCard("Investimentos Líquidos", brlSinal(I.totalLiquidoOutros(d) + p.acoes), pctInvestido, "var(--cy)", delta(rentCarteira, "rent. carteira"), `${pctInvestido.toFixed(0)}% do patrimônio investido`, "investido")}
+        ${kpiCard("Investimento Líquido", brlSinal(I.totalLiquidoOutros(d) + p.acoes), pctInvestido, "var(--cy)", delta(rentCarteira, "rent. carteira"), `${pctInvestido.toFixed(0)}% do patrimônio investido`, "investido")}
         ${kpiCard("Receitas mês", "+" + brl(entradasMes), entradasMes + despesasMes > 0 ? (entradasMes / (entradasMes + despesasMes)) * 100 : 0, "var(--cy)", delta(F.variacaoPercentual(entradasMes, entradasAnt), "vs mês anterior"), `Mês anterior: ${brl(entradasAnt)}`, "receitas")}
         ${kpiCard("Despesas mês", "−" + brl(despesasMes), pctDespesas, "var(--cy)", delta(F.variacaoPercentual(despesasMes, despesasAnt), "vs mês anterior", true), `${pctDespesas.toFixed(0)}% das receitas`, "despesas")}
       </div>
@@ -2303,6 +2304,24 @@
 
   // cada classe do patrimônio com uma cor própria e fixa (sem repetir e sem
   // vermelho, que no programa indica valor negativo)
+  // emoji de cada classe da composição; classe nova ganha um emoji sozinha
+  // (por palavra-chave ou, se nada combinar, um fixo tirado do próprio nome)
+  const EMOJI_CLASSE = {
+    "Bancos": "🏦", "Ações": "📈", "FIIs": "🏢", "ETFs": "🧺", "BDRs": "🌎", "Renda Fixa": "📄", "Tesouro Direto": "🏛️",
+    "Fundos": "💼", "Criptomoedas": "🪙", "Outros": "📦", "Dólar": "💵", "Poupança": "🐷", "Previdência": "🧓"
+  };
+  const EMOJI_CLASSE_CHAVE = [[/banco|conta/i, "🏦"], [/a[cç][aã]o|a[cç][oõ]es|bolsa/i, "📈"], [/fii|imobili/i, "🏢"], [/etf|[ií]ndice/i, "🧺"],
+    [/bdr|exterior|internacional/i, "🌎"], [/renda fixa|cdb|lci|lca|deb[eê]nt|cri\b|cra\b/i, "📄"], [/tesouro/i, "🏛️"], [/fundo/i, "💼"],
+    [/cripto|bitcoin|btc|eth/i, "🪙"], [/d[oó]lar|c[aâ]mbio|moeda/i, "💵"], [/poupan/i, "🐷"], [/previd/i, "🧓"], [/ouro/i, "🥇"], [/im[oó]ve/i, "🏠"]];
+  const EMOJIS_RESERVA = ["🔷", "🔶", "🟣", "🟢", "🔵", "🟠", "🟡", "🔺", "⭐", "💎", "🧩", "🎯"];
+  function emojiClasse(rotulo) {
+    const r = String(rotulo || "");
+    if (EMOJI_CLASSE[r]) return EMOJI_CLASSE[r];
+    const k = EMOJI_CLASSE_CHAVE.find(([re]) => re.test(r));
+    if (k) return k[1];
+    let h = 0; for (const c of r) h = (h * 31 + c.codePointAt(0)) >>> 0;
+    return EMOJIS_RESERVA[h % EMOJIS_RESERVA.length];
+  }
   const CORES_COMPOSICAO = {
     "Bancos": "#00E5FF", "Ações": "#2EE59D", "FIIs": "#A78BFA", "ETFs": "#FFD633",
     "Renda Fixa": "#FF8A3D", "Tesouro Direto": "#3B82F6", "Fundos": "#F472B6",
@@ -2332,7 +2351,7 @@
     const itens = itensPatrimonio(d);
     const total = itens.reduce((s, i) => s + i.valor, 0);
     const legendaHtml = itens.length
-      ? itens.map((i) => `<div class="legenda-linha"><span class="legenda-nome"><span class="legenda-ponto" style="background:${i.cor}"></span>${esc(i.rotulo)}</span><span class="legenda-pct" style="color:${i.cor}">${(total > 0 ? (i.valor / total) * 100 : 0).toFixed(0)}%</span><span class="legenda-val">${brlSinal(i.valor)}</span></div>`).join("")
+      ? itens.map((i) => `<div class="legenda-linha"><span class="legenda-nome"><span class="legenda-ponto" style="background:${i.cor}"></span>${esc(i.rotulo)}</span><span class="legenda-pct" style="color:${i.cor}"><span class="emoji-pct">${emojiClasse(i.rotulo)}</span>${(total > 0 ? (i.valor / total) * 100 : 0).toFixed(0)}%</span><span class="legenda-val">${brlSinal(i.valor)}</span></div>`).join("")
       : `<div class="empty">Cadastre bancos, ações ou investimentos para ver a composição.</div>`;
 
     const serie = serieMensalEfetiva(d, 12);
