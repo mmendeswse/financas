@@ -1376,3 +1376,13 @@ button.resumo-pill:active { transform: scale(.98); }
 /* selo do que falta: 🏁 no lugar da palavra, sempre no ciano padrão do sistema */
 .meta-item .meta-st.meta-falta { --st: var(--cy); gap: 4px; }
 .meta-falta-ic { font-size: 11px; line-height: 1; }
+/* metas: se o nome não couber ao lado dos selos, os selos descem para a linha de baixo */
+.meta-topo { flex-wrap: wrap; row-gap: 6px; }
+.meta-nome { flex: 1 1 120px; }
+.meta-selos { margin-left: auto; flex-wrap: wrap; justify-content: flex-end; row-gap: 4px; }
+/* seletor de ano + abas do quadro de metas quebra de linha se faltar largura */
+.card header .filtro-mes:has([data-acao="periodo-metas"]) { flex-wrap: wrap; row-gap: 6px; }
+/* abas do quadro de metas um pouco mais justas (são 5 + o ano) */
+.filtro-mes:has([data-acao="periodo-metas"]) .abas-periodo button { padding-left: 8px; padding-right: 8px; }
+.filtro-mes:has([data-acao="periodo-metas"]) .sel-ano { padding-left: 10px; }
+.card header .acoes:has([data-acao="periodo-metas"]) { flex: 0 1 auto; min-width: 0; max-width: 100%; }
