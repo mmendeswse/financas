@@ -1348,3 +1348,7 @@ button.resumo-pill:active { transform: scale(.98); }
 .legenda-pct .emoji-pct { margin-right: 5px; font-size: 12px; }
 .legenda-linha:has(.emoji-pct) { grid-template-columns: minmax(0, 1fr) 70px 92px; }
 .legenda-pct:has(.emoji-pct) { white-space: nowrap; }
+/* emoji na frente do título dos quadros de KPI, tudo numa linha */
+.kpi-rotulo { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.kpi-rotulo .kpi-emoji { flex: none; font-size: 13px; letter-spacing: 0; line-height: 1; }
+.kpi-rotulo .kpi-rotulo-txt { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
