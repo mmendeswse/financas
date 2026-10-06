@@ -1244,3 +1244,10 @@ button.resumo-pill:active { transform: scale(.98); }
 
 /* gráficos do USD/BRL, das ações e dos investimentos ocupando a tela inteira (sem o quadro de resumo) */
 .grafico-tela-cheia { min-height: 260px; }   /* a altura exata é calculada no app (até a linha do rodapé) */
+/* emoji na frente da descrição e lista de emojis do formulário */
+.emoji-desc { display: inline-block; margin-right: 6px; font-size: 15px; line-height: 1; vertical-align: -1px; }
+.seletor-emoji { display: grid; grid-template-columns: repeat(auto-fill, minmax(36px, 1fr)); gap: 4px; max-height: 128px; overflow-y: auto;
+  padding: 6px; border: 1px solid var(--linha-2); border-radius: 10px; background: var(--painel-2); }
+.opcao-emoji { height: 36px; border: 1px solid transparent; border-radius: 8px; background: transparent; font-size: 19px; line-height: 1; cursor: pointer; padding: 0; }
+.opcao-emoji:hover { background: var(--painel-3); }
+.opcao-emoji.ativo { border-color: var(--cy); background: var(--painel-3); }

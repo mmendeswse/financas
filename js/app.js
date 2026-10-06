@@ -22,9 +22,20 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "2.8.3";
+  const VERSAO_APP = "2.8.4";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
+  // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
+  // se não houver, o da categoria
+  const EMOJIS_ENTRADA = ["💼", "💰", "💵", "🪙", "🏦", "📈", "💹", "🧾", "💻", "🛍️", "🏷️", "🎁", "🤝", "🏠", "🚗", "💳", "🔁", "🎉", "⭐", "📦"];
+  const EMOJIS_DESPESA = ["🛒", "🍽️", "🍔", "☕", "🏠", "💡", "💧", "🔥", "📶", "📱", "🚗", "⛽", "🚌", "✈️", "🩺", "💊", "🦷", "🏋️", "📚", "🎓",
+    "🎬", "🎮", "🎵", "🍿", "👕", "🛍️", "🎁", "🐶", "👶", "💇", "🔧", "📺", "🤖", "🧾", "🏛️", "📈", "💳", "🏦", "❤️", "📦"];
+  const EMOJI_CATEGORIA = {
+    "Salário": "💼", "Freelance": "💻", "Venda": "🏷️", "Dividendos": "📈", "Juros": "🏦", "Cashback": "🔁",
+    "Alimentação": "🍽️", "Moradia": "🏠", "Transporte": "🚗", "Saúde": "🩺", "Educação": "📚", "Lazer": "🎬",
+    "Compras": "🛍️", "Assinaturas": "📺", "Cartão de crédito": "💳", "Impostos": "🧾", "Investimentos": "📈", "Outros": "📦"
+  };
+  const emojiDe = (x) => (x && x.emoji) || EMOJI_CATEGORIA[x && x.categoria] || "📦";
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
   const FORMAS_PAGAMENTO = ["Débito", "Pix", "Dinheiro", "Cartão Crédito", "Boleto", "Transferência", "Débito Automático"];
   const CATS_INVESTIMENTO = ["Renda fixa", "Tesouro Direto", "Criptomoedas", "Fundos", "Outros"];
@@ -1345,7 +1356,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.8.3" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.8.4" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2987,12 +2998,12 @@
   const registrosSerie = (tipo) => COLECOES_SERIE[tipo].flatMap((c) => DADOS[c]);
   const removerRegistro = (tipo, id) => COLECOES_SERIE[tipo].forEach((c) => { DADOS[c] = DADOS[c].filter((x) => x.id !== id); });
   const definirData = (x, iso) => { if (x.vencimento !== undefined) x.vencimento = iso; else x.data = iso; };
-  const CAMPOS_SERIE = ["descricao", "categoria", "bancoId", "tipo", "obs", "valor"];
+  const CAMPOS_SERIE = ["descricao", "emoji", "categoria", "bancoId", "tipo", "obs", "valor"];
 
   // cria (sem gravar) o lançamento de um mês da série
   function novaOcorrencia(tipo, orig, mes) {
     const base = {
-      id: A.novoId(), origemRecorrente: orig.id, descricao: orig.descricao, categoria: orig.categoria,
+      id: A.novoId(), origemRecorrente: orig.id, descricao: orig.descricao, emoji: orig.emoji, categoria: orig.categoria,
       bancoId: orig.bancoId, tipo: orig.tipo, obs: orig.obs || "", valor: valorDoMes(orig, mes),
       recorrencia: FREQ_PERS, regraRep: regraDe(orig), recorrente: false
     };
@@ -3183,6 +3194,32 @@
     return () => (campoRec.value === FREQ_PERS ? ler() : null);
   }
 
+  // Lista de emojis do formulário: o escolhido fica marcado; sem escolha,
+  // acompanha a categoria selecionada
+  function campoEmoji(lista, atual) {
+    const opcoesEmoji = atual && lista.indexOf(atual) === -1 ? [atual, ...lista] : lista;
+    return `<div class="campo"><label>Emoji</label><div class="seletor-emoji" id="f_emoji">${opcoesEmoji.map((em) =>
+      `<button type="button" class="opcao-emoji" data-emoji="${em}">${em}</button>`).join("")}</div></div>`;
+  }
+  function ligarEmoji(atual) {
+    const caixa = document.getElementById("f_emoji");
+    const selCat = document.getElementById("f_cat");
+    let escolhido = atual || "";
+    const marcar = () => {
+      const ativo = escolhido || EMOJI_CATEGORIA[selCat.value] || "";
+      caixa.querySelectorAll(".opcao-emoji").forEach((b) => b.classList.toggle("ativo", b.dataset.emoji === ativo));
+    };
+    caixa.addEventListener("click", (ev) => {
+      const b = ev.target.closest(".opcao-emoji");
+      if (!b) return;
+      escolhido = escolhido === b.dataset.emoji ? "" : b.dataset.emoji;   // clicar de novo volta ao da categoria
+      marcar();
+    });
+    selCat.addEventListener("change", marcar);
+    marcar();
+    return () => escolhido || undefined;
+  }
+
   function renderEntradas(d) {
     if (!mesEntradas) mesEntradas = F.mesAtual();
     materializarPers("entrada", mesEntradas);   // cria o lançamento do mês das séries "Personalizar"
@@ -3211,7 +3248,7 @@
         listaTabela.map((e) => `
         <div class="rw clicavel${e.prevista ? " linha-prevista" : ""}" style="${grid}" data-acao="${e.prevista ? "editar-previsao-entrada" : "editar-entrada"}" data-id="${e.id}" data-data="${e.data}" title="${e.prevista ? "Abre este mês para edição (o valor muda só aqui)" : "Abrir para editar"}">
           <div class="dim" style="font-size:12px">${fmtDataCurta(e.data)}</div>
-          <div><div class="nm">${esc(e.descricao)}${seloFreq(e)}</div><div class="sub">${esc(e.categoria)} · ${esc(e.tipo || "")}</div></div>
+          <div><div class="nm"><span class="emoji-desc">${emojiDe(e)}</span>${esc(e.descricao)}${seloFreq(e)}</div><div class="sub">${esc(e.categoria)} · ${esc(e.tipo || "")}</div></div>
           <div><button class="cel-banco cel-banco-botao" data-acao="trocar-banco-entrada" data-id="${e.id}" title="${e.prevista ? "Troca o banco do lançamento original (vale para todas as repetições)" : "Trocar o banco desta entrada"}">${marcaBanco(e.banco, 26)}<span class="dim">${esc(e.banco)}</span></button></div>
           <div>${e.prevista
             ? `<button class="selo-tag ${e.recebidaNoMes ? "selo-pago" : "selo-prevista"} selo-botao" data-acao="quitar-mes-entrada" data-id="${e.id}" data-mes="${e.mesRef}" title="${e.recebidaNoMes ? "Marcar como prevista" : "Marcar como paga"}">${e.status}</button>`
@@ -3268,6 +3305,7 @@
         <div class="campo"><label for="f_data">Data</label><input id="f_data" type="date" value="${previsao ? previsao.data : (e ? e.data : hojeISO())}"></div>
         <div class="campo"><label for="f_valor">Valor</label>${campoMoeda("f_valor", e ? (previsao ? valorDoMes(e, previsao.data.slice(0, 7)) : e.valor) : "")}</div>
       </div>
+      ${campoEmoji(EMOJIS_ENTRADA, e && e.emoji)}
       <div class="campo"><label for="f_desc">Descrição</label><input id="f_desc" value="${e ? esc(e.descricao) : ""}" placeholder="Salário"></div>
       <div class="par">
         <div class="campo"><label for="f_cat">Categoria</label><select id="f_cat">${opcoes(CATS_ENTRADA, e ? e.categoria : CATS_ENTRADA[0])}</select></div>
@@ -3285,6 +3323,7 @@
 
     // "Personalizar": a data vira calculada (somente leitura) para o mês escolhido
     const mesDoForm = e ? String(e.data).slice(0, 7) : (mesEntradas || (document.getElementById("f_data").value || hojeISO()).slice(0, 7));   // mês aberto na guia
+    const lerEmoji = ligarEmoji(e && e.emoji);
     const regraDoForm = ligarPersonalizar(mesDoForm, "O lançamento de cada mês é criado sozinho, com status Prevista, para você marcar como Pago depois.");
 
     document.getElementById("btnSalvar").onclick = () => {
@@ -3296,6 +3335,7 @@
         id: e ? e.id : A.novoId(),
         data: document.getElementById("f_data").value || hojeISO(),
         descricao: desc,
+        emoji: lerEmoji(),
         categoria: document.getElementById("f_cat").value,
         bancoId: banco,
         valor: numIn(document.getElementById("f_valor").value),
@@ -3314,6 +3354,7 @@
       if (previsao) {
         // muda só o mês editado, dentro do próprio lançamento recorrente
         gravarAjuste(e, previsao.data.slice(0, 7), { valor: registro.valor });
+        e.emoji = registro.emoji;   // o emoji vale para a série toda
         if (registro.data && registro.data !== previsao.data) registrarReancoragem(e, previsao.data.slice(0, 7), registro.data);
       } else if (e) Object.assign(e, manterSerie(e, registro));
       else DADOS.entradas.push(registro);
@@ -3352,7 +3393,7 @@
     // a tela reúne o que já saiu (despesas lançadas) e o que ainda vai
     // sair (contas a pagar), com o status de cada linha
     const lancadas = d.despesas.map((x) => ({
-      origem: "despesa", id: x.id, descricao: x.descricao, categoria: x.categoria, tipo: x.tipo,
+      origem: "despesa", id: x.id, descricao: x.descricao, emoji: x.emoji, categoria: x.categoria, tipo: x.tipo,
       pagoCom: bancoDoLancamento(d, x),
       data: x.data, status: "Pago", valor: Number(x.valor || 0), recorrencia: freqDe(x)
     }));
@@ -3362,19 +3403,19 @@
     // contas a pagar recorrentes também geram previsões
     const contasComoLista = (d.contasPagar || []).map((c) => ({ ...c, data: c.vencimento }));
     const repeticoesContas = repeticoesPrevistas(contasComoLista, mesDespesas, (reg, data) => ({
-      origem: "conta", id: reg.id, descricao: reg.descricao, categoria: reg.categoria, tipo: reg.tipo,
+      origem: "conta", id: reg.id, descricao: reg.descricao, emoji: reg.emoji, categoria: reg.categoria, tipo: reg.tipo,
       pagoCom: bancoDoMes(reg, data.slice(0, 7)) ? F.nomeBanco(d, bancoDoMes(reg, data.slice(0, 7))) : "—", data, valor: valorDoMes(reg, data.slice(0, 7)),
       status: mesQuitado(reg, data.slice(0, 7)) ? "Pago" : "Prevista",
       recorrencia: freqDe(reg), prevista: true, mesRef: data.slice(0, 7)
     }), []);
     const repeticoes = repeticoesPrevistas(d.despesas, mesDespesas, (reg, data) => ({
-      origem: "despesa", id: reg.id, descricao: reg.descricao, categoria: reg.categoria, tipo: reg.tipo,
+      origem: "despesa", id: reg.id, descricao: reg.descricao, emoji: reg.emoji, categoria: reg.categoria, tipo: reg.tipo,
       pagoCom: bancoDoLancamento(d, { ...reg, bancoId: bancoDoMes(reg, data.slice(0, 7)) }), data, valor: valorDoMes(reg, data.slice(0, 7)),
       status: mesQuitado(reg, data.slice(0, 7)) ? "Pago" : "Prevista",
       recorrencia: freqDe(reg), prevista: true, mesRef: data.slice(0, 7)
     }), contasDoMes);
     const previstas = F.listaContasPagarComStatus(d).map((c) => ({
-      origem: "conta", id: c.id, descricao: c.descricao, categoria: c.categoria, tipo: c.tipo,
+      origem: "conta", id: c.id, descricao: c.descricao, emoji: c.emoji, categoria: c.categoria, tipo: c.tipo,
       pagoCom: c.bancoId ? F.nomeBanco(d, c.bancoId) : "—",
       data: c.vencimento, status: c.statusReal === "Pendente" ? "Prevista" : c.statusReal,
       valor: Number(c.valor || 0), recorrencia: freqDe(c)
@@ -3407,7 +3448,7 @@
         listaTabela.map((x) => `
         <div class="rw clicavel${x.prevista ? " linha-prevista" : ""}" style="${gridD}" data-acao="${x.prevista ? (x.origem === "conta" ? "editar-previsao-conta" : "editar-previsao") : (x.origem === "despesa" ? "editar-despesa" : "editar-conta")}" data-id="${x.id}" data-data="${x.data}" title="${x.prevista ? "Abre este mês para edição (o valor muda só aqui)" : "Abrir para editar"}">
           <div class="dim" style="font-size:12px">${fmtData(x.data)}</div>
-          <div><div class="nm">${esc(x.descricao)}${seloFreq({ ...(registrosSerie("despesa").find((y) => y.id === x.id) || {}), recorrencia: x.recorrencia, data: x.data })}</div><div class="sub">${esc(x.categoria || "—")} · ${esc(x.tipo || "Variável")}</div></div>
+          <div><div class="nm"><span class="emoji-desc">${emojiDe(x)}</span>${esc(x.descricao)}${seloFreq({ ...(registrosSerie("despesa").find((y) => y.id === x.id) || {}), recorrencia: x.recorrencia, data: x.data })}</div><div class="sub">${esc(x.categoria || "—")} · ${esc(x.tipo || "Variável")}</div></div>
           <div>${x.origem === "despesa" || x.pagoCom !== "—"
             ? `<button class="cel-banco cel-banco-botao" data-acao="${x.origem === "despesa" ? "trocar-banco" : "trocar-banco-conta"}" data-id="${x.id}" title="Trocar o banco (nas repetições, altera o lançamento original)">${marcaBanco(x.pagoCom, 26)}<span class="dim">${esc(x.pagoCom)}</span></button>`
             : `<span class="cel-banco">${x.pagoCom && x.pagoCom !== "—" ? marcaBanco(x.pagoCom, 26) + `<span class="dim">${esc(x.pagoCom)}</span>` : '<span class="dim">—</span>'}</span>`}</div>
@@ -3462,6 +3503,7 @@
         <div class="campo"><label for="f_data"><span id="rotuloData">${statusAtual === "Pago" ? "Data" : "Data de vencimento"}</span></label><input id="f_data" type="date" value="${dataAtual}"></div>
         <div class="campo"><label for="f_valor">Valor</label>${campoMoeda("f_valor", x ? (previsao ? valorDoMes(x, previsao.data.slice(0, 7)) : x.valor) : "")}</div>
       </div>
+      ${campoEmoji(EMOJIS_DESPESA, x && x.emoji)}
       <div class="campo"><label for="f_desc">Descrição</label><input id="f_desc" value="${x ? esc(x.descricao) : ""}" placeholder="Supermercado"></div>
       <div class="par">
         <div class="campo"><label for="f_cat">Categoria</label><select id="f_cat">${opcoes(CATS_DESPESA, x ? x.categoria : CATS_DESPESA[0])}</select></div>
@@ -3491,6 +3533,7 @@
     });
 
     const mesDoFormD = x ? String(ehConta ? x.vencimento : x.data).slice(0, 7) : (mesDespesas || hojeISO().slice(0, 7));   // mês aberto na guia
+    const lerEmojiD = ligarEmoji(x && x.emoji);
     const regraDoFormD = ligarPersonalizar(mesDoFormD, "O lançamento de cada mês é criado sozinho, com status Prevista, para você marcar como Pago depois.");
 
     document.getElementById("btnSalvar").onclick = () => {
@@ -3503,7 +3546,7 @@
         // lançamento já existente da série: pergunta o alcance e aplica o status só no mês editado
         const pagarCom = document.getElementById("f_pagarcom") ? document.getElementById("f_pagarcom").value : "";
         const [tipoPg, idPg] = String(pagarCom || ":").split(":");
-        const reg = { descricao: desc, categoria: document.getElementById("f_cat").value, tipo: document.getElementById("f_tipo").value,
+        const reg = { descricao: desc, emoji: lerEmojiD(), categoria: document.getElementById("f_cat").value, tipo: document.getElementById("f_tipo").value,
           obs: document.getElementById("f_obs").value.trim(), valor: numIn(document.getElementById("f_valor").value), regraRep: regraLida };
         if (tipoPg === "banco" && idPg) reg.bancoId = idPg;
         escolherAlcance("Salvar alteração", (alcance) => {
@@ -3517,13 +3560,15 @@
       const categoria = document.getElementById("f_cat").value;
       const tipo = document.getElementById("f_tipo").value;
       const obs = document.getElementById("f_obs").value.trim();
+      const emoji = lerEmojiD();
+      if (previsao && x) x.emoji = emoji;   // o emoji vale para a série toda
 
       if (status === "Pago") {
         const pagarCom = document.getElementById("f_pagarcom").value;
         if (!pagarCom) { toast("Selecione com o que essa despesa foi paga."); return; }
         const [tipoPg, idPg] = pagarCom.split(":");
         const registro = {
-          id: (x && !ehConta) ? x.id : A.novoId(), data, descricao: desc, categoria, tipo,
+          id: (x && !ehConta) ? x.id : A.novoId(), data, descricao: desc, emoji, categoria, tipo,
           bancoId: tipoPg === "banco" ? idPg : "", cartaoId: tipoPg === "cartao" ? idPg : "",
           valor, formaPagamento: document.getElementById("f_forma").value,
           recorrencia: document.getElementById("f_rec").value,
@@ -3541,7 +3586,7 @@
         const pagarComP = document.getElementById("f_pagarcom").value;
         const [tipoP, idP] = pagarComP ? pagarComP.split(":") : ["", ""];
         const registro = {
-          id: (x && ehConta) ? x.id : A.novoId(), descricao: desc, categoria, tipo,
+          id: (x && ehConta) ? x.id : A.novoId(), descricao: desc, emoji, categoria, tipo,
           vencimento: data, valor, status: "Pendente", obs,
           bancoId: tipoP === "banco" ? idP : "",
           formaPagamento: document.getElementById("f_forma").value,
