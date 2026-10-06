@@ -58,10 +58,20 @@
   function rotuloIntervalo(n) {
     return ({ 1: "mensal", 2: "bimestral", 3: "trimestral", 6: "semestral", 12: "anual" })[Number(n) || 1] || `a cada ${n} meses`;
   }
+  // Parcelas de uma série "Personalizar": regra.parcelas = total e
+  // regra.primeiraParcela = mês (AAAA-MM) da parcela 1. Devolve o número da
+  // parcela daquele mês (1, 2, …) ou 0 se a série não tiver parcelas.
+  function numeroParcela(regra, mes) {
+    if (!regra || !(Number(regra.parcelas) > 0) || !regra.primeiraParcela || !mes) return 0;
+    const [a0, m0] = regra.primeiraParcela.split("-").map(Number), [a1, m1] = mes.split("-").map(Number);
+    return Math.floor(((a1 - a0) * 12 + (m1 - m0)) / Math.max(1, Number(regra.intervalo) || 1)) + 1;
+  }
   function seloFreq(reg) {
     const f = freqDe(reg);
     if (f === FREQ_PERS) {
       const regra = regraDe(reg);
+      const n = numeroParcela(regra, mesReg(reg));
+      if (n > 0) return ` <span class="selo-tag selo-cat" title="Parcela ${n} de ${regra.parcelas} · ${esc(rotuloRegra(regra))}">${n}/${regra.parcelas}</span>${seloSabado(reg)}`;
       return ` <span class="selo-tag selo-cat" title="Personalizar: ${esc(rotuloRegra(regra))}, ${esc(rotuloIntervalo(regra.intervalo))}">${esc(rotuloIntervalo(regra.intervalo))}</span>${seloSabado(reg)}`;
     }
     return f === FREQUENCIAS[0] ? "" : ` <span class="selo-tag selo-cat">${esc(f.toLowerCase())}</span>`;
@@ -2534,6 +2544,7 @@
       const regra = regraDe(reg);
       const [a0, m0] = inicio.split("-").map(Number), [a1, m1] = mes.split("-").map(Number);
       if (((a1 - a0) * 12 + (m1 - m0)) % Math.max(1, Number(regra.intervalo) || 1) !== 0) return [];
+      if (numeroParcela(regra, mes) > Number(regra.parcelas)) return [];   // já passou da última parcela
       return [dataDoMesRegra(regra, mes)];
     }
     if (freq === FREQUENCIAS[0] || !reg.data) return [];
@@ -2948,6 +2959,10 @@
       if (registrosSerie(tipo).some((x) => x.origemRecorrente === orig.id && mesReg(x) === mes)) return;
       novaOcorrencia(tipo, orig, mes); criados++;
     });
+    // parcelas que sobraram depois de diminuir a quantidade (só as ainda não pagas)
+    registrosSerie(tipo).filter((x) => x.origemRecorrente && ehPers(x) && x.status !== "Pago" && (tipo !== "entrada" || x.previsto))
+      .filter((x) => { const r = regraDe(x); return numeroParcela(r, mesReg(x)) > Number(r.parcelas); })
+      .forEach((x) => { removerRegistro(tipo, x.id); criados++; });
     if (criados) { A.salvarDados(DADOS, true); agendarEnvioSync(); }   // grava sem redesenhar a tela em laço
     return criados;
   }
@@ -3059,6 +3074,8 @@
           <div class="campo" id="p_campoAjuste"><label for="p_ajuste">Se cair em fim de semana ou feriado</label><select id="p_ajuste">${op([["proximo", "Próximo dia útil"], ["anterior", "Dia útil anterior"], ["manter", "Manter a data"]], r.ajuste)}</select></div>
           <div class="campo"><label for="p_intervalo">Repetir</label><select id="p_intervalo">${op([[1, "Todo mês"], [2, "A cada 2 meses"], [3, "A cada 3 meses"], [6, "A cada 6 meses"], [12, "Uma vez por ano"]], r.intervalo)}</select></div>
         </div>
+        <div class="campo"><label for="p_parcelas">Quantidade de parcelas</label><input id="p_parcelas" type="number" min="0" max="600" inputmode="numeric" placeholder="Sem fim" value="${Number(r.parcelas) > 0 ? r.parcelas : ""}" data-primeira="${esc(r.primeiraParcela || "")}">
+          <div class="ajuda">Deixe vazio para repetir sem data para acabar.</div></div>
         <div class="ajuda" id="p_previa"></div>
       </div>`;
   }
@@ -3073,7 +3090,12 @@
       tipo: document.getElementById("p_tipo").value,
       n: Math.max(1, Math.min(31, Number(document.getElementById("p_n").value) || 1)),
       ajuste: document.getElementById("p_ajuste").value,
-      intervalo: Number(document.getElementById("p_intervalo").value) || 1
+      intervalo: Number(document.getElementById("p_intervalo").value) || 1,
+      // a parcela 1 é o mês do lançamento (ou a já gravada, ao editar uma parcela)
+      ...((Number(document.getElementById("p_parcelas").value) || 0) > 0 ? {
+        parcelas: Math.min(600, Math.floor(Number(document.getElementById("p_parcelas").value))),
+        primeiraParcela: document.getElementById("p_parcelas").dataset.primeira || mesDoForm
+      } : {})
     });
     const atualizar = () => {
       const ativo = campoRec.value === FREQ_PERS;
@@ -3091,7 +3113,16 @@
       ajudaData.textContent = `A data é calculada todo mês pela regra: ${rotuloRegra(r)}.`;
       const prox = []; let mes = mesDoForm;
       for (let i = 0; i < 4; i++) { const [a, m] = mes.split("-").map(Number); const c = F.calcularDataRegra(a, m, r); prox.push(fmtData(c.data) + (c.alertaSabado ? " ⚠️" : "")); for (let k = 0; k < r.intervalo; k++) mes = proximoMes(mes); }
-      document.getElementById("p_previa").textContent = "Próximas datas: " + prox.join(" · ");
+      let previa = "Próximas datas: " + prox.join(" · ");
+      if (r.parcelas) {
+        // data da última parcela
+        let mesFim = r.primeiraParcela;
+        for (let k = 0; k < (r.parcelas - 1) * r.intervalo; k++) mesFim = proximoMes(mesFim);
+        const [af, mf] = mesFim.split("-").map(Number);
+        const nAtual = numeroParcela(r, mesDoForm);
+        previa = `Parcela ${nAtual} de ${r.parcelas} · última em ${fmtData(F.calcularDataRegra(af, mf, r).data)}. ` + previa;
+      }
+      document.getElementById("p_previa").textContent = previa;
     };
     ["change", "input"].forEach((ev) => bloco.addEventListener(ev, atualizar));
     campoRec.addEventListener("change", atualizar);
