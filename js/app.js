@@ -22,7 +22,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.1.5";
+  const VERSAO_APP = "3.1.6";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -152,6 +152,7 @@
   let ROTA = { secao: "dashboard", param: null };
   let editandoPrecos = false;
   let periodoGrafico = "tudo";
+  let periodoMetas = 0;   // quadro de metas: 0 = Atual (sempre abre assim), -1 = Início, 3/6/12 = meses atrás
   let anoRD = null;    // ano escolhido no quadro Receitas x despesas
   let anoEvo = null;   // ano escolhido no quadro Evolução patrimonial
   let mesesRD = 6;        // meses no gráfico receitas x despesas
@@ -1383,7 +1384,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.1.5" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.1.6" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1560,15 +1561,49 @@
 
   const ICONE_GUARDAR_MES = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M12 13.2v5M9.8 15.4h4.4"/></svg>';
   const brlCurto = (v) => brl(v).replace(/,00$/, "");   // sem centavos quando o valor é redondo
+  // Histórico do valor guardado em cada meta ({ data, valor }), gravado a cada
+  // mudança do "Atual" — é dele que sai a evolução por período do quadro.
+  // Metas antigas, sem histórico, começam a ser registradas a partir de agora.
+  function registrarHistMeta(m) {
+    const hoje = hojeISO(), valor = Number(m.atual || 0);
+    const hist = Array.isArray(m.historico) ? m.historico : (m.historico = []);
+    const ultimo = hist[hist.length - 1];
+    if (ultimo && ultimo.data === hoje) ultimo.valor = valor;
+    else if (!ultimo || ultimo.valor !== valor) hist.push({ data: hoje, valor });
+  }
+  // valor guardado na meta numa data (antes do 1º registro, vale o 1º registro)
+  function valorMetaEm(m, iso) {
+    const hist = Array.isArray(m.historico) ? m.historico : [];
+    if (!hist.length) return Number(m.atual || 0);
+    let v = hist[0].valor;
+    hist.forEach((h) => { if (h.data <= iso) v = h.valor; });
+    return Number(v || 0);
+  }
+  function dataInicioPeriodoMetas(m) {
+    if (periodoMetas === -1) return (Array.isArray(m.historico) && m.historico.length) ? m.historico[0].data : hojeISO();
+    const d = new Date(); d.setMonth(d.getMonth() - periodoMetas);
+    return d.toISOString().slice(0, 10);
+  }
+
   function metasMini(d) {
     if (!d.metas.length) return `<div class="empty" style="padding:14px">Nenhuma meta cadastrada.</div>`;
     return `<div class="metas-lista">` + d.metas.slice(0, 3).map((m) => {   // 3 metas: mesma altura do quadro Receitas x despesas
       const p = m.objetivo > 0 ? Math.min(100, (m.atual / m.objetivo) * 100) : 0;
       const st = situacaoMeta(m);
+      // período diferente de "Atual": a barra mostra quanto havia no começo do período (cheia)
+      // e o que entrou desde então (clara), e o meio da linha mostra esse ganho
+      const comparando = periodoMetas !== 0;
+      const inicio = comparando ? dataInicioPeriodoMetas(m) : null;
+      const base = comparando ? valorMetaEm(m, inicio) : Number(m.atual || 0);
+      const pBase = m.objetivo > 0 ? Math.min(100, (base / m.objetivo) * 100) : 0;
+      const ganho = Number(m.atual || 0) - base;
+      const meio = comparando
+        ? `<span class="meta-evolucao ${ganho > 0 ? "up" : ganho < 0 ? "down" : ""}" title="Desde ${fmtData(inicio)}">${ganho > 0 ? "▲" : ganho < 0 ? "▼" : "•"} ${ganho >= 0 ? "+" : "−"}${brlCurto(Math.abs(ganho))} desde ${fmtData(inicio)}</span>`
+        : `<span class="meta-guardar" title="Guardar por mês · data final da meta">${ICONE_GUARDAR_MES}${Number(m.aporteMensal) > 0 ? `<b>${brlCurto(m.aporteMensal)}</b>/mês` : "—/mês"}${m.prazo ? ` · ${fmtData(m.prazo)}` : ""}</span>`;
       return `<button class="meta-item clicavel st-${st.chave}" style="--meta-cor:${esc(m.cor || "var(--up)")}" data-acao="explicar-meta" data-id="${m.id}" title="Ver detalhes da meta">
         <div class="meta-topo"><span class="meta-nome">${nomeMeta(m)}</span><span class="meta-selos">${Number(m.objetivo || 0) > Number(m.atual || 0) ? `<span class="meta-st meta-falta" title="Quanto falta para o objetivo">Falta ${brlCurto(Number(m.objetivo) - Number(m.atual || 0))}</span>` : ""}<span class="meta-st"><i></i>${st.rotulo}</span></span></div>
-        <div class="meta-barra"><i style="width:${p}%"></i></div>
-        <div class="meta-rodape meta-rodape-3"><span><i class="rot">Atual: </i>${brlCurto(m.atual)}</span><span class="meta-guardar" title="Guardar por mês · data final da meta">${ICONE_GUARDAR_MES}${Number(m.aporteMensal) > 0 ? `<b>${brlCurto(m.aporteMensal)}</b>/mês` : "—/mês"}${m.prazo ? ` · ${fmtData(m.prazo)}` : ""}</span><span><i class="rot">Objetivo: </i>${brlCurto(m.objetivo)} · <b>${p.toFixed(0)}%</b></span></div>
+        <div class="meta-barra">${comparando ? `<i style="width:${pBase}%"></i><i class="meta-barra-ganho" style="width:${Math.max(0, p - pBase)}%"></i>` : `<i style="width:${p}%"></i>`}</div>
+        <div class="meta-rodape meta-rodape-3"><span><i class="rot">${comparando ? "Início: " : "Atual: "}</i>${brlCurto(base)}</span>${meio}<span><i class="rot">Objetivo: </i>${brlCurto(m.objetivo)} · <b>${p.toFixed(0)}%</b></span></div>
       </button>`;
     }).join("") + `</div>`;
   }
@@ -2247,7 +2282,7 @@
           </div>`)}</div>
         <div class="c3">${card("", "Receitas x despesas", `${mesesRD} ${mesesRD === 1 ? "mês" : "meses"} de ${anoRD}`,
           `<div class="filtro-mes">${seletorAnoDash("anoRD", anoRD, anosDashboard(d))}${abasMeses("periodo-rd", mesesRD, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }])}</div>`, `<div style="padding:8px 14px 12px;height:236px"><canvas id="graf-receitas-despesas"></canvas></div>`)}</div>
-        <div class="c3">${card("", "Metas", resumoMetas(d), `<button class="btn-ver-todas" data-acao="ir" data-secao="metas" title="Ver todas as metas" aria-label="Ver todas as metas"><svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10h12M11 5l5 5-5 5"/></svg></button>`, metasMini(d))}</div>
+        <div class="c3">${card("", "Metas", resumoMetas(d), abasMeses("periodo-metas", periodoMetas, [{ meses: -1, rotulo: "Início" }, { meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }, { meses: 0, rotulo: "Atual" }]), metasMini(d))}</div>
       </div>
 
       <div class="grid">
@@ -5055,6 +5090,7 @@
         emoji: lerEmojiMeta()
       };
       if (m) Object.assign(m, registro); else DADOS.metas.push(registro);
+      registrarHistMeta(m || registro);
       fecharModal();
       salvarEAtualizar(m ? "Meta atualizada." : "Meta criada.");
     };
@@ -5417,6 +5453,7 @@
         case "periodo-rel-a": mesesRelA = Number(b.dataset.meses); renderRota(); break;
         case "periodo-rel-b": mesesRelB = Number(b.dataset.meses); renderRota(); break;
         case "periodo-rd": mesesRD = Number(b.dataset.meses); renderRota(); break;
+        case "periodo-metas": periodoMetas = Number(b.dataset.meses); renderRota(); break;
         case "periodo-evo": mesesEvo = Number(b.dataset.meses); renderRota(); break;
         case "periodo-grafico": periodoGrafico = b.dataset.periodo; renderRota(); break;
         case "novo-preco-acao": abrirModalNovoPreco(id); break;
@@ -5598,6 +5635,7 @@
       const v = numIn(document.getElementById("f_valor").value);
       if (v <= 0) { toast("Informe um valor maior que zero."); return; }
       m.atual = Number(m.atual || 0) + v;
+      registrarHistMeta(m);
       fecharModal();
       salvarEAtualizar(`${brl(v)} adicionado à meta "${m.nome}".`);
     };
