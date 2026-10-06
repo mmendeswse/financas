@@ -22,7 +22,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.4.8";
+  const VERSAO_APP = "3.4.9";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1193,7 +1193,7 @@
     // todas as metas, cada uma com o emoji e o valor do "Guardar Mês"
     const partes = d.metas.map((m) => `${emojiMeta(m)} ${esc(m.nome)}${Number(m.aporteMensal || 0) > 0 ? ` ${brl(m.aporteMensal)}` : ""}`);
     return { tipo: nenhum ? "perigo" : "aviso", rota: "metas",
-      texto: `Seu salário foi pago (${fmtData(pagamento)}): guarde o valor do mês nas metas — ${partes.join(", ")}` };
+      texto: `Seu salário foi pago (${fmtData(pagamento)}): guarde o valor do mês nas metas:<span class="notif-lista">${partes.map((x) => `<span class="notif-item">${x}</span>`).join("")}</span>` };
   }
 
   function gerarAlertas(d) {
@@ -1411,7 +1411,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.4.8" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.4.9" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
