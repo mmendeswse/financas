@@ -1485,3 +1485,6 @@ button.resumo-pill:active { transform: scale(.98); }
 .meta-bolinha.st-nada { background: var(--down); box-shadow: 0 0 0 2px rgba(255,92,106,.22); }
 .meta-bolinha.st-atencao { background: #FFD60A; box-shadow: 0 0 0 2px rgba(255,214,10,.22); }
 .meta-bolinha.st-ok { background: var(--up); box-shadow: 0 0 0 2px rgba(46,229,157,.18); }
+/* aviso "⚠️ sábado" embaixo da data nas guias Entradas e Despesas */
+.cel-data { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.cel-data .selo-sabado { margin-left: 0; font-size: 9.5px; padding: 1px 6px; white-space: nowrap; }
