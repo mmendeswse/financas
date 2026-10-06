@@ -1341,7 +1341,7 @@ button.resumo-pill:active { transform: scale(.98); }
 .meta-rodape-3 .meta-guardar svg { display: inline-block; vertical-align: -2px; margin-right: 4px; }
 .meta-rodape-3 i.rot { font-style: normal; }
 .metas-lista { container-type: inline-size; }
-@container (max-width: 330px) { .meta-rodape-3 i.rot { display: none; } }
+@container (max-width: 400px) { .meta-rodape-3 i.rot { display: none; } }
 .meta-rodape-3 { font-size: 10.5px; gap: 6px; }
 .meta-rodape-3 > span:first-child { flex: none; }
 /* emoji da classe na frente da porcentagem (legenda da composição) */
@@ -1364,3 +1364,12 @@ button.resumo-pill:active { transform: scale(.98); }
 .btn-ver-todas:hover svg { transform: translateX(2px); }
 .btn-ver-todas svg { transition: transform .15s; }
 .btn-ver-todas { padding: 5px 9px; }
+/* "Falta R$ X" ao lado do selo de situação, no mesmo formato e cor */
+.meta-selos { display: inline-flex; align-items: center; gap: 6px; flex: none; }
+/* quadro de metas: fontes um pouco maiores */
+.meta-nome { font-size: 13.5px; }
+.meta-st { font-size: 10.5px; padding: 2px 8px; }
+.meta-st i { width: 7px; height: 7px; }
+.meta-rodape-3 { font-size: 11.5px; }
+.meta-rodape-3 .meta-guardar svg { width: 14px; height: 14px; }
+.meta-barra { height: 6px; }
