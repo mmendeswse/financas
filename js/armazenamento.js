@@ -76,6 +76,7 @@
       despesas: [],
       cartoes: [],
       contasPagar: [],
+      transferencias: [],   // { id, data, deBancoId, paraBancoId, valor, obs }
       investimentos: [],
       acoes: [],
       metas: [],

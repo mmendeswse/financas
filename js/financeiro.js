@@ -47,6 +47,7 @@
 
   // Movimentos que não estão em entradas/despesas, mas mexem no saldo:
   //  - contas a pagar marcadas como "Pago" (saem do banco escolhido);
+  //  - transferências entre os próprios bancos;
   //  - repetições de lançamentos recorrentes marcadas como pagas no mês
   //    (calculadas pelo app.js, que conhece as regras de repetição).
   // Cada item: { bancoId, valor (positivo entra, negativo sai), data }.
@@ -57,6 +58,12 @@
     var lista = (d.contasPagar || [])
       .filter(function (c) { return c.status === "Pago" && c.bancoId && !c.cartaoId; })
       .map(function (c) { return { bancoId: c.bancoId, valor: -Number(c.valor || 0), data: c.vencimento }; });
+    // transferência entre contas: sai de uma e entra na outra (não é receita nem despesa)
+    (d.transferencias || []).forEach(function (t) {
+      var v = Number(t.valor || 0);
+      lista.push({ bancoId: t.deBancoId, valor: -v, data: t.data, transferencia: true });
+      lista.push({ bancoId: t.paraBancoId, valor: v, data: t.data, transferencia: true });
+    });
     return movimentosExtras ? lista.concat(movimentosExtras(d) || []) : lista;
   }
 
@@ -64,7 +71,6 @@
     return outrosMovimentos(d).filter(function (m) { return m.bancoId === bancoId; });
   }
 
-  // saldo da própria conta, sem cobertura de outros bancos
   function saldoProprio(d, banco, extras) {
     // entradas ainda previstas não entram no saldo da conta
     var totalEntradas = entradasDoBanco(d, banco.id).filter(function (e) { return !e.previsto; })
@@ -78,35 +84,15 @@
 
   var centavos = function (v) { return Math.round(v * 100) / 100; };
 
-  // Saldo de cada banco. Quando uma conta fica negativa (ex.: a fatura do
-  // cartão Nubank paga pelo Nubank, mas o salário caiu no Banco do Brasil),
-  // a falta é coberta pelo dinheiro positivo dos outros bancos, começando
-  // pelo maior saldo — como uma transferência para pagar a conta. O total
-  // em bancos não muda; só a divisão entre as contas.
   function listaBancosComSaldo(d) {
     var extras = outrosMovimentos(d);
-    var lista = d.bancos.map(function (b) {
-      var proprio = centavos(saldoProprio(d, b, extras));
-      return Object.assign({}, b, { saldoProprio: proprio, saldoAtual: proprio, coberturas: [] });
+    return d.bancos.map(function (b) {
+      return Object.assign({}, b, { saldoAtual: centavos(saldoProprio(d, b, extras)) });
     });
-    lista.filter(function (b) { return b.saldoAtual < 0; }).forEach(function (neg) {
-      lista.filter(function (b) { return b.saldoAtual > 0; })
-        .sort(function (a, b) { return b.saldoAtual - a.saldoAtual; })
-        .forEach(function (doador) {
-          if (neg.saldoAtual >= 0) return;
-          var v = centavos(Math.min(doador.saldoAtual, -neg.saldoAtual));
-          doador.saldoAtual = centavos(doador.saldoAtual - v);
-          neg.saldoAtual = centavos(neg.saldoAtual + v);
-          neg.coberturas.push({ bancoId: doador.id, nome: doador.nome, valor: v });       // recebeu
-          doador.coberturas.push({ bancoId: neg.id, nome: neg.nome, valor: -v });        // cedeu
-        });
-    });
-    return lista;
   }
 
   function saldoBanco(d, banco) {
-    var b = listaBancosComSaldo(d).filter(function (x) { return x.id === banco.id; })[0];
-    return b ? b.saldoAtual : saldoProprio(d, banco);
+    return centavos(saldoProprio(d, banco));
   }
 
   function totalBancos(d) {

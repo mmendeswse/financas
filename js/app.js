@@ -1040,7 +1040,8 @@
       const st = e.target.closest("[data-acao-status]");
       if (st) {
         e.stopPropagation();
-        alternarStatusLancamento(st.dataset.acaoStatus, st.dataset.id, st.dataset.mes);
+        // se abriu a escolha do banco, o painel é redesenhado depois dela
+        if (alternarStatusLancamento(st.dataset.acaoStatus, st.dataset.id, st.dataset.mes)) return;
         if (painelReabrir) painelReabrir();   // redesenha com o status novo
         return;
       }
@@ -1815,6 +1816,7 @@
         linha("Tipo conta", esc(b.tipo || "—")) +
         linha(`Entradas ${periodo}`, `<span class="valor-guia up">+${brl(b.entradas)}</span>`) +
         linha(`Despesas ${periodo}`, `<span class="valor-guia down">−${brl(b.saidas)}</span>`) +
+        (b.transferido ? linha(`Transferências ${periodo}`, brlSinal(b.transferido)) : "") +
         linha("Movimentação líquida", brlSinal(b.valor)) +
         linha("Saldo atual da conta", brlSinal(b.saldoAtual)), "bancos",
         { rotulo: "+ Adicionar", acao: () => abrirModalValorBanco(b.id) });
@@ -1826,7 +1828,7 @@
       linha("Tipo conta", esc(b.tipo || "—")) +
       linha("+ Entradas", `<span class="valor-guia up">+${brl(b.entradas)}</span>`) +
       linha("− Despesas", `<span class="valor-guia down">−${brl(b.saidas)}</span>`) +
-      (b.coberturas.length ? linha("Saldo da conta", brlSinal(b.saldoProprio)) + linhasCobertura(b).map(([r, v]) => linha(r, v)).join("") : "") +
+      (b.transferido ? linha("Transferências", brlSinal(b.transferido)) : "") +
       linha("Saldo", brlSinal(b.saldoAtual)), "bancos",
       { rotulo: "+ Adicionar", acao: () => abrirModalValorBanco(b.id) });
   }
@@ -2316,13 +2318,6 @@
     return intervaloAnoMeses(anoBancos, mesesBancos);
   }
 
-  // conta negativa coberta pelo saldo positivo de outro banco (ver Financeiro.listaBancosComSaldo)
-  function linhasCobertura(b) {
-    return (b.coberturas || []).map((c) => c.valor > 0
-      ? [`Coberto pelo ${esc(c.nome)}`, `<span class="valor-guia up">+${brl(c.valor)}</span>`]
-      : [`Usado para cobrir ${esc(c.nome)}`, `<span class="valor-guia down">−${brl(-c.valor)}</span>`]);
-  }
-
   function bancosDoPeriodo(d) {
     const fx = mesesBancos ? faixaBancos() : { ini: "0000-01-01", fim: "9999-12-31" };
     const dentro = (dt) => String(dt || "") >= fx.ini && String(dt || "") <= fx.fim;
@@ -2332,10 +2327,12 @@
       let sai = d.despesas.filter((x) => x.bancoId === b.id && !x.cartaoId && dentro(x.data))
         .reduce((t, x) => t + Number(x.valor || 0), 0);
       // contas a pagar e repetições marcadas como pagas
+      let transf = 0;
       F.movimentosDoBanco(d, b.id).filter((m) => dentro(m.data)).forEach((m) => {
-        if (m.valor >= 0) ent += m.valor; else sai -= m.valor;
+        if (m.transferencia) transf += m.valor;
+        else if (m.valor >= 0) ent += m.valor; else sai -= m.valor;
       });
-      return Object.assign({}, b, { entradas: ent, saidas: sai, valor: mesesBancos ? ent - sai : b.saldoAtual });
+      return Object.assign({}, b, { entradas: ent, saidas: sai, transferido: transf, valor: mesesBancos ? ent - sai + transf : b.saldoAtual });
     });
   }
 
@@ -2351,7 +2348,7 @@
           <div class="cartao-item" style="border-left-color:${esc(b.cor || "#3FC1E0")}" data-acao="editar-banco" data-id="${b.id}">
             <div class="linha1"><div class="nome-com-marca">${marcaBanco(b.nome, 26)}<div><div class="nome">${esc(b.nome)}</div><div class="tipo">${esc(b.tipo || "—")}</div>${b.agencia || b.conta ? `<div class="tipo">${b.agencia ? "Ag " + esc(b.agencia) : ""}${b.agencia && b.conta ? " · " : ""}${b.conta ? "Cc " + esc(b.conta) : ""}</div>` : ""}</div></div></div>
             <div class="saldo saldo-branco">${brlSinal(b.valor)}</div>
-            <div class="rodape"><span>${mesesBancos ? `Saldo Atual ${brl(b.saldoAtual)}` : linhasCobertura(b).map(([r, v]) => `${r} ${v}`).join("<br>")}</span>
+            <div class="rodape"><span>${mesesBancos ? `Saldo Atual ${brl(b.saldoAtual)}` : ""}</span>
               <button class="btn pequeno" data-acao="entrada-banco" data-id="${b.id}" title="Lançar uma entrada nesta conta">+ Adicionar</button>
             </div>
           </div>`).join("") + `</div>`;
@@ -2359,14 +2356,68 @@
     return `
       ${faixaDemo(d)}
       <div class="grid g-top">
-        <div class="c12">${card("c12", "Meus bancos", `${bancos.length} ${bancos.length === 1 ? "Conta Cadastrada" : "Contas Cadastradas"}`, `<button class="btn primario" data-acao="nova-banco"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`, listaHtml, `<span class="dim">Total</span><b style="font-size:14px;font-weight:800;color:#FFFFFF">${brlSinal(total)}</b>`)}</div>
+        <div class="c12">${card("c12", "Meus bancos", `${bancos.length} ${bancos.length === 1 ? "Conta Cadastrada" : "Contas Cadastradas"}`, `${d.bancos.length > 1 ? `<button class="btn" data-acao="nova-transferencia" title="Passar dinheiro de um banco para outro">⇄ TRANSFERIR</button>` : ""}<button class="btn primario" data-acao="nova-banco"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`, listaHtml, `<span class="dim">Total</span><b style="font-size:14px;font-weight:800;color:#FFFFFF">${brlSinal(total)}</b>`)}</div>
       </div>
       <div class="grid">
         <div class="c12">${card("", "Saldo banco", mesesBancos ? `Movimentação · ${mesesBancos} ${mesesBancos === 1 ? "mês" : "meses"} de ${anoBancos}` : "comparação entre contas",
           `<div class="filtro-mes">${seletorAnoDash("anoBancos", anoBancos, anosDashboard(d))}${abasMeses("periodo-bancos", mesesBancos, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }, { meses: 0, rotulo: "Tudo" }])}</div>`,
           `<div style="padding:12px 18px 16px;height:${Math.max(190, bancos.length * 52)}px"><canvas id="graf-saldo-bancos"></canvas></div>`)}</div>
       </div>
+      ${listaTransferencias(d)}
     `;
+  }
+
+  // ---------------------------------------------------------------------
+  // TRANSFERÊNCIAS entre os próprios bancos: tiram de um e põem no outro,
+  // sem contar como receita ou despesa do mês.
+  // ---------------------------------------------------------------------
+  function listaTransferencias(d) {
+    const lista = (d.transferencias || []).slice().sort((a, b) => String(b.data).localeCompare(String(a.data)));
+    if (!lista.length) return "";
+    const corpo = lista.map((t) => `
+        <div class="kv kv-editavel" data-acao="editar-transferencia" data-id="${t.id}" title="Abrir para editar">
+          <span class="dim">${fmtDataCurta(t.data)} · ${esc(F.nomeBanco(d, t.deBancoId))} → ${esc(F.nomeBanco(d, t.paraBancoId))}${t.obs ? " · " + esc(t.obs) : ""}</span>
+          <b>${brl(t.valor)}</b>
+        </div>`).join("");
+    return `<div class="grid"><div class="c12">${card("", "Transferências", `${lista.length} ${lista.length === 1 ? "transferência" : "transferências"} entre suas contas`, "", `<div style="padding:4px 18px 12px">${corpo}</div>`)}</div></div>`;
+  }
+
+  function abrirModalTransferencia(id) {
+    const t = id ? achar(DADOS.transferencias || [], id) : null;
+    // sugestão: tirar do banco com mais saldo
+    const maior = F.listaBancosComSaldo(DADOS).slice().sort((a, b) => b.saldoAtual - a.saldoAtual)[0];
+    abrirModal(`
+      <h3>${t ? "Editar transferência" : "Transferir entre bancos"}</h3>
+      <div class="par">
+        <div class="campo"><label for="f_de">De</label><select id="f_de">${opcoesBancos(DADOS.bancos, t ? t.deBancoId : (maior ? maior.id : ""), true)}</select></div>
+        <div class="campo"><label for="f_para">Para</label><select id="f_para">${opcoesBancos(DADOS.bancos, t ? t.paraBancoId : "", true)}</select></div>
+      </div>
+      <div class="par">
+        <div class="campo"><label for="f_valor">Valor</label>${campoMoeda("f_valor", t ? t.valor : "")}</div>
+        <div class="campo"><label for="f_data">Data</label><input id="f_data" type="date" value="${t ? t.data : hojeISO()}"></div>
+      </div>
+      <div class="campo"><label for="f_obs">Observação</label><input id="f_obs" value="${t ? esc(t.obs || "") : ""}" placeholder="Opcional"><div class="ajuda">O valor sai do primeiro banco e entra no segundo. Não conta como receita nem despesa.</div></div>
+      <div class="modal-acoes">${t ? `<button class="btn perigo" id="btnExcluir">Excluir</button>` : ""}<button class="btn primario salvar" id="btnSalvar">${t ? "Salvar" : "Transferir"}</button></div>`);
+    document.getElementById("btnSalvar").onclick = () => {
+      const de = document.getElementById("f_de").value, para = document.getElementById("f_para").value;
+      const valor = numIn(document.getElementById("f_valor").value);
+      const data = document.getElementById("f_data").value || hojeISO();
+      if (!de || !para) { toast("Escolha os dois bancos."); return; }
+      if (de === para) { toast("Escolha bancos diferentes."); return; }
+      if (!(valor > 0)) { toast("Informe um valor maior que zero."); return; }
+      const registro = { deBancoId: de, paraBancoId: para, valor, data, obs: document.getElementById("f_obs").value.trim() };
+      DADOS.transferencias = DADOS.transferencias || [];
+      if (t) Object.assign(t, registro); else DADOS.transferencias.push({ id: A.novoId(), ...registro });
+      fecharModal();
+      salvarEAtualizar(t ? "Transferência atualizada." : `${brl(valor)} transferido de ${F.nomeBanco(DADOS, de)} para ${F.nomeBanco(DADOS, para)}.`);
+    };
+    if (t) document.getElementById("btnExcluir").onclick = () => {
+      fecharModal();
+      confirmarExclusao("Excluir esta transferência? Os saldos dos dois bancos voltam ao que eram antes.", () => {
+        DADOS.transferencias = DADOS.transferencias.filter((x) => x.id !== t.id);
+        salvarEAtualizar("Transferência excluída.");
+      });
+    };
   }
 
   function abrirModalBanco(id) {
@@ -2456,6 +2507,8 @@
     return registro;
   }
   function mesQuitado(reg, mes) { return !!ajusteDoMes(reg, mes).pago; }
+  // banco de onde saiu o pagamento daquele mês (pode ser outro que o da série)
+  function bancoDoMes(reg, mes) { return ajusteDoMes(reg, mes).bancoId || reg.bancoId; }
   function gravarAjuste(reg, mes, dados) {
     reg.meses = reg.meses || {};
     reg.meses[mes] = Object.assign({}, reg.meses[mes], dados);
@@ -2577,13 +2630,22 @@
 
   // Troca o status de um lançamento — a mesma regra usada nas guias
   // Entradas e Despesas e nos painéis "Receitas/Despesas do mês".
-  function alternarStatusLancamento(acao, id, mes) {
+  function alternarStatusLancamento(acao, id, mes, bancoEscolhido) {
+    // marcar despesa como paga: pergunta antes de qual banco sai o dinheiro
+    if (!bancoEscolhido && DADOS.bancos.length) {
+      const regQ = acao === "quitar-mes" ? achar(DADOS.despesas, id) : (acao === "quitar-mes-conta" || acao === "alternar-pago") ? achar(DADOS.contasPagar, id) : null;
+      const vaiPagar = regQ && !regQ.cartaoId && (acao === "alternar-pago" ? regQ.status !== "Pago" : !mesQuitado(regQ, mes));
+      if (vaiPagar) {
+        escolherBancoPagamento(regQ, mes, (bancoId) => alternarStatusLancamento(acao, id, mes, bancoId));
+        return true;
+      }
+    }
     if (acao === "quitar-mes") {
       const reg = achar(DADOS.despesas, id);
-      if (reg) { gravarAjuste(reg, mes, { pago: !mesQuitado(reg, mes) }); salvarEAtualizar(mesQuitado(reg, mes) ? "Marcada como paga neste mês." : "Marcada como prevista."); }
+      if (reg) { gravarAjuste(reg, mes, { pago: !mesQuitado(reg, mes), bancoId: bancoEscolhido || ajusteDoMes(reg, mes).bancoId }); salvarEAtualizar(mesQuitado(reg, mes) ? "Marcada como paga neste mês." : "Marcada como prevista."); }
     } else if (acao === "quitar-mes-conta") {
       const regC = achar(DADOS.contasPagar, id);
-      if (regC) { gravarAjuste(regC, mes, { pago: !mesQuitado(regC, mes) }); salvarEAtualizar(mesQuitado(regC, mes) ? "Marcada como paga neste mês." : "Marcada como prevista."); }
+      if (regC) { gravarAjuste(regC, mes, { pago: !mesQuitado(regC, mes), bancoId: bancoEscolhido || ajusteDoMes(regC, mes).bancoId }); salvarEAtualizar(mesQuitado(regC, mes) ? "Marcada como paga neste mês." : "Marcada como prevista."); }
     } else if (acao === "quitar-mes-entrada") {
       const regE = achar(DADOS.entradas, id);
       if (regE) { gravarAjuste(regE, mes, { pago: !mesQuitado(regE, mes) }); salvarEAtualizar(mesQuitado(regE, mes) ? "Marcada como paga neste mês." : "Marcada como prevista."); }
@@ -2602,10 +2664,38 @@
       }
     } else if (acao === "alternar-pago") {
       const c = achar(DADOS.contasPagar, id);
-      if (c) { c.status = c.status === "Pago" ? "Pendente" : "Pago"; salvarEAtualizar(c.status === "Pago" ? "Marcada como paga." : "Marcada como prevista."); }
+      if (c) { c.status = c.status === "Pago" ? "Pendente" : "Pago"; if (bancoEscolhido) c.bancoId = bancoEscolhido; salvarEAtualizar(c.status === "Pago" ? "Marcada como paga." : "Marcada como prevista."); }
     }
   }
 
+
+  // Janela "Pagar com qual banco?": lista os bancos com o saldo de hoje e
+  // como fica depois do pagamento; já vem marcado o banco da despesa.
+  function escolherBancoPagamento(reg, mes, aoEscolher) {
+    const valor = mes ? valorDoMes(reg, mes) : Number(reg.valor || 0);
+    const atual = mes ? bancoDoMes(reg, mes) : reg.bancoId;
+    const bancos = bancosNaOrdem(F.listaBancosComSaldo(DADOS));
+    let escolhido = bancos.some((b) => b.id === atual) ? atual : bancos[0].id;
+    const reabrir = painelReabrir;
+    abrirModal(`
+      <h3>Pagar com qual banco?</h3>
+      <div class="dim" style="margin-bottom:10px">${esc(reg.descricao || "Despesa")} · <b class="down">−${brl(valor)}</b></div>
+      <div id="listaBancosPg">${bancos.map((b) => `
+        <button type="button" class="kv kv-editavel opcao-banco-pg" data-banco="${b.id}" style="align-items:center;width:100%;text-align:left;cursor:pointer;border-radius:8px">
+          <span style="display:flex;align-items:center;gap:8px">${marcaBanco(b.nome, 18)}${esc(b.nome)}</span>
+          <b><span class="dim" style="font-weight:500">${brlSinal(b.saldoAtual)} → </span><span class="${b.saldoAtual - valor < 0 ? "down" : "up"}">${brlSinal(b.saldoAtual - valor)}</span></b>
+        </button>`).join("")}</div>
+      <div class="modal-acoes"><button class="btn" id="btnCancelarPg">Cancelar</button><button class="btn primario salvar" id="btnConfirmarPg">Marcar como pago</button></div>`);
+    const marcar = () => document.querySelectorAll(".opcao-banco-pg").forEach((el) => {
+      const sel = el.dataset.banco === escolhido;
+      el.style.outline = sel ? "2px solid var(--cy)" : "none";
+      el.style.background = sel ? "rgba(63,193,224,.08)" : "transparent";
+    });
+    marcar();
+    document.querySelectorAll(".opcao-banco-pg").forEach((el) => { el.onclick = () => { escolhido = el.dataset.banco; marcar(); }; });
+    document.getElementById("btnCancelarPg").onclick = () => { fecharModal(); if (reabrir) reabrir(); };
+    document.getElementById("btnConfirmarPg").onclick = () => { fecharModal(); painelReabrir = reabrir; aoEscolher(escolhido); if (reabrir) reabrir(); };
+  }
 
   // Troca o banco de um lançamento para o próximo da lista — a mesma regra
   // das guias Entradas e Despesas e dos painéis "Receitas/Despesas do mês".
@@ -2724,12 +2814,12 @@
     const repDespesas = repeticoesPrevistas(d.despesas, mes, (reg, data) => ({
       descricao: reg.descricao, valor: valorDoMes(reg, data.slice(0, 7)), data,
       status: mesQuitado(reg, data.slice(0, 7)) ? "Pago" : "Prevista",
-      acao: "quitar-mes", id: reg.id, mes: data.slice(0, 7), banco: bancoDoLancamento(d, reg), acaoBanco: "trocar-banco", acaoEditar: "editar-previsao"
+      acao: "quitar-mes", id: reg.id, mes: data.slice(0, 7), banco: bancoDoLancamento(d, { ...reg, bancoId: bancoDoMes(reg, data.slice(0, 7)) }), acaoBanco: "trocar-banco", acaoEditar: "editar-previsao"
     }), contasDoMes);
     const repContas = repeticoesPrevistas(contasComoLista, mes, (reg, data) => ({
       descricao: reg.descricao, valor: valorDoMes(reg, data.slice(0, 7)), data,
       status: mesQuitado(reg, data.slice(0, 7)) ? "Pago" : "Prevista",
-      acao: "quitar-mes-conta", id: reg.id, mes: data.slice(0, 7), banco: reg.bancoId ? F.nomeBanco(d, reg.bancoId) : "—", acaoBanco: "trocar-banco-conta", acaoEditar: "editar-previsao-conta"
+      acao: "quitar-mes-conta", id: reg.id, mes: data.slice(0, 7), banco: bancoDoMes(reg, data.slice(0, 7)) ? F.nomeBanco(d, bancoDoMes(reg, data.slice(0, 7))) : "—", acaoBanco: "trocar-banco-conta", acaoEditar: "editar-previsao-conta"
     }), []);
     return [...lancadas, ...contasMapeadas, ...repDespesas, ...repContas]
       .sort((a, b) => (a.data || "").localeCompare(b.data || ""));
@@ -2812,7 +2902,7 @@
     const saida = [];
     const pagas = (reg, data, sinal) => {
       const m = data.slice(0, 7);
-      if (reg.bancoId && !reg.cartaoId && mesQuitado(reg, m)) saida.push({ bancoId: reg.bancoId, valor: sinal * valorDoMes(reg, m), data });
+      if (bancoDoMes(reg, m) && !reg.cartaoId && mesQuitado(reg, m)) saida.push({ bancoId: bancoDoMes(reg, m), valor: sinal * valorDoMes(reg, m), data });
       return null;
     };
     meses.forEach((mes) => {
@@ -3189,13 +3279,13 @@
     const contasComoLista = (d.contasPagar || []).map((c) => ({ ...c, data: c.vencimento }));
     const repeticoesContas = repeticoesPrevistas(contasComoLista, mesDespesas, (reg, data) => ({
       origem: "conta", id: reg.id, descricao: reg.descricao, categoria: reg.categoria, tipo: reg.tipo,
-      pagoCom: reg.bancoId ? F.nomeBanco(d, reg.bancoId) : "—", data, valor: valorDoMes(reg, data.slice(0, 7)),
+      pagoCom: bancoDoMes(reg, data.slice(0, 7)) ? F.nomeBanco(d, bancoDoMes(reg, data.slice(0, 7))) : "—", data, valor: valorDoMes(reg, data.slice(0, 7)),
       status: mesQuitado(reg, data.slice(0, 7)) ? "Pago" : "Prevista",
       recorrencia: freqDe(reg), prevista: true, mesRef: data.slice(0, 7)
     }), []);
     const repeticoes = repeticoesPrevistas(d.despesas, mesDespesas, (reg, data) => ({
       origem: "despesa", id: reg.id, descricao: reg.descricao, categoria: reg.categoria, tipo: reg.tipo,
-      pagoCom: bancoDoLancamento(d, reg), data, valor: valorDoMes(reg, data.slice(0, 7)),
+      pagoCom: bancoDoLancamento(d, { ...reg, bancoId: bancoDoMes(reg, data.slice(0, 7)) }), data, valor: valorDoMes(reg, data.slice(0, 7)),
       status: mesQuitado(reg, data.slice(0, 7)) ? "Pago" : "Prevista",
       recorrencia: freqDe(reg), prevista: true, mesRef: data.slice(0, 7)
     }), contasDoMes);
@@ -3356,7 +3446,7 @@
           recorrente: document.getElementById("f_rec").value !== FREQUENCIAS[0], regraRep: regraLida || undefined, obs
         };
         if (previsao) {
-          gravarAjuste(x, previsao.data.slice(0, 7), { valor: registro.valor, pago: true });
+          gravarAjuste(x, previsao.data.slice(0, 7), { valor: registro.valor, pago: true, bancoId: registro.bancoId || undefined });
           if (data !== previsao.data) registrarReancoragem(x, previsao.data.slice(0, 7), data);
         } else if (x && !ehConta) Object.assign(x, manterSerie(x, registro));
         else {
@@ -3375,7 +3465,7 @@
           recorrente: document.getElementById("f_rec").value !== FREQUENCIAS[0], regraRep: regraLida || undefined
         };
         if (previsao) {
-          gravarAjuste(x, previsao.data.slice(0, 7), { valor: registro.valor, pago: false });
+          gravarAjuste(x, previsao.data.slice(0, 7), { valor: registro.valor, pago: false, bancoId: registro.bancoId || undefined });
           if (data !== previsao.data) registrarReancoragem(x, previsao.data.slice(0, 7), data);
         } else if (x && ehConta) Object.assign(x, manterSerie(x, registro));
         else {
@@ -5033,6 +5123,8 @@
 
         case "entrada-banco": abrirModalValorBanco(id); break;
         case "nova-banco": abrirModalBanco(null); break;
+        case "nova-transferencia": abrirModalTransferencia(null); break;
+        case "editar-transferencia": abrirModalTransferencia(id); break;
         case "editar-banco": abrirModalBanco(id); break;
 
         case "nova-entrada": abrirModalEntrada(null); break;
