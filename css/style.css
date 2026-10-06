@@ -1468,3 +1468,5 @@ button.resumo-pill:active { transform: scale(.98); }
 .meta-topo-linha .meta-nome { font-size: 13.5px; } .meta-topo.meta-topo-linha { gap: 4px; } .meta-topo-linha .meta-selos { gap: 2px; } .meta-bolinha { width: 9px; height: 9px; box-shadow: 0 0 0 2px rgba(255,167,38,.18); } .meta-bolinha.st-ok { box-shadow: 0 0 0 2px rgba(46,229,157,.18); }
 .meta-topo-linha .meta-st { padding: 2px 4px; } .meta-item { padding-left: 10px; padding-right: 10px; }
 .meta-topo-linha .meta-selos { align-items: center; } .meta-selos .meta-bolinha { margin-right: 3px; }
+/* nome da meta no mesmo tamanho/peso dos nomes da legenda da composição */
+.meta-topo-linha .meta-nome { font-size: 14px; font-weight: 600; }
