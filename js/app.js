@@ -22,7 +22,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.4.6";
+  const VERSAO_APP = "3.4.7";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1190,15 +1190,10 @@
     const pendentes = d.metas.filter((m) => situacaoMeta(m).chave !== "ok");
     if (!pendentes.length) return null;
     const nenhum = pendentes.some((m) => situacaoMeta(m).chave === "nada");
-    // para cada meta: o valor do "Guardar Mês" e, se já houve depósito parcial, quanto ainda falta
-    const partes = pendentes.map((m) => {
-      const mensal = Number(m.aporteMensal || 0), falta = Math.max(0, mensal - guardadoNoMes(m));
-      const valor = mensal > 0 ? ` ${brl(mensal)}${falta > 0 && falta < mensal ? ` (falta ${brl(falta)})` : ""}` : "";
-      return `${emojiMeta(m)} ${esc(m.nome)}${valor}`;
-    });
-    const total = pendentes.reduce((t, m) => t + Math.max(0, Number(m.aporteMensal || 0) - guardadoNoMes(m)), 0);
+    // cada meta pendente com o emoji e o valor do "Guardar Mês"
+    const partes = pendentes.map((m) => `${emojiMeta(m)} ${esc(m.nome)}${Number(m.aporteMensal || 0) > 0 ? ` ${brl(m.aporteMensal)}` : ""}`);
     return { tipo: nenhum ? "perigo" : "aviso", rota: "metas",
-      texto: `Seu salário entrou (${fmtData(pagamento)}): guarde o valor do mês nas metas${total > 0 ? ` — faltam ${brl(total)}` : ""}: ${partes.join(", ")}.` };
+      texto: `Seu salário foi pago (${fmtData(pagamento)}): guarde o valor do mês nas metas — ${partes.join(", ")}` };
   }
 
   function gerarAlertas(d) {
@@ -1416,7 +1411,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.4.6" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.4.7" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
