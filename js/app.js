@@ -22,7 +22,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.0.8";
+  const VERSAO_APP = "3.1.0";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1383,7 +1383,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.0.8" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.1.0" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2237,8 +2237,8 @@
       </div>
 
       <div class="grid">
-        <div class="c3">${card("card-centrado", "Saldo banco", "mapa ativos", `<span class="acc-laranja" style="font-size:12px;font-weight:700">Total: ${brlSinal(p.bancos)}</span>`, `<div class="body pad">${barList(bancos)}</div>`)}</div>
-        <div class="c3">${card("card-centrado", "Composição patrimônio", "ativos líquidos", `<span class="acc-laranja" style="font-size:12px;font-weight:700">Total: ${brlSinal(totalComp)}</span>`, `
+        <div class="c3">${card("card-centrado", "Saldo bancos", "mapa ativos", `<span class="acc-laranja" style="font-size:12px;font-weight:700">Total: ${brlSinal(p.bancos)}</span>`, `<div class="body pad">${barList(bancos)}</div>`)}</div>
+        <div class="c3">${card("card-centrado", "Composição patrimônio líquido", "ativos líquidos", `<span class="acc-laranja" style="font-size:12px;font-weight:700">Total: ${brlSinal(totalComp)}</span>`, `
           <div class="donut-wrap">
             <div class="donut-centro"><canvas id="graf-dash-composicao" width="150" height="150" style="width:150px;height:150px"></canvas>
               <button class="donut-rotulo clicavel" data-acao="explicar-kpi" data-kpi="investido" title="Ver como este percentual é calculado"><b>${pctInvestido.toFixed(1).replace(".", ",")}%</b><span class="acc-laranja">INVESTIDO</span></button>
@@ -2396,7 +2396,7 @@
       </div>
 
       <div class="grid">
-        <div class="c6">${card("card-centrado", "Composição patrimônio", "ativos líquidos", `<span class="acc-laranja" style="font-size:12px;font-weight:700">Total: ${brlSinal(I.totalLiquidoOutros(d) + p.acoes)}</span>`, `<div class="donut-wrap"><div class="donut-centro"><canvas id="graf-patrimonio-divisao" width="150" height="150" style="width:150px;height:150px"></canvas><div class="donut-rotulo"><b>${brl(p.bruto).replace("R$", "").trim()}</b><span class="acc-laranja">BRUTO</span></div></div><div class="legenda">${legendaHtml}</div></div>`)}</div>
+        <div class="c6">${card("card-centrado", "Composição patrimônio líquido", "ativos líquidos", `<span class="acc-laranja" style="font-size:12px;font-weight:700">Total: ${brlSinal(I.totalLiquidoOutros(d) + p.acoes)}</span>`, `<div class="donut-wrap"><div class="donut-centro"><canvas id="graf-patrimonio-divisao" width="150" height="150" style="width:150px;height:150px"></canvas><div class="donut-rotulo"><b>${brl(p.bruto).replace("R$", "").trim()}</b><span class="acc-laranja">BRUTO</span></div></div><div class="legenda">${legendaHtml}</div></div>`)}</div>
         <div class="c6">${card("", "Resumo patrimonial", "", "", `
           <div class="kv"><span class="dim">Dinheiro em bancos</span><b>${brl(p.bancos)}</b></div>
           <div class="kv"><span class="dim">+ Ações e FIIs</span><b>${brl(p.acoes)}</b></div>
@@ -2460,7 +2460,7 @@
         <div class="c12">${card("c12", "Meus bancos", `${bancos.length} ${bancos.length === 1 ? "Conta Cadastrada" : "Contas Cadastradas"}`, `${d.bancos.length > 1 ? `<button class="btn" data-acao="nova-transferencia" title="Passar dinheiro de um banco para outro">⇄ TRANSFERIR</button>` : ""}<button class="btn primario" data-acao="nova-banco"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`, listaHtml, `<span class="dim">Total</span><b style="font-size:14px;font-weight:800;color:#FFFFFF">${brlSinal(total)}</b>`)}</div>
       </div>
       <div class="grid">
-        <div class="c12">${card("", "Saldo banco", mesesBancos ? `Movimentação · ${mesesBancos} ${mesesBancos === 1 ? "mês" : "meses"} de ${anoBancos}` : "comparação entre contas",
+        <div class="c12">${card("", "Saldo bancos", mesesBancos ? `Movimentação · ${mesesBancos} ${mesesBancos === 1 ? "mês" : "meses"} de ${anoBancos}` : "comparação entre contas",
           `<div class="filtro-mes">${seletorAnoDash("anoBancos", anoBancos, anosDashboard(d))}${abasMeses("periodo-bancos", mesesBancos, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }, { meses: 0, rotulo: "Tudo" }])}</div>`,
           `<div style="padding:12px 18px 16px;height:${Math.max(190, bancos.length * 52)}px"><canvas id="graf-saldo-bancos"></canvas></div>`)}</div>
       </div>
