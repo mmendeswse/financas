@@ -1478,3 +1478,6 @@ button.resumo-pill:active { transform: scale(.98); }
 /* bolinha "falta guardar" em amarelo de verdade (antes puxava para o laranja) */
 .meta-bolinha { background: #FFD60A; box-shadow: 0 0 0 2px rgba(255,214,10,.22); }
 .meta-bolinha.st-ok { background: var(--up); box-shadow: 0 0 0 2px rgba(46,229,157,.18); }
+/* bolinha das metas: vermelha enquanto o "Guardar Mês" deste mês não foi atingido, verde quando atingiu ou passou */
+.meta-bolinha { background: var(--down); box-shadow: 0 0 0 2px rgba(255,92,106,.22); }
+.meta-bolinha.st-ok { background: var(--up); box-shadow: 0 0 0 2px rgba(46,229,157,.18); }
