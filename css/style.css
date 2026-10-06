@@ -1292,8 +1292,8 @@ button.resumo-pill:active { transform: scale(.98); }
 }
 /* selo de repetição (MENSAL, 5/16…) na linha de baixo, junto de categoria · tipo */
 .rw .sub .selo-tag, .desc-painel .dp-sub .selo-tag { font-size: 9px; padding: 0 5px; line-height: 15px; margin-left: 4px; vertical-align: 1px; }
-/* coluna Repetição (MENSAL, 5/16…) à esquerda do Status */
-.kv b .col-rep { display: inline-block; width: 84px; margin-left: 14px; text-align: left; vertical-align: middle; }
+/* coluna Recorrência (MENSAL, 5/16…) à esquerda do Status */
+.kv b .col-rep { display: inline-block; width: 100px; margin-left: 14px; text-align: left; vertical-align: middle; }
 .kv b .col-rep + .col-status { margin-left: 8px; }
 .kv b .col-rep .selo-tag { font-size: 9.5px; padding: 1px 6px; }
 .cel-rep { display: flex; align-items: center; gap: 4px; }
