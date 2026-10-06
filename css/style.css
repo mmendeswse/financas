@@ -1406,3 +1406,22 @@ button.resumo-pill:active { transform: scale(.98); }
 .meta-pct { margin: 0; }
 .meta-item .meta-topo { margin-bottom: 4px; }
 .meta-item .meta-rodape { margin-top: 3px; }
+/* quadro de metas com mais visibilidade: tudo um pouco maior */
+.metas-lista { gap: 9px; padding: 6px 12px 12px; }
+.meta-item { padding: 10px 12px 9px; }
+.meta-item .meta-topo { margin-bottom: 7px; row-gap: 6px; }
+.meta-nome { font-size: 15px; }
+.meta-nome .emoji-desc { font-size: 17px; }
+.meta-item .meta-st { font-size: 11.5px; padding: 2px 8px; gap: 5px; }
+.meta-falta-ic { font-size: 12px; }
+.meta-barra { height: 8px; }
+.meta-pct { font-size: 14px; min-width: 40px; }
+.meta-item .meta-rodape { margin-top: 5px; }
+.meta-rodape-3 { font-size: 13px; }
+/* linha 1: nome + situação; linha 2: 📅 · 💰 · 🏁 */
+.meta-item .meta-topo { flex-wrap: nowrap; margin-bottom: 6px; }
+.meta-item .meta-topo .meta-nome { flex: 1 1 auto; }
+.meta-item .meta-topo .meta-situacao { flex: none; }
+.meta-item > .meta-selos { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 5px; margin: 0 0 8px; max-width: 100%; }
+@container (max-width: 345px) { .meta-situacao .meta-st-txt { display: inline; } .meta-situacao { padding: 2px 8px; } }
+@container (max-width: 300px) { .meta-item > .meta-selos .meta-st { font-size: 10px; padding: 1px 6px; gap: 3px; } .meta-item > .meta-selos { gap: 4px; } }
