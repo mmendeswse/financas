@@ -1826,6 +1826,7 @@
       linha("Tipo conta", esc(b.tipo || "—")) +
       linha("+ Entradas", `<span class="valor-guia up">+${brl(b.entradas)}</span>`) +
       linha("− Despesas", `<span class="valor-guia down">−${brl(b.saidas)}</span>`) +
+      (b.coberturas.length ? linha("Saldo da conta", brlSinal(b.saldoProprio)) + linhasCobertura(b).map(([r, v]) => linha(r, v)).join("") : "") +
       linha("Saldo", brlSinal(b.saldoAtual)), "bancos",
       { rotulo: "+ Adicionar", acao: () => abrirModalValorBanco(b.id) });
   }
@@ -2315,14 +2316,25 @@
     return intervaloAnoMeses(anoBancos, mesesBancos);
   }
 
+  // conta negativa coberta pelo saldo positivo de outro banco (ver Financeiro.listaBancosComSaldo)
+  function linhasCobertura(b) {
+    return (b.coberturas || []).map((c) => c.valor > 0
+      ? [`Coberto pelo ${esc(c.nome)}`, `<span class="valor-guia up">+${brl(c.valor)}</span>`]
+      : [`Usado para cobrir ${esc(c.nome)}`, `<span class="valor-guia down">−${brl(-c.valor)}</span>`]);
+  }
+
   function bancosDoPeriodo(d) {
     const fx = mesesBancos ? faixaBancos() : { ini: "0000-01-01", fim: "9999-12-31" };
     const dentro = (dt) => String(dt || "") >= fx.ini && String(dt || "") <= fx.fim;
     return F.listaBancosComSaldo(d).map((b) => {
-      const ent = d.entradas.filter((e) => e.bancoId === b.id && dentro(e.data))
+      let ent = d.entradas.filter((e) => e.bancoId === b.id && !e.previsto && dentro(e.data))
         .reduce((t, e) => t + Number(e.valor || 0), 0);
-      const sai = d.despesas.filter((x) => x.bancoId === b.id && !x.cartaoId && dentro(x.data))
+      let sai = d.despesas.filter((x) => x.bancoId === b.id && !x.cartaoId && dentro(x.data))
         .reduce((t, x) => t + Number(x.valor || 0), 0);
+      // contas a pagar e repetições marcadas como pagas
+      F.movimentosDoBanco(d, b.id).filter((m) => dentro(m.data)).forEach((m) => {
+        if (m.valor >= 0) ent += m.valor; else sai -= m.valor;
+      });
       return Object.assign({}, b, { entradas: ent, saidas: sai, valor: mesesBancos ? ent - sai : b.saldoAtual });
     });
   }
@@ -2339,7 +2351,7 @@
           <div class="cartao-item" style="border-left-color:${esc(b.cor || "#3FC1E0")}" data-acao="editar-banco" data-id="${b.id}">
             <div class="linha1"><div class="nome-com-marca">${marcaBanco(b.nome, 26)}<div><div class="nome">${esc(b.nome)}</div><div class="tipo">${esc(b.tipo || "—")}</div>${b.agencia || b.conta ? `<div class="tipo">${b.agencia ? "Ag " + esc(b.agencia) : ""}${b.agencia && b.conta ? " · " : ""}${b.conta ? "Cc " + esc(b.conta) : ""}</div>` : ""}</div></div></div>
             <div class="saldo saldo-branco">${brlSinal(b.valor)}</div>
-            <div class="rodape"><span>${mesesBancos ? `Saldo Atual ${brl(b.saldoAtual)}` : ""}</span>
+            <div class="rodape"><span>${mesesBancos ? `Saldo Atual ${brl(b.saldoAtual)}` : linhasCobertura(b).map(([r, v]) => `${r} ${v}`).join("<br>")}</span>
               <button class="btn pequeno" data-acao="entrada-banco" data-id="${b.id}" title="Lançar uma entrada nesta conta">+ Adicionar</button>
             </div>
           </div>`).join("") + `</div>`;
@@ -2789,6 +2801,30 @@
     return saida;
   }
 
+
+  // Repetições de lançamentos recorrentes marcadas como pagas num mês: não
+  // são registros próprios, então entram no saldo dos bancos por aqui (as
+  // mesmas que as guias Entradas e Despesas mostram como "Pago").
+  function movimentosRepeticoesPagas(d) {
+    const meses = new Set();
+    [d.entradas, d.despesas, d.contasPagar || []].forEach((l) => l.forEach((r) =>
+      Object.keys(r.meses || {}).forEach((m) => { if (r.meses[m].pago) meses.add(m); })));
+    const saida = [];
+    const pagas = (reg, data, sinal) => {
+      const m = data.slice(0, 7);
+      if (reg.bancoId && !reg.cartaoId && mesQuitado(reg, m)) saida.push({ bancoId: reg.bancoId, valor: sinal * valorDoMes(reg, m), data });
+      return null;
+    };
+    meses.forEach((mes) => {
+      repeticoesPrevistas(d.entradas, mes, (reg, data) => pagas(reg, data, 1));
+      const contasDoMes = (d.contasPagar || []).filter((c) => String(c.vencimento || "").slice(0, 7) === mes)
+        .map((c) => ({ descricao: c.descricao, categoria: c.categoria, valor: c.valor, data: c.vencimento, origemRecorrente: c.origemRecorrente }));
+      repeticoesPrevistas(d.despesas, mes, (reg, data) => pagas(reg, data, -1), contasDoMes);
+      repeticoesPrevistas((d.contasPagar || []).map((c) => ({ ...c, data: c.vencimento })), mes, (reg, data) => pagas(reg, data, -1), []);
+    });
+    return saida;
+  }
+  F.definirMovimentosExtras(movimentosRepeticoesPagas);
 
   // ---- séries "Personalizar": funcionam para entradas e para despesas ----
   // entradas ficam em DADOS.entradas; despesas em DADOS.despesas (pagas) ou

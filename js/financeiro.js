@@ -9,8 +9,8 @@
  * Quem desenha a tela é o app.js.
  *
  * Tudo aqui é CALCULADO, nunca armazenado como valor fixo: o saldo de um
- * banco é sempre "saldo inicial + entradas − despesas daquele banco",
- * como pede o enunciado.
+ * banco é sempre "saldo inicial + entradas − despesas daquele banco"
+ * (incluindo contas a pagar e repetições marcadas como pagas).
  * -----------------------------------------------------------------------
  */
 (function (global) {
@@ -45,22 +45,73 @@
     return d.despesas.filter(function (x) { return x.bancoId === bancoId && !x.cartaoId; });
   }
 
-  function saldoBanco(d, banco) {
+  // Movimentos que não estão em entradas/despesas, mas mexem no saldo:
+  //  - contas a pagar marcadas como "Pago" (saem do banco escolhido);
+  //  - repetições de lançamentos recorrentes marcadas como pagas no mês
+  //    (calculadas pelo app.js, que conhece as regras de repetição).
+  // Cada item: { bancoId, valor (positivo entra, negativo sai), data }.
+  var movimentosExtras = null;
+  function definirMovimentosExtras(fn) { movimentosExtras = fn; }
+
+  function outrosMovimentos(d) {
+    var lista = (d.contasPagar || [])
+      .filter(function (c) { return c.status === "Pago" && c.bancoId && !c.cartaoId; })
+      .map(function (c) { return { bancoId: c.bancoId, valor: -Number(c.valor || 0), data: c.vencimento }; });
+    return movimentosExtras ? lista.concat(movimentosExtras(d) || []) : lista;
+  }
+
+  function movimentosDoBanco(d, bancoId) {
+    return outrosMovimentos(d).filter(function (m) { return m.bancoId === bancoId; });
+  }
+
+  // saldo da própria conta, sem cobertura de outros bancos
+  function saldoProprio(d, banco, extras) {
     // entradas ainda previstas não entram no saldo da conta
     var totalEntradas = entradasDoBanco(d, banco.id).filter(function (e) { return !e.previsto; })
       .reduce(function (s, e) { return s + Number(e.valor || 0); }, 0);
     var totalDespesas = despesasDoBanco(d, banco.id).reduce(function (s, x) { return s + Number(x.valor || 0); }, 0);
-    return Number(banco.saldoInicial || 0) + totalEntradas - totalDespesas;
+    var totalExtras = (extras || outrosMovimentos(d))
+      .filter(function (m) { return m.bancoId === banco.id; })
+      .reduce(function (s, m) { return s + Number(m.valor || 0); }, 0);
+    return Number(banco.saldoInicial || 0) + totalEntradas - totalDespesas + totalExtras;
   }
 
+  var centavos = function (v) { return Math.round(v * 100) / 100; };
+
+  // Saldo de cada banco. Quando uma conta fica negativa (ex.: a fatura do
+  // cartão Nubank paga pelo Nubank, mas o salário caiu no Banco do Brasil),
+  // a falta é coberta pelo dinheiro positivo dos outros bancos, começando
+  // pelo maior saldo — como uma transferência para pagar a conta. O total
+  // em bancos não muda; só a divisão entre as contas.
   function listaBancosComSaldo(d) {
-    return d.bancos.map(function (b) {
-      return Object.assign({}, b, { saldoAtual: saldoBanco(d, b) });
+    var extras = outrosMovimentos(d);
+    var lista = d.bancos.map(function (b) {
+      var proprio = centavos(saldoProprio(d, b, extras));
+      return Object.assign({}, b, { saldoProprio: proprio, saldoAtual: proprio, coberturas: [] });
     });
+    lista.filter(function (b) { return b.saldoAtual < 0; }).forEach(function (neg) {
+      lista.filter(function (b) { return b.saldoAtual > 0; })
+        .sort(function (a, b) { return b.saldoAtual - a.saldoAtual; })
+        .forEach(function (doador) {
+          if (neg.saldoAtual >= 0) return;
+          var v = centavos(Math.min(doador.saldoAtual, -neg.saldoAtual));
+          doador.saldoAtual = centavos(doador.saldoAtual - v);
+          neg.saldoAtual = centavos(neg.saldoAtual + v);
+          neg.coberturas.push({ bancoId: doador.id, nome: doador.nome, valor: v });       // recebeu
+          doador.coberturas.push({ bancoId: neg.id, nome: neg.nome, valor: -v });        // cedeu
+        });
+    });
+    return lista;
+  }
+
+  function saldoBanco(d, banco) {
+    var b = listaBancosComSaldo(d).filter(function (x) { return x.id === banco.id; })[0];
+    return b ? b.saldoAtual : saldoProprio(d, banco);
   }
 
   function totalBancos(d) {
-    return d.bancos.reduce(function (s, b) { return s + saldoBanco(d, b); }, 0);
+    var extras = outrosMovimentos(d);
+    return d.bancos.reduce(function (s, b) { return s + saldoProprio(d, b, extras); }, 0);
   }
 
   function nomeBanco(d, bancoId) {
@@ -325,6 +376,8 @@
     diasEntre: diasEntre,
 
     saldoBanco: saldoBanco,
+    definirMovimentosExtras: definirMovimentosExtras,
+    movimentosDoBanco: movimentosDoBanco,
     listaBancosComSaldo: listaBancosComSaldo,
     totalBancos: totalBancos,
     nomeBanco: nomeBanco,
