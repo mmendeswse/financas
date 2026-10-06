@@ -22,7 +22,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.4.2";
+  const VERSAO_APP = "3.4.3";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1173,11 +1173,14 @@
   // =========================================================================
   // ALERTAS / NOTIFICAÇÕES (calculados a partir dos dados reais)
   // =========================================================================
-  // dia do pagamento no mês: a primeira entrada de categoria "Salário" do mês
-  // (lançada ou prevista pela repetição); sem salário no mês, não há data
+  // dia do pagamento no mês, tirado da guia Entradas: a data do salário daquele mês,
+  // já lançado ou previsto pela repetição configurada (ex.: "4º dia útil").
+  // Usa a entrada com "Salário" na descrição; se não houver, a de categoria Salário.
   function diaPagamentoMes(d, mes) {
-    const salarios = listaEntradasTodasMes(d, mes).filter((e) => e.categoria === "Salário" && e.data);
-    return salarios.length ? salarios.map((e) => String(e.data)).sort()[0] : null;
+    const doMes = listaEntradasTodasMes(d, mes).filter((e) => e.data);
+    const porNome = doMes.filter((e) => /sal[aá]rio/i.test(e.descricao || ""));
+    const lista = porNome.length ? porNome : doMes.filter((e) => e.categoria === "Salário");
+    return lista.length ? lista.map((e) => String(e.data)).sort()[0] : null;
   }
   // a partir do dia do pagamento, avisa as metas que ainda não têm o "Guardar Mês" completo
   function alertaMetasPagamento(d) {
@@ -1410,7 +1413,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.4.2" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.4.3" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
