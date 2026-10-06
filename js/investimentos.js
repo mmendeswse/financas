@@ -289,7 +289,7 @@
     var bancos = F.totalBancos(d);
     var investOutros = totalAtualOutros(d);
     var acoes = totalCarteiraAcoes(d);
-    var dividas = F.totalAPagar(d); // contas ainda não pagas = dívidas em aberto
+    var dividas = F.totalDividas(d); // contas não pagas vencidas ou do mês atual = dívidas em aberto
     return {
       bancos: bancos,
       investimentos: investOutros,
