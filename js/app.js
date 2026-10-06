@@ -22,7 +22,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "2.9.8";
+  const VERSAO_APP = "2.9.9";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1383,7 +1383,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.9.8" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.9.9" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1557,20 +1557,17 @@
     return mensal * meses >= objetivo - atual ? { chave: "ok", rotulo: "Promissor" } : { chave: "atencao", rotulo: "Atenção" };
   }
 
+  const ICONE_GUARDAR_MES = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M12 13.2v5M9.8 15.4h4.4"/></svg>';
   const brlCurto = (v) => brl(v).replace(/,00$/, "");   // sem centavos quando o valor é redondo
   function metasMini(d) {
     if (!d.metas.length) return `<div class="empty" style="padding:14px">Nenhuma meta cadastrada.</div>`;
-    return `<div class="metas-lista">` + d.metas.slice(0, 4).map((m) => {
+    return `<div class="metas-lista">` + d.metas.slice(0, 3).map((m) => {   // 3 metas: mesma altura do quadro Receitas x despesas
       const p = m.objetivo > 0 ? Math.min(100, (m.atual / m.objetivo) * 100) : 0;
       const st = situacaoMeta(m);
       return `<button class="meta-item clicavel st-${st.chave}" data-acao="explicar-meta" data-id="${m.id}" title="Ver detalhes da meta">
         <div class="meta-topo"><span class="meta-nome">${nomeMeta(m)}</span><span class="meta-st"><i></i>${st.rotulo}</span></div>
         <div class="meta-barra"><i style="width:${p}%"></i></div>
-        <div class="meta-rodape"><span>Atual: ${brlCurto(m.atual)}</span><span>Objetivo: ${brlCurto(m.objetivo)} · <b>${p.toFixed(0)}%</b></span></div>
-        <div class="meta-mensal meta-mensal-mini">
-          <span class="meta-mensal-icone"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M12 13.2v5M9.8 15.4h4.4"/></svg></span>
-          <span class="meta-mensal-texto"><small>Guardar Mês</small>${Number(m.aporteMensal) > 0 ? `<b class="num">${brl(m.aporteMensal)}</b>` : `<b class="dim">Definir Valor</b>`}</span>
-        </div>
+        <div class="meta-rodape"><span class="meta-guardar" title="Guardar por mês">${ICONE_GUARDAR_MES}${Number(m.aporteMensal) > 0 ? `<b>${brlCurto(m.aporteMensal)}</b>/mês` : "Definir valor/mês"}</span><span>${brlCurto(m.atual)} de ${brlCurto(m.objetivo)} · <b>${p.toFixed(0)}%</b></span></div>
       </button>`;
     }).join("") + `</div>`;
   }
