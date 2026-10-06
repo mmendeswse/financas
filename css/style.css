@@ -1276,5 +1276,10 @@ button.resumo-pill:active { transform: scale(.98); }
   .kv .dp-data-col { width: 82px; font-size: 11px; }
   .kv:has(> span > .desc-painel) > b { padding-left: 0; }
 }
-/* painéis com coluna Data: banco um pouco mais estreito para sobrar espaço à descrição */
-.kv:has(> span > .desc-painel) > b .col-banco, .kv.kv-cab b .col-banco { width: 124px; }
+/* painéis com coluna Data: banco largo o bastante para o nome inteiro
+   ("Banco do Brasil"); status e valor mais justos para compensar */
+@media (min-width: 601px) {
+  .kv:has(> span > .desc-painel) > b .col-banco, .kv.kv-cab b .col-banco { width: 168px; }
+  .kv:has(> span > .desc-painel) > b .col-status, .kv.kv-cab b .col-status { width: 100px; }
+  .kv:has(> span > .desc-painel) > b .col-valor, .kv.kv-cab b .col-valor { width: 118px; }
+}
