@@ -1425,3 +1425,15 @@ button.resumo-pill:active { transform: scale(.98); }
 .meta-item > .meta-selos { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 5px; margin: 0 0 8px; max-width: 100%; }
 @container (max-width: 345px) { .meta-situacao .meta-st-txt { display: inline; } .meta-situacao { padding: 2px 8px; } }
 @container (max-width: 300px) { .meta-item > .meta-selos .meta-st { font-size: 10px; padding: 1px 6px; gap: 3px; } .meta-item > .meta-selos { gap: 4px; } }
+/* nome e todos os selos (📅 · 💰 · 🏁 · situação) numa linha só; o nome encurta com "…" se faltar espaço */
+.meta-topo.meta-topo-linha { flex-wrap: nowrap; gap: 6px; }
+.meta-topo-linha .meta-nome { flex: 1 1 auto; min-width: 48px; }
+.meta-topo-linha .meta-selos { flex: none; flex-wrap: nowrap; gap: 3px; margin-left: auto; }
+.meta-topo-linha .meta-st { font-size: 10px; padding: 1px 5px; gap: 3px; }
+.meta-topo-linha .meta-falta-ic { font-size: 10px; }
+.meta-topo-linha .meta-situacao .meta-st-txt { display: none; }
+.meta-topo-linha .meta-situacao { padding: 1px 5px; }
+.meta-topo-linha .meta-nome { font-size: 14px; }
+.meta-topo-linha .meta-nome { font-size: 13.5px; } .meta-topo-linha { gap: 5px; }
+.meta-topo-linha .meta-st { font-size: 9.5px; padding: 1px 4px; } .meta-topo-linha .meta-selos { gap: 2px; } .meta-topo-linha .meta-nome { font-size: 13px; } .meta-topo-linha .meta-nome .emoji-desc { font-size: 15px; margin-right: 4px; }
+@container (max-width: 330px) { .meta-topo.meta-topo-linha { flex-wrap: wrap; row-gap: 5px; } .meta-topo-linha .meta-nome { flex-basis: 100%; } .meta-topo-linha .meta-selos { margin-left: 0; } }
