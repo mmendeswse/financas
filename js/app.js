@@ -137,7 +137,7 @@
     const ano = selecionado.slice(0, 4);
     const mesSel = Number(selecionado.slice(5, 7));
     const lista = (anos && anos.length ? anos : [ano]).slice();
-    if (lista.indexOf(ano) === -1) lista.unshift(ano);
+    if (lista.indexOf(ano) === -1) { lista.push(ano); lista.sort(); }
     const seletorAno = `<select class="sel-ano" id="${idAno}" title="Ano">${lista.map((a) =>
       `<option value="${a}" ${a === ano ? "selected" : ""}>${a}</option>`).join("")}</select>`;
     const abas = `<div class="abas abas-periodo abas-mes">${NOMES_MES.map((nome, i) => {
@@ -4754,7 +4754,7 @@
     const inicio = Math.min(atual, ...(numeros.length ? numeros : [atual]));
     const fim = Math.max(ANO_LIMITE, ...(numeros.length ? numeros : [atual]));
     const lista = [];
-    for (let a = fim; a >= inicio; a--) lista.push(String(a));
+    for (let a = inicio; a <= fim; a++) lista.push(String(a));
     return lista;
   }
 
