@@ -22,7 +22,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "2.9.9";
+  const VERSAO_APP = "3.0.0";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1383,7 +1383,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.9.9" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.0.0" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1564,7 +1564,7 @@
     return `<div class="metas-lista">` + d.metas.slice(0, 3).map((m) => {   // 3 metas: mesma altura do quadro Receitas x despesas
       const p = m.objetivo > 0 ? Math.min(100, (m.atual / m.objetivo) * 100) : 0;
       const st = situacaoMeta(m);
-      return `<button class="meta-item clicavel st-${st.chave}" data-acao="explicar-meta" data-id="${m.id}" title="Ver detalhes da meta">
+      return `<button class="meta-item clicavel st-${st.chave}" style="--meta-cor:${esc(m.cor || "var(--up)")}" data-acao="explicar-meta" data-id="${m.id}" title="Ver detalhes da meta">
         <div class="meta-topo"><span class="meta-nome">${nomeMeta(m)}</span><span class="meta-st"><i></i>${st.rotulo}</span></div>
         <div class="meta-barra"><i style="width:${p}%"></i></div>
         <div class="meta-rodape"><span class="meta-guardar" title="Guardar por mês">${ICONE_GUARDAR_MES}${Number(m.aporteMensal) > 0 ? `<b>${brlCurto(m.aporteMensal)}</b>/mês` : "Definir valor/mês"}</span><span>${brlCurto(m.atual)} de ${brlCurto(m.objetivo)} · <b>${p.toFixed(0)}%</b></span></div>
