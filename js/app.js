@@ -22,7 +22,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.4.0";
+  const VERSAO_APP = "3.4.1";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1386,7 +1386,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.4.0" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.4.1" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1767,8 +1767,18 @@
   function iniciarRelogio() {
     const rel = document.getElementById("relogioTopbar");
     const dataEl = document.getElementById("dataTopbar");
+    // virada do mês: refaz a tela para o monitoramento das metas (bolinha e
+    // "N de M com o mês guardado") recomeçar no mês novo, mesmo com o app aberto
+    let mesVisto = `${new Date().getFullYear()}-${new Date().getMonth()}`;
     const tick = () => {
       const agora = new Date();
+      const mesAgora = `${agora.getFullYear()}-${agora.getMonth()}`;
+      const janelaAberta = document.getElementById("scrim") && document.getElementById("scrim").classList.contains("on");
+      if (mesAgora !== mesVisto && !janelaAberta) {   // com uma janela aberta, espera ela fechar
+        if (mesAgora.slice(0, 4) !== mesVisto.slice(0, 4)) anoMetas = String(agora.getFullYear());
+        mesVisto = mesAgora;
+        renderRota();
+      }
       if (rel) rel.textContent = agora.toLocaleTimeString("pt-BR");
       if (dataEl) dataEl.textContent = agora.toLocaleDateString("pt-BR", { weekday: "short", day: "numeric", month: "short", year: "numeric" }).replace(/\./g, "");
     };
