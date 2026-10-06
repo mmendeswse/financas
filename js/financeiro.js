@@ -47,6 +47,7 @@
 
   // Movimentos que não estão em entradas/despesas, mas mexem no saldo:
   //  - contas a pagar marcadas como "Pago" (saem do banco escolhido);
+  //  - transferências entre os próprios bancos;
   //  - repetições de lançamentos recorrentes marcadas como pagas no mês
   //    (calculadas pelo app.js, que conhece as regras de repetição).
   // Cada item: { bancoId, valor (positivo entra, negativo sai), data }.
@@ -57,6 +58,12 @@
     var lista = (d.contasPagar || [])
       .filter(function (c) { return c.status === "Pago" && c.bancoId && !c.cartaoId; })
       .map(function (c) { return { bancoId: c.bancoId, valor: -Number(c.valor || 0), data: c.vencimento }; });
+    // transferência entre contas: sai de uma e entra na outra (não é receita nem despesa)
+    (d.transferencias || []).forEach(function (t) {
+      var v = Number(t.valor || 0);
+      lista.push({ bancoId: t.deBancoId, valor: -v, data: t.data, transferencia: true });
+      lista.push({ bancoId: t.paraBancoId, valor: v, data: t.data, transferencia: true });
+    });
     return movimentosExtras ? lista.concat(movimentosExtras(d) || []) : lista;
   }
 

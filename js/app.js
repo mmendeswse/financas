@@ -1815,6 +1815,7 @@
         linha("Tipo conta", esc(b.tipo || "—")) +
         linha(`Entradas ${periodo}`, `<span class="valor-guia up">+${brl(b.entradas)}</span>`) +
         linha(`Despesas ${periodo}`, `<span class="valor-guia down">−${brl(b.saidas)}</span>`) +
+        (b.transferido ? linha(`Transferências ${periodo}`, brlSinal(b.transferido)) : "") +
         linha("Movimentação líquida", brlSinal(b.valor)) +
         linha("Saldo atual da conta", brlSinal(b.saldoAtual)), "bancos",
         { rotulo: "+ Adicionar", acao: () => abrirModalValorBanco(b.id) });
@@ -1826,6 +1827,7 @@
       linha("Tipo conta", esc(b.tipo || "—")) +
       linha("+ Entradas", `<span class="valor-guia up">+${brl(b.entradas)}</span>`) +
       linha("− Despesas", `<span class="valor-guia down">−${brl(b.saidas)}</span>`) +
+      (b.transferido ? linha("Transferências", brlSinal(b.transferido)) : "") +
       (b.coberturas.length ? linha("Saldo da conta", brlSinal(b.saldoProprio)) + linhasCobertura(b).map(([r, v]) => linha(r, v)).join("") : "") +
       linha("Saldo", brlSinal(b.saldoAtual)), "bancos",
       { rotulo: "+ Adicionar", acao: () => abrirModalValorBanco(b.id) });
@@ -2332,10 +2334,12 @@
       let sai = d.despesas.filter((x) => x.bancoId === b.id && !x.cartaoId && dentro(x.data))
         .reduce((t, x) => t + Number(x.valor || 0), 0);
       // contas a pagar e repetições marcadas como pagas
+      let transf = 0;
       F.movimentosDoBanco(d, b.id).filter((m) => dentro(m.data)).forEach((m) => {
-        if (m.valor >= 0) ent += m.valor; else sai -= m.valor;
+        if (m.transferencia) transf += m.valor;
+        else if (m.valor >= 0) ent += m.valor; else sai -= m.valor;
       });
-      return Object.assign({}, b, { entradas: ent, saidas: sai, valor: mesesBancos ? ent - sai : b.saldoAtual });
+      return Object.assign({}, b, { entradas: ent, saidas: sai, transferido: transf, valor: mesesBancos ? ent - sai + transf : b.saldoAtual });
     });
   }
 
@@ -2359,14 +2363,68 @@
     return `
       ${faixaDemo(d)}
       <div class="grid g-top">
-        <div class="c12">${card("c12", "Meus bancos", `${bancos.length} ${bancos.length === 1 ? "Conta Cadastrada" : "Contas Cadastradas"}`, `<button class="btn primario" data-acao="nova-banco"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`, listaHtml, `<span class="dim">Total</span><b style="font-size:14px;font-weight:800;color:#FFFFFF">${brlSinal(total)}</b>`)}</div>
+        <div class="c12">${card("c12", "Meus bancos", `${bancos.length} ${bancos.length === 1 ? "Conta Cadastrada" : "Contas Cadastradas"}`, `${d.bancos.length > 1 ? `<button class="btn" data-acao="nova-transferencia" title="Passar dinheiro de um banco para outro">⇄ TRANSFERIR</button>` : ""}<button class="btn primario" data-acao="nova-banco"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`, listaHtml, `<span class="dim">Total</span><b style="font-size:14px;font-weight:800;color:#FFFFFF">${brlSinal(total)}</b>`)}</div>
       </div>
       <div class="grid">
         <div class="c12">${card("", "Saldo banco", mesesBancos ? `Movimentação · ${mesesBancos} ${mesesBancos === 1 ? "mês" : "meses"} de ${anoBancos}` : "comparação entre contas",
           `<div class="filtro-mes">${seletorAnoDash("anoBancos", anoBancos, anosDashboard(d))}${abasMeses("periodo-bancos", mesesBancos, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }, { meses: 0, rotulo: "Tudo" }])}</div>`,
           `<div style="padding:12px 18px 16px;height:${Math.max(190, bancos.length * 52)}px"><canvas id="graf-saldo-bancos"></canvas></div>`)}</div>
       </div>
+      ${listaTransferencias(d)}
     `;
+  }
+
+  // ---------------------------------------------------------------------
+  // TRANSFERÊNCIAS entre os próprios bancos: tiram de um e põem no outro,
+  // sem contar como receita ou despesa do mês.
+  // ---------------------------------------------------------------------
+  function listaTransferencias(d) {
+    const lista = (d.transferencias || []).slice().sort((a, b) => String(b.data).localeCompare(String(a.data)));
+    if (!lista.length) return "";
+    const corpo = lista.map((t) => `
+        <div class="kv kv-editavel" data-acao="editar-transferencia" data-id="${t.id}" title="Abrir para editar">
+          <span class="dim">${fmtDataCurta(t.data)} · ${esc(F.nomeBanco(d, t.deBancoId))} → ${esc(F.nomeBanco(d, t.paraBancoId))}${t.obs ? " · " + esc(t.obs) : ""}</span>
+          <b>${brl(t.valor)}</b>
+        </div>`).join("");
+    return `<div class="grid"><div class="c12">${card("", "Transferências", `${lista.length} ${lista.length === 1 ? "transferência" : "transferências"} entre suas contas`, "", `<div style="padding:4px 18px 12px">${corpo}</div>`)}</div></div>`;
+  }
+
+  function abrirModalTransferencia(id) {
+    const t = id ? achar(DADOS.transferencias || [], id) : null;
+    // sugestão: tirar do banco com mais saldo
+    const maior = F.listaBancosComSaldo(DADOS).slice().sort((a, b) => b.saldoAtual - a.saldoAtual)[0];
+    abrirModal(`
+      <h3>${t ? "Editar transferência" : "Transferir entre bancos"}</h3>
+      <div class="par">
+        <div class="campo"><label for="f_de">De</label><select id="f_de">${opcoesBancos(DADOS.bancos, t ? t.deBancoId : (maior ? maior.id : ""), true)}</select></div>
+        <div class="campo"><label for="f_para">Para</label><select id="f_para">${opcoesBancos(DADOS.bancos, t ? t.paraBancoId : "", true)}</select></div>
+      </div>
+      <div class="par">
+        <div class="campo"><label for="f_valor">Valor</label>${campoMoeda("f_valor", t ? t.valor : "")}</div>
+        <div class="campo"><label for="f_data">Data</label><input id="f_data" type="date" value="${t ? t.data : hojeISO()}"></div>
+      </div>
+      <div class="campo"><label for="f_obs">Observação</label><input id="f_obs" value="${t ? esc(t.obs || "") : ""}" placeholder="Opcional"><div class="ajuda">O valor sai do primeiro banco e entra no segundo. Não conta como receita nem despesa.</div></div>
+      <div class="modal-acoes">${t ? `<button class="btn perigo" id="btnExcluir">Excluir</button>` : ""}<button class="btn primario salvar" id="btnSalvar">${t ? "Salvar" : "Transferir"}</button></div>`);
+    document.getElementById("btnSalvar").onclick = () => {
+      const de = document.getElementById("f_de").value, para = document.getElementById("f_para").value;
+      const valor = numIn(document.getElementById("f_valor").value);
+      const data = document.getElementById("f_data").value || hojeISO();
+      if (!de || !para) { toast("Escolha os dois bancos."); return; }
+      if (de === para) { toast("Escolha bancos diferentes."); return; }
+      if (!(valor > 0)) { toast("Informe um valor maior que zero."); return; }
+      const registro = { deBancoId: de, paraBancoId: para, valor, data, obs: document.getElementById("f_obs").value.trim() };
+      DADOS.transferencias = DADOS.transferencias || [];
+      if (t) Object.assign(t, registro); else DADOS.transferencias.push({ id: A.novoId(), ...registro });
+      fecharModal();
+      salvarEAtualizar(t ? "Transferência atualizada." : `${brl(valor)} transferido de ${F.nomeBanco(DADOS, de)} para ${F.nomeBanco(DADOS, para)}.`);
+    };
+    if (t) document.getElementById("btnExcluir").onclick = () => {
+      fecharModal();
+      confirmarExclusao("Excluir esta transferência? Os saldos dos dois bancos voltam ao que eram antes.", () => {
+        DADOS.transferencias = DADOS.transferencias.filter((x) => x.id !== t.id);
+        salvarEAtualizar("Transferência excluída.");
+      });
+    };
   }
 
   function abrirModalBanco(id) {
@@ -5033,6 +5091,8 @@
 
         case "entrada-banco": abrirModalValorBanco(id); break;
         case "nova-banco": abrirModalBanco(null); break;
+        case "nova-transferencia": abrirModalTransferencia(null); break;
+        case "editar-transferencia": abrirModalTransferencia(id); break;
         case "editar-banco": abrirModalBanco(id); break;
 
         case "nova-entrada": abrirModalEntrada(null); break;
