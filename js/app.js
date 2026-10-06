@@ -22,7 +22,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "2.9.3";
+  const VERSAO_APP = "2.9.5";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -36,6 +36,15 @@
     "Compras": "🛍️", "Assinaturas": "📺", "Cartão de crédito": "💳", "Impostos": "🧾", "Investimentos": "📈", "Outros": "📦"
   };
   const descEmoji = (x, padrao) => `<span class="emoji-desc">${emojiDe(x)}</span>${esc((x && x.descricao) || padrao || "")}`;
+  // metas: o emoji escolhido ou um sugerido pelo nome
+  const EMOJIS_META = ["🎯", "🏠", "🏡", "🚗", "🏍️", "✈️", "🏖️", "🛟", "💰", "🏦", "📈", "🎓", "📚", "💍", "👶", "🐶",
+    "💻", "📱", "🎮", "🛋️", "🔧", "🩺", "🎁", "🎉", "⛵", "🌎", "🏋️", "🎸", "📷", "⭐"];
+  const EMOJI_META_NOME = [[/apart|casa|im[oó]vel|reforma/i, "🏠"], [/carro|ve[ií]culo/i, "🚗"], [/moto/i, "🏍️"],
+    [/viag|f[eé]rias|interc[aâ]mbio/i, "✈️"], [/reserva|emerg/i, "🛟"], [/aposent|invest/i, "📈"], [/estud|faculd|curso|educa/i, "🎓"],
+    [/casament|noiv/i, "💍"], [/filh|beb[eê]/i, "👶"], [/computador|notebook/i, "💻"], [/celular|iphone/i, "📱"], [/sa[uú]de/i, "🩺"]];
+  const emojiSugeridoMeta = (nome) => { const r = EMOJI_META_NOME.find(([re]) => re.test(nome || "")); return r ? r[1] : "🎯"; };
+  const emojiMeta = (m) => (m && m.emoji) || emojiSugeridoMeta(m && m.nome);
+  const nomeMeta = (m) => `<span class="emoji-desc">${emojiMeta(m)}</span>${esc(m.nome)}`;
   const emojiDe = (x) => (x && x.emoji) || EMOJI_CATEGORIA[x && x.categoria] || "📦";
   const TIPOS_CONTA_BANCO = ["Conta Corrente", "Conta Poupança", "Conta Digital", "Investimento", "Outro"];
   const FORMAS_PAGAMENTO = ["Débito", "Pix", "Dinheiro", "Cartão Crédito", "Boleto", "Transferência", "Débito Automático"];
@@ -1374,7 +1383,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.9.3" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.9.5" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1535,16 +1544,38 @@
   }
   const TITULO_ALERTA = { perigo: "Atenção imediata", aviso: "Aviso", sucesso: "Bom sinal", info: "Informação" };
 
+  // situação da meta: concluída, prazo vencido, ou se o "Guardar Mês" dá
+  // conta do que falta até o prazo (sem prazo, basta ter um valor por mês)
+  function situacaoMeta(m) {
+    const atual = Number(m.atual || 0), objetivo = Number(m.objetivo || 0);
+    if (objetivo > 0 && atual >= objetivo) return { chave: "ok", rotulo: "Concluída" };
+    if (m.prazo && F.diasEntre(m.prazo) < 0) return { chave: "atrasada", rotulo: "Prazo vencido" };
+    const mensal = Number(m.aporteMensal || 0);
+    if (!(mensal > 0)) return { chave: "atencao", rotulo: "Atenção" };
+    if (!m.prazo) return { chave: "ok", rotulo: "No caminho certo" };
+    const meses = Math.max(1, F.diasEntre(m.prazo) / 30.44);
+    return mensal * meses >= objetivo - atual ? { chave: "ok", rotulo: "No caminho certo" } : { chave: "atencao", rotulo: "Atenção" };
+  }
+
+  const brlCurto = (v) => brl(v).replace(/,00$/, "");   // sem centavos quando o valor é redondo
   function metasMini(d) {
     if (!d.metas.length) return `<div class="empty" style="padding:14px">Nenhuma meta cadastrada.</div>`;
-    return `<div class="mix-lista">` + d.metas.slice(0, 4).map((m) => {
+    return `<div class="metas-lista">` + d.metas.slice(0, 4).map((m) => {
       const p = m.objetivo > 0 ? Math.min(100, (m.atual / m.objetivo) * 100) : 0;
-      const vencida = m.prazo && F.diasEntre(m.prazo) < 0 && Number(m.atual || 0) < Number(m.objetivo || 0);
-      return `<button class="mix-item clicavel${vencida ? " meta-vencida" : ""}" data-acao="explicar-meta" data-id="${m.id}" title="Ver detalhes da meta">
-        <div class="mix-topo"><span>${esc(m.nome)}</span><b style="color:${m.cor || "var(--laranja)"}">${p.toFixed(0)}% (${brl(m.atual)})</b></div>
-        <div class="progresso fina"><i style="width:${p}%;background:${m.cor || "var(--laranja)"}"></i></div>
+      const st = situacaoMeta(m);
+      return `<button class="meta-item clicavel st-${st.chave}" data-acao="explicar-meta" data-id="${m.id}" title="Ver detalhes da meta">
+        <div class="meta-topo"><span class="meta-nome">${nomeMeta(m)}</span><span class="meta-st"><i></i>${st.rotulo}</span></div>
+        <div class="meta-barra"><i style="width:${p}%"></i></div>
+        <div class="meta-rodape"><span>Atual: ${brlCurto(m.atual)}</span><span>Objetivo: ${brlCurto(m.objetivo)} · <b>${p.toFixed(0)}%</b></span></div>
       </button>`;
     }).join("") + `</div>`;
+  }
+
+  // subtítulo do quadro de metas: "N de M no caminho certo"
+  function resumoMetas(d) {
+    if (!d.metas.length) return "progressos";
+    const ok = d.metas.filter((m) => situacaoMeta(m).chave === "ok").length;
+    return `${ok} de ${d.metas.length} no caminho certo`;
   }
 
   function stripKpis(itens) {
@@ -1693,7 +1724,7 @@
     const p = m.objetivo > 0 ? Math.min(100, (m.atual / m.objetivo) * 100) : 0;
     const noPrazo = !m.prazo || F.diasEntre(m.prazo) >= 0;
     el.innerHTML = `<div class="sb-meta-titulo">META PRINCIPAL</div>
-      <div class="sb-meta-nome">${esc(m.nome)}</div>
+      <div class="sb-meta-nome">${nomeMeta(m)}</div>
       <div class="sb-meta-valor">${brl(m.objetivo)}</div>
       <div class="progresso" style="margin:10px 0 8px"><i style="width:${p}%;background:var(--laranja)"></i></div>
       <div class="sb-meta-linha"><span class="dim">Progresso</span><b class="up">${p.toFixed(1).replace(".", ",")}%</b></div>
@@ -1916,7 +1947,7 @@
     const falta = Math.max(0, Number(m.objetivo || 0) - Number(m.atual || 0));
     // cada linha abre a edição da meta
     const linha = (r, v, c) => `<div class="kv kv-editavel" data-acao-editar="editar-meta" data-id="${esc(m.id)}" title="Abrir para editar"><span class="dim">${rotuloPainel(r)}</span><b class="${c || ""}">${v}</b></div>`;
-    painelSimples(esc(m.nome), progresso, "do objetivo já foi guardado", "valor atual ÷ objetivo",
+    painelSimples(nomeMeta(m), progresso, "do objetivo já foi guardado", "valor atual ÷ objetivo",
       linha("Objetivo", brl(m.objetivo)) + linha("Guardado", brl(m.atual), "up") +
       linha("Faltam", brl(falta), falta > 0 ? "down" : "up") +
       linha("Prazo", m.prazo ? fmtData(m.prazo) : "sem prazo"),
@@ -2214,7 +2245,7 @@
           </div>`)}</div>
         <div class="c3">${card("", "Receitas x despesas", `${mesesRD} ${mesesRD === 1 ? "mês" : "meses"} de ${anoRD}`,
           `<div class="filtro-mes">${seletorAnoDash("anoRD", anoRD, anosDashboard(d))}${abasMeses("periodo-rd", mesesRD, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }])}</div>`, `<div style="padding:8px 14px 12px;height:236px"><canvas id="graf-receitas-despesas"></canvas></div>`)}</div>
-        <div class="c3">${card("", "Metas", "progressos", `<button class="btn pequeno" data-acao="ir" data-secao="metas">ver todas →</button>`, metasMini(d))}</div>
+        <div class="c3">${card("", "Metas", resumoMetas(d), `<button class="btn pequeno" data-acao="ir" data-secao="metas">todas →</button>`, metasMini(d))}</div>
       </div>
 
       <div class="grid">
@@ -3220,12 +3251,14 @@
     return `<div class="campo"><label>Emoji</label><div class="seletor-emoji" id="f_emoji">${opcoesEmoji.map((em) =>
       `<button type="button" class="opcao-emoji" data-emoji="${em}">${em}</button>`).join("")}</div></div>`;
   }
-  function ligarEmoji(atual) {
+  // padrao: emoji sugerido quando nada foi escolhido; campoPadrao: campo que muda a sugestão
+  function ligarEmoji(atual, padrao, campoPadrao) {
     const caixa = document.getElementById("f_emoji");
-    const selCat = document.getElementById("f_cat");
+    const selCat = campoPadrao || document.getElementById("f_cat");
+    const sugerido = padrao || (() => EMOJI_CATEGORIA[selCat.value]);
     let escolhido = atual || "";
     const marcar = () => {
-      const ativo = escolhido || EMOJI_CATEGORIA[selCat.value] || "";
+      const ativo = escolhido || sugerido() || "";
       caixa.querySelectorAll(".opcao-emoji").forEach((b) => b.classList.toggle("ativo", b.dataset.emoji === ativo));
     };
     caixa.addEventListener("click", (ev) => {
@@ -3235,6 +3268,7 @@
       marcar();
     });
     selCat.addEventListener("change", marcar);
+    selCat.addEventListener("input", marcar);
     marcar();
     return () => escolhido || undefined;
   }
@@ -4939,7 +4973,7 @@
         const diasPrazo = m.prazo ? F.diasEntre(m.prazo) : null;
         const vencida = diasPrazo !== null && diasPrazo < 0 && Number(m.atual || 0) < Number(m.objetivo || 0);
         return `<div class="c4"><div class="card card-clicavel${vencida ? " card-meta-vencida" : ""}" data-acao="editar-meta" data-id="${m.id}" title="Abrir para editar">
-          <header><div><h2>${esc(m.nome)}${vencida ? ' <span class="selo-tag selo-atrasado">prazo vencido</span>' : ""}</h2>${m.prazo ? `<div class="sub ${vencida ? "down" : ""}">até ${fmtData(m.prazo)}${vencida ? ` · há ${plural(Math.abs(diasPrazo), "dia")}` : ""}</div>` : ""}</div>
+          <header><div><h2>${nomeMeta(m)}${vencida ? ' <span class="selo-tag selo-atrasado">prazo vencido</span>' : ""}</h2>${m.prazo ? `<div class="sub ${vencida ? "down" : ""}">até ${fmtData(m.prazo)}${vencida ? ` · há ${plural(Math.abs(diasPrazo), "dia")}` : ""}</div>` : ""}</div>
           </header>
           <div class="body pad">
             <div style="display:flex;justify-content:space-between;margin-bottom:8px">
@@ -4969,6 +5003,7 @@
     const m = id ? achar(DADOS.metas, id) : null;
     abrirModal(`
       <h3>${m ? "Editar meta" : "Nova meta"}</h3>
+      ${campoEmoji(EMOJIS_META, m && m.emoji)}
       <div class="campo"><label for="f_nome">Nome</label><input id="f_nome" value="${m ? esc(m.nome) : ""}" placeholder="Reserva de emergência"></div>
       <div class="par">
         <div class="campo"><label for="f_obj">Objetivo</label>${campoMoeda("f_obj", m ? m.objetivo : "", "R$ 30.000,00")}</div>
@@ -4984,6 +5019,9 @@
         ${m ? `<button class="btn perigo" id="btnExcluir">Excluir</button>` : ""}
       </div>`);
 
+    const campoNome = document.getElementById("f_nome");
+    const lerEmojiMeta = ligarEmoji(m && m.emoji, () => emojiSugeridoMeta(campoNome.value), campoNome);
+
     document.getElementById("btnSalvar").onclick = () => {
       const nome = document.getElementById("f_nome").value.trim();
       if (!nome) { toast("Dê um nome para a meta."); return; }
@@ -4993,7 +5031,8 @@
         atual: numIn(document.getElementById("f_atual").value),
         prazo: document.getElementById("f_prazo").value,
         aporteMensal: numIn(document.getElementById("f_mensal").value),
-        cor: document.getElementById("f_cor").value
+        cor: document.getElementById("f_cor").value,
+        emoji: lerEmojiMeta()
       };
       if (m) Object.assign(m, registro); else DADOS.metas.push(registro);
       fecharModal();
@@ -5532,7 +5571,7 @@
     const m = achar(DADOS.metas, id);
     if (!m) return;
     abrirModal(`
-      <h3>Adicionar valor — ${esc(m.nome)}</h3>
+      <h3>Adicionar valor — ${nomeMeta(m)}</h3>
       <div class="campo"><label for="f_valor">Quanto você quer adicionar?</label>${campoMoeda("f_valor", "")}</div>
       <div class="modal-acoes"><button class="btn primario salvar" id="btnSalvar">Adicionar</button></div>`);
     document.getElementById("btnSalvar").onclick = () => {
