@@ -22,7 +22,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "2.8.8";
+  const VERSAO_APP = "2.9.0";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -207,7 +207,7 @@
 
   // Entradas e Despesas usam exatamente as mesmas larguras de coluna
   // colunas proporcionais: a descrição não "empurra" banco, status e valor para a borda
-  const GRID_LANCAMENTOS = "grid-template-columns:96px minmax(200px,1fr) 150px 120px 130px";   // banco, status e valor juntos, encostados à direita
+  const GRID_LANCAMENTOS = "grid-template-columns:96px minmax(200px,1fr) 120px 170px 130px";   // status, banco e valor juntos, encostados à direita
 
   let mesesBancos = 0;
   let anoBancos = null;   // período do gráfico da guia Bancos (0 = saldo atual)
@@ -1372,7 +1372,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.8.8" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=2.9.0" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1770,7 +1770,7 @@
         linhas: (() => {
           const itensR = listaEntradasTodasMes(d, mes);
           return cabecalhoColunasPainel() +
-            itensR.map((e) => linhaEditavel(e, linha(descPainel(e), bancoPainel(e.banco, e) + seloStatusPainel(e.status, e) + `<span class="col-valor valor-guia up">+${brl(e.valor)}</span>`))).join("") +
+            itensR.map((e) => linhaEditavel(e, linha(descPainel(e), seloStatusPainel(e.status, e) + bancoPainel(e.banco, e) + `<span class="col-valor valor-guia up">+${brl(e.valor)}</span>`))).join("") +
             linhaTotalPainel(plural(itensR.length, "Lançamento"), `+${brl(entradas)}`);
         })(),
         secao: "entradas"
@@ -1783,7 +1783,7 @@
         linhas: (() => {
           const itensD = listaDespesasTodasMes(d, mes);
           return cabecalhoColunasPainel() +
-            itensD.map((x) => linhaEditavel(x, linha(descPainel(x), bancoPainel(x.banco, x) + seloStatusPainel(x.status, x) + `<span class="col-valor valor-guia down">−${brl(x.valor)}</span>`))).join("") +
+            itensD.map((x) => linhaEditavel(x, linha(descPainel(x), seloStatusPainel(x.status, x) + bancoPainel(x.banco, x) + `<span class="col-valor valor-guia down">−${brl(x.valor)}</span>`))).join("") +
             linhaTotalPainel(plural(itensD.length, "Lançamento"), `−${brl(despesas)}`);
         })(),
         secao: "despesas"
@@ -1949,7 +1949,7 @@
         "do seu saldo em bancos já está comprometido", "despesas previstas para o próximo mês",
         (itens.length
           ? cabecalhoColunasPainel() + itens.map((x) => linhaEditavel(x, linha(descPainel(x),
-              bancoPainel(x.banco, x) + seloStatusPainel(x.status, x) + `<span class="col-valor valor-guia down">−${brl(x.valor)}</span>`))).join("")
+              seloStatusPainel(x.status, x) + bancoPainel(x.banco, x) + `<span class="col-valor valor-guia down">−${brl(x.valor)}</span>`))).join("")
           : `<div class="kv"><span class="dim">Nenhuma conta prevista para o mês que vem</span><b>—</b></div>`) +
         linhaTotalPainel(plural(itens.length, "Lançamento"), "−" + brl(aVir)), "despesas");
       return;
@@ -1987,7 +1987,7 @@
         (itens.length ? cabecalhoColunasPainel() : "") +
         (itens.length
           ? itens.map((x) => linhaEditavel(x, linha(descPainel(x),
-              bancoPainel(x.banco, x) + seloStatusPainel(x.status, x) + `<span class="col-valor valor-guia down">−${brl(x.valor)}</span>`))).join("")
+              seloStatusPainel(x.status, x) + bancoPainel(x.banco, x) + `<span class="col-valor valor-guia down">−${brl(x.valor)}</span>`))).join("")
           : `<div class="kv"><span class="dim">Nenhuma conta pendente no mês atual</span><b>—</b></div>`) +
         linhaTotalPainel(plural(itens.length, "Lançamento"), `−${brl(total)}`), "despesas");
       return;
@@ -2068,7 +2068,7 @@
     const itensD = listaDespesasTodasMes(d, mes).map((x) => ({ ...x, sinal: "−", cor: "down" }));
     const todos = [...itensR, ...itensD];
     const linhaItem = (it) => linhaEditavel(it, linha(descPainel(it),
-      bancoPainel(it.banco, it) + seloStatusPainel(it.status, it) + `<span class="col-valor valor-guia ${it.cor}">${it.sinal}${brl(it.valor)}</span>`));
+      seloStatusPainel(it.status, it) + bancoPainel(it.banco, it) + `<span class="col-valor valor-guia ${it.cor}">${it.sinal}${brl(it.valor)}</span>`));
     const vazio = (txt) => `<div class="kv"><span class="dim">${txt}</span><b>—</b></div>`;
     const totE = totalEntradasTodasMes(d, mes), totD = totalDespesasTodasMes(d, mes);
     const saldo = totE - totD;
@@ -2805,7 +2805,7 @@
   }
 
   function cabecalhoColunasPainel() {
-    return `<div class="kv kv-cab"><span class="cab-desc"><span class="dp-data-col">Data</span>Descrição</span><b><span class="col-banco">Banco</span><span class="col-status">Status</span><span class="col-valor">Valor</span></b></div>`;
+    return `<div class="kv kv-cab"><span class="cab-desc"><span class="dp-data-col">Data</span>Descrição</span><b><span class="col-status">Status</span><span class="col-banco">Banco</span><span class="col-valor">Valor</span></b></div>`;
   }
 
   function bancoPainel(nome, item) {
@@ -3261,15 +3261,15 @@
     if (!lista.length) {
       corpo = `<div class="empty">Nenhuma entrada cadastrada. Use "+ Nova entrada" para lançar seu salário ou outra receita.</div>`;
     } else {
-      corpo = `<div class="hd" style="${grid}">${thOrdem("ordenar-entradas", "data", "Data", ordemEntradas)}${thOrdem("ordenar-entradas", "descricao", "Descrição", ordemEntradas)}${thOrdem("ordenar-entradas", "banco", "Banco", ordemEntradas)}${thOrdem("ordenar-entradas", "status", "Status", ordemEntradas)}${thOrdem("ordenar-entradas", "valor", "Valor", ordemEntradas, "hd-valor")}</div>` +
+      corpo = `<div class="hd" style="${grid}">${thOrdem("ordenar-entradas", "data", "Data", ordemEntradas)}${thOrdem("ordenar-entradas", "descricao", "Descrição", ordemEntradas)}${thOrdem("ordenar-entradas", "status", "Status", ordemEntradas)}${thOrdem("ordenar-entradas", "banco", "Banco", ordemEntradas)}${thOrdem("ordenar-entradas", "valor", "Valor", ordemEntradas, "hd-valor")}</div>` +
         listaTabela.map((e) => `
         <div class="rw clicavel${e.prevista ? " linha-prevista" : ""}" style="${grid}" data-acao="${e.prevista ? "editar-previsao-entrada" : "editar-entrada"}" data-id="${e.id}" data-data="${e.data}" title="${e.prevista ? "Abre este mês para edição (o valor muda só aqui)" : "Abrir para editar"}">
           <div class="dim" style="font-size:12px">${fmtDataCurta(e.data)}</div>
           <div><div class="nm">${descEmoji(e)}${seloFreq(e)}</div><div class="sub">${esc(e.categoria)} · ${esc(e.tipo || "")}</div></div>
-          <div><button class="cel-banco cel-banco-botao" data-acao="trocar-banco-entrada" data-id="${e.id}" title="${e.prevista ? "Troca o banco do lançamento original (vale para todas as repetições)" : "Trocar o banco desta entrada"}">${marcaBanco(e.banco, 26)}<span class="dim">${esc(e.banco)}</span></button></div>
           <div>${e.prevista
             ? `<button class="selo-tag ${e.recebidaNoMes ? "selo-pago" : "selo-prevista"} selo-botao" data-acao="quitar-mes-entrada" data-id="${e.id}" data-mes="${e.mesRef}" title="${e.recebidaNoMes ? "Marcar como prevista" : "Marcar como paga"}">${e.status}</button>`
             : `<button class="selo-tag ${e.previsto ? "selo-prevista" : "selo-pago"} selo-botao" data-acao="alternar-prevista-entrada" data-id="${e.id}" title="${e.previsto ? "Marcar como paga" : "Marcar como prevista"}">${e.status}</button>`}</div>
+          <div><button class="cel-banco cel-banco-botao" data-acao="trocar-banco-entrada" data-id="${e.id}" title="${e.prevista ? "Troca o banco do lançamento original (vale para todas as repetições)" : "Trocar o banco desta entrada"}">${marcaBanco(e.banco, 26)}<span class="dim">${esc(e.banco)}</span></button></div>
           <div class="cel-valor"><span class="big up">+${brl(e.valor)}</span></div>
         </div>`).join("");
     }
@@ -3461,17 +3461,17 @@
     if (!lista.length) {
       corpo = `<div class="empty">Nenhum lançamento em ${NOMES_MES[Number(mesDespesas.slice(5, 7)) - 1]}/${mesDespesas.slice(0, 4)}. Use NOVO para lançar uma despesa ou uma conta a pagar.</div>`;
     } else {
-      corpo = `<div class="hd" style="${gridD}">${thOrdem("ordenar-despesas", "data", "Data", ordemDespesas)}${thOrdem("ordenar-despesas", "descricao", "Descrição", ordemDespesas)}${thOrdem("ordenar-despesas", "pagoCom", "Banco", ordemDespesas)}${thOrdem("ordenar-despesas", "status", "Status", ordemDespesas)}${thOrdem("ordenar-despesas", "valor", "Valor", ordemDespesas, "hd-valor")}</div>` +
+      corpo = `<div class="hd" style="${gridD}">${thOrdem("ordenar-despesas", "data", "Data", ordemDespesas)}${thOrdem("ordenar-despesas", "descricao", "Descrição", ordemDespesas)}${thOrdem("ordenar-despesas", "status", "Status", ordemDespesas)}${thOrdem("ordenar-despesas", "pagoCom", "Banco", ordemDespesas)}${thOrdem("ordenar-despesas", "valor", "Valor", ordemDespesas, "hd-valor")}</div>` +
         listaTabela.map((x) => `
         <div class="rw clicavel${x.prevista ? " linha-prevista" : ""}" style="${gridD}" data-acao="${x.prevista ? (x.origem === "conta" ? "editar-previsao-conta" : "editar-previsao") : (x.origem === "despesa" ? "editar-despesa" : "editar-conta")}" data-id="${x.id}" data-data="${x.data}" title="${x.prevista ? "Abre este mês para edição (o valor muda só aqui)" : "Abrir para editar"}">
           <div class="dim" style="font-size:12px">${fmtData(x.data)}</div>
           <div><div class="nm">${descEmoji(x)}${seloFreq({ ...(registrosSerie("despesa").find((y) => y.id === x.id) || {}), recorrencia: x.recorrencia, data: x.data })}</div><div class="sub">${esc(x.categoria || "—")} · ${esc(x.tipo || "Variável")}</div></div>
-          <div>${x.origem === "despesa" || x.pagoCom !== "—"
-            ? `<button class="cel-banco cel-banco-botao" data-acao="${x.origem === "despesa" ? "trocar-banco" : "trocar-banco-conta"}" data-id="${x.id}" title="Trocar o banco (nas repetições, altera o lançamento original)">${marcaBanco(x.pagoCom, 26)}<span class="dim">${esc(x.pagoCom)}</span></button>`
-            : `<span class="cel-banco">${x.pagoCom && x.pagoCom !== "—" ? marcaBanco(x.pagoCom, 26) + `<span class="dim">${esc(x.pagoCom)}</span>` : '<span class="dim">—</span>'}</span>`}</div>
           <div>${x.prevista
             ? `<button class="selo-tag ${x.status === "Pago" ? "selo-pago" : "selo-prevista"} selo-botao" data-acao="${x.origem === "conta" ? "quitar-mes-conta" : "quitar-mes"}" data-id="${x.id}" data-mes="${x.mesRef}" title="Confirmar: cria o lançamento deste mês">${x.status}</button>`
             : `<button class="selo-tag selo-${x.status.toLowerCase()} selo-botao" data-acao="${x.origem === "conta" ? "alternar-pago" : "tornar-pendente"}" data-id="${x.id}" title="${x.origem === "conta" ? (x.status === "Pago" ? "Marcar como prevista" : "Marcar como paga") : "Marcar como prevista (vira conta a pagar)"}">${x.status}</button>`}</div>
+          <div>${x.origem === "despesa" || x.pagoCom !== "—"
+            ? `<button class="cel-banco cel-banco-botao" data-acao="${x.origem === "despesa" ? "trocar-banco" : "trocar-banco-conta"}" data-id="${x.id}" title="Trocar o banco (nas repetições, altera o lançamento original)">${marcaBanco(x.pagoCom, 26)}<span class="dim">${esc(x.pagoCom)}</span></button>`
+            : `<span class="cel-banco">${x.pagoCom && x.pagoCom !== "—" ? marcaBanco(x.pagoCom, 26) + `<span class="dim">${esc(x.pagoCom)}</span>` : '<span class="dim">—</span>'}</span>`}</div>
           <div class="cel-valor"><span class="big down">−${brl(x.valor)}</span></div>
         </div>`).join("");
     }
