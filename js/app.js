@@ -22,7 +22,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.3.7";
+  const VERSAO_APP = "3.3.9";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1386,7 +1386,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.3.7" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.3.9" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1556,16 +1556,16 @@
     const iso = `${fimMesAnterior.getFullYear()}-${String(fimMesAnterior.getMonth() + 1).padStart(2, "0")}-${String(fimMesAnterior.getDate()).padStart(2, "0")}`;
     return Number(m.atual || 0) - valorMetaEm(m, iso);
   }
-  // situação da meta pela bolinha: verde = guardou o valor do mês (ou já concluiu),
-  // amarela = ainda não guardou o "Guardar Mês" deste mês
+  // situação da meta pela bolinha, comparando o que entrou no mês com o "Guardar Mês":
+  // verde = soma do mês igual ou maior (ou meta concluída), amarela = já houve depósito
+  // no mês mas ainda falta, vermelha = nenhum depósito no mês
   function situacaoMeta(m) {
     const atual = Number(m.atual || 0), objetivo = Number(m.objetivo || 0);
     if (objetivo > 0 && atual >= objetivo) return { chave: "ok", rotulo: "Meta concluída" };
     const mensal = Number(m.aporteMensal || 0), noMes = guardadoNoMes(m);
-    const guardou = mensal > 0 ? noMes >= mensal - 0.005 : noMes > 0;
-    return guardou
-      ? { chave: "ok", rotulo: `Guardou ${brl(noMes)} este mês` }
-      : { chave: "atencao", rotulo: mensal > 0 ? `Falta guardar ${brl(Math.max(0, mensal - noMes))} este mês` : "Nada guardado este mês" };
+    if (noMes <= 0) return { chave: "nada", rotulo: mensal > 0 ? `Nenhum depósito este mês · guardar ${brl(mensal)}` : "Nenhum depósito este mês" };
+    if (!(mensal > 0) || noMes >= mensal - 0.005) return { chave: "ok", rotulo: `Guardou ${brl(noMes)} este mês` };
+    return { chave: "atencao", rotulo: `Guardou ${brl(noMes)} · falta ${brl(mensal - noMes)} este mês` };
   }
 
   const ICONE_GUARDAR_MES = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M12 13.2v5M9.8 15.4h4.4"/></svg>';
