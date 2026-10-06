@@ -1344,3 +1344,7 @@ button.resumo-pill:active { transform: scale(.98); }
 @container (max-width: 330px) { .meta-rodape-3 i.rot { display: none; } }
 .meta-rodape-3 { font-size: 10.5px; gap: 6px; }
 .meta-rodape-3 > span:first-child { flex: none; }
+/* emoji da classe na frente da porcentagem (legenda da composição) */
+.legenda-pct .emoji-pct { margin-right: 5px; font-size: 12px; }
+.legenda-linha:has(.emoji-pct) { grid-template-columns: minmax(0, 1fr) 70px 92px; }
+.legenda-pct:has(.emoji-pct) { white-space: nowrap; }
