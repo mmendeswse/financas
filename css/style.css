@@ -1448,3 +1448,22 @@ button.resumo-pill:active { transform: scale(.98); }
 .meta-topo-linha .meta-st { font-size: 10.5px; padding: 2px 6px; gap: 3px; } .meta-topo-linha .meta-selos { gap: 3px; }
 .meta-topo-linha .meta-nome { font-size: 13.5px; } .meta-topo-linha .meta-nome .emoji-desc { font-size: 15px; margin-right: 4px; }
 .meta-topo-linha .meta-st { padding: 2px 5px; } .meta-topo-linha .meta-selos { gap: 2px; } .meta-topo.meta-topo-linha { gap: 4px; }
+/* situação só pela bolinha (verde = mês guardado, amarela = falta guardar) */
+.meta-bolinha { flex: none; width: 11px; height: 11px; border-radius: 50%; background: var(--amarelo); box-shadow: 0 0 0 3px rgba(255,167,38,.18); }
+.meta-bolinha.st-ok { background: var(--up); box-shadow: 0 0 0 3px rgba(46,229,157,.18); }
+/* selos do topo maiores de novo */
+.meta-topo-linha .meta-st { font-size: 11.5px; padding: 2px 7px; gap: 4px; }
+.meta-topo-linha .meta-falta-ic { font-size: 12px; }
+.meta-topo-linha .meta-selos { gap: 4px; }
+.meta-topo.meta-topo-linha { gap: 7px; align-items: center; }
+.meta-topo-linha .meta-nome { font-size: 14.5px; }
+.meta-topo-linha .meta-nome .emoji-desc { font-size: 16px; margin-right: 5px; }
+/* barra larga até o fim, com a porcentagem dentro */
+.meta-barra.meta-barra-grande { position: relative; height: 18px; border-radius: 9px; display: block; }
+.meta-barra-grande > i { border-radius: 9px; }
+.meta-pct-dentro { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 11.5px; font-weight: 800; color: #fff; line-height: 1; text-shadow: 0 1px 2px rgba(0,0,0,.6); }
+.meta-item .meta-rodape { margin-top: 6px; }
+.meta-rodape-3 { font-size: 13px; }
+.meta-topo-linha .meta-st { font-size: 10.5px; padding: 2px 5px; gap: 3px; } .meta-topo-linha .meta-falta-ic { font-size: 11px; } .meta-topo-linha .meta-selos { gap: 3px; } .meta-topo.meta-topo-linha { gap: 5px; } .meta-topo-linha .meta-nome { font-size: 14px; } .meta-topo-linha .meta-nome .emoji-desc { font-size: 15px; margin-right: 4px; }
+.meta-topo-linha .meta-nome { font-size: 13.5px; } .meta-topo.meta-topo-linha { gap: 4px; } .meta-topo-linha .meta-selos { gap: 2px; } .meta-bolinha { width: 9px; height: 9px; box-shadow: 0 0 0 2px rgba(255,167,38,.18); } .meta-bolinha.st-ok { box-shadow: 0 0 0 2px rgba(46,229,157,.18); }
+.meta-topo-linha .meta-st { padding: 2px 4px; } .meta-item { padding-left: 10px; padding-right: 10px; }

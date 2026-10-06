@@ -22,7 +22,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.2.7";
+  const VERSAO_APP = "3.2.8";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1386,7 +1386,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.2.7" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.2.8" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1550,15 +1550,22 @@
 
   // situação da meta: concluída, prazo vencido, ou se o "Guardar Mês" dá
   // conta do que falta até o prazo (sem prazo, basta ter um valor por mês)
+  // quanto entrou na meta no mês corrente (pelo histórico de valores)
+  function guardadoNoMes(m) {
+    const h = new Date(), fimMesAnterior = new Date(h.getFullYear(), h.getMonth(), 0);
+    const iso = `${fimMesAnterior.getFullYear()}-${String(fimMesAnterior.getMonth() + 1).padStart(2, "0")}-${String(fimMesAnterior.getDate()).padStart(2, "0")}`;
+    return Number(m.atual || 0) - valorMetaEm(m, iso);
+  }
+  // situação da meta pela bolinha: verde = guardou o valor do mês (ou já concluiu),
+  // amarela = ainda não guardou o "Guardar Mês" deste mês
   function situacaoMeta(m) {
     const atual = Number(m.atual || 0), objetivo = Number(m.objetivo || 0);
-    if (objetivo > 0 && atual >= objetivo) return { chave: "ok", rotulo: "Concluída" };
-    if (m.prazo && F.diasEntre(m.prazo) < 0) return { chave: "atrasada", rotulo: "Prazo Vencido" };
-    const mensal = Number(m.aporteMensal || 0);
-    if (!(mensal > 0)) return { chave: "atencao", rotulo: "Atenção" };
-    if (!m.prazo) return { chave: "ok", rotulo: "Promissor" };
-    const meses = Math.max(1, F.diasEntre(m.prazo) / 30.44);
-    return mensal * meses >= objetivo - atual ? { chave: "ok", rotulo: "Promissor" } : { chave: "atencao", rotulo: "Atenção" };
+    if (objetivo > 0 && atual >= objetivo) return { chave: "ok", rotulo: "Meta concluída" };
+    const mensal = Number(m.aporteMensal || 0), noMes = guardadoNoMes(m);
+    const guardou = mensal > 0 ? noMes >= mensal - 0.005 : noMes > 0;
+    return guardou
+      ? { chave: "ok", rotulo: `Guardou ${brl(noMes)} este mês` }
+      : { chave: "atencao", rotulo: mensal > 0 ? `Falta guardar ${brl(Math.max(0, mensal - noMes))} este mês` : "Nada guardado este mês" };
   }
 
   const ICONE_GUARDAR_MES = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M12 13.2v5M9.8 15.4h4.4"/></svg>';
@@ -1612,8 +1619,8 @@
       const p = objetivo > 0 ? Math.min(100, (valor / objetivo) * 100) : 0;
       const st = situacaoMeta(m);
       return `<button class="meta-item clicavel st-${st.chave}" style="--meta-cor:${esc(m.cor || "var(--up)")}" data-acao="explicar-meta" data-id="${m.id}" title="Ver detalhes da meta">
-        <div class="meta-topo meta-topo-linha"><span class="meta-nome">${nomeMeta(m)}</span><span class="meta-selos">${m.prazo ? `<span class="meta-st meta-falta" title="Data final da meta"><span class="meta-falta-ic">📅</span>${fmtData(m.prazo)}</span>` : ""}<span class="meta-st meta-falta" title="Guardar por mês: ${Number(m.aporteMensal) > 0 ? brl(m.aporteMensal) : "não definido"}"><span class="meta-falta-ic">💰</span>${Number(m.aporteMensal) > 0 ? brlCurto(m.aporteMensal).replace(/^R\$\s*/, "") : "—"}</span>${objetivo > valor ? `<span class="meta-st meta-falta" title="Quanto falta para o objetivo"><span class="meta-falta-ic">🏁</span>${brlCurto(objetivo - valor).replace(/^R\$\s*/, "")}</span>` : ""}</span></div>
-        <div class="meta-barra-linha"><div class="meta-barra"><i style="width:${p}%"></i></div><span class="meta-st meta-situacao meta-sit-barra" title="${st.rotulo}"><i></i><span class="meta-st-txt">${st.rotulo}</span></span><b class="meta-pct">${p.toFixed(0)}%</b></div>
+        <div class="meta-topo meta-topo-linha"><span class="meta-nome">${nomeMeta(m)}</span><span class="meta-selos">${m.prazo ? `<span class="meta-st meta-falta" title="Data final da meta"><span class="meta-falta-ic">📅</span>${fmtData(m.prazo)}</span>` : ""}<span class="meta-st meta-falta" title="Guardar por mês: ${Number(m.aporteMensal) > 0 ? brl(m.aporteMensal) : "não definido"}"><span class="meta-falta-ic">💰</span>${Number(m.aporteMensal) > 0 ? brlCurto(m.aporteMensal).replace(/^R\$\s*/, "") : "—"}</span>${objetivo > valor ? `<span class="meta-st meta-falta" title="Quanto falta para o objetivo"><span class="meta-falta-ic">🏁</span>${brlCurto(objetivo - valor).replace(/^R\$\s*/, "")}</span>` : ""}</span><span class="meta-bolinha st-${st.chave}" title="${st.rotulo}"></span></div>
+        <div class="meta-barra meta-barra-grande"><i style="width:${p}%"></i><b class="meta-pct-dentro">${p.toFixed(0)}%</b></div>
         <div class="meta-rodape meta-rodape-3"><span>${brlCurto(valor)}</span><span></span><span>${brlCurto(objetivo)}</span></div>
       </button>`;
     }).join("") + `</div>`;
@@ -1623,7 +1630,7 @@
   function resumoMetas(d) {
     if (!d.metas.length) return "progressos";
     const ok = d.metas.filter((m) => situacaoMeta(m).chave === "ok").length;
-    return `${ok} de ${d.metas.length} caminho certo`;
+    return `${ok} de ${d.metas.length} com o mês guardado`;
   }
 
   function stripKpis(itens) {
