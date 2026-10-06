@@ -76,6 +76,15 @@
     }
     return f === FREQUENCIAS[0] ? "" : ` <span class="selo-tag selo-cat">${esc(f.toLowerCase())}</span>`;
   }
+  // selo "4/16" de um lançamento parcelado, achado pelo id (origem da série ou
+  // lançamento do mês) e pela data daquele mês — usado nos painéis e listas
+  function seloParcela(id, data) {
+    if (!id || !data) return "";
+    const reg = [...DADOS.entradas, ...DADOS.despesas, ...(DADOS.contasPagar || [])].find((r) => r.id === id);
+    if (!ehPers(reg)) return "";
+    const regra = regraDe(reg), n = numeroParcela(regra, String(data).slice(0, 7));
+    return n > 0 ? ` <span class="selo-tag selo-cat" title="Parcela ${n} de ${regra.parcelas}">${n}/${regra.parcelas}</span>` : "";
+  }
   // selo extra quando, na regra de dia útil, contando também os sábados, o dia cai num sábado
   function seloSabado(reg) {
     if (!ehPers(reg) || !dataReg(reg)) return "";
@@ -1733,7 +1742,7 @@
         linhas: (() => {
           const itensR = listaEntradasTodasMes(d, mes);
           return cabecalhoColunasPainel() +
-            itensR.map((e) => linhaEditavel(e, linha(fmtDataCurta(e.data) + " · " + esc(e.descricao), bancoPainel(e.banco, e) + seloStatusPainel(e.status, e) + `<span class="col-valor valor-guia up">+${brl(e.valor)}</span>`))).join("") +
+            itensR.map((e) => linhaEditavel(e, linha(fmtDataCurta(e.data) + " · " + esc(e.descricao) + seloParcela(e.id, e.data), bancoPainel(e.banco, e) + seloStatusPainel(e.status, e) + `<span class="col-valor valor-guia up">+${brl(e.valor)}</span>`))).join("") +
             linhaTotalPainel(plural(itensR.length, "Lançamento"), `+${brl(entradas)}`);
         })(),
         secao: "entradas"
@@ -1746,7 +1755,7 @@
         linhas: (() => {
           const itensD = listaDespesasTodasMes(d, mes);
           return cabecalhoColunasPainel() +
-            itensD.map((x) => linhaEditavel(x, linha(fmtDataCurta(x.data) + " · " + esc(x.descricao), bancoPainel(x.banco, x) + seloStatusPainel(x.status, x) + `<span class="col-valor valor-guia down">−${brl(x.valor)}</span>`))).join("") +
+            itensD.map((x) => linhaEditavel(x, linha(fmtDataCurta(x.data) + " · " + esc(x.descricao) + seloParcela(x.id, x.data), bancoPainel(x.banco, x) + seloStatusPainel(x.status, x) + `<span class="col-valor valor-guia down">−${brl(x.valor)}</span>`))).join("") +
             linhaTotalPainel(plural(itensD.length, "Lançamento"), `−${brl(despesas)}`);
         })(),
         secao: "despesas"
@@ -1910,7 +1919,7 @@
       painelSimples(`Projeção de despesas · ${nomeMesQueVem()}`, saldo > 0 ? (aVir / saldo) * 100 : 0,
         "do seu saldo em bancos já está comprometido", "despesas previstas para o próximo mês",
         (itens.length
-          ? cabecalhoColunasPainel() + itens.map((x) => linhaEditavel(x, linha(fmtDataCurta(x.data) + " · " + esc(x.descricao),
+          ? cabecalhoColunasPainel() + itens.map((x) => linhaEditavel(x, linha(fmtDataCurta(x.data) + " · " + esc(x.descricao) + seloParcela(x.id, x.data),
               bancoPainel(x.banco, x) + seloStatusPainel(x.status, x) + `<span class="col-valor valor-guia down">−${brl(x.valor)}</span>`))).join("")
           : `<div class="kv"><span class="dim">Nenhuma conta prevista para o mês que vem</span><b>—</b></div>`) +
         linhaTotalPainel(plural(itens.length, "Lançamento"), "−" + brl(aVir)), "despesas");
@@ -1948,7 +1957,7 @@
         "do seu saldo em bancos está comprometido", "soma de contas pendentes no mês atual",
         (itens.length ? cabecalhoColunasPainel() : "") +
         (itens.length
-          ? itens.map((x) => linhaEditavel(x, linha(fmtDataCurta(x.data) + " · " + esc(x.descricao),
+          ? itens.map((x) => linhaEditavel(x, linha(fmtDataCurta(x.data) + " · " + esc(x.descricao) + seloParcela(x.id, x.data),
               bancoPainel(x.banco, x) + seloStatusPainel(x.status, x) + `<span class="col-valor valor-guia down">−${brl(x.valor)}</span>`))).join("")
           : `<div class="kv"><span class="dim">Nenhuma conta pendente no mês atual</span><b>—</b></div>`) +
         linhaTotalPainel(plural(itens.length, "Lançamento"), `−${brl(total)}`), "despesas");
@@ -2029,7 +2038,7 @@
     const itensR = listaEntradasTodasMes(d, mes).map((e) => ({ ...e, sinal: "+", cor: "up" }));
     const itensD = listaDespesasTodasMes(d, mes).map((x) => ({ ...x, sinal: "−", cor: "down" }));
     const todos = [...itensR, ...itensD];
-    const linhaItem = (it) => linhaEditavel(it, linha(fmtDataCurta(it.data) + " · " + esc(it.descricao),
+    const linhaItem = (it) => linhaEditavel(it, linha(fmtDataCurta(it.data) + " · " + esc(it.descricao) + seloParcela(it.id, it.data),
       bancoPainel(it.banco, it) + seloStatusPainel(it.status, it) + `<span class="col-valor valor-guia ${it.cor}">${it.sinal}${brl(it.valor)}</span>`));
     const vazio = (txt) => `<div class="kv"><span class="dim">${txt}</span><b>—</b></div>`;
     const totE = totalEntradasTodasMes(d, mes), totD = totalDespesasTodasMes(d, mes);
@@ -2217,7 +2226,7 @@
     let html = `<div class="hd" style="${grid}"><i>Descrição</i><i class="r">Valor</i></div>`;
     html += lista.map((m) => `
       <div class="rw" style="${grid}">
-        <div><div class="nm">${esc(m.descricao)}</div><div class="sub">${fmtDataCurta(m.data)} · ${esc(m.categoria || "—")}</div></div>
+        <div><div class="nm">${esc(m.descricao)}${seloParcela(m.id, m.data)}</div><div class="sub">${fmtDataCurta(m.data)} · ${esc(m.categoria || "—")}</div></div>
         <div class="r big ${m.__tipo === "entrada" ? "up" : "down"}">${m.__tipo === "entrada" ? "+" : "−"}${brl(m.valor)}</div>
       </div>`).join("");
     return html;
@@ -2690,7 +2699,7 @@
     const reabrir = painelReabrir;
     abrirModal(`
       <h3>Pagar com qual banco?</h3>
-      <div class="dim" style="margin-bottom:10px">${esc(reg.descricao || "Despesa")} · <b class="down">−${brl(valor)}</b></div>
+      <div class="dim" style="margin-bottom:10px">${esc(reg.descricao || "Despesa")}${seloParcela(reg.id, mes ? mes + "-01" : reg.vencimento)} · <b class="down">−${brl(valor)}</b></div>
       <div id="listaBancosPg">${bancos.map((b) => `
         <button type="button" class="kv kv-editavel opcao-banco-pg" data-banco="${b.id}" style="align-items:center;width:100%;text-align:left;cursor:pointer;border-radius:8px">
           <span style="display:flex;align-items:center;gap:8px">${marcaBanco(b.nome, 18)}${esc(b.nome)}</span>
@@ -3618,7 +3627,7 @@
           <button class="btn fantasma" data-acao="alternar-pago" data-id="${c.id}" title="${c.statusReal === "Pago" ? "Marcar como pendente" : "Marcar como pago"}" style="color:${c.statusReal === "Pago" ? "var(--up)" : "var(--dim)"}">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l3.5 3.5L16 5"/></svg>
           </button>
-          <button data-acao="editar-conta" data-id="${c.id}" style="text-align:left"><div class="nm">${esc(c.descricao)}</div><div class="sub">${esc(c.categoria || "—")}</div></button>
+          <button data-acao="editar-conta" data-id="${c.id}" style="text-align:left"><div class="nm">${esc(c.descricao)}${seloParcela(c.id, c.vencimento)}</div><div class="sub">${esc(c.categoria || "—")}</div></button>
           <div class="dim" style="font-size:12.5px">${fmtData(c.vencimento)}</div>
           <div class="r big">${brl(c.valor)}</div>
           <div class="r" style="display:flex;gap:6px;justify-content:flex-end;align-items:center">${seloStatus(c.statusReal)}
@@ -3741,7 +3750,7 @@
         lista.map((m) => `
         <div class="rw" style="${grid}">
           <div class="dim" style="font-size:12px">${fmtDataCurta(m.data)}</div>
-          <button data-acao="${m.__tipo === "Entrada" ? "editar-entrada" : "editar-despesa"}" data-id="${m.id}" style="text-align:left"><div class="nm">${esc(m.descricao)}</div></button>
+          <button data-acao="${m.__tipo === "Entrada" ? "editar-entrada" : "editar-despesa"}" data-id="${m.id}" style="text-align:left"><div class="nm">${esc(m.descricao)}${seloParcela(m.id, m.data)}</div></button>
           <div class="dim" style="font-size:12.5px">${esc(m.categoria || "—")}</div>
           <div class="dim" style="font-size:12.5px">${m.cartaoId ? "💳 " + esc(nomeCartao(d, m.cartaoId)) : esc(F.nomeBanco(d, m.bancoId))}</div>
           <div class="r big ${m.__tipo === "Entrada" ? "up" : "down"}">${m.__tipo === "Entrada" ? "+" : "−"}${brl(m.valor)}</div>
