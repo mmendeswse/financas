@@ -1335,3 +1335,12 @@ button.resumo-pill:active { transform: scale(.98); }
 .meta-guardar b { color: var(--texto); }
 .meta-rodape > span:last-child { flex: none; }   /* o percentual nunca é cortado; se faltar espaço, encurta o "Guardar Mês" */
 .meta-guardar { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Atual · Guardar Mês e data (no meio) · Objetivo, numa linha só */
+.meta-rodape-3 { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px; }
+.meta-rodape-3 .meta-guardar { justify-self: center; max-width: 100%; display: block; }
+.meta-rodape-3 .meta-guardar svg { display: inline-block; vertical-align: -2px; margin-right: 4px; }
+.meta-rodape-3 i.rot { font-style: normal; }
+.metas-lista { container-type: inline-size; }
+@container (max-width: 330px) { .meta-rodape-3 i.rot { display: none; } }
+.meta-rodape-3 { font-size: 10.5px; gap: 6px; }
+.meta-rodape-3 > span:first-child { flex: none; }
