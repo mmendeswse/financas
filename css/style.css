@@ -1398,3 +1398,11 @@ button.resumo-pill:active { transform: scale(.98); }
 .meta-rodape { margin-top: 5px; }
 /* em quadros estreitos o selo de situação fica só com a bolinha colorida (o nome aparece ao passar o mouse) */
 @container (max-width: 345px) { .meta-situacao .meta-st-txt { display: none; } .meta-situacao { padding: 1px 5px; } }
+/* porcentagem de progresso no fim da barra */
+.meta-barra-linha { display: flex; align-items: center; gap: 8px; }
+.meta-barra-linha .meta-barra { flex: 1; }
+.meta-pct { flex: none; min-width: 34px; text-align: right; font-size: 12px; font-weight: 800; color: var(--texto); }
+.meta-pct { line-height: 1; font-size: 11.5px; margin: -4px 0; }
+.meta-pct { margin: 0; }
+.meta-item .meta-topo { margin-bottom: 4px; }
+.meta-item .meta-rodape { margin-top: 3px; }
