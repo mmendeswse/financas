@@ -1220,7 +1220,10 @@ button.resumo-pill:active { transform: scale(.98); }
 .scroll { display: flex; flex-direction: column; flex: 1 0 auto; }
 /* largura total: num contêiner flex em coluna, margin auto encolheria os itens */
 #conteudo { flex: 1 0 auto; width: 100%; box-sizing: border-box; }
-.rodape-app { width: 100%; max-width: none; box-sizing: border-box; margin: 8px 0 0; }
+.rodape-app { width: 100%; max-width: none; box-sizing: border-box; margin: 16px 0 0; }
+/* o rodapé fica a 16px do último quadro — o mesmo espaço entre os quadros */
+#conteudo { padding-bottom: 0 !important; }
+#conteudo > :last-child { margin-bottom: 0 !important; }
 
 /* resumo de notícias ao tocar no "N" de uma vela */
 .popover-noticias { position: absolute; z-index: 5; width: min(320px, calc(100% - 8px)); box-sizing: border-box;
