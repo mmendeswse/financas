@@ -22,7 +22,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.4.9";
+  const VERSAO_APP = "3.5.0";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1411,7 +1411,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.4.9" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.5.0" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1965,12 +1965,13 @@
 
 
 
-  function painelSimples(titulo, pctValor, pctRotulo, comoCalcula, linhasHtml, secao, botao) {
+  function painelSimples(titulo, pctValor, pctRotulo, comoCalcula, linhasHtml, secao, botao, extraHtml) {
     abrirModal(`
       <h3>${titulo}</h3>
       <div class="explica-pct"><b>${Math.abs(pctValor).toFixed(1).replace(".", ",")}%</b><span>${pctRotulo}</span></div>
       ${comoCalcula ? `<p class="campo ajuda" style="margin:0 0 12px">Como é calculado: <b>${comoCalcula}</b></p>` : ""}
       <div class="explica-lista">${linhasHtml}</div>
+      ${extraHtml || ""}
       <div class="modal-acoes">
         <button class="btn primario salvar" id="btnIrPainel">${botao ? esc(botao.rotulo) : "Abrir"}</button>
         <button class="btn" id="btnFecharPainel">Fechar</button>
@@ -1981,6 +1982,43 @@
       else navegarPara(secao);
     };
     document.getElementById("btnFecharPainel").onclick = fecharModal;
+    // o extrato abre já no fim, onde está o saldo atual
+    const ext = document.querySelector(".extrato-banco");
+    if (ext) ext.scrollTop = ext.scrollHeight;
+  }
+
+  // Histórico da conta: do saldo inicial, lançamento a lançamento, até o
+  // saldo atual (o mesmo do quadro Meus bancos). Com período escolhido,
+  // começa no saldo de antes do período e resume o que veio depois dele.
+  function extratoBancoHtml(d, b) {
+    const ext = F.extratoDoBanco(d, b.id);
+    const linha = (data, desc, valor, saldo, classe) => `
+      <div class="extrato-linha ${classe || ""}">
+        <span class="dim">${data}</span>
+        <span class="desc">${desc}</span>
+        <b class="${valor === null ? "vazio" : corSinal(valor)}">${valor === null ? "" : brlSinal(valor)}</b>
+        <b class="saldo">${brlSinal(saldo)}</b>
+      </div>`;
+    const doItem = (i) => linha(fmtDataCurta(i.data), esc(i.descricao) + (i.tipo === "transferencia" ? ` <span class="dim">⇄</span>` : ""), i.valor, i.saldo);
+    let corpo;
+    if (mesesBancos) {
+      const fx = faixaBancos();
+      const antes = ext.itens.filter((i) => String(i.data) < fx.ini);
+      const dentro = ext.itens.filter((i) => String(i.data) >= fx.ini && String(i.data) <= fx.fim);
+      const depois = ext.itens.filter((i) => String(i.data) > fx.fim);
+      const saldoAntes = antes.length ? antes[antes.length - 1].saldo : ext.saldoInicial;
+      corpo = linha(fmtDataCurta(fx.ini), "Saldo antes do período", null, saldoAntes, "marco") +
+        (dentro.length ? dentro.map(doItem).join("") : `<div class="extrato-linha"><span></span><span class="desc dim">Nenhum lançamento no período</span><span></span><span></span></div>`) +
+        (depois.length ? linha("", `${plural(depois.length, "lançamento")} após o período`,
+          Math.round(depois.reduce((t, i) => t + i.valor, 0) * 100) / 100, depois[depois.length - 1].saldo) : "");
+    } else {
+      corpo = linha("", "Saldo inicial", null, ext.saldoInicial, "marco") + ext.itens.map(doItem).join("");
+    }
+    corpo += linha("", "Saldo atual", null, ext.saldoFinal, "marco final");
+    return `
+      <div class="extrato-titulo"><span>Histórico da conta</span><span class="dim">${plural(ext.itens.length, "lançamento")}</span></div>
+      <div class="extrato-cab"><span>Data</span><span>Descrição</span><span>Valor</span><span>Saldo</span></div>
+      <div class="explica-lista extrato-banco">${corpo}</div>`;
   }
 
   function explicarBanco(id) {
@@ -2001,7 +2039,7 @@
         (b.transferido ? linha(`Transferências ${periodo}`, brlSinal(b.transferido)) : "") +
         linha("Movimentação líquida", brlSinal(b.valor)) +
         linha("Saldo atual da conta", brlSinal(b.saldoAtual)), "bancos",
-        { rotulo: "+ Adicionar", acao: () => abrirModalValorBanco(b.id) });
+        { rotulo: "+ Adicionar", acao: () => abrirModalValorBanco(b.id) }, extratoBancoHtml(d, b));
       return;
     }
 
@@ -2012,7 +2050,7 @@
       linha("− Despesas", `<span class="valor-guia down">−${brl(b.saidas)}</span>`) +
       (b.transferido ? linha("Transferências", brlSinal(b.transferido)) : "") +
       linha("Saldo", brlSinal(b.saldoAtual)), "bancos",
-      { rotulo: "+ Adicionar", acao: () => abrirModalValorBanco(b.id) });
+      { rotulo: "+ Adicionar", acao: () => abrirModalValorBanco(b.id) }, extratoBancoHtml(d, b));
   }
 
   function explicarClasse(rotulo) {
@@ -3123,7 +3161,7 @@
     const saida = [];
     const pagas = (reg, data, sinal) => {
       const m = data.slice(0, 7);
-      if (bancoDoMes(reg, m) && !reg.cartaoId && mesQuitado(reg, m)) saida.push({ bancoId: bancoDoMes(reg, m), valor: sinal * valorDoMes(reg, m), data });
+      if (bancoDoMes(reg, m) && !reg.cartaoId && mesQuitado(reg, m)) saida.push({ bancoId: bancoDoMes(reg, m), valor: sinal * valorDoMes(reg, m), data, descricao: reg.descricao });
       return null;
     };
     meses.forEach((mes) => {
