@@ -1283,3 +1283,10 @@ button.resumo-pill:active { transform: scale(.98); }
   .kv:has(> span > .desc-painel) > b .col-status, .kv.kv-cab b .col-status { width: 100px; }
   .kv:has(> span > .desc-painel) > b .col-valor, .kv.kv-cab b .col-valor { width: 118px; }
 }
+/* status antes do banco nos painéis */
+.kv b > .col-status:first-child { margin-left: 14px; }
+.kv b .col-status + .col-banco { margin-left: 8px; }
+@media (max-width: 600px) {
+  .kv:has(> span > .desc-painel) > b > .col-status:first-child { margin-left: 0; }
+  .kv:has(> span > .desc-painel) > b .col-status + .col-banco { margin-left: 10px; }
+}
