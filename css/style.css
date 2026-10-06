@@ -1388,3 +1388,13 @@ button.resumo-pill:active { transform: scale(.98); }
 .card header .acoes:has([data-acao="periodo-metas"]) { flex: 0 1 auto; min-width: 0; max-width: 100%; }
 .meta-selos { flex: 0 1 auto; max-width: 100%; }
 .meta-rodape-3 .meta-data { justify-self: center; font-size: 10.5px; }
+/* metas: 4 selos numa linha (📅 · 💰 · 🏁 · situação) e caixas mais baixas, para o quadro voltar à altura dos vizinhos */
+.metas-lista { gap: 7px; padding-bottom: 10px; }
+.meta-item { padding: 8px 10px 7px; }
+.meta-topo { margin-bottom: 6px; row-gap: 5px; }
+.meta-selos { gap: 4px; }
+.meta-item .meta-st { font-size: 10px; padding: 1px 6px; gap: 4px; }
+.meta-falta-ic { font-size: 10px; }
+.meta-rodape { margin-top: 5px; }
+/* em quadros estreitos o selo de situação fica só com a bolinha colorida (o nome aparece ao passar o mouse) */
+@container (max-width: 345px) { .meta-situacao .meta-st-txt { display: none; } .meta-situacao { padding: 1px 5px; } }
