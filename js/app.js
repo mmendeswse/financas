@@ -22,7 +22,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.4.3";
+  const VERSAO_APP = "3.4.4";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -89,13 +89,14 @@
     const [a0, m0] = regra.primeiraParcela.split("-").map(Number), [a1, m1] = mes.split("-").map(Number);
     return Math.floor(((a1 - a0) * 12 + (m1 - m0)) / Math.max(1, Number(regra.intervalo) || 1)) + 1;
   }
-  function seloFreq(reg) {
+  // semSabado: o aviso "⚠️ sábado" fica fora (as guias o mostram embaixo da data)
+  function seloFreq(reg, semSabado) {
     const f = freqDe(reg);
     if (f === FREQ_PERS) {
       const regra = regraDe(reg);
       const n = numeroParcela(regra, mesReg(reg));
-      if (n > 0) return ` <span class="selo-tag selo-cat" title="Parcela ${n} de ${regra.parcelas} · ${esc(rotuloRegra(regra))}">${n}/${regra.parcelas}</span>${seloSabado(reg)}`;
-      return ` <span class="selo-tag selo-cat" title="Personalizar: ${esc(rotuloRegra(regra))}, ${esc(rotuloIntervalo(regra.intervalo))}">${esc(rotuloIntervalo(regra.intervalo))}</span>${seloSabado(reg)}`;
+      if (n > 0) return ` <span class="selo-tag selo-cat" title="Parcela ${n} de ${regra.parcelas} · ${esc(rotuloRegra(regra))}">${n}/${regra.parcelas}</span>${semSabado ? "" : seloSabado(reg)}`;
+      return ` <span class="selo-tag selo-cat" title="Personalizar: ${esc(rotuloRegra(regra))}, ${esc(rotuloIntervalo(regra.intervalo))}">${esc(rotuloIntervalo(regra.intervalo))}</span>${semSabado ? "" : seloSabado(reg)}`;
     }
     return f === FREQUENCIAS[0] ? "" : ` <span class="selo-tag selo-cat">${esc(f.toLowerCase())}</span>`;
   }
@@ -1413,7 +1414,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.4.3" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.4.4" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -3421,9 +3422,9 @@
       corpo = `<div class="hd" style="${grid}">${thOrdem("ordenar-entradas", "data", "Data", ordemEntradas)}${thOrdem("ordenar-entradas", "descricao", "Descrição", ordemEntradas)}<i>Recorrência</i>${thOrdem("ordenar-entradas", "status", "Status", ordemEntradas)}${thOrdem("ordenar-entradas", "banco", "Banco", ordemEntradas)}${thOrdem("ordenar-entradas", "valor", "Valor", ordemEntradas, "hd-valor")}</div>` +
         listaTabela.map((e) => `
         <div class="rw clicavel${e.prevista ? " linha-prevista" : ""}" style="${grid}" data-acao="${e.prevista ? "editar-previsao-entrada" : "editar-entrada"}" data-id="${e.id}" data-data="${e.data}" title="${e.prevista ? "Abre este mês para edição (o valor muda só aqui)" : "Abrir para editar"}">
-          <div class="dim" style="font-size:12px">${fmtDataCurta(e.data)}</div>
+          <div class="dim cel-data" style="font-size:12px">${fmtDataCurta(e.data)}${seloSabado(e)}</div>
           <div><div class="nm">${descEmoji(e)}</div><div class="sub">${esc(e.categoria)} · ${esc(e.tipo || "")}</div></div>
-          <div class="cel-rep">${celRep(seloFreq(e))}</div>
+          <div class="cel-rep">${celRep(seloFreq(e, true))}</div>
           <div>${e.prevista
             ? `<button class="selo-tag ${e.recebidaNoMes ? "selo-pago" : "selo-prevista"} selo-botao" data-acao="quitar-mes-entrada" data-id="${e.id}" data-mes="${e.mesRef}" title="${e.recebidaNoMes ? "Marcar como prevista" : "Marcar como paga"}">${e.status}</button>`
             : `<button class="selo-tag ${e.previsto ? "selo-prevista" : "selo-pago"} selo-botao" data-acao="alternar-prevista-entrada" data-id="${e.id}" title="${e.previsto ? "Marcar como paga" : "Marcar como prevista"}">${e.status}</button>`}</div>
@@ -3622,9 +3623,9 @@
       corpo = `<div class="hd" style="${gridD}">${thOrdem("ordenar-despesas", "data", "Data", ordemDespesas)}${thOrdem("ordenar-despesas", "descricao", "Descrição", ordemDespesas)}<i>Recorrência</i>${thOrdem("ordenar-despesas", "status", "Status", ordemDespesas)}${thOrdem("ordenar-despesas", "pagoCom", "Banco", ordemDespesas)}${thOrdem("ordenar-despesas", "valor", "Valor", ordemDespesas, "hd-valor")}</div>` +
         listaTabela.map((x) => `
         <div class="rw clicavel${x.prevista ? " linha-prevista" : ""}" style="${gridD}" data-acao="${x.prevista ? (x.origem === "conta" ? "editar-previsao-conta" : "editar-previsao") : (x.origem === "despesa" ? "editar-despesa" : "editar-conta")}" data-id="${x.id}" data-data="${x.data}" title="${x.prevista ? "Abre este mês para edição (o valor muda só aqui)" : "Abrir para editar"}">
-          <div class="dim" style="font-size:12px">${fmtData(x.data)}</div>
+          <div class="dim cel-data" style="font-size:12px">${fmtData(x.data)}${seloSabado({ ...(registrosSerie("despesa").find((y) => y.id === x.id) || {}), data: x.data })}</div>
           <div><div class="nm">${descEmoji(x)}</div><div class="sub">${esc(x.categoria || "—")} · ${esc(x.tipo || "Variável")}</div></div>
-          <div class="cel-rep">${celRep(seloFreq({ ...(registrosSerie("despesa").find((y) => y.id === x.id) || {}), recorrencia: x.recorrencia, data: x.data }))}</div>
+          <div class="cel-rep">${celRep(seloFreq({ ...(registrosSerie("despesa").find((y) => y.id === x.id) || {}), recorrencia: x.recorrencia, data: x.data }, true))}</div>
           <div>${x.prevista
             ? `<button class="selo-tag ${x.status === "Pago" ? "selo-pago" : "selo-prevista"} selo-botao" data-acao="${x.origem === "conta" ? "quitar-mes-conta" : "quitar-mes"}" data-id="${x.id}" data-mes="${x.mesRef}" title="Confirmar: cria o lançamento deste mês">${x.status}</button>`
             : `<button class="selo-tag selo-${x.status.toLowerCase()} selo-botao" data-acao="${x.origem === "conta" ? "alternar-pago" : "tornar-pendente"}" data-id="${x.id}" title="${x.origem === "conta" ? (x.status === "Pago" ? "Marcar como prevista" : "Marcar como paga") : "Marcar como prevista (vira conta a pagar)"}">${x.status}</button>`}</div>
