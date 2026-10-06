@@ -1364,3 +1364,5 @@ button.resumo-pill:active { transform: scale(.98); }
 .btn-ver-todas:hover svg { transform: translateX(2px); }
 .btn-ver-todas svg { transition: transform .15s; }
 .btn-ver-todas { padding: 5px 9px; }
+/* "Falta R$ X" ao lado do selo de situação, no mesmo formato e cor */
+.meta-selos { display: inline-flex; align-items: center; gap: 6px; flex: none; }
