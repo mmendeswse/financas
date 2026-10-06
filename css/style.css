@@ -1356,3 +1356,10 @@ button.resumo-pill:active { transform: scale(.98); }
 .kpi-rotulo .kpi-rotulo-txt { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 /* o rótulo clicável do centro do donut ocupa só o centro: o clique nas fatias abre o detalhe da classe */
 .donut-rotulo.clicavel { inset: auto; left: 50%; top: 50%; transform: translate(-50%, -50%); }
+/* botão "TODAS →" no padrão das pílulas (TOTAL, PERÍODO) */
+.btn-ver-todas { display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 10.5px; font-weight: 800; letter-spacing: .06em;
+  padding: 5px 10px; border-radius: 8px; border: 1px solid var(--cy); color: var(--cy); background: rgba(0,229,255,.08); cursor: pointer; white-space: nowrap;
+  transition: background .15s, transform .15s; }
+.btn-ver-todas:hover { background: rgba(0,229,255,.18); }
+.btn-ver-todas:hover svg { transform: translateX(2px); }
+.btn-ver-todas svg { transition: transform .15s; }
