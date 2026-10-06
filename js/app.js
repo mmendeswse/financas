@@ -22,7 +22,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.4.4";
+  const VERSAO_APP = "3.4.5";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1190,13 +1190,13 @@
     const pendentes = d.metas.filter((m) => situacaoMeta(m).chave !== "ok");
     if (!pendentes.length) return null;
     const nenhum = pendentes.some((m) => situacaoMeta(m).chave === "nada");
-    const partes = pendentes.map((m) => {
-      const falta = Math.max(0, Number(m.aporteMensal || 0) - guardadoNoMes(m));
-      return `${emojiMeta(m)} ${esc(m.nome)}${falta > 0 ? ` (${brl(falta)})` : ""}`;
+    // resumo curto: uma linha por meta com o valor que ainda falta reservar no mês
+    const linhas = pendentes.map((m) => {
+      const falta = Number(m.aporteMensal || 0) > 0 ? Math.max(0, Number(m.aporteMensal) - guardadoNoMes(m)) : 0;
+      return `<span class="notif-meta">${emojiMeta(m)} ${esc(m.nome)}<b>${falta > 0 ? brlCurto(falta) : "—"}</b></span>`;
     });
-    const total = pendentes.reduce((t, m) => t + Math.max(0, Number(m.aporteMensal || 0) - guardadoNoMes(m)), 0);
     return { tipo: nenhum ? "perigo" : "aviso", rota: "metas",
-      texto: `Seu salário entrou (${fmtData(pagamento)}): guarde o valor do mês nas metas${total > 0 ? ` — faltam ${brl(total)}` : ""}: ${partes.join(", ")}.` };
+      texto: `<b>💰 Reservar nas metas este mês</b>${linhas.join("")}` };
   }
 
   function gerarAlertas(d) {
@@ -1414,7 +1414,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.4.4" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.4.5" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
