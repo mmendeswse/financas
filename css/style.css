@@ -1593,3 +1593,6 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 /* quadro da meta: Guardar Mês e o Adicionar na mesma linha, embaixo à direita */
 .card.card-meta-quadro > .body > .body.pad.meta-quadro-acoes { display: flex; justify-content: flex-end; padding: 10px 18px 7px; }   /* mesmo recuo do Editar no canto de cima */
 .card-meta-quadro > header { align-items: flex-start; flex-wrap: nowrap; }
+/* guia Bancos: Editar e Depositar menores nos quadros dos bancos */
+.cartao-item .btn.btn-icone { width: 28px; height: 28px; border-radius: 7px; }
+.cartao-item .btn-icone .ic-btn { width: 16px; height: 16px; }
