@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.16";
+  const VERSAO_APP = "3.6.19";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1418,7 +1418,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.16" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.19" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2822,7 +2822,7 @@
       <div class="grid">
         <div class="c12">${card("", "Saldo bancos", mesesBancos ? `Movimentação · ${mesesBancos} ${mesesBancos === 1 ? "mês" : "meses"} de ${anoBancos}` : "comparação entre contas",
           `<div class="filtro-mes">${seletorAnoDash("anoBancos", anoBancos, anosDashboard(d))}${abasMeses("periodo-bancos", mesesBancos, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }, { meses: 0, rotulo: "Tudo" }])}</div>`,
-          `<div style="padding:12px 18px 16px;height:${Math.max(190, bancos.length * 52)}px"><canvas id="graf-saldo-bancos"></canvas></div>`)}</div>
+          `<div style="padding:6px 18px 8px;height:${Math.max(120, bancos.length * 34 + 26)}px"><canvas id="graf-saldo-bancos"></canvas></div>`)}</div>
       </div>
       ${listaTransferencias(d)}
     `;
@@ -4448,11 +4448,11 @@
     return `
       ${aviso}
       <div class="grid g-top">
-        <div class="c12">${card("", "Investimentos", "",
-          `<button class="btn" data-acao="buscar-investimentos" title="Atualizar os investimentos pelos índices do Banco Central (CDI, Selic, IPCA)">↻<span class="btn-txt">Buscar</span></button>
-           <button class="btn primario" data-acao="novo-investimento" title="Novo investimento"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg><span class="btn-txt">NOVO</span></button>`,
+        <div class="c12">${card("", "Investimentos", "renda fixa, tesouro, fundos e cripto",
+          `<button class="btn" data-acao="buscar-investimentos" title="Atualizar os investimentos pelos índices do Banco Central (CDI, Selic, IPCA)">↻ Buscar</button>
+           <button class="btn primario" data-acao="novo-investimento"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`,
           corpo,
-          `<span class="dim">Total líquido</span><b class="creme" style="font-size:14px;font-weight:800">${brlSinal(t.liquido)}</b>`, "painelInvestimentos")}</div>
+          `<span class="dim">Total líquido</span><b class="creme" style="font-size:14px;font-weight:800">${brlSinal(t.liquido)}</b>`)}</div>
       </div>
     `;
   }
@@ -5077,8 +5077,8 @@
           `<div class="pilulas-cotacao"><div class="dolar-pill" id="dolarTopbar" title="Dólar comercial (AwesomeAPI)" style="display:none"></div>
            <div class="dolar-pill cripto-pill" id="criptoBTC" style="display:none"></div>
            <div class="dolar-pill cripto-pill" id="criptoETH" style="display:none"></div></div>
-           <button class="btn" data-acao="buscar-cotacoes" title="Buscar cotações na internet agora">↻<span class="btn-txt">Buscar</span></button>
-           <button class="btn primario" data-acao="novo-ativo" title="Novo ativo"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg><span class="btn-txt">NOVO</span></button>`,
+           <button class="btn" data-acao="buscar-cotacoes" title="Buscar cotações na internet agora">↻ Buscar</button>
+           <button class="btn primario" data-acao="novo-ativo"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`,
           corpo,
           `<span class="dim">Total Carteira</span><b class="creme" style="font-size:14px;font-weight:800">${brlSinal(I.totalCarteiraAcoes(d))}</b>`, "painelAtivos")}</div>
       </div>
@@ -5680,6 +5680,14 @@
       }
       case "bancos": {
         if (!d.bancos.length) break;
+        // no computador, o gráfico encolhe o necessário para a guia caber na
+        // tela sem rolar até o rodapé (sem ficar menor que uma barra fina por banco)
+        const caixaGraf = document.getElementById("graf-saldo-bancos") && document.getElementById("graf-saldo-bancos").parentElement;
+        if (caixaGraf && window.innerWidth > 980) {
+          const sobra = document.documentElement.scrollHeight - window.innerHeight;
+          const minimo = d.bancos.length * 22 + 30;
+          if (sobra > 0) caixaGraf.style.height = Math.max(minimo, caixaGraf.clientHeight - sobra) + "px";
+        }
         G.renderSaldoBancos("graf-saldo-bancos", bancosNaOrdem(bancosDoPeriodo(d)).map((b) => Object.assign({}, b, { saldoAtual: b.valor })),
           { aoClicar: (b) => explicarBanco(b.id) });
         break;
