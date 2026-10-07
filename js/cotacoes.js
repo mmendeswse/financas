@@ -19,7 +19,7 @@
   "use strict";
 
   var URL_DOLAR = "https://economia.awesomeapi.com.br/last/USD-BRL";
-  var URL_DOLAR_SERIE = "https://economia.awesomeapi.com.br/json/daily/USD-BRL/";
+  var URL_SERIE_MOEDA = "https://economia.awesomeapi.com.br/json/daily/";
   var URL_BRAPI = "https://brapi.dev/api/quote/";
   var URL_CRIPTO = "https://economia.awesomeapi.com.br/last/BTC-BRL,ETH-BRL";
 
@@ -61,8 +61,10 @@
   // Série histórica do dólar (fechamento diário), usada no gráfico da
   // tela de detalhe. A mesma API, sem chave; devolve do mais recente
   // para o mais antigo, então invertemos a ordem.
-  function buscarSerieDolar(dias) {
-    return comTimeout(fetch(URL_DOLAR_SERIE + (dias || 90), { cache: "no-store" }).then(function (r) {
+  // O mesmo vale para o Bitcoin e o Ethereum (par "BTC-BRL", "ETH-BRL").
+  function buscarSerieDolar(dias) { return buscarSerieMoeda("USD-BRL", dias); }
+  function buscarSerieMoeda(par, dias) {
+    return comTimeout(fetch(URL_SERIE_MOEDA + par + "/" + (dias || 90), { cache: "no-store" }).then(function (r) {
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.json();
     }).then(function (lista) {
@@ -290,5 +292,5 @@
     });
   }
 
-  global.Cotacoes = { buscarDolar: buscarDolar, buscarCripto: buscarCripto, buscarSerieDolar: buscarSerieDolar, buscarCotacoes: buscarCotacoes, buscarSerieBCB: buscarSerieBCB, buscarNoticiasDia: buscarNoticiasDia, buscarNoticiasPeriodo: buscarNoticiasPeriodo };
+  global.Cotacoes = { buscarDolar: buscarDolar, buscarCripto: buscarCripto, buscarSerieDolar: buscarSerieDolar, buscarSerieMoeda: buscarSerieMoeda, buscarCotacoes: buscarCotacoes, buscarSerieBCB: buscarSerieBCB, buscarNoticiasDia: buscarNoticiasDia, buscarNoticiasPeriodo: buscarNoticiasPeriodo };
 })(window);
