@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.21";
+  const VERSAO_APP = "3.6.24";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1418,7 +1418,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.21" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.24" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1667,10 +1667,11 @@
   }
 
   // uma meta como no quadro Metas do Dashboard (usado também nos quadros da guia Metas)
-  function itemMetaHtml(m) {
+  // sempreAtual: na guia Metas (sem filtro de período) mostra sempre o valor de hoje
+  function itemMetaHtml(m, sempreAtual) {
     {
       // fora de "Atual", os valores e a barra mostram como a meta estava no começo do período escolhido
-      const naHoje = periodoMetas === 0 && dataRefAnoMetas() === hojeISO();
+      const naHoje = sempreAtual === true || (periodoMetas === 0 && dataRefAnoMetas() === hojeISO());
       const valor = naHoje ? Number(m.atual || 0) : valorMetaEm(m, dataInicioPeriodoMetas(m));
       const objetivo = Number(m.objetivo || 0);
       const p = objetivo > 0 ? Math.min(100, (valor / objetivo) * 100) : 0;
@@ -5411,20 +5412,17 @@
       corpo = `<div class="c8"><div class="card"><div class="empty">Nenhuma meta cadastrada. Que tal começar por uma reserva de emergência?</div></div></div>`;
     } else {
       // cada meta num quadro igual ao quadro Metas do Dashboard (o mesmo bloco
-      // da meta), com Editar e Depositar embaixo à direita, como nos quadros dos
-      // bancos (o "Guardar Mês" aparece no selo 💰 da meta)
+      // da meta), com Depositar e Editar no topo à direita (o "Guardar Mês"
+      // aparece no selo 💰 da meta); sempre com o valor de hoje
       corpo = d.metas.map((m) => {
         const st = situacaoMeta(m);
         const diasPrazo = m.prazo ? F.diasEntre(m.prazo) : null;
         const vencida = diasPrazo !== null && diasPrazo < 0 && Number(m.atual || 0) < Number(m.objetivo || 0);
         const sub = vencida ? `<span class="down">prazo vencido há ${plural(Math.abs(diasPrazo), "dia")}</span>` : esc(st.rotulo);
         return `<div class="c4">${card("card-meta-quadro" + (vencida ? " card-meta-vencida" : ""), nomeMeta(m), sub,
-          "",
-          `<div class="metas-lista">${itemMetaHtml(m)}</div>
-          <div class="body pad meta-quadro-acoes">
-            <span class="rodape-botoes"><button class="btn pequeno btn-banco btn-banco-editar" data-acao="editar-meta" data-id="${m.id}" title="Editar a meta">${ICONE_EDITAR}Editar</button>
-            <button class="btn pequeno btn-banco btn-banco-depositar" data-acao="depositar-meta" data-id="${m.id}" title="Depositar: adicionar valor na meta">${ICONE_CAIXA_24H}Depositar</button></span>
-          </div>`)}</div>`;
+          `<span class="rodape-botoes"><button class="btn pequeno btn-banco btn-banco-depositar" data-acao="depositar-meta" data-id="${m.id}" title="Depositar: adicionar valor na meta">${ICONE_CAIXA_24H}Depositar</button>
+            <button class="btn pequeno btn-banco btn-banco-editar" data-acao="editar-meta" data-id="${m.id}" title="Editar a meta">${ICONE_EDITAR}Editar</button></span>`,
+          `<div class="metas-lista">${itemMetaHtml(m, true)}</div>`)}</div>`;
       }).join("");
     }
     // o botão de nova meta ocupa o espaço de um quadro, com o sinal "+"
@@ -5679,6 +5677,18 @@
       }
       case "bancos": {
         if (!d.bancos.length) break;
+        // tablet e computador: o gráfico ocupa a altura que sobra até o rodapé
+        // (a página termina junto com a tela, sem faixa vazia); nunca fica
+        // menor que o tamanho original
+        const caixaGraf = document.getElementById("graf-saldo-bancos") && document.getElementById("graf-saldo-bancos").parentElement;
+        if (caixaGraf && window.innerWidth > 760) {
+          // espaço vazio entre o fim do conteúdo e o rodapé (o rodapé fica preso embaixo)
+          const rod = document.querySelector(".rodape-app"), cont = document.getElementById("conteudo");
+          const ultimo = cont && cont.lastElementChild;
+          const folga = (cont ? parseFloat(getComputedStyle(cont).paddingBottom) || 0 : 0) + (rod ? parseFloat(getComputedStyle(rod).marginTop) || 0 : 0);
+          const sobra = rod && ultimo ? rod.getBoundingClientRect().top - ultimo.getBoundingClientRect().bottom - folga : 0;
+          if (sobra > 1) caixaGraf.style.height = Math.floor(caixaGraf.clientHeight + sobra) + "px";
+        }
         G.renderSaldoBancos("graf-saldo-bancos", bancosNaOrdem(bancosDoPeriodo(d)).map((b) => Object.assign({}, b, { saldoAtual: b.valor })),
           { aoClicar: (b) => explicarBanco(b.id) });
         break;
