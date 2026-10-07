@@ -255,18 +255,16 @@
           c.fillStyle = "#FFFFFF";
           if (v < 0) { c.textAlign = "left"; c.fillText(txt, grafico.chartArea.left + 6, barra.y); }
           else { c.textAlign = "right"; c.fillText(txt, grafico.chartArea.right - 6, barra.y); }
-          // o valor em reais logo depois da ponta da barra (por dentro, se não couber fora)
+          // o valor em reais alinhado à esquerda, em branco, no começo da barra
+          // (barras negativas: logo depois do zero, do lado direito)
           var val = moeda(v);
           c.font = "700 11.5px 'Segoe UI', Roboto, sans-serif";
-          var larg = c.measureText(val).width;
-          c.fillStyle = "#C9D3E6";
-          if (v >= 0) {
-            var xFora = barra.x + 8;
-            if (xFora + larg < grafico.chartArea.right - 60) { c.textAlign = "left"; c.fillText(val, xFora, barra.y); }
-            else { c.textAlign = "right"; c.fillStyle = "#0B1420"; c.fillText(val, barra.x - 8, barra.y); }
-          } else {
-            c.textAlign = "right"; c.fillText(val, barra.x - 8, barra.y);
-          }
+          c.fillStyle = "#FFFFFF";
+          c.textAlign = "left";
+          c.shadowColor = "rgba(0,0,0,.55)"; c.shadowBlur = 3;   // legível sobre barras claras
+          var zero = grafico.scales.x.getPixelForValue(0);
+          c.fillText(val, (v < 0 ? zero : Math.max(zero, grafico.chartArea.left)) + 8, barra.y);
+          c.shadowBlur = 0;
           c.font = "800 11px 'Segoe UI', Roboto, sans-serif";
         });
         c.restore();
