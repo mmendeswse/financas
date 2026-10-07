@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.11";
+  const VERSAO_APP = "3.6.12";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1418,7 +1418,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.11" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.12" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1663,7 +1663,12 @@
 
   function metasMini(d) {
     if (!d.metas.length) return `<div class="empty" style="padding:14px">Nenhuma meta cadastrada.</div>`;
-    return `<div class="metas-lista">` + d.metas.slice(0, 3).map((m) => {   // 3 metas: mesma altura do quadro Receitas x despesas
+    return `<div class="metas-lista">` + d.metas.slice(0, 3).map(itemMetaHtml).join("") + `</div>`;   // 3 metas: mesma altura do quadro Receitas x despesas
+  }
+
+  // uma meta como no quadro Metas do Dashboard (usado também nos quadros da guia Metas)
+  function itemMetaHtml(m) {
+    {
       // fora de "Atual", os valores e a barra mostram como a meta estava no começo do período escolhido
       const naHoje = periodoMetas === 0 && dataRefAnoMetas() === hojeISO();
       const valor = naHoje ? Number(m.atual || 0) : valorMetaEm(m, dataInicioPeriodoMetas(m));
@@ -1675,7 +1680,7 @@
         <div class="meta-barra meta-barra-grande"><i style="width:${p}%"></i><b class="meta-pct-dentro">${p.toFixed(0)}%</b></div>
         <div class="meta-rodape meta-rodape-3"><span title="Valor guardado">💵 ${brlCurto(valor)}</span><span></span><span class="meta-falta-valor" title="Falta para o objetivo">${objetivo > valor ? `⏳ ${brlCurto(objetivo - valor)}` : "✅ Concluída"}</span></div>
       </button>`;
-    }).join("") + `</div>`;
+    }
   }
 
   // subtítulo do quadro de metas: "N de M no caminho certo"
@@ -5434,37 +5439,28 @@
     if (!d.metas.length) {
       corpo = `<div class="c8"><div class="card"><div class="empty">Nenhuma meta cadastrada. Que tal começar por uma reserva de emergência?</div></div></div>`;
     } else {
+      // cada meta num quadro igual ao quadro Metas do Dashboard (ano, período
+      // e o mesmo bloco da meta), com o "Guardar Mês" e o botão de adicionar
+      const anos = anosMetas(d), ano = anoMetas || String(new Date().getFullYear());
+      const OPC = [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }, { meses: 0, rotulo: "Tudo" }];
       corpo = d.metas.map((m) => {
-        const progresso = m.objetivo > 0 ? Math.min(100, (m.atual / m.objetivo) * 100) : 0;
+        const st = situacaoMeta(m);
         const diasPrazo = m.prazo ? F.diasEntre(m.prazo) : null;
         const vencida = diasPrazo !== null && diasPrazo < 0 && Number(m.atual || 0) < Number(m.objetivo || 0);
-        return `<div class="c4"><div class="card card-clicavel${vencida ? " card-meta-vencida" : ""}" data-acao="editar-meta" data-id="${m.id}" title="Abrir para editar">
-          <header><div><h2>${nomeMeta(m)}${vencida ? ' <span class="selo-tag selo-atrasado">prazo vencido</span>' : ""}</h2>${m.prazo ? `<div class="sub ${vencida ? "down" : ""}">até ${fmtData(m.prazo)}${vencida ? ` · há ${plural(Math.abs(diasPrazo), "dia")}` : ""}</div>` : ""}</div>
-          </header>
-          <div class="body pad">
-            ${(() => {
-              // os mesmos elementos do quadro Metas do Dashboard: situação do mês,
-              // selos (guardar por mês, prazo, objetivo), barra com o % e o que falta
-              const st = situacaoMeta(m);
-              const atual = Number(m.atual || 0), objetivo = Number(m.objetivo || 0);
-              return `<div class="meta-item meta-item-quadro st-${st.chave}" style="--meta-cor:${esc(m.cor || "var(--up)")}">
-                <div class="meta-selos meta-selos-quadro">
-                  <span class="meta-st meta-falta" title="Guardar por mês: ${Number(m.aporteMensal) > 0 ? brl(m.aporteMensal) : "não definido"}"><span class="meta-falta-ic">💰</span>${Number(m.aporteMensal) > 0 ? brlCurto(m.aporteMensal).replace(/^R\$\s*/, "") : "—"}</span>
-                  ${m.prazo ? `<span class="meta-st meta-falta" title="Data final da meta"><span class="meta-falta-ic">📅</span>${fmtData(m.prazo)}</span>` : ""}
-                  <span class="meta-st meta-falta" title="Objetivo: ${brl(objetivo)}"><span class="meta-falta-ic">🏁</span>${brlCurto(objetivo).replace(/^R\$\s*/, "")}</span>
-                </div>
-                <div class="meta-barra meta-barra-grande"><i style="width:${progresso}%"></i><b class="meta-pct-dentro">${progresso.toFixed(0)}%</b></div>
-                <div class="meta-rodape meta-rodape-3"><span title="Valor guardado">💵 ${brlCurto(atual)}</span><span></span><span class="meta-falta-valor" title="Falta para o objetivo">${objetivo > atual ? `⏳ ${brlCurto(objetivo - atual)}` : "✅ Concluída"}</span></div>
-                <div class="meta-situacao-linha"><span class="meta-bolinha st-${st.chave}"></span>${esc(st.rotulo)}</div>
-              </div>`;
-            })()}
-            <div class="meta-mensal" title="Quanto guardar por mês — clique para editar">
+        const sub = vencida ? `<span class="down">prazo vencido há ${plural(Math.abs(diasPrazo), "dia")}</span>` : esc(st.rotulo);
+        return `<div class="c4">${card("card-meta-quadro" + (vencida ? " card-meta-vencida" : ""), nomeMeta(m), sub,
+          `<div class="filtro-mes">${seletorAnoDash("anoMetas_" + m.id, ano, anos)}${abasMeses("periodo-metas", periodoMetas, OPC)}</div>`,
+          `<div class="metas-lista">${itemMetaHtml(m)}</div>
+          <div class="body pad meta-quadro-acoes">
+            <div class="meta-mensal" data-acao="editar-meta" data-id="${m.id}" title="Quanto guardar por mês — clique para editar">
               <span class="meta-mensal-icone" style="color:${m.cor || "var(--up)"}"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M12 13.2v5M9.8 15.4h4.4"/></svg></span>
               <span class="meta-mensal-texto"><small>Guardar Mês</small>${Number(m.aporteMensal) > 0 ? `<b class="num">${brl(m.aporteMensal)}</b>` : `<b class="dim">Definir Valor</b>`}</span>
             </div>
-            <button class="btn pequeno" style="margin-top:12px;width:100%;justify-content:center" data-acao="depositar-meta" data-id="${m.id}">+ Adicionar</button>
-          </div>
-        </div></div>`;
+            <div class="meta-quadro-botoes">
+              <button class="btn pequeno" data-acao="editar-meta" data-id="${m.id}">✎ Editar</button>
+              <button class="btn pequeno btn-meta-adicionar" data-acao="depositar-meta" data-id="${m.id}">+ Adicionar</button>
+            </div>
+          </div>`)}</div>`;
       }).join("");
     }
     // o botão de nova meta ocupa o espaço de um quadro, com o sinal "+"
@@ -6010,7 +6006,7 @@
       if (id === "anoRelB") { anoRelB = e.target.value; renderRota(); return; }
       if (id === "anoBancos") { anoBancos = e.target.value; renderRota(); return; }
       if (id === "anoRD") { anoRD = e.target.value; renderRota(); return; }
-      if (id === "anoMetas") { anoMetas = e.target.value; renderRota(); return; }
+      if (id === "anoMetas" || id.startsWith("anoMetas_")) { anoMetas = e.target.value; renderRota(); return; }
       if (id === "anoEvo") { anoEvo = e.target.value; renderRota(); return; }
       if (id === "anoEntradas") { mesEntradas = e.target.value + mesEntradas.slice(4); filtroEntradas = null; renderRota(); return; }
       if (id === "anoDespesas") { mesDespesas = e.target.value + mesDespesas.slice(4); filtroDespesas = null; renderRota(); return; }
