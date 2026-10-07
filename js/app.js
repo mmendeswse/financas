@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.12";
+  const VERSAO_APP = "3.6.13";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1418,7 +1418,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.12" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.13" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2778,30 +2778,6 @@
     return intervaloAnoMeses(anoBancos, mesesBancos);
   }
 
-  // saldo de cada banco dia a dia (só nos dias com lançamento), no período
-  // da guia Bancos ou em todo o histórico; o último ponto é o saldo de hoje
-  function serieSaldosBancos(d) {
-    const hj = hojeISO();
-    const bancos = bancosNaOrdem(F.listaBancosComSaldo(d));
-    const extratos = bancos.map((b) => F.extratoDoBanco(d, b.id));
-    let ini, fim = hj;
-    if (mesesBancos) { const fx = faixaBancos(); ini = fx.ini; fim = fx.fim < hj ? fx.fim : hj; }
-    const datas = new Set([fim]);
-    extratos.forEach((e) => e.itens.forEach((i) => { const dt = String(i.data).slice(0, 10); if (dt && dt <= fim && (!ini || dt >= ini)) datas.add(dt); }));
-    if (ini) datas.add(ini < fim ? ini : fim);
-    const lista = [...datas].sort();
-    const series = bancos.map((b, k) => {
-      const itens = extratos[k].itens;
-      let j = 0, saldo = extratos[k].saldoInicial;
-      const valores = lista.map((dt) => {
-        while (j < itens.length && String(itens[j].data).slice(0, 10) <= dt) { saldo = itens[j].saldo; j++; }
-        return saldo;
-      });
-      return { id: b.id, nome: b.nome, cor: b.cor || "#3FC1E0", valores };
-    });
-    return { datas: lista, series };
-  }
-
   function bancosDoPeriodo(d) {
     const fx = mesesBancos ? faixaBancos() : { ini: "0000-01-01", fim: "9999-12-31" };
     const dentro = (dt) => String(dt || "") >= fx.ini && String(dt || "") <= fx.fim;
@@ -2830,11 +2806,11 @@
     } else {
       listaHtml = `<div class="grade-bancos">` + bancos.map((b) => `
           <div class="cartao-item" style="border-left-color:${esc(b.cor || "#3FC1E0")}" data-acao="explicar-banco" data-id="${b.id}" title="Ver o histórico de transações">
-            <div class="linha1"><div class="nome-com-marca">${marcaBanco(b.nome, 26)}<div><div class="nome">${esc(b.nome)}</div><div class="tipo">${esc(b.tipo || "—")}</div>${b.agencia || b.conta ? `<div class="tipo">${b.agencia ? "Ag " + esc(b.agencia) : ""}${b.agencia && b.conta ? " · " : ""}${b.conta ? "Cc " + esc(b.conta) : ""}</div>` : ""}</div></div></div>
+            <div class="linha1"><div class="nome-com-marca">${marcaBanco(b.nome, 26)}<div><div class="nome">${esc(b.nome)}</div><div class="tipo">${esc(b.tipo || "—")}</div>${b.agencia || b.conta ? `<div class="tipo">${b.agencia ? "Ag " + esc(b.agencia) : ""}${b.agencia && b.conta ? " · " : ""}${b.conta ? "Cc " + esc(b.conta) : ""}</div>` : ""}</div></div>
+              <button class="btn btn-icone btn-banco-editar" data-acao="editar-banco" data-id="${b.id}" title="Editar os dados do banco" aria-label="Editar">${ICONE_EDITAR}</button></div>
             <div class="saldo saldo-branco">${brlSinal(b.valor)}</div>
             <div class="rodape"><span>${mesesBancos ? `Saldo Atual ${brl(b.saldoAtual)}` : ""}</span>
-              <span class="rodape-botoes"><button class="btn pequeno btn-banco btn-banco-editar" data-acao="editar-banco" data-id="${b.id}" title="Editar os dados do banco">${ICONE_EDITAR}Editar</button>
-              <button class="btn pequeno btn-banco btn-banco-depositar" data-acao="entrada-banco" data-id="${b.id}" title="Depositar: lançar uma entrada nesta conta">${ICONE_CAIXA_24H}Depositar</button></span>
+              <button class="btn btn-icone btn-banco-depositar" data-acao="entrada-banco" data-id="${b.id}" title="Depositar: lançar uma entrada nesta conta" aria-label="Depositar">${ICONE_CAIXA_24H}</button>
             </div>
           </div>`).join("") + `</div>`;
     }
@@ -2848,10 +2824,6 @@
           `<div class="filtro-mes">${seletorAnoDash("anoBancos", anoBancos, anosDashboard(d))}${abasMeses("periodo-bancos", mesesBancos, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }, { meses: 0, rotulo: "Tudo" }])}</div>`,
           `<div style="padding:12px 18px 16px;height:${Math.max(190, bancos.length * 52)}px"><canvas id="graf-saldo-bancos"></canvas></div>`)}</div>
       </div>
-      ${bancos.length ? `<div class="grid">
-        <div class="c12">${card("", "Evolução dos saldos", `saldo de cada conta · ${mesesBancos ? `${mesesBancos} ${mesesBancos === 1 ? "mês" : "meses"} de ${anoBancos}` : "todo histórico"}`, "",
-          `<div style="padding:8px 14px 12px;height:300px"><canvas id="graf-evolucao-bancos"></canvas></div>`)}</div>
-      </div>` : ""}
       ${listaTransferencias(d)}
     `;
   }
@@ -5439,27 +5411,22 @@
     if (!d.metas.length) {
       corpo = `<div class="c8"><div class="card"><div class="empty">Nenhuma meta cadastrada. Que tal começar por uma reserva de emergência?</div></div></div>`;
     } else {
-      // cada meta num quadro igual ao quadro Metas do Dashboard (ano, período
-      // e o mesmo bloco da meta), com o "Guardar Mês" e o botão de adicionar
-      const anos = anosMetas(d), ano = anoMetas || String(new Date().getFullYear());
-      const OPC = [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }, { meses: 0, rotulo: "Tudo" }];
+      // cada meta num quadro igual ao quadro Metas do Dashboard (o mesmo bloco
+      // da meta), com Editar no canto de cima e Adicionar no canto de baixo
       corpo = d.metas.map((m) => {
         const st = situacaoMeta(m);
         const diasPrazo = m.prazo ? F.diasEntre(m.prazo) : null;
         const vencida = diasPrazo !== null && diasPrazo < 0 && Number(m.atual || 0) < Number(m.objetivo || 0);
         const sub = vencida ? `<span class="down">prazo vencido há ${plural(Math.abs(diasPrazo), "dia")}</span>` : esc(st.rotulo);
         return `<div class="c4">${card("card-meta-quadro" + (vencida ? " card-meta-vencida" : ""), nomeMeta(m), sub,
-          `<div class="filtro-mes">${seletorAnoDash("anoMetas_" + m.id, ano, anos)}${abasMeses("periodo-metas", periodoMetas, OPC)}</div>`,
+          `<button class="btn btn-icone btn-banco-editar" data-acao="editar-meta" data-id="${m.id}" title="Editar a meta" aria-label="Editar">${ICONE_EDITAR}</button>`,
           `<div class="metas-lista">${itemMetaHtml(m)}</div>
           <div class="body pad meta-quadro-acoes">
             <div class="meta-mensal" data-acao="editar-meta" data-id="${m.id}" title="Quanto guardar por mês — clique para editar">
               <span class="meta-mensal-icone" style="color:${m.cor || "var(--up)"}"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M12 13.2v5M9.8 15.4h4.4"/></svg></span>
               <span class="meta-mensal-texto"><small>Guardar Mês</small>${Number(m.aporteMensal) > 0 ? `<b class="num">${brl(m.aporteMensal)}</b>` : `<b class="dim">Definir Valor</b>`}</span>
             </div>
-            <div class="meta-quadro-botoes">
-              <button class="btn pequeno" data-acao="editar-meta" data-id="${m.id}">✎ Editar</button>
-              <button class="btn pequeno btn-meta-adicionar" data-acao="depositar-meta" data-id="${m.id}">+ Adicionar</button>
-            </div>
+            <button class="btn btn-icone btn-banco-depositar" data-acao="depositar-meta" data-id="${m.id}" title="Adicionar valor na meta" aria-label="Adicionar">${ICONE_CAIXA_24H}</button>
           </div>`)}</div>`;
       }).join("");
     }
@@ -5717,8 +5684,6 @@
         if (!d.bancos.length) break;
         G.renderSaldoBancos("graf-saldo-bancos", bancosNaOrdem(bancosDoPeriodo(d)).map((b) => Object.assign({}, b, { saldoAtual: b.valor })),
           { aoClicar: (b) => explicarBanco(b.id) });
-        const evo = serieSaldosBancos(d);
-        if (evo.datas.length) G.renderEvolucaoBancos("graf-evolucao-bancos", evo.datas, evo.series, { aoClicar: (b) => explicarBanco(b.id) });
         break;
       }
       case "despesas": break;
@@ -6006,7 +5971,7 @@
       if (id === "anoRelB") { anoRelB = e.target.value; renderRota(); return; }
       if (id === "anoBancos") { anoBancos = e.target.value; renderRota(); return; }
       if (id === "anoRD") { anoRD = e.target.value; renderRota(); return; }
-      if (id === "anoMetas" || id.startsWith("anoMetas_")) { anoMetas = e.target.value; renderRota(); return; }
+      if (id === "anoMetas") { anoMetas = e.target.value; renderRota(); return; }
       if (id === "anoEvo") { anoEvo = e.target.value; renderRota(); return; }
       if (id === "anoEntradas") { mesEntradas = e.target.value + mesEntradas.slice(4); filtroEntradas = null; renderRota(); return; }
       if (id === "anoDespesas") { mesDespesas = e.target.value + mesDespesas.slice(4); filtroDespesas = null; renderRota(); return; }

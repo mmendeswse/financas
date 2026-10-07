@@ -1573,21 +1573,24 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 .meta-item-quadro .meta-rodape-3 { font-size: 13.5px; margin-top: 8px; color: var(--texto); }
 .meta-situacao-linha { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 12px; color: var(--dim); }
 
-/* cartão do banco: Editar e Depositar com o mesmo estilo e tamanho; o
-   Depositar em destaque (ciano) e o Editar neutro, para diferenciar */
-.cartao-item .rodape .btn.btn-banco { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 11px; font-size: 11.5px; font-family: var(--ui); font-weight: 700; min-width: 0; }
-.btn-banco .ic-btn { width: 17px; height: 17px; flex: none; }
-.btn-banco-depositar { color: var(--cy); border-color: rgba(0,229,255,.45); background: rgba(0,229,255,.07); }
-.btn-banco-depositar:hover { background: rgba(0,229,255,.14); border-color: var(--cy); }
-.btn-banco-editar { color: var(--texto); }
 
 /* guia Metas: quadros no formato do quadro Metas do Dashboard */
 .meta-quadro-acoes { padding-top: 0; }
-.meta-quadro-botoes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
-.meta-quadro-botoes .btn { justify-content: center; }
-.btn-meta-adicionar { color: var(--cy); border-color: rgba(0,229,255,.45); background: rgba(0,229,255,.07); }
-.card-meta-quadro > header > div:first-child { flex-basis: 100%; }   /* título em cima, ano e período embaixo, como no Dashboard */
 .card-meta-quadro .metas-lista { padding-bottom: 0; }
 .card-meta-quadro .meta-topo-linha .meta-nome { display: none; }   /* o nome já está no título do quadro */
 .card-meta-quadro .meta-topo-linha .meta-selos { margin-left: 0; }
 .card-meta-quadro .meta-quadro-acoes { padding-top: 10px; }
+
+/* Editar (canto de cima) e Depositar/Adicionar (canto de baixo) só com o
+   ícone, do mesmo tamanho; o Depositar em ciano para diferenciar */
+.btn.btn-icone { width: 34px; height: 34px; padding: 0; justify-content: center; flex: none; position: relative; z-index: 2; }
+.btn-icone .ic-btn { width: 19px; height: 19px; }
+.btn-banco-editar { color: var(--texto); }
+.btn-banco-depositar { color: var(--cy); border-color: rgba(0,229,255,.45); background: rgba(0,229,255,.07); }
+.btn-banco-depositar:hover { background: rgba(0,229,255,.14); border-color: var(--cy); }
+.cartao-item .rodape { align-items: flex-end; }
+.cartao-item .rodape .btn.btn-icone { padding: 0; }
+/* quadro da meta: Guardar Mês e o Adicionar na mesma linha, embaixo à direita */
+.card-meta-quadro .meta-quadro-acoes { display: flex; align-items: flex-end; gap: 10px; }
+.card-meta-quadro .meta-quadro-acoes .meta-mensal { flex: 1; min-width: 0; margin: 0; }
+.card-meta-quadro > header { align-items: flex-start; flex-wrap: nowrap; }
