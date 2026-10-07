@@ -282,27 +282,57 @@
   }
 
   // ---------------------------------------------------------------------
-  // PATRIMÔNIO (junta bancos + investimentos + ações − dívidas)
+  // CRIPTOMOEDAS (BTC, ETH): a quantidade fica em config.cripto e o preço
+  // de cada dia em config.criptoPrecos (o último é o atual), para os
+  // totais funcionarem mesmo sem internet e a evolução ter o histórico.
+  // ---------------------------------------------------------------------
+  var MOEDAS_CRIPTO = ["BTC", "ETH"];
+  function precoCripto(d, moeda, ateData) {
+    var hist = ((d.config || {}).criptoPrecos || {})[moeda] || [];
+    var v = null;
+    hist.forEach(function (p) { if ((!ateData || p.data <= ateData) && (v === null || p.data >= v.data)) v = p; });
+    return v ? Number(v.preco) || 0 : 0;
+  }
+  function listaCripto(d) {
+    var qtd = (d.config || {}).cripto || {};
+    return MOEDAS_CRIPTO.map(function (m) {
+      var q = Number(qtd[m]) > 0 ? Number(qtd[m]) : 0;
+      var preco = precoCripto(d, m);
+      return { moeda: m, quantidade: q, preco: preco, valor: q * preco };
+    }).filter(function (c) { return c.quantidade > 0; });
+  }
+  function totalCripto(d, ateData) {
+    var qtd = (d.config || {}).cripto || {};
+    return MOEDAS_CRIPTO.reduce(function (s, m) {
+      var q = Number(qtd[m]) > 0 ? Number(qtd[m]) : 0;
+      return s + (q ? q * precoCripto(d, m, ateData) : 0);
+    }, 0);
+  }
+
+  // ---------------------------------------------------------------------
+  // PATRIMÔNIO (junta bancos + investimentos + ações + cripto − dívidas)
   // ---------------------------------------------------------------------
   function patrimonio(d) {
     var F = global.Financeiro;
     var bancos = F.totalBancos(d);
     var investOutros = totalAtualOutros(d);
     var acoes = totalCarteiraAcoes(d);
+    var cripto = totalCripto(d);
     var dividas = F.totalDividas(d); // contas não pagas vencidas ou do mês atual = dívidas em aberto
     return {
       bancos: bancos,
       investimentos: investOutros,
       acoes: acoes,
+      cripto: cripto,
       dividas: dividas,
-      liquido: bancos + investOutros + acoes - dividas,
-      bruto: bancos + investOutros + acoes
+      liquido: bancos + investOutros + acoes + cripto - dividas,
+      bruto: bancos + investOutros + acoes + cripto
     };
   }
 
   function percentualInvestido(d) {
     var p = patrimonio(d);
-    return p.bruto > 0 ? ((p.investimentos + p.acoes) / p.bruto) * 100 : 0;
+    return p.bruto > 0 ? ((p.investimentos + p.acoes + p.cripto) / p.bruto) * 100 : 0;
   }
 
   // adiciona (ou atualiza, se já existir hoje) um ponto no histórico de
@@ -323,6 +353,10 @@
   }
 
   global.Investimentos = {
+    MOEDAS_CRIPTO: MOEDAS_CRIPTO,
+    precoCripto: precoCripto,
+    listaCripto: listaCripto,
+    totalCripto: totalCripto,
     resultadoInvestimento: resultadoInvestimento,
     rentabilidadeInvestimento: rentabilidadeInvestimento,
     diasCorridos: diasCorridos,

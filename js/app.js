@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.4";
+  const VERSAO_APP = "3.6.5";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1418,7 +1418,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.4" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.5" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1769,10 +1769,47 @@
       el.setAttribute("title", q ? `${fmtQtdCripto(q)} ${m} — ver histórico do ${CRIPTOS[m]}` : `Ver histórico do ${CRIPTOS[m]}`);
       const v = c ? c.variacaoPct || 0 : 0;
       const preco = c ? `<b>${brl(c.valor)}</b><span class="${v >= 0 ? "up" : "down"}">${v >= 0 ? "▲" : "▼"} ${Math.abs(v).toFixed(2).replace(".", ",")}%</span>` : `<b>—</b>`;
-      const meu = q && c ? `<em class="cripto-meu">${brl(q * c.valor)}</em>` : "";
+      const meu = q && precoCriptoAtual(m) ? `<em class="cripto-meu">${brl(q * precoCriptoAtual(m))}</em>` : "";
       el.innerHTML = `<small>${m}</small>${preco}${meu}`;
     });
   }
+  // guarda o preço do dia de cada cripto nos dados: os totais (patrimônio,
+  // composição, relatórios) usam o último preço mesmo sem internet, e a
+  // evolução patrimonial ganha o histórico
+  function registrarPrecosCripto(r) {
+    DADOS.config = DADOS.config || {};
+    const precos = DADOS.config.criptoPrecos = DADOS.config.criptoPrecos || {};
+    let mudou = false;
+    Object.keys(CRIPTOS).forEach((m) => {
+      const c = r && r[m];
+      if (!c || !(c.valor > 0)) return;
+      const hist = precos[m] || [];
+      const ult = hist[hist.length - 1];
+      if (ult && ult.data === hojeISO() && Math.abs(ult.preco - c.valor) < 0.005) return;
+      precos[m] = adicionarPontoPreco(hist, c.valor);
+      mudou = true;
+    });
+    if (mudou) A.salvarDados(DADOS, false, true);   // preço de mercado não conta como alteração sua
+  }
+  // completa o histórico de preços com a série diária (tela da moeda)
+  function completarHistoricoCripto(m, serie) {
+    if (!serie || !serie.length) return;
+    DADOS.config = DADOS.config || {};
+    const precos = DADOS.config.criptoPrecos = DADOS.config.criptoPrecos || {};
+    const porData = {};
+    (precos[m] || []).forEach((p) => { porData[p.data] = p; });
+    let novos = 0;
+    serie.forEach((p) => { if (p.data < hojeISO() && !porData[p.data]) { porData[p.data] = { data: p.data, preco: p.preco }; novos++; } });
+    if (!novos) return;
+    precos[m] = Object.keys(porData).sort().map((dt) => porData[dt]).slice(-400);
+    A.salvarDados(DADOS, false, true);
+  }
+  // preço para mostrar: o ao vivo ou, sem internet, o último guardado
+  function precoCriptoAtual(m) {
+    const c = cripto && cripto[m];
+    return c ? c.valor : I.precoCripto(DADOS, m);
+  }
+
   function abrirModalCripto(m) {
     if (!CRIPTOS[m]) return;
     const c = cripto && cripto[m];
@@ -1813,6 +1850,7 @@
     const pDolar = C.buscarDolar().then((r) => { dolar = r; renderDolar(); atualizarTicker(); }).catch(() => {});
     const pCripto = C.buscarCripto ? C.buscarCripto().then((r) => {
       cripto = r;
+      registrarPrecosCripto(r);
       renderCripto();
       atualizarTicker();
       // na tela da moeda, o rodapé (cotação e quanto vale o que você tem) acompanha o preço novo
@@ -1938,16 +1976,17 @@
     const paineis = {
       patrimonio: {
         titulo: "Patrimônio total",
-        conta: "bancos + investimentos + ações − dívidas",
+        conta: "bancos + investimentos + ações + cripto − dívidas",
         pct: p.bruto > 0 ? (p.liquido / p.bruto) * 100 : 0,
         pctRotulo: "do patrimônio bruto está livre de dívidas",
         // o total soma exatamente as linhas mostradas aqui (investimentos já
         // líquidos de IR), para nunca destoar da própria conta do painel
         linhas: (() => {
           const investLiq = I.totalLiquidoOutros(d);
-          const totalLiquido = p.bancos + investLiq + p.acoes - p.dividas;
+          const totalLiquido = p.bancos + investLiq + p.acoes + p.cripto - p.dividas;
           return linha("+ Bancos", brl(p.bancos)) + linha("+ Investimentos", brl(investLiq)) +
-            linha("+ Ações e FIIs", brl(p.acoes)) + linha("− Dívidas", brl(p.dividas), "down") +
+            linha("+ Ações e FIIs", brl(p.acoes)) + (p.cripto > 0 ? linha("+ Criptomoedas", brl(p.cripto)) : "") +
+            linha("− Dívidas", brl(p.dividas), "down") +
             linha("Total", brl(totalLiquido), corSinal(totalLiquido));
         })(),
         secao: "bancos"
@@ -1963,7 +2002,7 @@
       },
       investido: {
         titulo: "Investimentos",
-        conta: "(investimentos + ações) ÷ patrimônio bruto",
+        conta: "(investimentos + ações + cripto) ÷ patrimônio bruto",
         pct: I.percentualInvestido(d),
         pctRotulo: "do patrimônio bruto está investido",
         linhas: (() => {
@@ -1971,7 +2010,8 @@
           return linha("Rentabilidade carteira", pct(I.rentabilidadeCarteiraAcoes(d)), corSinal(I.rentabilidadeCarteiraAcoes(d))) +
             linha("Renda fixa, Tesouro e Fundos", `<span class="valor-guia up">+${brl(investLiq)}</span>`) +
             linha("Ações, FIIs e ETFs", `<span class="valor-guia up">+${brl(p.acoes)}</span>`) +
-            linha("Total", "+" + brl(investLiq + p.acoes));
+            (p.cripto > 0 ? linha("Criptomoedas (BTC, ETH)", `<span class="valor-guia up">+${brl(p.cripto)}</span>`) : "") +
+            linha("Total", "+" + brl(investLiq + p.acoes + p.cripto));
         })(),
         secao: "investimentos"
       },
@@ -2152,6 +2192,10 @@
     } else {
       detalhe = d.investimentos.filter((i) => rotuloCategoriaComp(i.categoria || "Outros") === rotulo)
         .map((i) => linha(esc(i.nome), brlSinal(I.valorLiquidoInvestimento(i)))).join("");
+      if (rotulo === "Criptomoedas") {
+        detalhe += I.listaCripto(d).map((c) => linha(`${c.moeda} · ${fmtQtdCripto(c.quantidade)}`, brlSinal(c.valor))).join("");
+        if (!d.investimentos.some((i) => rotuloCategoriaComp(i.categoria || "Outros") === rotulo)) secao = "acoes";
+      }
     }
     painelSimples(rotulo, total > 0 ? (item.valor / total) * 100 : 0, "do seu patrimônio líquido",
       "valor deste grupo ÷ patrimônio líquido",
@@ -2372,7 +2416,7 @@
 
     painelSimples(quando.charAt(0).toUpperCase() + quando.slice(1) + (ponto.hoje ? " · hoje" : ""),
       anterior ? pctMes : pctPeriodo, anterior ? "em relação ao mês anterior" : "desde o início do período",
-      "bancos + investimentos + ações − dívidas",
+      "bancos + investimentos + ações + cripto − dívidas",
       marco +
       secao("Resumo") +
       linha("Patrimônio", brlSinal(ponto.valor)) +
@@ -2383,6 +2427,7 @@
         linha("+ Bancos", brlSinal(ponto.bancos)) +
         linha("+ Investimentos", brlSinal(ponto.investimentos)) +
         linha("+ Ações e FIIs", brlSinal(ponto.acoes)) +
+        (ponto.cripto > 0 ? linha("+ Criptomoedas", brlSinal(ponto.cripto)) : "") +
         (ponto.dividas > 0 ? linha("− Dívidas", "−" + brl(ponto.dividas), "down") : "") : "") +
       secao("Movimento do mês") +
       linha("+ Entradas", "+" + brl(entradasMes), "up") +
@@ -2411,8 +2456,8 @@
     })();
     const pctDespesas = entradasMes > 0 ? (despesasMes / entradasMes) * 100 : 0;
     const taxaPoupanca = entradasMes > 0 ? (resultadoMes / entradasMes) * 100 : 0;
-    const baseLiquida = p.bancos + I.totalLiquidoOutros(d) + p.acoes;
-    const pctInvestido = baseLiquida > 0 ? ((I.totalLiquidoOutros(d) + p.acoes) / baseLiquida) * 100 : 0;
+    const baseLiquida = p.bancos + I.totalLiquidoOutros(d) + p.acoes + p.cripto;
+    const pctInvestido = baseLiquida > 0 ? ((I.totalLiquidoOutros(d) + p.acoes + p.cripto) / baseLiquida) * 100 : 0;
     const pctLivre = p.bruto > 0 ? (p.liquido / p.bruto) * 100 : 0;
     const pctBancos = p.bruto > 0 ? (p.bancos / p.bruto) * 100 : 0;
     const rentCarteira = I.rentabilidadeCarteiraAcoes(d);
@@ -2445,9 +2490,9 @@
     return `
       ${faixaDemo(d)}
       <div class="kpi-row">
-        ${kpiCard("Patrimônio líquido", brlSinal(p.bancos + I.totalLiquidoOutros(d) + p.acoes - p.dividas), pctLivre, "var(--cy)", delta(F.variacaoPercentual(p.liquido, patrimonioAnt), "vs mês anterior"), `Dívidas: ${brl(p.dividas)}`, "patrimonio")}
+        ${kpiCard("Patrimônio líquido", brlSinal(p.bancos + I.totalLiquidoOutros(d) + p.acoes + p.cripto - p.dividas), pctLivre, "var(--cy)", delta(F.variacaoPercentual(p.liquido, patrimonioAnt), "vs mês anterior"), `Dívidas: ${brl(p.dividas)}`, "patrimonio")}
         ${kpiCard("Saldo bancário", brlSinal(p.bancos), pctBancos, "var(--cy)", delta(pctBancos, "do patrimônio"), `${bancos.length} ${bancos.length === 1 ? "Conta Cadastrada" : "Contas Cadastradas"}`, "bancos")}
-        ${kpiCard("Bolsa Líquido", brlSinal(I.totalLiquidoOutros(d) + p.acoes), pctInvestido, "var(--cy)", delta(rentCarteira, "rent. carteira"), `${pctInvestido.toFixed(0)}% do patrimônio investido`, "investido")}
+        ${kpiCard("Bolsa Líquido", brlSinal(I.totalLiquidoOutros(d) + p.acoes + p.cripto), pctInvestido, "var(--cy)", delta(rentCarteira, "rent. carteira"), `${pctInvestido.toFixed(0)}% do patrimônio investido`, "investido")}
         ${kpiCard("Receitas mês", "+" + brl(entradasMes), entradasMes + despesasMes > 0 ? (entradasMes / (entradasMes + despesasMes)) * 100 : 0, "var(--cy)", delta(F.variacaoPercentual(entradasMes, entradasAnt), "vs mês anterior"), `Mês anterior: ${brl(entradasAnt)}`, "receitas")}
         ${kpiCard("Despesas mês", "−" + brl(despesasMes), pctDespesas, "var(--cy)", delta(F.variacaoPercentual(despesasMes, despesasAnt), "vs mês anterior", true), `${pctDespesas.toFixed(0)}% das receitas`, "despesas")}
       </div>
@@ -2559,6 +2604,13 @@
     d.investimentos.forEach((inv) => { const c = inv.categoria || "Outros"; invLiq[c] = (invLiq[c] || 0) + I.valorLiquidoInvestimento(inv); });
     Object.keys(invLiq).sort((a, b) => invLiq[b] - invLiq[a])
       .forEach((c, i) => { const r = rotuloCategoriaComp(c); itens.push({ rotulo: r, valor: invLiq[c], cor: CORES_COMPOSICAO[r] || CORES_COMPOSICAO_EXTRA[i % CORES_COMPOSICAO_EXTRA.length] }); });
+    // BTC e ETH entram em "Criptomoedas" (somam com os investimentos lançados nessa categoria)
+    const totCripto = I.totalCripto(d);
+    if (totCripto > 0) {
+      const ex = itens.find((i) => i.rotulo === "Criptomoedas");
+      if (ex) ex.valor += totCripto;
+      else itens.push({ rotulo: "Criptomoedas", valor: totCripto, cor: CORES_COMPOSICAO["Criptomoedas"] });
+    }
     return itens.filter((i) => i.valor > 0);
   }
 
@@ -2616,6 +2668,7 @@
         <div class="c6">${card("", "Resumo patrimonial", "", "", `
           <div class="kv"><span class="dim">Dinheiro em bancos</span><b>${brl(p.bancos)}</b></div>
           <div class="kv"><span class="dim">+ Ações e FIIs</span><b>${brl(p.acoes)}</b></div>
+          ${p.cripto > 0 ? `<div class="kv"><span class="dim">+ Criptomoedas (BTC, ETH)</span><b>${brl(p.cripto)}</b></div>` : ""}
           <div class="kv"><span class="dim">+ Investimentos (renda fixa, tesouro, fundos...)</span><b>${brl(p.investimentos)}</b></div>
           <div class="kv"><span class="dim">− Dívidas (contas em aberto e parcelas a pagar)</span><b class="down">${brl(p.dividas)}</b></div>
         `, `<span>PATRIMÔNIO LÍQUIDO</span><span class="${corSinal(p.liquido)}" style="font-size:15px">${brl(p.liquido)}</span>`)}</div>
@@ -4819,6 +4872,7 @@
     promessasSerieCripto[m] = C.buscarSerieMoeda(m + "-BRL", 365).then((serie) => {
       seriesCripto[m] = serie;
       delete promessasSerieCripto[m];
+      completarHistoricoCripto(m, serie);
       if (ROTA.secao === "detalhe-cripto" && ROTA.param === m) renderRota();
       return serie;
     }).catch(() => { delete promessasSerieCripto[m]; return null; });
@@ -4848,7 +4902,7 @@
     const btnQtd = `<button class="btn primario" data-cripto-qtd="${m}">${q ? "✎ Editar" : `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>Adicionar quantidade`}</button>`;
     const v = c ? c.variacaoPct || 0 : 0;
     const rodape = `<span class="cripto-rodape"><span class="dim">Cotação</span><b class="creme">${c ? brl(c.valor) : "—"}</b>${c ? `<span class="${v >= 0 ? "up" : "down"}">${v >= 0 ? "▲" : "▼"} ${Math.abs(v).toFixed(2).replace(".", ",")}%</span>` : ""}</span>
-      <span class="cripto-rodape"><span class="dim">${q ? `Você tem ${fmtQtdCripto(q)} ${m}` : `Você ainda não informou quantos ${m} tem`}</span>${q && c ? `<b class="creme" style="font-size:14px;font-weight:800">${brl(q * c.valor)}</b>` : ""}</span>`;
+      <span class="cripto-rodape"><span class="dim">${q ? `Você tem ${fmtQtdCripto(q)} ${m}` : `Você ainda não informou quantos ${m} tem`}</span>${q && precoCriptoAtual(m) ? `<b class="creme" style="font-size:14px;font-weight:800">${brl(q * precoCriptoAtual(m))}</b>` : ""}</span>`;
 
     return `
       ${voltar}
@@ -5076,7 +5130,7 @@
   let cacheHistPat = { chave: "", pontos: [] };
   function histPatrimonio(d) {
     const hoje = hojeISO();
-    const chave = (d.atualizadoEm || "") + "|" + hoje + "|" + d.entradas.length + "|" + d.despesas.length + "|" + d.investimentos.length + "|" + d.acoes.length + "|" + d.bancos.length;
+    const chave = (d.atualizadoEm || "") + "|" + hoje + "|" + JSON.stringify([(d.config || {}).cripto, (d.config || {}).criptoPrecos]) + "|" + d.entradas.length + "|" + d.despesas.length + "|" + d.investimentos.length + "|" + d.acoes.length + "|" + d.bancos.length;
     if (cacheHistPat.chave === chave) return cacheHistPat.pontos;
     const idsBanco = new Set(d.bancos.map((b) => b.id));
     const movs = [
@@ -5086,6 +5140,7 @@
     const datas = [...movs.map((m) => m.data)];
     d.investimentos.forEach((i) => { (i.historicoValores || []).forEach((p) => datas.push(p.data)); if (i.dataAplicacao) datas.push(i.dataAplicacao); });
     d.acoes.forEach((a) => (a.historicoPrecos || []).forEach((p) => datas.push(p.data)));
+    I.listaCripto(d).forEach((c) => ((((d.config || {}).criptoPrecos || {})[c.moeda]) || []).forEach((p) => datas.push(p.data)));
     const p = I.patrimonio(d);
     const validas = datas.filter((x) => x && x <= hoje).sort();
     if (!validas.length && !p.bruto) { cacheHistPat = { chave, pontos: [] }; return []; }
@@ -5099,7 +5154,8 @@
         return s + (i.dataAplicacao && i.dataAplicacao <= fim ? Number(i.valorInvestido || 0) : 0);
       }, 0);
       const acoes = d.acoes.reduce((s, a) => { const pr = ultimoAte(a.historicoPrecos, "preco", fim); return s + (pr !== null ? pr * Number(a.quantidade || 0) : 0); }, 0);
-      return { bancos, investimentos: invest, acoes, dividas: 0 };
+      const cripto = I.totalCripto(d, fim);   // quantidade atual × preço do fim do mês
+      return { bancos, investimentos: invest, acoes, cripto, dividas: 0 };
     };
     let inicio = (validas[0] || hoje).slice(0, 7);
     const limite = `${Number(hoje.slice(0, 4)) - 10}${hoje.slice(4, 7)}`;
@@ -5109,10 +5165,10 @@
       const [a, m] = mes.split("-").map(Number);
       const fim = `${mes}-${String(new Date(a, m, 0).getDate()).padStart(2, "0")}`;
       const c = valorEm(fim);
-      pontos.push({ data: fim, valor: Math.round(c.bancos + c.investimentos + c.acoes), ...c });
+      pontos.push({ data: fim, valor: Math.round(c.bancos + c.investimentos + c.acoes + c.cripto), ...c });
       const prox = new Date(a, m, 1); mes = `${prox.getFullYear()}-${String(prox.getMonth() + 1).padStart(2, "0")}`;
     }
-    pontos.push({ data: hoje, valor: Math.round(p.liquido), bancos: p.bancos, investimentos: p.investimentos, acoes: p.acoes, dividas: p.dividas, hoje: true });     // hoje: o patrimônio líquido exato
+    pontos.push({ data: hoje, valor: Math.round(p.liquido), bancos: p.bancos, investimentos: p.investimentos, acoes: p.acoes, cripto: p.cripto, dividas: p.dividas, hoje: true });     // hoje: o patrimônio líquido exato
     cacheHistPat = { chave, pontos };
     return pontos;
   }
