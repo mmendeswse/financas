@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.13";
+  const VERSAO_APP = "3.6.14";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1418,7 +1418,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.13" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.14" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -5412,7 +5412,8 @@
       corpo = `<div class="c8"><div class="card"><div class="empty">Nenhuma meta cadastrada. Que tal começar por uma reserva de emergência?</div></div></div>`;
     } else {
       // cada meta num quadro igual ao quadro Metas do Dashboard (o mesmo bloco
-      // da meta), com Editar no canto de cima e Adicionar no canto de baixo
+      // da meta), com Editar no canto de cima e Depositar no canto de baixo, como
+      // nos quadros dos bancos (o "Guardar Mês" aparece no selo 💰 da meta)
       corpo = d.metas.map((m) => {
         const st = situacaoMeta(m);
         const diasPrazo = m.prazo ? F.diasEntre(m.prazo) : null;
@@ -5422,10 +5423,6 @@
           `<button class="btn btn-icone btn-banco-editar" data-acao="editar-meta" data-id="${m.id}" title="Editar a meta" aria-label="Editar">${ICONE_EDITAR}</button>`,
           `<div class="metas-lista">${itemMetaHtml(m)}</div>
           <div class="body pad meta-quadro-acoes">
-            <div class="meta-mensal" data-acao="editar-meta" data-id="${m.id}" title="Quanto guardar por mês — clique para editar">
-              <span class="meta-mensal-icone" style="color:${m.cor || "var(--up)"}"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M12 13.2v5M9.8 15.4h4.4"/></svg></span>
-              <span class="meta-mensal-texto"><small>Guardar Mês</small>${Number(m.aporteMensal) > 0 ? `<b class="num">${brl(m.aporteMensal)}</b>` : `<b class="dim">Definir Valor</b>`}</span>
-            </div>
             <button class="btn btn-icone btn-banco-depositar" data-acao="depositar-meta" data-id="${m.id}" title="Adicionar valor na meta" aria-label="Adicionar">${ICONE_CAIXA_24H}</button>
           </div>`)}</div>`;
       }).join("");
