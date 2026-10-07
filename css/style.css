@@ -1524,8 +1524,8 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 /* Painel ativos: a barra de título inteira em uma linha só — título, selo,
    USD/BRL, BTC, ETH e os botões. Em telas estreitas tudo encolhe e, se ainda
    não couber, as pílulas rolam para o lado em vez de quebrar a linha. */
-#painelAtivos > header, #painelInvestimentos > header { flex-wrap: nowrap; align-items: center; }
-#painelAtivos > header > div:first-child, #painelInvestimentos > header > div:first-child { flex: none; margin-right: auto; display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+#painelAtivos > header { flex-wrap: nowrap; align-items: center; }
+#painelAtivos > header > div:first-child { flex: none; margin-right: auto; display: flex; align-items: center; gap: 10px; white-space: nowrap; }
 #painelAtivos > header .sub { margin-top: 0; }
 #painelAtivos > header .acoes { flex: 0 1 auto; min-width: 0; flex-wrap: nowrap; }
 #painelAtivos > header .acoes > * { flex: none; }
@@ -1540,8 +1540,8 @@ button.pill-periodo:hover { filter: brightness(1.25); }
   #painelAtivos .dolar-pill { gap: 6px; padding: 0 10px; }
   #painelAtivos .dolar-pill b { font-size: 13px; }
   #painelAtivos .dolar-pill span, #painelAtivos .dolar-pill .cripto-meu { font-size: 11px; }
-  #painelAtivos > header .btn, #painelInvestimentos > header .btn { padding: 8px 11px; }
-  #painelAtivos > header .btn .btn-txt, #painelInvestimentos > header .btn .btn-txt { display: none; }
+  #painelAtivos > header .btn { padding: 8px 11px; }
+  #painelAtivos > header .btn .btn-txt { display: none; }
 }
 @media (max-width: 980px) {
   /* o rótulo some no celular (regra geral): BTC e ETH continuam identificados */
