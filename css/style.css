@@ -1515,3 +1515,35 @@ button.resumo-pill:active { transform: scale(.98); }
 .notif-lista { display: block; margin-top: 4px; }
 .notif-item { display: block; margin: 2px 0; padding-left: 14px; position: relative; }
 .notif-item::before { content: "•"; position: absolute; left: 3px; }
+
+/* Painel ativos: a barra de título inteira em uma linha só — título, selo,
+   USD/BRL, BTC, ETH e os botões. Em telas estreitas tudo encolhe e, se ainda
+   não couber, as pílulas rolam para o lado em vez de quebrar a linha. */
+#painelAtivos > header { flex-wrap: nowrap; align-items: center; }
+#painelAtivos > header > div:first-child { flex: none; margin-right: auto; display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+#painelAtivos > header .sub { margin-top: 0; }
+#painelAtivos > header .acoes { flex: 0 1 auto; min-width: 0; flex-wrap: nowrap; }
+#painelAtivos > header .acoes > * { flex: none; }
+#painelAtivos > header .acoes > .pilulas-cotacao { flex: 0 1 auto; min-width: 0; display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
+#painelAtivos .pilulas-cotacao::-webkit-scrollbar { display: none; }
+#painelAtivos .pilulas-cotacao > * { flex: none; }
+#painelAtivos .dolar-pill { white-space: nowrap; }
+@media (max-width: 1500px) {
+  #painelAtivos > header .sub { display: none; }
+}
+@media (max-width: 1200px) {
+  #painelAtivos .dolar-pill { gap: 6px; padding: 0 10px; }
+  #painelAtivos .dolar-pill b { font-size: 13px; }
+  #painelAtivos .dolar-pill span, #painelAtivos .dolar-pill .cripto-meu { font-size: 11px; }
+  #painelAtivos > header .btn { padding: 8px 11px; }
+  #painelAtivos > header .btn .btn-txt { display: none; }
+}
+@media (max-width: 980px) {
+  /* o rótulo some no celular (regra geral): BTC e ETH continuam identificados */
+  #painelAtivos .cripto-pill small { display: inline; }
+  #painelAtivos .status-mercado { display: none; }
+}
+@media (max-width: 600px) {
+  #painelAtivos > header { gap: 10px; }
+  #painelAtivos .dolar-pill span { display: none; }   /* no celular, só o preço */
+}
