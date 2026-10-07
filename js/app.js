@@ -17,12 +17,13 @@
   const G = window.Graficos;
   const C = window.Cotacoes;
   let dolar = null;            // { valor, variacaoPct, atualizadoEm }
+  let cripto = null;           // { BTC: { valor, variacaoPct }, ETH: { valor, variacaoPct } }
   let buscandoCotacoes = false;
 
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.5.1";
+  const VERSAO_APP = "3.6.0";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -949,6 +950,8 @@
     // a faixa de cotações e a pílula do dólar ficam fora da área principal,
     // então precisam do seu próprio tratador de clique
     document.addEventListener("click", (e) => {
+      const cr = e.target.closest("[data-cripto]");
+      if (cr) { e.preventDefault(); e.stopPropagation(); abrirModalCripto(cr.dataset.cripto); return; }
       const alvo = e.target.closest('[data-acao="ir-dolar"]');
       if (alvo) { e.preventDefault(); navegarPara("detalhe-dolar"); return; }
       const acao = e.target.closest('#tickerTape [data-acao="ir-acao"]');
@@ -1067,6 +1070,7 @@
     atualizarSidebarMeta();
     atualizarRodape();
     renderDolar();
+    renderCripto();
   }
 
   // =========================================================================
@@ -1411,7 +1415,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.5.1" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.0" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1731,6 +1735,61 @@
     el.innerHTML = `<i class="status-mercado ${aberto ? "aberto" : "fechado"}" title="${aberto ? "Mercado aberto" : "Mercado fechado"}"></i><small>USD/BRL</small><b>R$ ${dolar.valor.toFixed(2).replace(".", ",")}</b><span class="${v >= 0 ? "up" : "down"}">${v >= 0 ? "▲" : "▼"} ${Math.abs(v).toFixed(2).replace(".", ",")}%</span>`;
   }
 
+  // Pílulas do Bitcoin e do Ethereum ao lado do dólar. Clicando, informa a
+  // quantidade que você tem; com quantidade, a pílula mostra quanto ela vale em reais.
+  const CRIPTOS = { BTC: "Bitcoin", ETH: "Ethereum" };
+  function qtdCripto(m) {
+    const q = ((DADOS.config || {}).cripto || {})[m];
+    return q > 0 ? q : 0;
+  }
+  function fmtQtdCripto(q) {
+    return q.toLocaleString("pt-BR", { maximumFractionDigits: 8 });
+  }
+  function renderCripto() {
+    Object.keys(CRIPTOS).forEach((m) => {
+      const el = document.getElementById("cripto" + m);
+      if (!el) return;
+      const c = cripto && cripto[m];
+      const q = qtdCripto(m);
+      if (!c && !q) { el.style.display = "none"; return; }
+      el.style.display = "";
+      el.style.cursor = "pointer";
+      el.setAttribute("data-cripto", m);
+      el.setAttribute("title", q ? `${fmtQtdCripto(q)} ${m} — clique para alterar a quantidade` : `Clique para informar quantos ${m} você tem`);
+      const v = c ? c.variacaoPct || 0 : 0;
+      const preco = c ? `<b>${brl(c.valor)}</b><span class="${v >= 0 ? "up" : "down"}">${v >= 0 ? "▲" : "▼"} ${Math.abs(v).toFixed(2).replace(".", ",")}%</span>` : `<b>—</b>`;
+      const meu = q && c ? `<em class="cripto-meu">${brl(q * c.valor)}</em>` : "";
+      el.innerHTML = `<small>${m}</small>${preco}${meu}`;
+    });
+  }
+  function abrirModalCripto(m) {
+    if (!CRIPTOS[m]) return;
+    const c = cripto && cripto[m];
+    const q = qtdCripto(m);
+    abrirModal(`
+      <h3>${CRIPTOS[m]} (${m})</h3>
+      ${c ? `<p class="dim" style="margin:0 0 12px">Cotação agora: <b class="creme">${brl(c.valor)}</b></p>` : ""}
+      <div class="campo"><label for="f_qtdCripto">Quantos ${m} você tem?</label><input id="f_qtdCripto" type="text" inputmode="decimal" autocomplete="off" value="${q ? fmtQtdCripto(q).replace(/\./g, "") : ""}" placeholder="0,00000000"></div>
+      <p class="dim" id="f_valorCripto" style="margin:4px 0 0;font-size:12.5px"></p>
+      <div class="modal-acoes"><button class="btn primario salvar" id="btnSalvar">Salvar</button></div>`);
+    const inp = document.getElementById("f_qtdCripto");
+    const mostrarValor = () => {
+      const n = numIn(inp.value);
+      document.getElementById("f_valorCripto").textContent = c && n > 0 ? `Vale ${brl(n * c.valor)}` : "";
+    };
+    inp.addEventListener("input", mostrarValor);
+    mostrarValor();
+    document.getElementById("btnSalvar").onclick = () => {
+      const n = String(inp.value).trim() ? numIn(inp.value) : 0;
+      if (!(n >= 0) || !isFinite(n)) { toast("Informe uma quantidade válida."); return; }
+      DADOS.config = DADOS.config || {};
+      DADOS.config.cripto = { ...(DADOS.config.cripto || {}), [m]: n };
+      fecharModal();
+      salvarEAtualizar(n > 0 ? `${fmtQtdCripto(n)} ${m} salvo.` : `Quantidade de ${m} zerada.`);
+      renderCripto();
+    };
+  }
+
   function atualizarCotacoesAutomaticas(silencioso) {
     if (!C || buscandoCotacoes || typeof fetch !== "function") return Promise.resolve();
     const cfg = configCotacoes();
@@ -1740,6 +1799,7 @@
     const tickers = DADOS.acoes.map((a) => a.ticker.toUpperCase());
 
     const pDolar = C.buscarDolar().then((r) => { dolar = r; renderDolar(); atualizarTicker(); }).catch(() => {});
+    const pCripto = C.buscarCripto ? C.buscarCripto().then((r) => { cripto = r; renderCripto(); }).catch(() => {}) : Promise.resolve();
     const pAcoes = tickers.length ? C.buscarCotacoes(tickers, cfg.token).then((res) => {
       const mapa = res.cotacoes || {};
       const erros = res.erros || {};
@@ -1786,7 +1846,7 @@
       if (qtdErros) console.warn("Cotações com erro:", erros);
     }).catch((e) => { if (!silencioso) toast("Não consegui buscar as ações: " + e.message); }) : Promise.resolve();
 
-    return Promise.all([pDolar, pAcoes]).then(() => { buscandoCotacoes = false; }, () => { buscandoCotacoes = false; });
+    return Promise.all([pDolar, pCripto, pAcoes]).then(() => { buscandoCotacoes = false; }, () => { buscandoCotacoes = false; });
   }
 
   function iniciarRelogio() {
@@ -4793,6 +4853,8 @@
       <div class="grid g-top">
         <div class="c12">${card("", "Painel ativos", (configCotacoes().auto ? '<span class="selo-tag selo-acao">cotação automática · brapi.dev</span>' : '<span class="selo-tag selo-cat">preço atualizado manualmente</span>'),
           `<div class="dolar-pill" id="dolarTopbar" title="Dólar comercial (AwesomeAPI)" style="display:none"></div>
+           <div class="dolar-pill cripto-pill" id="criptoBTC" style="display:none"></div>
+           <div class="dolar-pill cripto-pill" id="criptoETH" style="display:none"></div>
            <button class="btn" data-acao="buscar-cotacoes" title="Buscar cotações na internet agora">↻ Buscar</button>
            <button class="btn primario" data-acao="novo-ativo"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`,
           corpo,

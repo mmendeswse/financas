@@ -7,6 +7,7 @@
  * último preço conhecido (com a indicação "atualizado manualmente").
  *
  *   buscarDolar()                 -> { valor, variacaoPct, atualizadoEm }
+ *   buscarCripto()                -> { BTC: { valor, variacaoPct }, ETH: { valor, variacaoPct } }
  *   buscarCotacoes(tickers, token) -> { cotacoes: { PETR4: { preco, variacaoPct, nome } }, erros: { XPTO3: 'motivo' } }
  *
  * Dólar: AwesomeAPI (economia.awesomeapi.com.br) — gratuita, sem chave.
@@ -20,6 +21,7 @@
   var URL_DOLAR = "https://economia.awesomeapi.com.br/last/USD-BRL";
   var URL_DOLAR_SERIE = "https://economia.awesomeapi.com.br/json/daily/USD-BRL/";
   var URL_BRAPI = "https://brapi.dev/api/quote/";
+  var URL_CRIPTO = "https://economia.awesomeapi.com.br/last/BTC-BRL,ETH-BRL";
 
   function comTimeout(promessa, ms) {
     return new Promise(function (resolve, reject) {
@@ -36,6 +38,23 @@
       var d = j && j.USDBRL;
       if (!d) throw new Error("Resposta inesperada");
       return { valor: Number(d.bid), variacaoPct: Number(d.pctChange), atualizadoEm: d.create_date || new Date().toISOString() };
+    }), 8000);
+  }
+
+  // Bitcoin e Ethereum em reais, na mesma AwesomeAPI do dólar.
+  // -> { BTC: { valor, variacaoPct }, ETH: { valor, variacaoPct } }
+  function buscarCripto() {
+    return comTimeout(fetch(URL_CRIPTO, { cache: "no-store" }).then(function (r) {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function (j) {
+      var res = {};
+      ["BTC", "ETH"].forEach(function (m) {
+        var d = j && j[m + "BRL"];
+        if (d && Number(d.bid) > 0) res[m] = { valor: Number(d.bid), variacaoPct: Number(d.pctChange) || 0 };
+      });
+      if (!res.BTC && !res.ETH) throw new Error("Resposta inesperada");
+      return res;
     }), 8000);
   }
 
@@ -271,5 +290,5 @@
     });
   }
 
-  global.Cotacoes = { buscarDolar: buscarDolar, buscarSerieDolar: buscarSerieDolar, buscarCotacoes: buscarCotacoes, buscarSerieBCB: buscarSerieBCB, buscarNoticiasDia: buscarNoticiasDia, buscarNoticiasPeriodo: buscarNoticiasPeriodo };
+  global.Cotacoes = { buscarDolar: buscarDolar, buscarCripto: buscarCripto, buscarSerieDolar: buscarSerieDolar, buscarCotacoes: buscarCotacoes, buscarSerieBCB: buscarSerieBCB, buscarNoticiasDia: buscarNoticiasDia, buscarNoticiasPeriodo: buscarNoticiasPeriodo };
 })(window);
