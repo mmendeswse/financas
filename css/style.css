@@ -1588,6 +1588,3 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 .card-meta-quadro .rodape-botoes { display: flex; gap: 6px; }
 .card-meta-quadro .metas-lista { padding-bottom: 12px; }
 
-/* rodapé do sistema sempre inteiro na parte de baixo da tela, sem precisar
-   rolar até o fim da página para vê-lo */
-@media (min-width: 761px) { .rodape-app { position: sticky; bottom: 0; z-index: 30; } }   /* no celular ele tem 3 linhas: fica no fim da página */
