@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.22";
+  const VERSAO_APP = "3.6.23";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1418,7 +1418,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.22" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.23" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -5677,6 +5677,18 @@
       }
       case "bancos": {
         if (!d.bancos.length) break;
+        // tablet e computador: o gráfico ocupa a altura que sobra até o rodapé
+        // (a página termina junto com a tela, sem faixa vazia); nunca fica
+        // menor que o tamanho original
+        const caixaGraf = document.getElementById("graf-saldo-bancos") && document.getElementById("graf-saldo-bancos").parentElement;
+        if (caixaGraf && window.innerWidth > 760) {
+          // espaço vazio entre o fim do conteúdo e o rodapé (o rodapé fica preso embaixo)
+          const rod = document.querySelector(".rodape-app"), cont = document.getElementById("conteudo");
+          const ultimo = cont && cont.lastElementChild;
+          const folga = (cont ? parseFloat(getComputedStyle(cont).paddingBottom) || 0 : 0) + (rod ? parseFloat(getComputedStyle(rod).marginTop) || 0 : 0);
+          const sobra = rod && ultimo ? rod.getBoundingClientRect().top - ultimo.getBoundingClientRect().bottom - folga : 0;
+          if (sobra > 1) caixaGraf.style.height = Math.floor(caixaGraf.clientHeight + sobra) + "px";
+        }
         G.renderSaldoBancos("graf-saldo-bancos", bancosNaOrdem(bancosDoPeriodo(d)).map((b) => Object.assign({}, b, { saldoAtual: b.valor })),
           { aoClicar: (b) => explicarBanco(b.id) });
         break;
