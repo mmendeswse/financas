@@ -278,7 +278,7 @@
           data: bancos.map(function (b) { return b.saldoAtual; }),
           backgroundColor: bancos.map(function (b) { return Number(b.saldoAtual) < 0 ? CORES.down : (b.cor || CORES.cy); }),
           borderColor: bancos.map(function (b) { return Number(b.saldoAtual) < 0 ? CORES.down : (b.cor || CORES.cy); }),
-          borderWidth: 1, borderRadius: 3, maxBarThickness: 22
+          borderWidth: 1, borderRadius: 3, maxBarThickness: 26
         }]
       },
       options: {

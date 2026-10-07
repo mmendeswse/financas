@@ -1590,3 +1590,7 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 .cartao-item .rodape .btn.btn-banco, .card-meta-quadro .rodape-botoes .btn.btn-banco { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 11px; font-size: 11.5px; font-family: var(--ui); font-weight: 700; min-width: 0; position: relative; z-index: 2; }
 .btn-banco .ic-btn { width: 17px; height: 17px; flex: none; }
 .card-meta-quadro .rodape-botoes { display: flex; gap: 6px; }
+
+/* rodapé do sistema sempre inteiro na parte de baixo da tela, sem precisar
+   rolar até o fim da página para vê-lo */
+@media (min-width: 761px) { .rodape-app { position: sticky; bottom: 0; z-index: 30; } }   /* no celular ele tem 3 linhas: fica no fim da página */
