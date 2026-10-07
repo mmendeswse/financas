@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.1";
+  const VERSAO_APP = "3.6.2";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1418,7 +1418,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.1" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.2" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1689,9 +1689,16 @@
     const track = document.getElementById("tickerTrack");
     if (!tape || !track) return;
     const lista = I.listaAcoesComCalculo(DADOS);
-    if (!lista.length && !dolar) { tape.style.display = "none"; return; }
+    if (!lista.length && !dolar && !cripto) { tape.style.display = "none"; return; }
     const itemDolar = dolar ? `<span class="ticker-item clicavel" data-acao="ir-dolar" title="Ver histórico do dólar"><b>USD/BRL</b><span class="tp">${dolar.valor.toFixed(2).replace(".", ",")}</span><span class="tv ${dolar.variacaoPct >= 0 ? "up" : "down"}">${Math.abs(dolar.variacaoPct || 0).toFixed(2).replace(".", ",")}%</span></span>` : "";
-    const itens = itemDolar + lista.map((a) => {
+    // BTC e ETH logo depois do dólar; clicando, abrem a tela da moeda
+    const itensCripto = Object.keys(CRIPTOS).map((m) => {
+      const c = cripto && cripto[m];
+      if (!c) return "";
+      const v = c.variacaoPct || 0;
+      return `<span class="ticker-item clicavel" data-cripto="${m}" title="Ver histórico do ${CRIPTOS[m]}"><b>${m}/BRL</b><span class="tp">${c.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span><span class="tv ${v >= 0 ? "up" : "down"}">${Math.abs(v).toFixed(2).replace(".", ",")}%</span></span>`;
+    }).join("");
+    const itens = itemDolar + itensCripto + lista.map((a) => {
       const p = a.fontePreco === "auto" && a.variacaoDiaPct != null ? a.variacaoDiaPct : ((a.historicoPrecos || []).length < 2 ? a.rentabilidade : I.variacaoRecente(a).pct);
       return `<span class="ticker-item clicavel" data-acao="ir-acao" data-id="${a.id}" title="Ver ${esc(a.ticker)}"><b>${esc(a.ticker)}</b><span class="tp">${a.precoAtual.toFixed(2).replace(".", ",")}</span><span class="tv ${p >= 0 ? "up" : "down"}">${Math.abs(p).toFixed(2).replace(".", ",")}%</span></span>`;
     }).join("");
@@ -1807,6 +1814,7 @@
     const pCripto = C.buscarCripto ? C.buscarCripto().then((r) => {
       cripto = r;
       renderCripto();
+      atualizarTicker();
       // na tela da moeda, o rodapé (cotação e quanto vale o que você tem) acompanha o preço novo
       const janelaAberta = document.getElementById("scrim") && document.getElementById("scrim").classList.contains("on");
       if (ROTA.secao === "detalhe-cripto" && !janelaAberta) renderRota();
