@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.15";
+  const VERSAO_APP = "3.6.16";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1418,7 +1418,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.15" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.16" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2806,11 +2806,11 @@
     } else {
       listaHtml = `<div class="grade-bancos">` + bancos.map((b) => `
           <div class="cartao-item" style="border-left-color:${esc(b.cor || "#3FC1E0")}" data-acao="explicar-banco" data-id="${b.id}" title="Ver o histórico de transações">
-            <div class="linha1"><div class="nome-com-marca">${marcaBanco(b.nome, 26)}<div><div class="nome">${esc(b.nome)}</div><div class="tipo">${esc(b.tipo || "—")}</div>${b.agencia || b.conta ? `<div class="tipo">${b.agencia ? "Ag " + esc(b.agencia) : ""}${b.agencia && b.conta ? " · " : ""}${b.conta ? "Cc " + esc(b.conta) : ""}</div>` : ""}</div></div>
-              <button class="btn btn-icone btn-banco-editar" data-acao="editar-banco" data-id="${b.id}" title="Editar os dados do banco" aria-label="Editar">${ICONE_EDITAR}</button></div>
+            <div class="linha1"><div class="nome-com-marca">${marcaBanco(b.nome, 26)}<div><div class="nome">${esc(b.nome)}</div><div class="tipo">${esc(b.tipo || "—")}</div>${b.agencia || b.conta ? `<div class="tipo">${b.agencia ? "Ag " + esc(b.agencia) : ""}${b.agencia && b.conta ? " · " : ""}${b.conta ? "Cc " + esc(b.conta) : ""}</div>` : ""}</div></div></div>
             <div class="saldo saldo-branco">${brlSinal(b.valor)}</div>
             <div class="rodape"><span>${mesesBancos ? `Saldo Atual ${brl(b.saldoAtual)}` : ""}</span>
-              <button class="btn btn-icone btn-banco-depositar" data-acao="entrada-banco" data-id="${b.id}" title="Depositar: lançar uma entrada nesta conta" aria-label="Depositar">${ICONE_CAIXA_24H}</button>
+              <span class="rodape-botoes"><button class="btn pequeno btn-banco btn-banco-editar" data-acao="editar-banco" data-id="${b.id}" title="Editar os dados do banco">${ICONE_EDITAR}Editar</button>
+              <button class="btn pequeno btn-banco btn-banco-depositar" data-acao="entrada-banco" data-id="${b.id}" title="Depositar: lançar uma entrada nesta conta">${ICONE_CAIXA_24H}Depositar</button></span>
             </div>
           </div>`).join("") + `</div>`;
     }
@@ -5412,18 +5412,19 @@
       corpo = `<div class="c8"><div class="card"><div class="empty">Nenhuma meta cadastrada. Que tal começar por uma reserva de emergência?</div></div></div>`;
     } else {
       // cada meta num quadro igual ao quadro Metas do Dashboard (o mesmo bloco
-      // da meta), com Editar no canto de cima e Depositar no canto de baixo, como
-      // nos quadros dos bancos (o "Guardar Mês" aparece no selo 💰 da meta)
+      // da meta), com Editar e Depositar embaixo à direita, como nos quadros dos
+      // bancos (o "Guardar Mês" aparece no selo 💰 da meta)
       corpo = d.metas.map((m) => {
         const st = situacaoMeta(m);
         const diasPrazo = m.prazo ? F.diasEntre(m.prazo) : null;
         const vencida = diasPrazo !== null && diasPrazo < 0 && Number(m.atual || 0) < Number(m.objetivo || 0);
         const sub = vencida ? `<span class="down">prazo vencido há ${plural(Math.abs(diasPrazo), "dia")}</span>` : esc(st.rotulo);
         return `<div class="c4">${card("card-meta-quadro" + (vencida ? " card-meta-vencida" : ""), nomeMeta(m), sub,
-          `<button class="btn btn-icone btn-banco-editar" data-acao="editar-meta" data-id="${m.id}" title="Editar a meta" aria-label="Editar">${ICONE_EDITAR}</button>`,
+          "",
           `<div class="metas-lista">${itemMetaHtml(m)}</div>
           <div class="body pad meta-quadro-acoes">
-            <button class="btn btn-icone btn-banco-depositar" data-acao="depositar-meta" data-id="${m.id}" title="Adicionar valor na meta" aria-label="Adicionar">${ICONE_CAIXA_24H}</button>
+            <span class="rodape-botoes"><button class="btn pequeno btn-banco btn-banco-editar" data-acao="editar-meta" data-id="${m.id}" title="Editar a meta">${ICONE_EDITAR}Editar</button>
+            <button class="btn pequeno btn-banco btn-banco-depositar" data-acao="depositar-meta" data-id="${m.id}" title="Depositar: adicionar valor na meta">${ICONE_CAIXA_24H}Depositar</button></span>
           </div>`)}</div>`;
       }).join("");
     }
