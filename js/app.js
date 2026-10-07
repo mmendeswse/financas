@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.0";
+  const VERSAO_APP = "3.6.2";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -950,8 +950,10 @@
     // a faixa de cotações e a pílula do dólar ficam fora da área principal,
     // então precisam do seu próprio tratador de clique
     document.addEventListener("click", (e) => {
+      const bq = e.target.closest("[data-cripto-qtd]");
+      if (bq) { e.preventDefault(); e.stopPropagation(); abrirModalCripto(bq.dataset.criptoQtd); return; }
       const cr = e.target.closest("[data-cripto]");
-      if (cr) { e.preventDefault(); e.stopPropagation(); abrirModalCripto(cr.dataset.cripto); return; }
+      if (cr) { e.preventDefault(); e.stopPropagation(); navegarPara("detalhe-cripto", cr.dataset.cripto); return; }
       const alvo = e.target.closest('[data-acao="ir-dolar"]');
       if (alvo) { e.preventDefault(); navegarPara("detalhe-dolar"); return; }
       const acao = e.target.closest('#tickerTape [data-acao="ir-acao"]');
@@ -991,18 +993,18 @@
   function navegarPara(secao, param) {
     ROTA = { secao, param: param || null };
     // cada abertura do gráfico do dólar/ação procura notícias novas
-    if (secao === "detalhe-dolar" || secao === "detalhe-acao") aberturaGrafico++;
+    if (secao === "detalhe-dolar" || secao === "detalhe-acao" || secao === "detalhe-cripto") aberturaGrafico++;
     else chaveNaTela = null;   // saiu do gráfico: a busca dele deixa de ter prioridade
     // ao entrar na guia, o filtro volta sempre para o mês e o ano atuais
     if (secao === "entradas") { mesEntradas = F.mesAtual(); ordemEntradas = { ...ORDEM_ENTRADAS_PADRAO }; filtroEntradas = null; }
     if (secao === "despesas") { mesDespesas = F.mesAtual(); ordemDespesas = { ...ORDEM_DESPESAS_PADRAO }; filtroDespesas = null; }
     // o período dos gráficos abre sempre no padrão, em vez de guardar a
     // escolha anterior: ações e moeda (USD/BRL) em "3 meses"; investimentos em "Tudo"
-    if (["acoes", "detalhe-acao", "detalhe-dolar"].includes(secao)) periodoGrafico = "90d";
+    if (["acoes", "detalhe-acao", "detalhe-dolar", "detalhe-cripto"].includes(secao)) periodoGrafico = "90d";
     if (["investimentos", "detalhe-investimento"].includes(secao)) periodoGrafico = "tudo";
     // o gráfico do dólar e o de cada ação abrem sempre em velas (candles);
     // tocar no gráfico alterna para a linha e de volta
-    if (secao === "detalhe-dolar") velasDolar = true;
+    if (secao === "detalhe-dolar" || secao === "detalhe-cripto") velasDolar = true;
     if (secao === "detalhe-acao") velasAcao = true;
     // a guia Bancos sempre abre mostrando o saldo atual ("Tudo")
     if (secao === "bancos") { mesesBancos = 0; anoBancos = String(new Date().getFullYear()); }
@@ -1041,6 +1043,7 @@
     acoes: ["Ações", "Ações, FIIs e ETFs — preços atualizados manualmente"],
     "detalhe-investimento": ["Detalhe da aplicação", "Histórico, imposto e rentabilidade"],
     "detalhe-dolar": ["Dólar comercial", "USD/BRL — cotação e histórico"],
+    "detalhe-cripto": ["Criptomoeda", "Cotação, histórico e a quantidade que você tem"],
     "detalhe-acao": ["Detalhe do ativo", "Histórico e composição da posição"],
     carteira: ["Carteira de ações", "Composição e rentabilidade da carteira"],
     relatorios: ["Relatórios", "Análises por período"],
@@ -1057,7 +1060,7 @@
       dashboard: renderDashboard, financas: renderFinancas, bancos: renderBancos,
       entradas: renderEntradas, despesas: renderDespesas, cartoes: renderCartoes,
       contas: renderDespesas, historico: renderHistorico, investimentos: renderInvestimentos,
-      acoes: renderAcoes, "detalhe-acao": renderDetalheAcao, "detalhe-investimento": renderDetalheInvestimento, "detalhe-dolar": renderDetalheDolar, carteira: renderCarteira,
+      acoes: renderAcoes, "detalhe-acao": renderDetalheAcao, "detalhe-investimento": renderDetalheInvestimento, "detalhe-dolar": renderDetalheDolar, "detalhe-cripto": renderDetalheCripto, carteira: renderCarteira,
       relatorios: renderRelatorios, metas: renderMetas, configuracoes: renderConfiguracoes
     };
     const fn = mapa[ROTA.secao] || renderDashboard;
@@ -1415,7 +1418,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.0" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.2" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1686,9 +1689,16 @@
     const track = document.getElementById("tickerTrack");
     if (!tape || !track) return;
     const lista = I.listaAcoesComCalculo(DADOS);
-    if (!lista.length && !dolar) { tape.style.display = "none"; return; }
+    if (!lista.length && !dolar && !cripto) { tape.style.display = "none"; return; }
     const itemDolar = dolar ? `<span class="ticker-item clicavel" data-acao="ir-dolar" title="Ver histórico do dólar"><b>USD/BRL</b><span class="tp">${dolar.valor.toFixed(2).replace(".", ",")}</span><span class="tv ${dolar.variacaoPct >= 0 ? "up" : "down"}">${Math.abs(dolar.variacaoPct || 0).toFixed(2).replace(".", ",")}%</span></span>` : "";
-    const itens = itemDolar + lista.map((a) => {
+    // BTC e ETH logo depois do dólar; clicando, abrem a tela da moeda
+    const itensCripto = Object.keys(CRIPTOS).map((m) => {
+      const c = cripto && cripto[m];
+      if (!c) return "";
+      const v = c.variacaoPct || 0;
+      return `<span class="ticker-item clicavel" data-cripto="${m}" title="Ver histórico do ${CRIPTOS[m]}"><b>${m}/BRL</b><span class="tp">${c.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span><span class="tv ${v >= 0 ? "up" : "down"}">${Math.abs(v).toFixed(2).replace(".", ",")}%</span></span>`;
+    }).join("");
+    const itens = itemDolar + itensCripto + lista.map((a) => {
       const p = a.fontePreco === "auto" && a.variacaoDiaPct != null ? a.variacaoDiaPct : ((a.historicoPrecos || []).length < 2 ? a.rentabilidade : I.variacaoRecente(a).pct);
       return `<span class="ticker-item clicavel" data-acao="ir-acao" data-id="${a.id}" title="Ver ${esc(a.ticker)}"><b>${esc(a.ticker)}</b><span class="tp">${a.precoAtual.toFixed(2).replace(".", ",")}</span><span class="tv ${p >= 0 ? "up" : "down"}">${Math.abs(p).toFixed(2).replace(".", ",")}%</span></span>`;
     }).join("");
@@ -1735,8 +1745,9 @@
     el.innerHTML = `<i class="status-mercado ${aberto ? "aberto" : "fechado"}" title="${aberto ? "Mercado aberto" : "Mercado fechado"}"></i><small>USD/BRL</small><b>R$ ${dolar.valor.toFixed(2).replace(".", ",")}</b><span class="${v >= 0 ? "up" : "down"}">${v >= 0 ? "▲" : "▼"} ${Math.abs(v).toFixed(2).replace(".", ",")}%</span>`;
   }
 
-  // Pílulas do Bitcoin e do Ethereum ao lado do dólar. Clicando, informa a
-  // quantidade que você tem; com quantidade, a pílula mostra quanto ela vale em reais.
+  // Pílulas do Bitcoin e do Ethereum ao lado do dólar. Clicando, abre a tela
+  // da moeda (como a do USD/BRL), com o botão para informar a quantidade que
+  // você tem; com quantidade, a pílula mostra quanto ela vale em reais.
   const CRIPTOS = { BTC: "Bitcoin", ETH: "Ethereum" };
   function qtdCripto(m) {
     const q = ((DADOS.config || {}).cripto || {})[m];
@@ -1755,7 +1766,7 @@
       el.style.display = "";
       el.style.cursor = "pointer";
       el.setAttribute("data-cripto", m);
-      el.setAttribute("title", q ? `${fmtQtdCripto(q)} ${m} — clique para alterar a quantidade` : `Clique para informar quantos ${m} você tem`);
+      el.setAttribute("title", q ? `${fmtQtdCripto(q)} ${m} — ver histórico do ${CRIPTOS[m]}` : `Ver histórico do ${CRIPTOS[m]}`);
       const v = c ? c.variacaoPct || 0 : 0;
       const preco = c ? `<b>${brl(c.valor)}</b><span class="${v >= 0 ? "up" : "down"}">${v >= 0 ? "▲" : "▼"} ${Math.abs(v).toFixed(2).replace(".", ",")}%</span>` : `<b>—</b>`;
       const meu = q && c ? `<em class="cripto-meu">${brl(q * c.valor)}</em>` : "";
@@ -1786,7 +1797,8 @@
       DADOS.config.cripto = { ...(DADOS.config.cripto || {}), [m]: n };
       fecharModal();
       salvarEAtualizar(n > 0 ? `${fmtQtdCripto(n)} ${m} salvo.` : `Quantidade de ${m} zerada.`);
-      renderCripto();
+      if (ROTA.secao === "detalhe-cripto") renderRota();
+      else renderCripto();
     };
   }
 
@@ -1799,7 +1811,14 @@
     const tickers = DADOS.acoes.map((a) => a.ticker.toUpperCase());
 
     const pDolar = C.buscarDolar().then((r) => { dolar = r; renderDolar(); atualizarTicker(); }).catch(() => {});
-    const pCripto = C.buscarCripto ? C.buscarCripto().then((r) => { cripto = r; renderCripto(); }).catch(() => {}) : Promise.resolve();
+    const pCripto = C.buscarCripto ? C.buscarCripto().then((r) => {
+      cripto = r;
+      renderCripto();
+      atualizarTicker();
+      // na tela da moeda, o rodapé (cotação e quanto vale o que você tem) acompanha o preço novo
+      const janelaAberta = document.getElementById("scrim") && document.getElementById("scrim").classList.contains("on");
+      if (ROTA.secao === "detalhe-cripto" && !janelaAberta) renderRota();
+    }).catch(() => {}) : Promise.resolve();
     const pAcoes = tickers.length ? C.buscarCotacoes(tickers, cfg.token).then((res) => {
       const mapa = res.cotacoes || {};
       const erros = res.erros || {};
@@ -4788,6 +4807,64 @@
   }
 
   // =========================================================================
+  // DETALHE DE UMA CRIPTOMOEDA (BTC, ETH) — mesma tela do dólar, com a
+  // quantidade que você tem e o botão para adicionar/editar
+  // =========================================================================
+  const seriesCripto = {};      // { BTC: [...], ETH: [...] } — série diária da AwesomeAPI
+  const promessasSerieCripto = {};
+  function carregarSerieCripto(m) {
+    if (seriesCripto[m]) return Promise.resolve(seriesCripto[m]);
+    if (promessasSerieCripto[m]) return promessasSerieCripto[m];
+    if (!C || !C.buscarSerieMoeda || typeof fetch !== "function") return Promise.resolve(null);
+    promessasSerieCripto[m] = C.buscarSerieMoeda(m + "-BRL", 365).then((serie) => {
+      seriesCripto[m] = serie;
+      delete promessasSerieCripto[m];
+      if (ROTA.secao === "detalhe-cripto" && ROTA.param === m) renderRota();
+      return serie;
+    }).catch(() => { delete promessasSerieCripto[m]; return null; });
+    return promessasSerieCripto[m];
+  }
+  function velasCriptoPeriodo(m) {
+    const c = cripto && cripto[m];
+    return velasPeriodo((seriesCripto[m] || []).filter((p) => p.abertura > 0), c ? c.valor : 0);
+  }
+  function noticiasDaCripto(m, primeiroPlano) {
+    const vc = velasCriptoPeriodo(m);
+    if (vc.velas.length < 2) return Promise.resolve();
+    // "N" nas velas em que a moeda variou 3% ou mais e houve notícia
+    const nome = CRIPTOS[m];
+    return carregarNoticiasVelas("cripto:" + m, { google: nome, gdelt: `(${nome} OR ${m})` }, vc.velas, vc.visiveis, 3, "graf-cripto",
+      () => ROTA.secao === "detalhe-cripto" && ROTA.param === m && velasDolar, primeiroPlano);
+  }
+
+  function renderDetalheCripto() {
+    const m = ROTA.param;
+    const voltar = `<button class="voltar" data-acao="ir" data-secao="acoes"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONES.voltar}</svg>Voltar para Ações</button>`;
+    if (!CRIPTOS[m]) return `${voltar}<div class="empty">Criptomoeda não encontrada.</div>`;
+    const serie = seriesCripto[m] || [];
+    const filtrada = filtrarPeriodo(serie.map((p) => ({ data: p.data, preco: p.preco })), periodoGrafico);
+    const c = cripto && cripto[m];
+    const q = qtdCripto(m);
+    const btnQtd = `<button class="btn primario" data-cripto-qtd="${m}">${q ? "✎ Editar quantidade" : `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>Adicionar quantidade`}</button>`;
+    const v = c ? c.variacaoPct || 0 : 0;
+    const rodape = `<span class="cripto-rodape"><span class="dim">Cotação</span><b class="creme">${c ? brl(c.valor) : "—"}</b>${c ? `<span class="${v >= 0 ? "up" : "down"}">${v >= 0 ? "▲" : "▼"} ${Math.abs(v).toFixed(2).replace(".", ",")}%</span>` : ""}</span>
+      <span class="cripto-rodape"><span class="dim">${q ? `Você tem ${fmtQtdCripto(q)} ${m}` : `Você ainda não informou quantos ${m} tem`}</span>${q && c ? `<b class="creme" style="font-size:14px;font-weight:800">${brl(q * c.valor)}</b>` : ""}</span>`;
+
+    return `
+      ${voltar}
+      <div class="grid g-top">
+        <div class="c12">${card("", `${m}/BRL <span class="selo-tag selo-acao">cripto</span>`,
+          `${CRIPTOS[m].toLowerCase()} · AwesomeAPI`,
+          `${abasPeriodo()}<button class="btn" data-acao="buscar-cotacoes">↻ Buscar</button>${btnQtd}`,
+          filtrada.length >= 2
+            ? `<div class="grafico-acao-area grafico-tela-cheia"><canvas id="graf-cripto"></canvas></div>`
+            : `<div class="empty">${promessasSerieCripto[m] ? `Carregando o histórico do ${CRIPTOS[m]}…` : "Não foi possível carregar o histórico agora. Verifique a internet e toque em ↻ Buscar."}</div>`,
+          rodape)}</div>
+      </div>
+    `;
+  }
+
+  // =========================================================================
   // AÇÕES (terminal)
   // =========================================================================
   function renderAcoes(d) {
@@ -5485,6 +5562,24 @@
         else if (serie.length >= 2) G.renderPrecoAcao("graf-dolar", serie, 0, 0, { linhaAtual: atualDolar, aoClicar: alternar });
         // notícias: a busca já começa na visão de linha, para estar pronta ao trocar para velas
         noticiasDoDolar(true);   // gráfico aberto: tem prioridade sobre o segundo plano
+        break;
+      }
+      case "detalhe-cripto": {
+        const m = ROTA.param;
+        if (!CRIPTOS[m]) break;
+        carregarSerieCripto(m);
+        const serie = filtrarPeriodo((seriesCripto[m] || []).map((p) => ({ data: p.data, preco: p.preco })), periodoGrafico);
+        const atual = cripto && cripto[m] ? cripto[m].valor : (serie.length ? serie[serie.length - 1].preco : 0);
+        if (atual > 0 && serie.length) {
+          const hj = hojeISO();
+          if (serie[serie.length - 1].data === hj) serie[serie.length - 1] = { ...serie[serie.length - 1], preco: atual };
+          else serie.push({ data: hj, preco: atual });
+        }
+        const alternar = () => { velasDolar = !velasDolar; renderRota(); };
+        const vc = velasCriptoPeriodo(m);
+        if (velasDolar && vc.velas.length >= 2) G.renderVelas("graf-cripto", vc.velas, { visiveis: vc.visiveis, casas: 2, linhaAtual: atual, corAtual: "#FFD633", rotuloAtual: "Valor Atual", aoClicar: alternar, aoMudarJanela: marcarPeriodoDoZoom });
+        else if (serie.length >= 2) G.renderPrecoAcao("graf-cripto", serie, 0, 0, { linhaAtual: atual, aoClicar: alternar });
+        noticiasDaCripto(m, true);
         break;
       }
       case "detalhe-investimento": {
