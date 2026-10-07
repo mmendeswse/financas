@@ -112,6 +112,7 @@ svg { display: block; }
 .dolar-pill small { font-size: 10px; letter-spacing: .1em; color: var(--dim); }
 .dolar-pill b { font-size: 15px; color: var(--creme); }
 .dolar-pill span { font-size: 12px; }
+.cripto-pill .cripto-meu { font-style: normal; font-size: 12px; color: var(--dim); border-left: 1px solid var(--linha); padding-left: 8px; }
 .data-topbar::first-letter { text-transform: uppercase; }
 .dot-vivo { width: 8px; height: 8px; border-radius: 50%; background: var(--up); flex: none; animation: pulso-vivo 1.8s ease-in-out infinite; }
 @keyframes pulso-vivo { 0%, 100% { box-shadow: 0 0 0 0 rgba(34,227,154,.55); } 50% { box-shadow: 0 0 0 4px rgba(34,227,154,0); } }
