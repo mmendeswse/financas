@@ -307,94 +307,6 @@
     });
   }
 
-  // Evolução do saldo de cada banco: uma linha em degraus por conta (o saldo
-  // só muda quando há lançamento), na cor do banco, com legenda, o nome e o
-  // saldo de hoje escritos no fim de cada linha e uma régua vertical com
-  // todos os saldos ao passar o mouse.
-  function renderEvolucaoBancos(canvasId, datas, series, opcoes) {
-    opcoes = opcoes || {};
-    destruir(canvasId);
-    var ctx = ctxOf(canvasId); if (!ctx) return;
-    var rotulos = datas.map(function (dt) { var p = String(dt).split("-"); return p[2] + "/" + p[1] + (datas.length > 1 && datas[0].slice(0, 4) !== datas[datas.length - 1].slice(0, 4) ? "/" + p[0].slice(2) : ""); });
-    var ultimo = datas.length - 1;
-    var rotulosFim = {
-      id: "rotulosFim",
-      afterDatasetsDraw: function (g) {
-        if (series.length > 6) return;   // muitas contas: fica só a legenda
-        var c = g.ctx, area = g.chartArea, ALT = 14, rot = [];
-        g.data.datasets.forEach(function (ds, k) {
-          var meta = g.getDatasetMeta(k);
-          if (meta.hidden || !meta.data[ultimo]) return;
-          rot.push({ k: k, y: meta.data[ultimo].y - 4 });
-        });
-        // em ordem de altura, cada rótulo fica pelo menos uma linha abaixo do
-        // anterior; se passar do fundo, o grupo todo sobe
-        rot.sort(function (a, b) { return a.y - b.y; });
-        rot.forEach(function (r, i) { r.y = Math.max(r.y, area.top + 12); if (i && r.y < rot[i - 1].y + ALT) r.y = rot[i - 1].y + ALT; });
-        var excesso = rot.length ? rot[rot.length - 1].y - (area.bottom - 2) : 0;
-        if (excesso > 0) rot.forEach(function (r) { r.y -= excesso; });
-        c.save();
-        c.font = "700 11px 'Segoe UI', Roboto, sans-serif";
-        c.textAlign = "right"; c.textBaseline = "bottom";
-        rot.forEach(function (r) {
-          var txt = series[r.k].nome + " · " + moeda(series[r.k].valores[ultimo]);
-          var w = c.measureText(txt).width;
-          c.fillStyle = "rgba(11,20,32,.85)"; c.fillRect(area.right - w - 6, r.y - 13, w + 6, 14);   // fundo para ler sobre as linhas
-          c.fillStyle = "#EDF2FA"; c.fillText(txt, area.right - 2, r.y);
-        });
-        c.restore();
-      }
-    };
-    var regua = {
-      id: "reguaBancos",
-      afterDatasetsDraw: function (g) {
-        var at = g.tooltip && g.tooltip.getActiveElements ? g.tooltip.getActiveElements() : [];
-        if (!at.length) return;
-        var x = at[0].element.x, c = g.ctx;
-        c.save(); c.strokeStyle = "rgba(237,242,250,.35)"; c.setLineDash([3, 3]); c.lineWidth = 1;
-        c.beginPath(); c.moveTo(x, g.chartArea.top); c.lineTo(x, g.chartArea.bottom); c.stroke(); c.restore();
-      }
-    };
-    instancias[canvasId] = new Chart(ctx, {
-      type: "line",
-      data: {
-        labels: rotulos,
-        datasets: series.map(function (s) {
-          return { label: s.nome, data: s.valores, borderColor: s.cor, backgroundColor: s.cor,
-            borderWidth: 2, stepped: "before", pointRadius: datas.length > 40 ? 0 : 2.5, pointHoverRadius: 5,
-            pointBackgroundColor: s.cor, pointBorderColor: "#0B1420", pointBorderWidth: 2, fill: false };
-        })
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        interaction: { mode: "index", intersect: false },
-        layout: { padding: { top: 6, right: 4 } },
-        onClick: function (evt, el, g) {
-          if (!opcoes.aoClicar) return;
-          var perto = g.getElementsAtEventForMode(evt, "nearest", { intersect: false }, true);
-          if (perto && perto.length) opcoes.aoClicar(series[perto[0].datasetIndex]);
-        },
-        scales: {
-          x: eixoX({ ticks: { color: CORES.texto, font: fonte(10.5), maxTicksLimit: 10, autoSkip: true, maxRotation: 0 } }),
-          y: eixoY()
-        },
-        plugins: {
-          legend: { display: true, position: "top", align: "start",
-            labels: { color: CORES.texto, font: fonte(11), usePointStyle: true, pointStyle: "circle", boxWidth: 8, boxHeight: 8, padding: 14 } },
-          tooltip: tooltipPadrao({
-            itemSort: function (a, b) { return b.parsed.y - a.parsed.y; },
-            callbacks: {
-              title: function (it) { return it.length ? String(datas[it[0].dataIndex]).split("-").reverse().join("/") : ""; },
-              label: function (c) { return " " + c.dataset.label + ": " + moeda(c.parsed.y); },
-              footer: function (it) { var t = it.reduce(function (s, i) { return s + i.parsed.y; }, 0); return "Total: " + moeda(t); }
-            }
-          })
-        }
-      },
-      plugins: [rotulosFim, regua]
-    });
-  }
-
   // Resultado (preço atual × preço de compra): traço pontilhado vertical
   // ligando as duas linhas, com uma caixa no meio mostrando o lucro/prejuízo
   // total (diferença × cotas) e a diferença por cota. Usado no gráfico de
@@ -1285,7 +1197,6 @@
     renderDoughnutGenerico: renderDoughnutGenerico,
     renderEvolucaoPatrimonio: renderEvolucaoPatrimonio,
     renderSaldoBancos: renderSaldoBancos,
-    renderEvolucaoBancos: renderEvolucaoBancos,
     renderPrecoAcao: renderPrecoAcao,
     renderVelas: renderVelas,
     // notícias nas velas: artigos = [{ data, quando, titulo, url, fonte }]
