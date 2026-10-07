@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.10";
+  const VERSAO_APP = "3.6.11";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1418,7 +1418,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.10" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.11" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1445,6 +1445,15 @@
     avencer: '<rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 9.5h17"/><path d="M8 3.5v3M16 3.5v3"/><path d="M12 12.5V16"/><circle cx="12" cy="18.2" r=".8" fill="currentColor" stroke="none"/>'
   };
 
+  // caixa eletrônico 24h (botão Depositar dos bancos) e lápis (Editar):
+  // vetoriais, ficam nítidos em qualquer tela
+  const ICONE_CAIXA_24H = '<svg class="ic-btn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<rect x="3.5" y="2" width="17" height="20" rx="2.5"/>' +
+    '<rect x="6.2" y="4.6" width="11.6" height="7.4" rx="1.2"/>' +
+    '<text x="12" y="10.35" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="5.6" font-weight="900" fill="currentColor" stroke="none" letter-spacing="-.2">24h</text>' +
+    '<path d="M7 14.6h10"/><path d="M9 14.6v4.6h6v-4.6"/><path d="M11 17h2"/></svg>';
+  const ICONE_EDITAR = '<svg class="ic-btn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<path d="M4 20h4L19 9a2.1 2.1 0 0 0-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg>';
   const ICONES = {
     patrimonio: '<path d="M3 6.2A2.2 2.2 0 0 1 5.2 4h8.6A2.2 2.2 0 0 1 16 6.2v1H6a2 2 0 0 0 0 4h10v2.6A2.2 2.2 0 0 1 13.8 16H5.2A2.2 2.2 0 0 1 3 13.8V6.2z"/><circle cx="12.6" cy="9.2" r=".9" fill="currentColor" stroke="none"/>',
     banco: '<path d="M3 8l7-4 7 4"/><path d="M4 8h12v1H4z"/><path d="M5 9v6M9 9v6M13 9v6"/><path d="M3 16h14"/>',
@@ -2216,7 +2225,7 @@
         (b.transferido ? linha(`Transferências ${periodo}`, brlSinal(b.transferido)) : "") +
         linha("Movimentação líquida", brlSinal(b.valor)) +
         linha("Saldo atual da conta", brlSinal(b.saldoAtual)), "bancos",
-        { rotulo: "+ Adicionar", acao: () => abrirModalValorBanco(b.id) }, extratoBancoHtml(d, b));
+        { rotulo: "Depositar", acao: () => abrirModalValorBanco(b.id) }, extratoBancoHtml(d, b));
       ligarPeriodoExtrato(b);
       return;
     }
@@ -2228,7 +2237,7 @@
       linha("− Despesas", `<span class="valor-guia down">−${brl(b.saidas)}</span>`) +
       (b.transferido ? linha("Transferências", brlSinal(b.transferido)) : "") +
       linha("Saldo", brlSinal(b.saldoAtual)), "bancos",
-      { rotulo: "+ Adicionar", acao: () => abrirModalValorBanco(b.id) }, extratoBancoHtml(d, b));
+      { rotulo: "Depositar", acao: () => abrirModalValorBanco(b.id) }, extratoBancoHtml(d, b));
     ligarPeriodoExtrato(b);
   }
 
@@ -2819,8 +2828,8 @@
             <div class="linha1"><div class="nome-com-marca">${marcaBanco(b.nome, 26)}<div><div class="nome">${esc(b.nome)}</div><div class="tipo">${esc(b.tipo || "—")}</div>${b.agencia || b.conta ? `<div class="tipo">${b.agencia ? "Ag " + esc(b.agencia) : ""}${b.agencia && b.conta ? " · " : ""}${b.conta ? "Cc " + esc(b.conta) : ""}</div>` : ""}</div></div></div>
             <div class="saldo saldo-branco">${brlSinal(b.valor)}</div>
             <div class="rodape"><span>${mesesBancos ? `Saldo Atual ${brl(b.saldoAtual)}` : ""}</span>
-              <span class="rodape-botoes"><button class="btn pequeno" data-acao="editar-banco" data-id="${b.id}" title="Editar os dados do banco">✎</button>
-              <button class="btn pequeno" data-acao="entrada-banco" data-id="${b.id}" title="Lançar uma entrada nesta conta">+ Adicionar</button></span>
+              <span class="rodape-botoes"><button class="btn pequeno btn-banco btn-banco-editar" data-acao="editar-banco" data-id="${b.id}" title="Editar os dados do banco">${ICONE_EDITAR}Editar</button>
+              <button class="btn pequeno btn-banco btn-banco-depositar" data-acao="entrada-banco" data-id="${b.id}" title="Depositar: lançar uma entrada nesta conta">${ICONE_CAIXA_24H}Depositar</button></span>
             </div>
           </div>`).join("") + `</div>`;
     }
