@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.7";
+  const VERSAO_APP = "3.6.10";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1418,7 +1418,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.7" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.10" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2109,7 +2109,65 @@
   // Histórico da conta: do saldo inicial, lançamento a lançamento, até o
   // saldo atual (o mesmo do quadro Meus bancos). Com período escolhido,
   // começa no saldo de antes do período e resume o que veio depois dele.
-  function extratoBancoHtml(d, b) {
+  // período do histórico da conta (De / Até) — começa no período da guia
+  // Bancos ou, em "Tudo", do primeiro lançamento até hoje
+  function faixaExtratoPadrao(d, b) {
+    if (mesesBancos) return faixaBancos();
+    const itens = F.extratoDoBanco(d, b.id).itens.filter((i) => i.data);
+    const hj = hojeISO();
+    return { ini: itens.length ? String(itens[0].data).slice(0, 10) : hj.slice(0, 8) + "01", fim: hj, tudo: true };
+  }
+
+  function extratoBancoHtml(d, b, faixa) {
+    const fx = faixa || faixaExtratoPadrao(d, b);
+    return `
+      <div class="extrato-periodo" data-banco="${b.id}">
+        <label>De <input type="date" id="extratoIni" value="${fx.ini}"></label>
+        <label>Até <input type="date" id="extratoFim" value="${fx.fim}"></label>
+        <span class="extrato-atalhos">
+          <button type="button" class="btn pequeno" data-extrato-meses="1">Mês</button>
+          <button type="button" class="btn pequeno" data-extrato-meses="3">3m</button>
+          <button type="button" class="btn pequeno" data-extrato-meses="12">12m</button>
+          <button type="button" class="btn pequeno" data-extrato-meses="0">Tudo</button>
+        </span>
+      </div>
+      <div id="extratoConteudo">${extratoBancoCorpo(d, b, fx)}</div>`;
+  }
+
+  // liga os campos De/Até e os atalhos do histórico aberto no painel
+  function ligarPeriodoExtrato(b) {
+    const caixa = document.querySelector("#modal .extrato-periodo");
+    if (!caixa) return;
+    const ini = document.getElementById("extratoIni"), fim = document.getElementById("extratoFim");
+    const atualizar = () => {
+      let a = ini.value, z = fim.value;
+      if (!a || !z) return;
+      if (a > z) { [a, z] = [z, a]; ini.value = a; fim.value = z; }
+      document.getElementById("extratoConteudo").innerHTML = extratoBancoCorpo(DADOS, b, { ini: a, fim: z });
+      const ext = document.querySelector("#modal .extrato-banco");
+      if (ext) ext.scrollTop = ext.scrollHeight;
+    };
+    ini.addEventListener("change", atualizar);
+    fim.addEventListener("change", atualizar);
+    caixa.querySelectorAll("[data-extrato-meses]").forEach((bt) => {
+      bt.onclick = (e) => {
+        e.stopPropagation();
+        const m = Number(bt.dataset.extratoMeses);
+        const hj = hojeISO();
+        if (!m) {   // Tudo: do primeiro lançamento até hoje
+          const it = F.extratoDoBanco(DADOS, b.id).itens.filter((i) => i.data);
+          ini.value = it.length ? String(it[0].data).slice(0, 10) : hj.slice(0, 8) + "01";
+        } else {    // mês atual, ou os últimos 3/12 meses contando o atual
+          const dt = new Date(Number(hj.slice(0, 4)), Number(hj.slice(5, 7)) - 1 - (m - 1), 1);
+          ini.value = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-01`;
+        }
+        fim.value = hj;
+        atualizar();
+      };
+    });
+  }
+
+  function extratoBancoCorpo(d, b, fx) {
     const ext = F.extratoDoBanco(d, b.id);
     const linha = (data, desc, valor, saldo, classe) => `
       <div class="extrato-linha ${classe || ""}">
@@ -2120,24 +2178,24 @@
       </div>`;
     const doItem = (i) => linha(fmtDataCurta(i.data), esc(i.descricao) + (i.tipo === "transferencia" ? ` <span class="dim">⇄</span>` : ""), i.valor, i.saldo);
     let corpo;
-    if (mesesBancos) {
-      const fx = faixaBancos();
+    {
       const antes = ext.itens.filter((i) => String(i.data) < fx.ini);
       const dentro = ext.itens.filter((i) => String(i.data) >= fx.ini && String(i.data) <= fx.fim);
       const depois = ext.itens.filter((i) => String(i.data) > fx.fim);
       const saldoAntes = antes.length ? antes[antes.length - 1].saldo : ext.saldoInicial;
-      corpo = linha(fmtDataCurta(fx.ini), "Saldo antes do período", null, saldoAntes, "marco") +
+      const entradas = dentro.filter((i) => i.valor > 0).reduce((t, i) => t + i.valor, 0);
+      const saidas = dentro.filter((i) => i.valor < 0).reduce((t, i) => t - i.valor, 0);
+      corpo = linha(fmtDataCurta(fx.ini), antes.length ? "Saldo antes do período" : "Saldo inicial", null, saldoAntes, "marco") +
         (dentro.length ? dentro.map(doItem).join("") : `<div class="extrato-linha"><span></span><span class="desc dim">Nenhum lançamento no período</span><span></span><span></span></div>`) +
         (depois.length ? linha("", `${plural(depois.length, "lançamento")} após o período`,
           Math.round(depois.reduce((t, i) => t + i.valor, 0) * 100) / 100, depois[depois.length - 1].saldo) : "");
-    } else {
-      corpo = linha("", "Saldo inicial", null, ext.saldoInicial, "marco") + ext.itens.map(doItem).join("");
-    }
-    corpo += linha("", "Saldo atual", null, ext.saldoFinal, "marco final");
-    return `
-      <div class="extrato-titulo"><span>Histórico da conta</span><span class="dim">${plural(ext.itens.length, "lançamento")}</span></div>
+      corpo += linha("", "Saldo atual", null, ext.saldoFinal, "marco final");
+      return `
+      <div class="extrato-titulo"><span>Histórico da conta</span><span class="dim">${plural(dentro.length, "lançamento")} no período</span></div>
+      <div class="extrato-resumo"><span>Entradas <b class="up">+${brl(entradas)}</b></span><span>Saídas <b class="down">−${brl(saidas)}</b></span><span>Resultado <b class="${corSinal(entradas - saidas)}">${brlSinal(Math.round((entradas - saidas) * 100) / 100)}</b></span></div>
       <div class="extrato-cab"><span>Data</span><span>Descrição</span><span>Valor</span><span>Saldo</span></div>
       <div class="explica-lista extrato-banco">${corpo}</div>`;
+    }
   }
 
   function explicarBanco(id) {
@@ -2159,6 +2217,7 @@
         linha("Movimentação líquida", brlSinal(b.valor)) +
         linha("Saldo atual da conta", brlSinal(b.saldoAtual)), "bancos",
         { rotulo: "+ Adicionar", acao: () => abrirModalValorBanco(b.id) }, extratoBancoHtml(d, b));
+      ligarPeriodoExtrato(b);
       return;
     }
 
@@ -2170,6 +2229,7 @@
       (b.transferido ? linha("Transferências", brlSinal(b.transferido)) : "") +
       linha("Saldo", brlSinal(b.saldoAtual)), "bancos",
       { rotulo: "+ Adicionar", acao: () => abrirModalValorBanco(b.id) }, extratoBancoHtml(d, b));
+    ligarPeriodoExtrato(b);
   }
 
   function explicarClasse(rotulo) {
@@ -2704,6 +2764,30 @@
     return intervaloAnoMeses(anoBancos, mesesBancos);
   }
 
+  // saldo de cada banco dia a dia (só nos dias com lançamento), no período
+  // da guia Bancos ou em todo o histórico; o último ponto é o saldo de hoje
+  function serieSaldosBancos(d) {
+    const hj = hojeISO();
+    const bancos = bancosNaOrdem(F.listaBancosComSaldo(d));
+    const extratos = bancos.map((b) => F.extratoDoBanco(d, b.id));
+    let ini, fim = hj;
+    if (mesesBancos) { const fx = faixaBancos(); ini = fx.ini; fim = fx.fim < hj ? fx.fim : hj; }
+    const datas = new Set([fim]);
+    extratos.forEach((e) => e.itens.forEach((i) => { const dt = String(i.data).slice(0, 10); if (dt && dt <= fim && (!ini || dt >= ini)) datas.add(dt); }));
+    if (ini) datas.add(ini < fim ? ini : fim);
+    const lista = [...datas].sort();
+    const series = bancos.map((b, k) => {
+      const itens = extratos[k].itens;
+      let j = 0, saldo = extratos[k].saldoInicial;
+      const valores = lista.map((dt) => {
+        while (j < itens.length && String(itens[j].data).slice(0, 10) <= dt) { saldo = itens[j].saldo; j++; }
+        return saldo;
+      });
+      return { id: b.id, nome: b.nome, cor: b.cor || "#3FC1E0", valores };
+    });
+    return { datas: lista, series };
+  }
+
   function bancosDoPeriodo(d) {
     const fx = mesesBancos ? faixaBancos() : { ini: "0000-01-01", fim: "9999-12-31" };
     const dentro = (dt) => String(dt || "") >= fx.ini && String(dt || "") <= fx.fim;
@@ -2731,11 +2815,12 @@
       listaHtml = `<div class="empty">Nenhum banco cadastrado. Use "+ Novo banco" para começar.</div>`;
     } else {
       listaHtml = `<div class="grade-bancos">` + bancos.map((b) => `
-          <div class="cartao-item" style="border-left-color:${esc(b.cor || "#3FC1E0")}" data-acao="editar-banco" data-id="${b.id}">
+          <div class="cartao-item" style="border-left-color:${esc(b.cor || "#3FC1E0")}" data-acao="explicar-banco" data-id="${b.id}" title="Ver o histórico de transações">
             <div class="linha1"><div class="nome-com-marca">${marcaBanco(b.nome, 26)}<div><div class="nome">${esc(b.nome)}</div><div class="tipo">${esc(b.tipo || "—")}</div>${b.agencia || b.conta ? `<div class="tipo">${b.agencia ? "Ag " + esc(b.agencia) : ""}${b.agencia && b.conta ? " · " : ""}${b.conta ? "Cc " + esc(b.conta) : ""}</div>` : ""}</div></div></div>
             <div class="saldo saldo-branco">${brlSinal(b.valor)}</div>
             <div class="rodape"><span>${mesesBancos ? `Saldo Atual ${brl(b.saldoAtual)}` : ""}</span>
-              <button class="btn pequeno" data-acao="entrada-banco" data-id="${b.id}" title="Lançar uma entrada nesta conta">+ Adicionar</button>
+              <span class="rodape-botoes"><button class="btn pequeno" data-acao="editar-banco" data-id="${b.id}" title="Editar os dados do banco">✎</button>
+              <button class="btn pequeno" data-acao="entrada-banco" data-id="${b.id}" title="Lançar uma entrada nesta conta">+ Adicionar</button></span>
             </div>
           </div>`).join("") + `</div>`;
     }
@@ -2749,6 +2834,10 @@
           `<div class="filtro-mes">${seletorAnoDash("anoBancos", anoBancos, anosDashboard(d))}${abasMeses("periodo-bancos", mesesBancos, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }, { meses: 0, rotulo: "Tudo" }])}</div>`,
           `<div style="padding:12px 18px 16px;height:${Math.max(190, bancos.length * 52)}px"><canvas id="graf-saldo-bancos"></canvas></div>`)}</div>
       </div>
+      ${bancos.length ? `<div class="grid">
+        <div class="c12">${card("", "Evolução dos saldos", `saldo de cada conta · ${mesesBancos ? `${mesesBancos} ${mesesBancos === 1 ? "mês" : "meses"} de ${anoBancos}` : "todo histórico"}`, "",
+          `<div style="padding:8px 14px 12px;height:300px"><canvas id="graf-evolucao-bancos"></canvas></div>`)}</div>
+      </div>` : ""}
       ${listaTransferencias(d)}
     `;
   }
@@ -4373,11 +4462,11 @@
     return `
       ${aviso}
       <div class="grid g-top">
-        <div class="c12">${card("", "Investimentos", "renda fixa, tesouro, fundos e cripto",
-          `<button class="btn" data-acao="buscar-investimentos" title="Atualizar os investimentos pelos índices do Banco Central (CDI, Selic, IPCA)">↻ Buscar</button>
-           <button class="btn primario" data-acao="novo-investimento"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`,
+        <div class="c12">${card("", "Investimentos", "",
+          `<button class="btn" data-acao="buscar-investimentos" title="Atualizar os investimentos pelos índices do Banco Central (CDI, Selic, IPCA)">↻<span class="btn-txt">Buscar</span></button>
+           <button class="btn primario" data-acao="novo-investimento" title="Novo investimento"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg><span class="btn-txt">NOVO</span></button>`,
           corpo,
-          `<span class="dim">Total líquido</span><b class="creme" style="font-size:14px;font-weight:800">${brlSinal(t.liquido)}</b>`)}</div>
+          `<span class="dim">Total líquido</span><b class="creme" style="font-size:14px;font-weight:800">${brlSinal(t.liquido)}</b>`, "painelInvestimentos")}</div>
       </div>
     `;
   }
@@ -5344,12 +5433,22 @@
           <header><div><h2>${nomeMeta(m)}${vencida ? ' <span class="selo-tag selo-atrasado">prazo vencido</span>' : ""}</h2>${m.prazo ? `<div class="sub ${vencida ? "down" : ""}">até ${fmtData(m.prazo)}${vencida ? ` · há ${plural(Math.abs(diasPrazo), "dia")}` : ""}</div>` : ""}</div>
           </header>
           <div class="body pad">
-            <div style="display:flex;justify-content:space-between;margin-bottom:8px">
-              <span class="num" style="font-size:18px;font-weight:600">${brl(m.atual)}</span>
-              <span class="dim num" style="font-size:12.5px">de ${brl(m.objetivo)}</span>
-            </div>
-            <div class="progresso"><i style="width:${progresso}%;background:${m.cor || "var(--up)"}"></i></div>
-            <div class="progresso-legenda"><span>${progresso.toFixed(1)}%</span><span>${brl(Math.max(0, m.objetivo - m.atual))} restantes</span></div>
+            ${(() => {
+              // os mesmos elementos do quadro Metas do Dashboard: situação do mês,
+              // selos (guardar por mês, prazo, objetivo), barra com o % e o que falta
+              const st = situacaoMeta(m);
+              const atual = Number(m.atual || 0), objetivo = Number(m.objetivo || 0);
+              return `<div class="meta-item meta-item-quadro st-${st.chave}" style="--meta-cor:${esc(m.cor || "var(--up)")}">
+                <div class="meta-selos meta-selos-quadro">
+                  <span class="meta-st meta-falta" title="Guardar por mês: ${Number(m.aporteMensal) > 0 ? brl(m.aporteMensal) : "não definido"}"><span class="meta-falta-ic">💰</span>${Number(m.aporteMensal) > 0 ? brlCurto(m.aporteMensal).replace(/^R\$\s*/, "") : "—"}</span>
+                  ${m.prazo ? `<span class="meta-st meta-falta" title="Data final da meta"><span class="meta-falta-ic">📅</span>${fmtData(m.prazo)}</span>` : ""}
+                  <span class="meta-st meta-falta" title="Objetivo: ${brl(objetivo)}"><span class="meta-falta-ic">🏁</span>${brlCurto(objetivo).replace(/^R\$\s*/, "")}</span>
+                </div>
+                <div class="meta-barra meta-barra-grande"><i style="width:${progresso}%"></i><b class="meta-pct-dentro">${progresso.toFixed(0)}%</b></div>
+                <div class="meta-rodape meta-rodape-3"><span title="Valor guardado">💵 ${brlCurto(atual)}</span><span></span><span class="meta-falta-valor" title="Falta para o objetivo">${objetivo > atual ? `⏳ ${brlCurto(objetivo - atual)}` : "✅ Concluída"}</span></div>
+                <div class="meta-situacao-linha"><span class="meta-bolinha st-${st.chave}"></span>${esc(st.rotulo)}</div>
+              </div>`;
+            })()}
             <div class="meta-mensal" title="Quanto guardar por mês — clique para editar">
               <span class="meta-mensal-icone" style="color:${m.cor || "var(--up)"}"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M12 13.2v5M9.8 15.4h4.4"/></svg></span>
               <span class="meta-mensal-texto"><small>Guardar Mês</small>${Number(m.aporteMensal) > 0 ? `<b class="num">${brl(m.aporteMensal)}</b>` : `<b class="dim">Definir Valor</b>`}</span>
@@ -5613,6 +5712,8 @@
         if (!d.bancos.length) break;
         G.renderSaldoBancos("graf-saldo-bancos", bancosNaOrdem(bancosDoPeriodo(d)).map((b) => Object.assign({}, b, { saldoAtual: b.valor })),
           { aoClicar: (b) => explicarBanco(b.id) });
+        const evo = serieSaldosBancos(d);
+        if (evo.datas.length) G.renderEvolucaoBancos("graf-evolucao-bancos", evo.datas, evo.series, { aoClicar: (b) => explicarBanco(b.id) });
         break;
       }
       case "despesas": break;

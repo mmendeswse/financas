@@ -1524,8 +1524,8 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 /* Painel ativos: a barra de título inteira em uma linha só — título, selo,
    USD/BRL, BTC, ETH e os botões. Em telas estreitas tudo encolhe e, se ainda
    não couber, as pílulas rolam para o lado em vez de quebrar a linha. */
-#painelAtivos > header { flex-wrap: nowrap; align-items: center; }
-#painelAtivos > header > div:first-child { flex: none; margin-right: auto; display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+#painelAtivos > header, #painelInvestimentos > header { flex-wrap: nowrap; align-items: center; }
+#painelAtivos > header > div:first-child, #painelInvestimentos > header > div:first-child { flex: none; margin-right: auto; display: flex; align-items: center; gap: 10px; white-space: nowrap; }
 #painelAtivos > header .sub { margin-top: 0; }
 #painelAtivos > header .acoes { flex: 0 1 auto; min-width: 0; flex-wrap: nowrap; }
 #painelAtivos > header .acoes > * { flex: none; }
@@ -1540,8 +1540,8 @@ button.pill-periodo:hover { filter: brightness(1.25); }
   #painelAtivos .dolar-pill { gap: 6px; padding: 0 10px; }
   #painelAtivos .dolar-pill b { font-size: 13px; }
   #painelAtivos .dolar-pill span, #painelAtivos .dolar-pill .cripto-meu { font-size: 11px; }
-  #painelAtivos > header .btn { padding: 8px 11px; }
-  #painelAtivos > header .btn .btn-txt { display: none; }
+  #painelAtivos > header .btn, #painelInvestimentos > header .btn { padding: 8px 11px; }
+  #painelAtivos > header .btn .btn-txt, #painelInvestimentos > header .btn .btn-txt { display: none; }
 }
 @media (max-width: 980px) {
   /* o rótulo some no celular (regra geral): BTC e ETH continuam identificados */
@@ -1552,3 +1552,23 @@ button.pill-periodo:hover { filter: brightness(1.25); }
   #painelAtivos > header { gap: 10px; }
   #painelAtivos .dolar-pill span { display: none; }   /* no celular, só o preço */
 }
+
+/* Histórico da conta: período De / Até, atalhos e resumo do período */
+.extrato-periodo { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 16px 2px 4px; font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: .06em; font-weight: 700; }
+.extrato-periodo label { display: flex; align-items: center; gap: 6px; }
+#modal .extrato-periodo input[type="date"] { padding: 4px 8px; font-size: 12px; height: 30px; width: auto; min-width: 0; letter-spacing: 0; text-transform: none; font-weight: 600; }
+.extrato-periodo .extrato-atalhos { display: flex; gap: 4px; margin-left: auto; }
+.extrato-periodo .extrato-atalhos .btn { padding: 4px 8px; font-size: 10.5px; }
+.extrato-resumo { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0 2px 8px; font-size: 11.5px; color: var(--dim); }
+.extrato-resumo b { font-family: var(--mono); margin-left: 4px; }
+.cartao-item .rodape-botoes { display: flex; gap: 6px; }
+
+/* guia Metas: o bloco do quadro Metas do Dashboard dentro de cada quadro */
+.meta-item.meta-item-quadro { cursor: inherit; background: none; border: none; padding: 0; margin-bottom: 4px; }
+.meta-item.meta-item-quadro:hover { border-color: transparent; }
+.meta-item-quadro .meta-selos-quadro { display: flex; flex-wrap: wrap; justify-content: flex-start; margin: 0 0 10px; gap: 6px; }
+.meta-item-quadro .meta-selos-quadro .meta-st { font-size: 12px; padding: 3px 9px; }
+.meta-item-quadro .meta-barra.meta-barra-grande { height: 22px; border-radius: 11px; }
+.meta-item-quadro .meta-pct-dentro { font-size: 12.5px; }
+.meta-item-quadro .meta-rodape-3 { font-size: 13.5px; margin-top: 8px; color: var(--texto); }
+.meta-situacao-linha { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 12px; color: var(--dim); }
