@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.9";
+  const VERSAO_APP = "3.6.10";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1418,7 +1418,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.9" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.10" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -5433,12 +5433,22 @@
           <header><div><h2>${nomeMeta(m)}${vencida ? ' <span class="selo-tag selo-atrasado">prazo vencido</span>' : ""}</h2>${m.prazo ? `<div class="sub ${vencida ? "down" : ""}">até ${fmtData(m.prazo)}${vencida ? ` · há ${plural(Math.abs(diasPrazo), "dia")}` : ""}</div>` : ""}</div>
           </header>
           <div class="body pad">
-            <div style="display:flex;justify-content:space-between;margin-bottom:8px">
-              <span class="num" style="font-size:18px;font-weight:600">${brl(m.atual)}</span>
-              <span class="dim num" style="font-size:12.5px">de ${brl(m.objetivo)}</span>
-            </div>
-            <div class="progresso"><i style="width:${progresso}%;background:${m.cor || "var(--up)"}"></i></div>
-            <div class="progresso-legenda"><span>${progresso.toFixed(1)}%</span><span>${brl(Math.max(0, m.objetivo - m.atual))} restantes</span></div>
+            ${(() => {
+              // os mesmos elementos do quadro Metas do Dashboard: situação do mês,
+              // selos (guardar por mês, prazo, objetivo), barra com o % e o que falta
+              const st = situacaoMeta(m);
+              const atual = Number(m.atual || 0), objetivo = Number(m.objetivo || 0);
+              return `<div class="meta-item meta-item-quadro st-${st.chave}" style="--meta-cor:${esc(m.cor || "var(--up)")}">
+                <div class="meta-selos meta-selos-quadro">
+                  <span class="meta-st meta-falta" title="Guardar por mês: ${Number(m.aporteMensal) > 0 ? brl(m.aporteMensal) : "não definido"}"><span class="meta-falta-ic">💰</span>${Number(m.aporteMensal) > 0 ? brlCurto(m.aporteMensal).replace(/^R\$\s*/, "") : "—"}</span>
+                  ${m.prazo ? `<span class="meta-st meta-falta" title="Data final da meta"><span class="meta-falta-ic">📅</span>${fmtData(m.prazo)}</span>` : ""}
+                  <span class="meta-st meta-falta" title="Objetivo: ${brl(objetivo)}"><span class="meta-falta-ic">🏁</span>${brlCurto(objetivo).replace(/^R\$\s*/, "")}</span>
+                </div>
+                <div class="meta-barra meta-barra-grande"><i style="width:${progresso}%"></i><b class="meta-pct-dentro">${progresso.toFixed(0)}%</b></div>
+                <div class="meta-rodape meta-rodape-3"><span title="Valor guardado">💵 ${brlCurto(atual)}</span><span></span><span class="meta-falta-valor" title="Falta para o objetivo">${objetivo > atual ? `⏳ ${brlCurto(objetivo - atual)}` : "✅ Concluída"}</span></div>
+                <div class="meta-situacao-linha"><span class="meta-bolinha st-${st.chave}"></span>${esc(st.rotulo)}</div>
+              </div>`;
+            })()}
             <div class="meta-mensal" title="Quanto guardar por mês — clique para editar">
               <span class="meta-mensal-icone" style="color:${m.cor || "var(--up)"}"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M12 13.2v5M9.8 15.4h4.4"/></svg></span>
               <span class="meta-mensal-texto"><small>Guardar Mês</small>${Number(m.aporteMensal) > 0 ? `<b class="num">${brl(m.aporteMensal)}</b>` : `<b class="dim">Definir Valor</b>`}</span>
