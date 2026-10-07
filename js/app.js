@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.6";
+  const VERSAO_APP = "3.6.7";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1418,7 +1418,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.6" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.7" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2202,6 +2202,22 @@
       detalhe + linha("Total", brlSinal(item.valor), "up"), secao);
   }
 
+  // TOTAL do quadro "Composição patrimônio": quanto há em cada classe;
+  // cada linha abre o detalhe daquela classe
+  function explicarComposicao() {
+    const itens = itensPatrimonio(DADOS);
+    if (!itens.length) return;
+    const total = itens.reduce((s, i) => s + i.valor, 0);
+    const bancos = itens.filter((i) => i.rotulo === "Bancos").reduce((s, i) => s + i.valor, 0);
+    const linhas = itens.map((i) => `<div class="kv kv-editavel" data-classe="${esc(i.rotulo)}" title="Ver detalhes"><span class="dim">${emojiClasse(i.rotulo)} ${esc(i.rotulo)} · ${(total > 0 ? (i.valor / total) * 100 : 0).toFixed(1).replace(".", ",")}%</span><b>${brlSinal(i.valor)}</b></div>`).join("");
+    painelSimples("Composição patrimônio", total > 0 ? ((total - bancos) / total) * 100 : 0, "do total está investido",
+      "soma dos ativos líquidos (bancos + investimentos sem IR + ações + cripto)",
+      linhas + `<div class="kv"><span class="dim">Total</span><b class="${corSinal(total)}">${brlSinal(total)}</b></div>`, "investimentos");
+    document.querySelectorAll("#modal [data-classe]").forEach((el) => {
+      el.onclick = (e) => { e.stopPropagation(); explicarClasse(el.dataset.classe); };
+    });
+  }
+
   function explicarMeta(id) {
     const m = achar(DADOS.metas, id);
     if (!m) return;
@@ -2498,8 +2514,8 @@
       </div>
 
       <div class="grid">
-        <div class="c3">${card("card-centrado", "Saldo bancos", "mapa ativos", `<span class="pill-periodo ${corSinal(p.bancos)}">TOTAL ${brlSinal(p.bancos)}</span>`, `<div class="body pad">${barList(bancos)}</div>`)}</div>
-        <div class="c3">${card("card-centrado", "Composição patrimônio", "ativos líquidos", `<span class="pill-periodo ${corSinal(totalComp)}">TOTAL ${brlSinal(totalComp)}</span>`, `
+        <div class="c3">${card("card-centrado", "Saldo bancos", "mapa ativos", `<button class="pill-periodo clicavel ${corSinal(p.bancos)}" data-acao="explicar-kpi" data-kpi="bancos" title="Ver o saldo de cada banco">TOTAL ${brlSinal(p.bancos)}</button>`, `<div class="body pad">${barList(bancos)}</div>`)}</div>
+        <div class="c3">${card("card-centrado", "Composição patrimônio", "ativos líquidos", `<button class="pill-periodo clicavel ${corSinal(totalComp)}" data-acao="explicar-composicao" title="Ver o total de cada classe">TOTAL ${brlSinal(totalComp)}</button>`, `
           <div class="donut-wrap">
             <div class="donut-centro"><canvas id="graf-dash-composicao" width="150" height="150" style="width:150px;height:150px"></canvas>
               <button class="donut-rotulo clicavel" data-acao="explicar-kpi" data-kpi="investido" title="Ver como este percentual é calculado"><b>${pctInvestido.toFixed(1).replace(".", ",")}%</b><span class="acc-laranja">INVESTIDO</span></button>
@@ -2664,7 +2680,7 @@
       </div>
 
       <div class="grid">
-        <div class="c6">${card("card-centrado", "Composição patrimônio", "ativos líquidos", `<span class="pill-periodo ${corSinal(total)}">TOTAL ${brlSinal(total)}</span>`, `<div class="donut-wrap"><div class="donut-centro"><canvas id="graf-patrimonio-divisao" width="150" height="150" style="width:150px;height:150px"></canvas><div class="donut-rotulo"><b>${brl(p.bruto).replace("R$", "").trim()}</b><span class="acc-laranja">BRUTO</span></div></div><div class="legenda">${legendaHtml}</div></div>`)}</div>
+        <div class="c6">${card("card-centrado", "Composição patrimônio", "ativos líquidos", `<button class="pill-periodo clicavel ${corSinal(total)}" data-acao="explicar-composicao" title="Ver o total de cada classe">TOTAL ${brlSinal(total)}</button>`, `<div class="donut-wrap"><div class="donut-centro"><canvas id="graf-patrimonio-divisao" width="150" height="150" style="width:150px;height:150px"></canvas><div class="donut-rotulo"><b>${brl(p.bruto).replace("R$", "").trim()}</b><span class="acc-laranja">BRUTO</span></div></div><div class="legenda">${legendaHtml}</div></div>`)}</div>
         <div class="c6">${card("", "Resumo patrimonial", "", "", `
           <div class="kv"><span class="dim">Dinheiro em bancos</span><b>${brl(p.bancos)}</b></div>
           <div class="kv"><span class="dim">+ Ações e FIIs</span><b>${brl(p.acoes)}</b></div>
@@ -5746,6 +5762,7 @@
         case "explicar-kpi": explicarKPI(b.dataset.kpi); break;
         case "explicar-banco": explicarBanco(id); break;
         case "explicar-classe": explicarClasse(b.dataset.rotulo); break;
+        case "explicar-composicao": explicarComposicao(); break;
         case "explicar-meta": explicarMeta(id); break;
         case "ordenar-entradas": {
           const campo = b.dataset.campo;
