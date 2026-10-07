@@ -3727,10 +3727,10 @@
     const b = achar(DADOS.bancos, bancoId);
     if (!b) return;
     abrirModal(`
-      <h3>Adicionar valor — ${esc(b.nome)}</h3>
-      <div class="campo"><label for="f_valor">Quanto você quer adicionar?</label>${campoMoeda("f_valor", "")}</div>
+      <h3>Depositar — ${esc(b.nome)}</h3>
+      <div class="campo"><label for="f_valor">Quanto você quer depositar?</label>${campoMoeda("f_valor", "")}</div>
       <div class="campo"><label for="f_desc">Descrição</label><input id="f_desc" value="Depósito" placeholder="Depósito"></div>
-      <div class="modal-acoes"><button class="btn primario salvar" id="btnSalvar">Adicionar</button></div>`);
+      <div class="modal-acoes"><button class="btn primario salvar" id="btnSalvar">Depositar</button></div>`);
     document.getElementById("btnSalvar").onclick = () => {
       const v = numIn(document.getElementById("f_valor").value);
       if (!(v > 0)) { toast("Informe um valor maior que zero."); return; }
