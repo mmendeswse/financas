@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.8";
+  const VERSAO_APP = "3.6.9";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1418,7 +1418,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.8" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.9" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -4462,11 +4462,11 @@
     return `
       ${aviso}
       <div class="grid g-top">
-        <div class="c12">${card("", "Investimentos", "renda fixa, tesouro, fundos e cripto",
-          `<button class="btn" data-acao="buscar-investimentos" title="Atualizar os investimentos pelos índices do Banco Central (CDI, Selic, IPCA)">↻ Buscar</button>
-           <button class="btn primario" data-acao="novo-investimento"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`,
+        <div class="c12">${card("", "Investimentos", "",
+          `<button class="btn" data-acao="buscar-investimentos" title="Atualizar os investimentos pelos índices do Banco Central (CDI, Selic, IPCA)">↻<span class="btn-txt">Buscar</span></button>
+           <button class="btn primario" data-acao="novo-investimento" title="Novo investimento"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg><span class="btn-txt">NOVO</span></button>`,
           corpo,
-          `<span class="dim">Total líquido</span><b class="creme" style="font-size:14px;font-weight:800">${brlSinal(t.liquido)}</b>`)}</div>
+          `<span class="dim">Total líquido</span><b class="creme" style="font-size:14px;font-weight:800">${brlSinal(t.liquido)}</b>`, "painelInvestimentos")}</div>
       </div>
     `;
   }
