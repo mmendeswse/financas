@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.54";
+  const VERSAO_APP = "3.6.55";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -71,6 +71,8 @@
   const REGRA_PADRAO = { tipo: "diaUtil", n: 4, ajuste: "proximo", intervalo: 1 };
   const ehPers = (reg) => !!reg && reg.recorrencia === FREQ_PERS;
   const regraDe = (reg) => ({ ...REGRA_PADRAO, ...((reg && reg.regraRep) || {}) });
+  // número de parcela com dois dígitos: 1/16 → 01/16
+  const dd = (n) => String(n).padStart(2, "0");
   const dataReg = (x) => String((x && (x.data || x.vencimento)) || "");
   const mesReg = (x) => dataReg(x).slice(0, 7);
   const dataDoMesRegra = (regra, mes) => { const [a, m] = mes.split("-").map(Number); return F.calcularDataRegra(a, m, regra).data; };
@@ -96,7 +98,7 @@
     if (f === FREQ_PERS) {
       const regra = regraDe(reg);
       const n = numeroParcela(regra, mesReg(reg));
-      if (n > 0) return ` <span class="selo-tag selo-cat" title="Parcela ${n} de ${regra.parcelas} · ${esc(rotuloRegra(regra))}">Parcela ${n}/${regra.parcelas}</span>${semSabado ? "" : seloSabado(reg)}`;
+      if (n > 0) return ` <span class="selo-tag selo-cat" title="Parcela ${n} de ${regra.parcelas} · ${esc(rotuloRegra(regra))}">Parcela ${dd(n)}/${dd(regra.parcelas)}</span>${semSabado ? "" : seloSabado(reg)}`;
       return ` <span class="selo-tag selo-cat" title="Personalizar: ${esc(rotuloRegra(regra))}, ${esc(rotuloIntervalo(regra.intervalo))}">${esc(rotuloIntervalo(regra.intervalo))}</span>${semSabado ? "" : seloSabado(reg)}`;
     }
     return f === FREQUENCIAS[0] ? "" : ` <span class="selo-tag selo-cat">${esc(f.toLowerCase())}</span>`;
@@ -125,7 +127,7 @@
     const reg = [...DADOS.entradas, ...DADOS.despesas, ...(DADOS.contasPagar || [])].find((r) => r.id === id);
     if (!ehPers(reg)) return "";
     const regra = regraDe(reg), n = numeroParcela(regra, String(data).slice(0, 7));
-    return n > 0 ? ` <span class="selo-tag selo-cat" title="Parcela ${n} de ${regra.parcelas}">Parcela ${n}/${regra.parcelas}</span>` : "";
+    return n > 0 ? ` <span class="selo-tag selo-cat" title="Parcela ${n} de ${regra.parcelas}">Parcela ${dd(n)}/${dd(regra.parcelas)}</span>` : "";
   }
   // selo extra quando, na regra de dia útil, contando também os sábados, o dia cai num sábado
   function seloSabado(reg) {
@@ -1437,7 +1439,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.54" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.55" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2445,7 +2447,7 @@
       let mes = regra.primeiraParcela || mesReg(orig);
       for (let k = 0; k < n; k++) {
         if (k) for (let i = 0; i < Math.max(1, Number(regra.intervalo) || 1); i++) mes = proximoMes(mes);
-        const parc = `<span class="selo-tag selo-cat">Parcela ${k + 1}/${n}</span>`;
+        const parc = `<span class="selo-tag selo-cat">Parcela ${dd(k + 1)}/${dd(n)}</span>`;
         if (mes === mesReg(orig)) { if (!pago(orig)) add(orig, dataReg(orig), orig.valor, parc); continue; }
         if (!ocorrenciasNoMes(orig, mes).length) continue;
         const inst = todos.find((x) => x.origemRecorrente === orig.id && mesReg(x) === mes);
