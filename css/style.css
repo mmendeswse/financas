@@ -1736,3 +1736,19 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 @media (max-width: 560px) {
   .extrato-classe .extrato-cab, .extrato-classe .extrato-linha { grid-template-columns: 74px minmax(0, 1fr) auto; }
 }
+/* históricos: Valor e Saldo sempre encostados à direita da coluna */
+.extrato-linha > b { justify-self: end; text-align: right; }
+.extrato-cab > span:nth-last-child(-n+2) { text-align: right; justify-self: end; }
+@media (max-width: 560px) { .extrato-cab > span:nth-child(3):last-of-type, .extrato-linha > b.saldo { justify-self: end; } }
+/* Receitas/Despesas do mês: valores alinhados à esquerda na mesma coluna, inclusive Total e Previsto */
+@media (min-width: 601px) {
+  .kv.kv-total b .col-valor, .kv.kv-previsto b .col-valor { width: 118px; }
+}
+/* nomes de banco quebram só entre palavras, nunca letra a letra */
+.cel-banco .dim, .kv b .col-banco .dim { overflow-wrap: normal !important; word-break: normal; }
+@media (max-width: 600px) {
+  /* celular: o nome do banco não é cortado; se faltar espaço, o valor desce para a linha de baixo, à direita */
+  .kv:has(> span > .desc-painel) > b { flex-wrap: wrap; row-gap: 6px; }
+  .kv:has(> span > .desc-painel) > b .col-banco { flex: 1 0 auto; }
+  .kv:has(> span > .desc-painel) > b .col-valor { margin-left: auto; }
+}

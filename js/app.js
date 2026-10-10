@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.76";
+  const VERSAO_APP = "3.6.78";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1439,7 +1439,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.76" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.78" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2395,7 +2395,7 @@
         <span class="rep">${celRep(repDe(ref))}</span>
         <span class="status">${tipo ? seloStatus(tipo, previsto) : ""}${repDe(ref) ? `<span class="rep-movel">${repDe(ref)}</span>` : ""}</span>
         <b class="${valor === null ? "vazio" : corSinal(valor)}">${valor === null ? "" : brlSinal(valor)}</b>
-        <b class="saldo">${brlSinal(saldo)}</b>
+        <b class="saldo${saldo < 0 ? " down" : ""}">${brl(Math.abs(saldo))}</b>
       </div>`;
     // coluna Recorrência: o mesmo selo das guias (mensal, Parcela 05/16…) ou "—"
     const todos = [...d.entradas, ...d.despesas, ...(d.contasPagar || [])];
@@ -2556,7 +2556,7 @@
         <span class="desc"${i.banco ? ` title="${esc(i.banco)}"` : ""}>${i.desc}</span>
         <span class="status">${i.status || ""}</span>
         <b class="${corSinal(i.valor)}">${brlSinal(i.valor)}</b>
-        <b class="saldo">${brlSinal(i.saldo)}</b>
+        <b class="saldo${i.saldo < 0 ? " down" : ""}">${brl(Math.abs(i.saldo))}</b>
       </div>`;
     const cel = ([rot, curto, v, sinal, cls]) => celResumo(rot, curto, Math.abs(r2(v)), sinal !== undefined ? sinal : (r2(v) > 0 ? "+" : r2(v) < 0 ? "−" : ""), cls || corSinal(v));
     return { titulo, total: r2(saldo), qtd: itens.length, html: `
