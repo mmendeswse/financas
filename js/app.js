@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.44";
+  const VERSAO_APP = "3.6.45";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1122,6 +1122,8 @@
         if (painelReabrir) painelReabrir();   // redesenha com o banco novo
         return;
       }
+      const ir = e.target.closest("[data-ir-secao]");
+      if (ir) { e.stopPropagation(); irParaLancamento(ir.dataset.irSecao, ir.dataset.irId, ir.dataset.irData); return; }
       const ln = e.target.closest("[data-acao-editar]");
       if (ln) {
         e.stopPropagation();
@@ -1129,6 +1131,21 @@
       }
     });
     document.addEventListener("keydown", (e) => { if (e.key === "Escape") fecharModal(); });
+  }
+
+  // leva da linha do histórico da conta até o lançamento na guia Entradas ou
+  // Despesas: abre o mês dele, rola até a linha e a destaca por um instante
+  function irParaLancamento(secao, id, data) {
+    fecharModal();
+    navegarPara(secao);
+    const mes = String(data || "").slice(0, 7);
+    if (mes) { if (secao === "entradas") mesEntradas = mes; else mesDespesas = mes; renderRota(); }
+    const linhas = [...document.querySelectorAll(`#conteudo .rw[data-id="${CSS.escape(String(id))}"]`)];
+    const alvo = linhas.find((l) => l.dataset.data === data) || linhas[0];
+    if (!alvo) { toast("Não encontrei esse lançamento na lista."); return; }
+    alvo.scrollIntoView({ behavior: "smooth", block: "center" });
+    alvo.classList.remove("linha-destaque"); void alvo.offsetWidth; alvo.classList.add("linha-destaque");
+    setTimeout(() => alvo.classList.remove("linha-destaque"), 2600);
   }
 
   function confirmarExclusao(mensagem, aoConfirmar) {
@@ -1418,7 +1435,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.44" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.45" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2296,15 +2313,15 @@
 
   function extratoBancoCorpo(d, b, fx) {
     const ext = F.extratoDoBanco(d, b.id);
-    const linha = (data, desc, valor, saldo, classe) => `
-      <div class="extrato-linha ${classe || ""}">
+    const linha = (data, desc, valor, saldo, classe, ref) => `
+      <div class="extrato-linha ${classe || ""}${ref ? " clicavel" : ""}"${ref ? ` data-ir-secao="${ref.secao}" data-ir-id="${esc(String(ref.id))}" data-ir-data="${esc(String(ref.data || ""))}" title="Ver na guia ${ref.secao === "entradas" ? "Entradas" : "Despesas"}"` : ""}>
         <span class="dim">${data}</span>
         <span class="desc">${desc}</span>
         <b class="${valor === null ? "vazio" : corSinal(valor)}">${valor === null ? "" : brlSinal(valor)}</b>
         <b class="saldo">${brlSinal(saldo)}</b>
       </div>`;
     // o emoji do lançamento (o escolhido ou o da categoria) na frente da descrição
-    const doItem = (i) => linha(fmtDataCurta(i.data), descEmoji(i) + (i.tipo === "transferencia" ? ` <span class="dim">⇄</span>` : ""), i.valor, i.saldo);
+    const doItem = (i) => linha(fmtDataCurta(i.data), descEmoji(i) + (i.tipo === "transferencia" ? ` <span class="dim">⇄</span>` : ""), i.valor, i.saldo, "", i.ref);
     let corpo;
     {
       const dentro = ext.itens.filter((i) => String(i.data) >= fx.ini && String(i.data) <= fx.fim);
@@ -3487,7 +3504,8 @@
     const saida = [];
     const pagas = (reg, data, sinal) => {
       const m = data.slice(0, 7);
-      if (bancoDoMes(reg, m) && !reg.cartaoId && mesQuitado(reg, m)) saida.push({ bancoId: bancoDoMes(reg, m), valor: sinal * valorDoMes(reg, m), data, descricao: reg.descricao });
+      if (bancoDoMes(reg, m) && !reg.cartaoId && mesQuitado(reg, m)) saida.push({ bancoId: bancoDoMes(reg, m), valor: sinal * valorDoMes(reg, m), data, descricao: reg.descricao,
+        emoji: reg.emoji, categoria: reg.categoria, ref: { secao: sinal > 0 ? "entradas" : "despesas", id: reg.id, data } });
       return null;
     };
     meses.forEach((mes) => {

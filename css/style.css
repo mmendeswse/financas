@@ -1660,3 +1660,10 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 /* ícone padronizado dos botões (o mesmo ícone para a mesma função em todo o programa) */
 .btn > svg.ic-auto { width: 15px; height: 15px; flex: none; }
 .btn.pequeno > svg.ic-auto { width: 13px; height: 13px; }
+
+/* histórico da conta: a linha leva até o lançamento */
+.extrato-linha.clicavel { cursor: pointer; }
+.extrato-linha.clicavel:hover { background: var(--painel-2); }
+/* lançamento aberto a partir do histórico da conta: destaque por um instante */
+@keyframes destaque-linha { 0%, 60% { background: rgba(0,229,255,.16); box-shadow: inset 3px 0 0 var(--cy); } 100% { background: transparent; box-shadow: none; } }
+.rw.linha-destaque { animation: destaque-linha 2.6s ease-out; }
