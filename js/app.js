@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.24";
+  const VERSAO_APP = "3.6.25";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1418,7 +1418,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.24" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.25" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2212,38 +2212,28 @@
     }
   }
 
+  // quadro do banco: só o histórico da conta, com o período De/Até e os atalhos
+  // numa linha, e os botões Depositar / Fechar
   function explicarBanco(id) {
     const d = DADOS;
-    const lista = bancosDoPeriodo(d);
-    const b = lista.find((x) => x.id === id);
+    const b = bancosDoPeriodo(d).find((x) => x.id === id);
     if (!b) return;
-    const totalPeriodo = lista.reduce((t, x) => t + Number(x.valor || 0), 0);
-    const linha = (r, v, c) => `<div class="kv"><span class="dim">${rotuloPainel(r)}</span><b class="${c || ""}">${v}</b></div>`;
-    const periodo = mesesBancos ? `nos últimos ${mesesBancos} meses` : "";
-
-    if (mesesBancos) {
-      painelSimples(esc(b.nome), totalPeriodo !== 0 ? (b.valor / totalPeriodo) * 100 : 0,
-        `da movimentação de todas as contas ${periodo}`, "entradas − despesas do período",
-        linha("Tipo conta", esc(b.tipo || "—")) +
-        linha(`Entradas ${periodo}`, `<span class="valor-guia up">+${brl(b.entradas)}</span>`) +
-        linha(`Despesas ${periodo}`, `<span class="valor-guia down">−${brl(b.saidas)}</span>`) +
-        (b.transferido ? linha(`Transferências ${periodo}`, brlSinal(b.transferido)) : "") +
-        linha("Movimentação líquida", brlSinal(b.valor)) +
-        linha("Saldo atual da conta", brlSinal(b.saldoAtual)), "bancos",
-        { rotulo: "Depositar", acao: () => abrirModalValorBanco(b.id) }, extratoBancoHtml(d, b));
-      ligarPeriodoExtrato(b);
-      return;
-    }
-
-    painelSimples(esc(b.nome), totalPeriodo > 0 ? (b.saldoAtual / totalPeriodo) * 100 : 0, "do seu dinheiro em bancos está aqui",
-      "saldo inicial + entradas − despesas",
-      linha("Tipo conta", esc(b.tipo || "—")) +
-      linha("+ Entradas", `<span class="valor-guia up">+${brl(b.entradas)}</span>`) +
-      linha("− Despesas", `<span class="valor-guia down">−${brl(b.saidas)}</span>`) +
-      (b.transferido ? linha("Transferências", brlSinal(b.transferido)) : "") +
-      linha("Saldo", brlSinal(b.saldoAtual)), "bancos",
-      { rotulo: "Depositar", acao: () => abrirModalValorBanco(b.id) }, extratoBancoHtml(d, b));
+    painelReabrir = null;
+    abrirModal(`
+      <h3 class="extrato-cab-banco"><span>${esc(b.nome)}</span><b class="${corSinal(b.saldoAtual)}">${brlSinal(b.saldoAtual)}</b></h3>
+      ${extratoBancoHtml(d, b)}
+      <div class="modal-acoes">
+        <button class="btn primario salvar" id="btnIrPainel">Depositar</button>
+        <button class="btn" id="btnFecharPainel">Fechar</button>
+      </div>`);
+    document.getElementById("modal").classList.add("modal-extrato");
+    document.getElementById("btnIrPainel").onclick = () => { fecharModal(); abrirModalValorBanco(b.id); };
+    document.getElementById("btnFecharPainel").onclick = fecharModal;
     ligarPeriodoExtrato(b);
+    const ext = document.querySelector("#modal .extrato-banco");
+    if (ext) ext.scrollTop = ext.scrollHeight;   // abre no fim, onde está o saldo atual
+    // o foco automático no primeiro campo abriria o calendário no iPad
+    if (document.activeElement && document.activeElement.blur) setTimeout(() => document.activeElement.blur(), 40);
   }
 
   function explicarClasse(rotulo) {
