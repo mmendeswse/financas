@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.70";
+  const VERSAO_APP = "3.6.71";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1439,7 +1439,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.70" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.71" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2549,7 +2549,7 @@
     const cel = ([rot, curto, v, sinal, cls]) => celResumo(rot, curto, Math.abs(r2(v)), sinal !== undefined ? sinal : (r2(v) > 0 ? "+" : r2(v) < 0 ? "−" : ""), cls || corSinal(v));
     return { titulo, total: r2(saldo), qtd: itens.length, html: `
       <div class="extrato-titulo"><span>Histórico</span><span class="dim">${plural(itens.length, "lançamento")}</span></div>
-      <div class="extrato-tabela">
+      <div class="extrato-tabela extrato-classe">
         <div class="extrato-cab"><span>Data</span><span>Descrição</span><span class="status">Status</span><span>Valor</span><span>Saldo</span></div>
         <div class="explica-lista extrato-banco">${itens.length ? itens.map(linha).join("") : `<div class="extrato-linha"><span></span><span class="desc dim">Nada por aqui ainda</span><span></span><span></span><span></span></div>`}</div>
         <div class="extrato-resumo">${resumo.map(cel).join("")}</div>
