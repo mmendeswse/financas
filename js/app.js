@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.94";
+  const VERSAO_APP = "3.6.95";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1467,7 +1467,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.94" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.95" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2704,7 +2704,7 @@
     // cada linha abre a edição da meta
     const linha = (r, v, c) => `<div class="kv kv-editavel" data-acao-editar="editar-meta" data-id="${esc(m.id)}" title="Abrir para editar"><span class="dim">${rotuloPainel(r)}</span><b class="${c || ""}">${v}</b></div>`;
     painelSimples(nomeMeta(m), progresso, "do objetivo já foi guardado", "valor atual ÷ objetivo",
-      linha("Objetivo", brlSinal(m.objetivo), corSinal(m.objetivo)) + linha("Guardado", brlSinal(m.atual), corSinal(m.atual)) +
+      linha("Objetivo", brlSinal(m.objetivo)) + linha("Guardado", brlSinal(m.atual)) +
       linha("Faltam", brlSinal(-falta), corSinal(-falta)) +
       linha("Prazo", m.prazo ? fmtData(m.prazo) : "sem prazo"),
       "metas", { rotulo: "+ Adicionar", acao: () => abrirModalDeposito(m.id) });
@@ -2764,8 +2764,8 @@
       painelSimples(`${esc(a.ticker)} · melhor ativo`, a.rentabilidade, "de rentabilidade sobre o preço médio",
         "(preço atual ÷ preço médio − 1) × 100",
         linha("Empresa", esc(a.empresa || "—")) + linha("Quantidade", String(a.quantidade)) +
-        linha("Preço médio", brlSinal(a.precoMedio), corSinal(a.precoMedio)) + linha("Preço atual", brlSinal(a.precoAtual), corSinal(a.precoAtual)) +
-        linha("Valor investido", brlSinal(a.valorInvestido), corSinal(a.valorInvestido)) + linha("Valor atual", brlSinal(a.valorAtual), corSinal(a.valorAtual)) +
+        linha("Preço médio", brlSinal(a.precoMedio)) + linha("Preço atual", brlSinal(a.precoAtual)) +
+        linha("Valor investido", brlSinal(a.valorInvestido)) + linha("Valor atual", brlSinal(a.valorAtual)) +
         linha("Resultado", brlSinal(a.resultado), corSinal(a.resultado)), "acoes");
       return;
     }
@@ -2812,7 +2812,7 @@
       const mapa = {};
       lista.forEach((m) => { const k = m.categoria || "Outros"; mapa[k] = (mapa[k] || 0) + Number(m.valor || 0); });
       return Object.keys(mapa).sort((a, b) => mapa[b] - mapa[a])
-        .map((k) => linha("· " + esc(k), brlSinal(sinal === "−" ? -mapa[k] : mapa[k]), corSinal(sinal === "−" ? -mapa[k] : mapa[k]))).join("");
+        .map((k) => linha("· " + esc(k), brlSinal(sinal === "−" ? -mapa[k] : mapa[k]))).join("");
     };
 
     if (chave === "rel-receitas") {
@@ -2838,9 +2838,9 @@
     if (chave === "rel-rentabilidade") {
       const rent = I.rentabilidadeCarteiraAcoes(d);
       painelSimples("Rentabilidade da carteira", rent, "acumulada em relação ao preço médio", "(valor atual ÷ valor investido − 1) × 100",
-        linha("Valor investido", brlSinal(I.totalInvestidoAcoes(d)), corSinal(I.totalInvestidoAcoes(d))) +
-        linha("Valor atual", brlSinal(I.totalCarteiraAcoes(d)), corSinal(I.totalCarteiraAcoes(d))) +
-        linha("Dividendos recebidos", brlSinal(I.totalDividendosAcoes(d)), corSinal(I.totalDividendosAcoes(d))) +
+        linha("Valor investido", brlSinal(I.totalInvestidoAcoes(d))) +
+        linha("Valor atual", brlSinal(I.totalCarteiraAcoes(d))) +
+        linha("Dividendos recebidos", brlSinal(I.totalDividendosAcoes(d))) +
         linha("Ativos carteira", plural(d.acoes.length, "ativo")) +
         linha("Resultado", brlSinal(I.resultadoCarteiraAcoes(d)), corSinal(I.resultadoCarteiraAcoes(d))), "acoes");
     }
@@ -5069,12 +5069,12 @@
     const linha = (r, v, c) => `<div class="kv"><span class="dim">${rotuloPainel(r)}</span><b class="${c || ""}">${v}</b></div>`;
     painelSimples(`${esc(inv.nome)} · ${fmtData(ponto.data)}`, aplicado > 0 ? (resultado / aplicado) * 100 : 0,
       "de rendimento sobre o valor aplicado", "(valor na data ÷ valor aplicado − 1) × 100",
-      linha("Valor na data", brlSinal(ponto.valor), corSinal(ponto.valor)) +
-      linha("Valor Aplicado", brlSinal(aplicado), corSinal(aplicado)) +
+      linha("Valor na data", brlSinal(ponto.valor)) +
+      linha("Valor Aplicado", brlSinal(aplicado)) +
       linha("Resultado", brlSinal(resultado), corSinal(resultado)) +
-      (anterior ? linha("Registro anterior", `${brlSinal(anterior.valor)} · ${fmtData(anterior.data)}`, corSinal(anterior.valor)) : "") +
+      (anterior ? linha("Registro anterior", `${brlSinal(anterior.valor)} · ${fmtData(anterior.data)}`) : "") +
       (anterior ? linha("Variação", brlSinal(varAnt), corSinal(varAnt)) : "") +
-      linha("Valor atual", brlSinal(inv.valorAtual), corSinal(inv.valorAtual)),
+      linha("Valor atual", brlSinal(inv.valorAtual)),
       "investimentos",
       { rotulo: "Editar", acao: () => abrirModalInvestimento(inv.id) });
   }
