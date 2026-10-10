@@ -1839,3 +1839,16 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 .extrato-resumo > span b.fluxo.down { color: var(--down) !important; }
 /* valor no topo do quadro do banco e dos históricos: em branco (com o sinal) */
 .extrato-cab-banco b, .extrato-cab-banco b.up, .extrato-cab-banco b.down { color: var(--texto) !important; }
+/* histórico do banco: Mês · 3m · 12m · Tudo no mesmo seletor dos gráficos (abas) */
+.extrato-periodo .extrato-atalhos { align-items: center; gap: 6px; }
+.extrato-periodo .extrato-abas { margin: 0; text-transform: none; letter-spacing: 0; }
+.extrato-periodo .extrato-abas button { padding: 6px 10px; font-size: 11.5px; }
+.extrato-periodo .extrato-atalhos .btn.extrato-seta { height: 32px; }
+@media (max-width: 600px) {
+  .modal-extrato .extrato-periodo .extrato-atalhos { display: flex; }
+  .modal-extrato .extrato-periodo .extrato-abas { flex: 1; display: flex; }
+  .modal-extrato .extrato-periodo .extrato-abas button { flex: 1; }
+}
+.extrato-periodo .extrato-atalhos > .extrato-seta:first-child { order: 0; }
+.extrato-periodo .extrato-atalhos > .extrato-abas { order: 1; }
+.extrato-periodo .extrato-atalhos > .extrato-seta:last-child { order: 2; }
