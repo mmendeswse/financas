@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.25";
+  const VERSAO_APP = "3.6.26";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1418,7 +1418,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.25" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.26" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2200,10 +2200,13 @@
       const entradas = dentro.filter((i) => i.valor > 0).reduce((t, i) => t + i.valor, 0);
       const saidas = dentro.filter((i) => i.valor < 0).reduce((t, i) => t - i.valor, 0);
       corpo = linha(fmtDataCurta(fx.ini), antes.length ? "Saldo antes do período" : "Saldo inicial", null, saldoAntes, "marco") +
-        (dentro.length ? dentro.map(doItem).join("") : `<div class="extrato-linha"><span></span><span class="desc dim">Nenhum lançamento no período</span><span></span><span></span></div>`) +
-        (depois.length ? linha("", `${plural(depois.length, "lançamento")} após o período`,
-          Math.round(depois.reduce((t, i) => t + i.valor, 0) * 100) / 100, depois[depois.length - 1].saldo) : "");
-      corpo += linha("", "Saldo atual", null, ext.saldoFinal, "marco final");
+        (dentro.length ? dentro.map(doItem).join("") : `<div class="extrato-linha"><span></span><span class="desc dim">Nenhum lançamento no período</span><span></span><span></span></div>`);
+      // a última linha é o saldo no fim do período (o saldo atual, se não houver
+      // lançamentos depois dele); o que vem depois do período não é listado
+      const saldoFim = dentro.length ? dentro[dentro.length - 1].saldo : saldoAntes;
+      corpo += depois.length
+        ? linha(fmtDataCurta(fx.fim), "Saldo no fim do período", null, saldoFim, "marco final")
+        : linha("", "Saldo atual", null, ext.saldoFinal, "marco final");
       return `
       <div class="extrato-titulo"><span>Histórico da conta</span><span class="dim">${plural(dentro.length, "lançamento")} no período</span></div>
       <div class="extrato-resumo"><span>Entradas <b class="up">+${brl(entradas)}</b></span><span>Saídas <b class="down">−${brl(saidas)}</b></span><span>Resultado <b class="${corSinal(entradas - saidas)}">${brlSinal(Math.round((entradas - saidas) * 100) / 100)}</b></span></div>
