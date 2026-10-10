@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.74";
+  const VERSAO_APP = "3.6.76";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1439,7 +1439,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.74" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.76" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2273,13 +2273,22 @@
         <span class="extrato-atalhos">
           <button type="button" class="btn pequeno extrato-seta" data-extrato-passo="-1" title="Mês anterior" aria-label="Mês anterior">‹</button>
           <button type="button" class="btn pequeno" data-extrato-meses="1">Mês</button>
-          <button type="button" class="btn pequeno extrato-seta" data-extrato-passo="1" title="Próximo mês" aria-label="Próximo mês">›</button>
           <button type="button" class="btn pequeno" data-extrato-meses="3">3m</button>
           <button type="button" class="btn pequeno" data-extrato-meses="12">12m</button>
           <button type="button" class="btn pequeno" data-extrato-meses="0">Tudo</button>
+          <button type="button" class="btn pequeno extrato-seta" data-extrato-passo="1" title="Próximo mês" aria-label="Próximo mês">›</button>
         </span>
       </div>
       <div id="extratoConteudo">${extratoBancoCorpo(d, b, fx)}</div>`;
+  }
+
+  // "outubro de 2026" quando o período é um mês só; "set/2026 a out/2026" quando são vários
+  const NOMES_MES_LONGO = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+  function rotuloPeriodoMeses(ini, fim) {
+    const a = String(ini || "").slice(0, 7), z = String(fim || "").slice(0, 7);
+    if (!a || !z) return "no período";
+    const mesAno = (m) => `${NOMES_MES[Number(m.slice(5, 7)) - 1]}/${m.slice(0, 4)}`;
+    return a === z ? `${NOMES_MES_LONGO[Number(a.slice(5, 7)) - 1]} de ${a.slice(0, 4)}` : `${mesAno(a)} a ${mesAno(z)}`;
   }
 
   // liga os campos De/Até e os atalhos do histórico aberto no painel
@@ -2301,7 +2310,7 @@
     // quantos lançamentos no período, na linha do título
     const contarExtrato = () => {
       const c = document.querySelector("#extratoConteudo [data-qtd]"), q = document.getElementById("extratoQtd");
-      if (c && q) q.textContent = plural(Number(c.dataset.qtd), "lançamento") + " no período";
+      if (c && q) q.textContent = plural(Number(c.dataset.qtd), "lançamento") + " · " + rotuloPeriodoMeses(ini.value, fim.value);
     };
     contarExtrato();
     [ini, fim].forEach((el) => {
