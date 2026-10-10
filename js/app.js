@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.62";
+  const VERSAO_APP = "3.6.66";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1439,7 +1439,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.62" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.66" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2268,7 +2268,9 @@
         <label>De ${campo("extratoIni", fx.ini)}</label>
         <label>Até ${campo("extratoFim", fx.fim)}</label>
         <span class="extrato-atalhos">
+          <button type="button" class="btn pequeno extrato-seta" data-extrato-passo="-1" title="Mês anterior" aria-label="Mês anterior">‹</button>
           <button type="button" class="btn pequeno" data-extrato-meses="1">Mês</button>
+          <button type="button" class="btn pequeno extrato-seta" data-extrato-passo="1" title="Próximo mês" aria-label="Próximo mês">›</button>
           <button type="button" class="btn pequeno" data-extrato-meses="3">3m</button>
           <button type="button" class="btn pequeno" data-extrato-meses="12">12m</button>
           <button type="button" class="btn pequeno" data-extrato-meses="0">Tudo</button>
@@ -2304,6 +2306,19 @@
       el.addEventListener("input", atualizar);
       // no computador, clicar em qualquer parte do campo abre o calendário
       el.addEventListener("click", () => { try { if (el.showPicker) el.showPicker(); } catch (e) { /* sem suporte */ } });
+    });
+    // setas: vão para o mês anterior / seguinte ao mês da data inicial, do dia 1 ao último dia
+    caixa.querySelectorAll("[data-extrato-passo]").forEach((bt) => {
+      bt.onclick = (e) => {
+        e.stopPropagation();
+        const base = (ini.value || hojeISO()).slice(0, 7).split("-").map(Number);
+        const alvo = new Date(base[0], base[1] - 1 + Number(bt.dataset.extratoPasso), 1);
+        const ultimo = new Date(alvo.getFullYear(), alvo.getMonth() + 1, 0).getDate();
+        const mes = `${alvo.getFullYear()}-${String(alvo.getMonth() + 1).padStart(2, "0")}`;
+        ini.value = `${mes}-01`;
+        fim.value = `${mes}-${String(ultimo).padStart(2, "0")}`;
+        atualizar();
+      };
     });
     caixa.querySelectorAll("[data-extrato-meses]").forEach((bt) => {
       bt.onclick = (e) => {
