@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.78";
+  const VERSAO_APP = "3.6.79";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1439,7 +1439,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.78" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.79" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2118,8 +2118,8 @@
           const totalLiquido = p.bancos + investLiq + p.acoes + p.cripto - p.dividas;
           // cada classe abre o histórico dela, com data e valores, como no quadro do banco
           const abre = (classe, html) => html.replace('<div class="kv">', `<div class="kv kv-editavel" data-historico-classe="${classe}" title="Ver o histórico">`);
-          // valores com sinal e cor, como nos outros quadros: + verde, − vermelho
-          const val = (v) => [brlSinal(v), corSinal(v)];
+          // valores com sinal, em branco (só o Total leva a cor verde/vermelha)
+          const val = (v) => [brlSinal(v), ""];
           const lv = (classe, rot, v) => abre(classe, linha(rot, ...val(v)));
           return lv("bancos", "+ Bancos", p.bancos) + lv("investimentos", "+ Investimentos", investLiq) +
             lv("acoes", "+ Ações e FIIs", p.acoes) + (p.cripto > 0 ? lv("cripto", "+ Criptomoedas", p.cripto) : "") +
