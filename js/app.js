@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.102";
+  const VERSAO_APP = "3.6.103";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1468,7 +1468,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.102" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.103" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2462,8 +2462,8 @@
         <div class="extrato-cab"><span>Data</span><span>Descrição</span><span class="rep">Recorrência</span><span class="status">Status</span><span>Valor</span><span>Saldo</span></div>
         <div class="explica-lista extrato-banco">${corpo}</div>
         <div class="extrato-resumo" data-qtd="${dentro.length}">
-          ${celResumo("Entradas", "Ent.", entradas, "+", "up")}
-          ${celResumo("Saídas", "Saí.", saidas, "−", "down")}
+          ${celResumo("Entradas", "Ent.", entradas, "+", "up fluxo")}
+          ${celResumo("Despesas", "Desp.", saidas, "−", "down fluxo")}
           ${celResumo("Saldo", "Sal.", Math.abs(Math.round((entradas - saidas) * 100) / 100), entradas - saidas > 0 ? "+" : entradas - saidas < 0 ? "−" : "", corSinal(entradas - saidas))}
         </div>
       </div>`;
@@ -2552,7 +2552,7 @@
           status: i.tipo === "transferencia" ? selo("Transf.") : selo("Pago", "selo-pago") }));
       });
       const ent = soma(itens.filter((i) => i.valor > 0), (i) => i.valor), sai = soma(itens.filter((i) => i.valor < 0), (i) => -i.valor);
-      resumo = [["Entradas", "Ent.", ent, "+", "up"], ["Saídas", "Saí.", sai, "−", "down"], ["Saldo", "Sal.", inicial + ent - sai]];
+      resumo = [["Entradas", "Ent.", ent, "+", "up fluxo"], ["Despesas", "Desp.", sai, "−", "down fluxo"], ["Saldo", "Sal.", inicial + ent - sai]];
     } else if (classe === "investimentos") {
       titulo = "Investimentos";
       itens = d.investimentos.map((i) => ({ data: i.dataAplicacao || "", valor: I.valorLiquidoInvestimento(i),
@@ -2871,8 +2871,8 @@
       (todos.length ? todos.sort((a, b) => String(a.data || "").localeCompare(String(b.data || ""))).map(linhaItem).join("") : vazio("Nenhum lançamento no mês")) +
       // rodapé igual ao dos históricos: Entradas, Despesas e Saldo do mês (só o que está Pago)
       `<div class="extrato-tabela rodape-painel"><div class="extrato-resumo">
-        ${celResumo("Entradas", "Ent.", totE, "+", "up")}
-        ${celResumo("Despesas", "Desp.", totD, "−", "down")}
+        ${celResumo("Entradas", "Ent.", totE, "+", "up fluxo")}
+        ${celResumo("Despesas", "Desp.", totD, "−", "down fluxo")}
         ${celResumo("Saldo", "Sal.", Math.abs(saldo), saldo > 0 ? "+" : saldo < 0 ? "−" : "", corSinal(saldo))}
       </div></div>`,
       "despesas", { rotulo: "Abrir", acao: () => { navegarPara("despesas"); mesDespesas = mes; renderRota(); } });

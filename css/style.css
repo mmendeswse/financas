@@ -1834,3 +1834,6 @@ button.pill-periodo:hover { filter: brightness(1.25); }
    em branco; só o último (Saldo/Total) fica verde ou vermelho */
 .extrato-resumo > span b { color: var(--texto) !important; }   /* todos os valores do rodapé em branco, inclusive o Saldo */
 .explica-pct b.down { color: var(--down); }
+/* rodapés: Entradas em verde e Despesas em vermelho; os demais valores seguem em branco */
+.extrato-resumo > span b.fluxo.up { color: var(--up) !important; }
+.extrato-resumo > span b.fluxo.down { color: var(--down) !important; }
