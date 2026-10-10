@@ -92,15 +92,15 @@
     if (!banco) return { saldoInicial: 0, itens: [], saldoFinal: 0 };
     var itens = [];
     entradasDoBanco(d, bancoId).filter(function (e) { return !e.previsto; }).forEach(function (e) {
-      itens.push({ data: e.data || "", descricao: e.descricao || e.categoria || "Entrada", valor: Number(e.valor || 0), tipo: "entrada" });
+      itens.push({ data: e.data || "", descricao: e.descricao || e.categoria || "Entrada", valor: Number(e.valor || 0), tipo: "entrada", emoji: e.emoji, categoria: e.categoria });
     });
     despesasDoBanco(d, bancoId).forEach(function (x) {
-      itens.push({ data: x.data || "", descricao: x.descricao || x.categoria || "Despesa", valor: -Number(x.valor || 0), tipo: "despesa" });
+      itens.push({ data: x.data || "", descricao: x.descricao || x.categoria || "Despesa", valor: -Number(x.valor || 0), tipo: "despesa", emoji: x.emoji, categoria: x.categoria });
     });
     movimentosDoBanco(d, bancoId).forEach(function (m) {
       var v = Number(m.valor || 0);
       itens.push({ data: m.data || "", descricao: m.descricao || (v >= 0 ? "Entrada" : "Despesa"), valor: v,
-        tipo: m.transferencia ? "transferencia" : v >= 0 ? "entrada" : "despesa" });
+        tipo: m.transferencia ? "transferencia" : v >= 0 ? "entrada" : "despesa", emoji: m.emoji || (m.transferencia ? "🔁" : ""), categoria: m.categoria });
     });
     // mesmo dia: entradas antes das saídas, para o saldo não oscilar à toa
     itens.sort(function (a, b) { return String(a.data).localeCompare(String(b.data)) || (b.valor - a.valor); });

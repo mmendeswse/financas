@@ -1654,3 +1654,7 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 /* guia Metas: a bolinha de situação vai para o título, na frente do nome */
 .card-meta-quadro > header h2 .meta-bolinha { display: inline-block; vertical-align: 1px; margin-right: 8px; }
 .card-meta-quadro .meta-topo-linha > .meta-bolinha { display: none; }
+
+/* botão com ícone e texto (Editar no quadro do banco) */
+.btn.btn-com-icone { display: inline-flex; align-items: center; gap: 6px; }
+.btn-com-icone .ic-btn { width: 16px; height: 16px; flex: none; }
