@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.107";
+  const VERSAO_APP = "3.6.108";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1468,7 +1468,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.107" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.108" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2298,17 +2298,17 @@
     return `
       <div class="extrato-titulo"><span>Histórico da conta</span><span class="dim" id="extratoQtd"></span></div>
       <div class="extrato-periodo" data-banco="${b.id}">
+        <button type="button" class="btn pequeno extrato-seta" data-extrato-passo="-1" title="Mês anterior" aria-label="Mês anterior">‹</button>
         <label>De ${campo("extratoIni", fx.ini)}</label>
         <label>Até ${campo("extratoFim", fx.fim)}</label>
+        <button type="button" class="btn pequeno extrato-seta" data-extrato-passo="1" title="Próximo mês" aria-label="Próximo mês">›</button>
         <span class="extrato-atalhos">
-          <button type="button" class="btn pequeno extrato-seta" data-extrato-passo="-1" title="Mês anterior" aria-label="Mês anterior">‹</button>
           <span class="abas abas-periodo extrato-abas">
             <button type="button" data-extrato-meses="3">3m</button>
             <button type="button" data-extrato-meses="6">6m</button>
             <button type="button" data-extrato-meses="12">12m</button>
             <button type="button" data-extrato-meses="0">Tudo</button>
           </span>
-          <button type="button" class="btn pequeno extrato-seta" data-extrato-passo="1" title="Próximo mês" aria-label="Próximo mês">›</button>
         </span>
       </div>
       <div id="extratoConteudo">${extratoBancoCorpo(d, b, fx)}</div>`;
