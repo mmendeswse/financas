@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.56";
+  const VERSAO_APP = "3.6.57";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1439,7 +1439,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.56" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.57" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2962,11 +2962,11 @@
   // emoji de cada classe da composição; classe nova ganha um emoji sozinha
   // (por palavra-chave ou, se nada combinar, um fixo tirado do próprio nome)
   const EMOJI_CLASSE = {
-    "Bancos": "🏦", "Ações": "📈", "FIIs": "🏢", "ETFs": "🧺", "BDRs": "🌎", "Renda Fixa": "📄", "Tesouro Direto": "🏛️",
+    "Bancos": "🏦", "Ações": "📈", "FIIs": "🏢", "ETFs": "🧺", "BDRs": "🌎", "Renda Fixa": "💰", "Tesouro Direto": "🏛️",
     "Fundos": "💼", "Criptomoedas": "🪙", "Outros": "📦", "Dólar": "💵", "Poupança": "🐷", "Previdência": "🧓"
   };
   const EMOJI_CLASSE_CHAVE = [[/banco|conta/i, "🏦"], [/a[cç][aã]o|a[cç][oõ]es|bolsa/i, "📈"], [/fii|imobili/i, "🏢"], [/etf|[ií]ndice/i, "🧺"],
-    [/bdr|exterior|internacional/i, "🌎"], [/renda fixa|cdb|lci|lca|deb[eê]nt|cri\b|cra\b/i, "📄"], [/tesouro/i, "🏛️"], [/fundo/i, "💼"],
+    [/bdr|exterior|internacional/i, "🌎"], [/renda fixa|cdb|lci|lca|deb[eê]nt|cri\b|cra\b/i, "💰"], [/tesouro/i, "🏛️"], [/fundo/i, "💼"],
     [/cripto|bitcoin|btc|eth/i, "🪙"], [/d[oó]lar|c[aâ]mbio|moeda/i, "💵"], [/poupan/i, "🐷"], [/previd/i, "🧓"], [/ouro/i, "🥇"], [/im[oó]ve/i, "🏠"]];
   const EMOJIS_RESERVA = ["🔷", "🔶", "🟣", "🟢", "🔵", "🟠", "🟡", "🔺", "⭐", "💎", "🧩", "🎯"];
   function emojiClasse(rotulo) {
