@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.101";
+  const VERSAO_APP = "3.6.102";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1468,7 +1468,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.101" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.102" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2193,7 +2193,6 @@
           const itensR = listaEntradasTodasMes(d, mes);
           return cabecalhoColunasPainel() +
             itensR.map((e) => linhaEditavel(e, linha(descPainel(e), `<span class="col-rep">${celRep(seloDe(e, e.data))}</span>` + seloStatusPainel(e.status, e) + bancoPainel(e.banco, e) + `<span class="col-valor valor-guia up">+${brl(e.valor)}</span>`))).join("") +
-            (entradasPrev > 0 ? linhaPrevistoPainel(`+${brl(entradasPrev)}`) : "") +
             linhaTotalPainel(plural(itensR.filter((e) => e.status === "Pago").length, "Lançamento pago", "Lançamentos pagos"), `+${brl(entradas)}`);
         })(),
         secao: "entradas"
@@ -2207,7 +2206,6 @@
           const itensD = listaDespesasTodasMes(d, mes);
           return cabecalhoColunasPainel() +
             itensD.map((x) => linhaEditavel(x, linha(descPainel(x), `<span class="col-rep">${celRep(seloDe(x, x.data))}</span>` + seloStatusPainel(x.status, x) + bancoPainel(x.banco, x) + `<span class="col-valor valor-guia down">−${brl(x.valor)}</span>`))).join("") +
-            (despesasPrev > 0 ? linhaPrevistoPainel(`−${brl(despesasPrev)}`) : "") +
             linhaTotalPainel(plural(itensD.filter((x) => x.status === "Pago").length, "Lançamento pago", "Lançamentos pagos"), `−${brl(despesas)}`);
         })(),
         secao: "despesas"
