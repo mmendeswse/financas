@@ -1677,7 +1677,6 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 
 /* histórico da conta: lançamento previsto (ainda não mexeu no saldo) */
 .extrato-linha.linha-prevista .desc, .extrato-linha.linha-prevista b { opacity: .8; }
-.extrato-linha.linha-prevista .saldo { font-style: italic; }
 
 /* situação do mês da meta no meio da linha de valores (guardado · situação · falta) */
 .meta-rodape-3 .meta-situacao-meio { justify-self: center; min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--dim); align-self: center; }
