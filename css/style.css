@@ -1683,3 +1683,5 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 .meta-rodape-3 .meta-situacao-meio { justify-self: center; min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--dim); align-self: center; }
 .meta-quadro-rodape { justify-content: flex-end; }
 @media (max-width: 480px) { .meta-rodape-3 .meta-situacao-meio { font-size: 9px; letter-spacing: .02em; } }
+/* guia Metas: o "+" não pode ser mais alto que os quadros das metas, senão estica o quadro ao lado */
+.card-novo.card-novo-meta { min-height: 110px; }
