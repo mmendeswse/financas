@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.97";
+  const VERSAO_APP = "3.6.98";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1467,7 +1467,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.97" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.98" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2869,7 +2869,7 @@
     const nomeMes = new Date(mes + "-01T00:00:00").toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 
     painelSimples(nomeMes.charAt(0).toUpperCase() + nomeMes.slice(1),
-      totE > 0 ? (saldo / totE) * 100 : 0, "das receitas sobraram neste mês", "receitas − despesas do mês",
+      totE > 0 ? (saldo / totE) * 100 : 0, saldo < 0 ? "das receitas: o mês fechou no negativo" : "das receitas sobraram neste mês", "receitas − despesas do mês",
       cabecalhoColunasPainel() +
       (todos.length ? todos.sort((a, b) => String(a.data || "").localeCompare(String(b.data || ""))).map(linhaItem).join("") : vazio("Nenhum lançamento no mês")) +
       // rodapé igual ao dos históricos: Entradas, Despesas e Saldo do mês (só o que está Pago)
@@ -2879,6 +2879,8 @@
         ${celResumo("Saldo", "Sal.", Math.abs(saldo), saldo > 0 ? "+" : saldo < 0 ? "−" : "", corSinal(saldo))}
       </div></div>`,
       "despesas", { rotulo: "Abrir", acao: () => { navegarPara("despesas"); mesDespesas = mes; renderRota(); } });
+    // mês no negativo: o percentual aparece com "−" e em vermelho
+    if (saldo < 0) { const b = document.querySelector("#modal .explica-pct b"); if (b) { b.textContent = "−" + b.textContent; b.classList.add("down"); } }
   }
 
 

@@ -1833,3 +1833,4 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 /* rodapés de totais (Entradas · Saídas · Saldo e afins): os dois primeiros valores
    em branco; só o último (Saldo/Total) fica verde ou vermelho */
 .extrato-resumo > span:not(:last-child) b { color: var(--texto) !important; }
+.explica-pct b.down { color: var(--down); }
