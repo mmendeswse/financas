@@ -1623,3 +1623,8 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 
 /* bolinha da barra de data e hora: mercado aberto (verde, pulsando) ou fechado (vermelha) */
 #statusVivo .dot-vivo.fechado { background: var(--down); animation: none; box-shadow: 0 0 0 3px rgba(255,92,106,.22); }
+
+/* bolinha de situação da meta na frente do nome (sempre visível, mesmo com o nome cortado) */
+.meta-topo-linha > .meta-bolinha { flex: none; margin-right: 2px; }
+.card-meta-quadro .meta-topo.meta-topo-linha { justify-content: flex-start; }
+.card-meta-quadro .meta-topo-linha .meta-selos { margin-left: 4px; }

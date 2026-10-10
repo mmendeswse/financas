@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.30";
+  const VERSAO_APP = "3.6.31";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1418,7 +1418,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.30" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.31" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1677,7 +1677,7 @@
       const p = objetivo > 0 ? Math.min(100, (valor / objetivo) * 100) : 0;
       const st = situacaoMeta(m);
       return `<button class="meta-item clicavel st-${st.chave}" style="--meta-cor:${esc(m.cor || "var(--up)")}" data-acao="explicar-meta" data-id="${m.id}" title="Ver detalhes da meta">
-        <div class="meta-topo meta-topo-linha"><span class="meta-nome">${nomeMeta(m)}</span><span class="meta-selos"><span class="meta-bolinha st-${st.chave}" title="${st.rotulo}"></span><span class="meta-st meta-falta" title="Guardar por mês: ${Number(m.aporteMensal) > 0 ? brl(m.aporteMensal) : "não definido"}"><span class="meta-falta-ic">💰</span>${Number(m.aporteMensal) > 0 ? brlCurto(m.aporteMensal).replace(/^R\$\s*/, "") : "—"}</span>${m.prazo ? `<span class="meta-st meta-falta" title="Data final da meta"><span class="meta-falta-ic">📅</span>${fmtData(m.prazo)}</span>` : ""}<span class="meta-st meta-falta" title="Objetivo: ${brl(objetivo)}"><span class="meta-falta-ic">🏁</span>${brlCurto(objetivo).replace(/^R\$\s*/, "")}</span></span></div>
+        <div class="meta-topo meta-topo-linha"><span class="meta-bolinha st-${st.chave}" title="${st.rotulo}"></span><span class="meta-nome">${nomeMeta(m)}</span><span class="meta-selos"><span class="meta-st meta-falta" title="Guardar por mês: ${Number(m.aporteMensal) > 0 ? brl(m.aporteMensal) : "não definido"}"><span class="meta-falta-ic">💰</span>${Number(m.aporteMensal) > 0 ? brlCurto(m.aporteMensal).replace(/^R\$\s*/, "") : "—"}</span>${m.prazo ? `<span class="meta-st meta-falta" title="Data final da meta"><span class="meta-falta-ic">📅</span>${fmtData(m.prazo)}</span>` : ""}<span class="meta-st meta-falta" title="Objetivo: ${brl(objetivo)}"><span class="meta-falta-ic">🏁</span>${brlCurto(objetivo).replace(/^R\$\s*/, "")}</span></span></div>
         <div class="meta-barra meta-barra-grande"><i style="width:${p}%"></i><b class="meta-pct-dentro">${p.toFixed(0)}%</b></div>
         <div class="meta-rodape meta-rodape-3"><span title="Valor guardado">💵 ${brlCurto(valor)}</span><span></span><span class="meta-falta-valor" title="Falta para o objetivo">${objetivo > valor ? `⏳ ${brlCurto(objetivo - valor)}` : "✅ Concluída"}</span></div>
       </button>`;
