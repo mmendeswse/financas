@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.46";
+  const VERSAO_APP = "3.6.48";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1435,7 +1435,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.46" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.48" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2089,8 +2089,10 @@
     const d = DADOS;
     const p = I.patrimonio(d);
     const mes = F.mesAtual(), mesAnt = F.mesAnterior();
-    const entradas = totalEntradasTodasMes(d, mes), entradasAnt = totalEntradasTodasMes(d, mesAnt);
-    const despesas = totalDespesasTodasMes(d, mes), despesasAnt = totalDespesasTodasMes(d, mesAnt);
+    // receitas e despesas seguem o status: só o que está Pago; o previsto aparece à parte
+    const entradas = totalEntradasEfetivas(d, mes), entradasAnt = totalEntradasEfetivas(d, mesAnt);
+    const despesas = totalDespesasPagasMes(d, mes), despesasAnt = totalDespesasPagasMes(d, mesAnt);
+    const entradasPrev = Math.max(0, totalEntradasTodasMes(d, mes) - entradas), despesasPrev = Math.max(0, totalDespesasTodasMes(d, mes) - despesas);
     const linha = (rot, val, cls) => `<div class="kv"><span class="dim">${rotuloPainel(rot)}</span><b class="${cls || ""}">${val}</b></div>`;
 
     const paineis = {
@@ -2137,27 +2139,29 @@
       },
       receitas: {
         titulo: "Receitas do mês",
-        conta: "soma das entradas lançadas no mês atual",
+        conta: "soma das entradas pagas no mês atual (as previstas aparecem à parte)",
         pct: F.variacaoPercentual(entradas, entradasAnt),
         pctRotulo: "de variação em relação ao mês anterior",
         linhas: (() => {
           const itensR = listaEntradasTodasMes(d, mes);
           return cabecalhoColunasPainel() +
             itensR.map((e) => linhaEditavel(e, linha(descPainel(e), `<span class="col-rep">${celRep(seloDe(e, e.data))}</span>` + seloStatusPainel(e.status, e) + bancoPainel(e.banco, e) + `<span class="col-valor valor-guia up">+${brl(e.valor)}</span>`))).join("") +
-            linhaTotalPainel(plural(itensR.length, "Lançamento"), `+${brl(entradas)}`);
+            (entradasPrev > 0 ? linhaPrevistoPainel(`+${brl(entradasPrev)}`) : "") +
+            linhaTotalPainel(plural(itensR.filter((e) => e.status === "Pago").length, "Lançamento pago", "Lançamentos pagos"), `+${brl(entradas)}`);
         })(),
         secao: "entradas"
       },
       despesas: {
         titulo: "Despesas do mês",
-        conta: "soma das despesas lançadas no mês atual",
+        conta: "soma das despesas pagas no mês atual (as previstas aparecem à parte)",
         pct: entradas > 0 ? (despesas / entradas) * 100 : 0,
         pctRotulo: "das receitas do mês já foram gastas",
         linhas: (() => {
           const itensD = listaDespesasTodasMes(d, mes);
           return cabecalhoColunasPainel() +
             itensD.map((x) => linhaEditavel(x, linha(descPainel(x), `<span class="col-rep">${celRep(seloDe(x, x.data))}</span>` + seloStatusPainel(x.status, x) + bancoPainel(x.banco, x) + `<span class="col-valor valor-guia down">−${brl(x.valor)}</span>`))).join("") +
-            linhaTotalPainel(plural(itensD.length, "Lançamento"), `−${brl(despesas)}`);
+            (despesasPrev > 0 ? linhaPrevistoPainel(`−${brl(despesasPrev)}`) : "") +
+            linhaTotalPainel(plural(itensD.filter((x) => x.status === "Pago").length, "Lançamento pago", "Lançamentos pagos"), `−${brl(despesas)}`);
         })(),
         secao: "despesas"
       }
@@ -2313,25 +2317,30 @@
 
   function extratoBancoCorpo(d, b, fx) {
     const ext = F.extratoDoBanco(d, b.id);
-    const linha = (data, desc, valor, saldo, classe, ref) => `
+    // status do lançamento, com o mesmo selo das guias Entradas e Despesas (tudo o
+    // que aparece no histórico já mexeu no saldo, então está pago)
+    const seloStatus = (tipo) => tipo === "transferencia"
+      ? `<span class="selo-tag selo-cat">Transf.</span>` : `<span class="selo-tag selo-pago">Pago</span>`;
+    const linha = (data, desc, valor, saldo, classe, ref, tipo) => `
       <div class="extrato-linha ${classe || ""}${ref ? " clicavel" : ""}"${ref ? ` data-ir-secao="${ref.secao}" data-ir-id="${esc(String(ref.id))}" data-ir-data="${esc(String(ref.data || ""))}" title="Ver na guia ${ref.secao === "entradas" ? "Entradas" : "Despesas"}"` : ""}>
         <span class="dim">${data}</span>
         <span class="desc">${desc}</span>
+        <span class="status">${tipo ? seloStatus(tipo) : ""}</span>
         <b class="${valor === null ? "vazio" : corSinal(valor)}">${valor === null ? "" : brlSinal(valor)}</b>
         <b class="saldo">${brlSinal(saldo)}</b>
       </div>`;
     // o emoji do lançamento (o escolhido ou o da categoria) na frente da descrição
-    const doItem = (i) => linha(fmtDataCurta(i.data), descEmoji(i) + (i.tipo === "transferencia" ? ` <span class="dim">⇄</span>` : ""), i.valor, i.saldo, "", i.ref);
+    const doItem = (i) => linha(fmtDataCurta(i.data), descEmoji(i) + (i.tipo === "transferencia" ? ` <span class="dim">⇄</span>` : ""), i.valor, i.saldo, "", i.ref, i.tipo);
     let corpo;
     {
       const dentro = ext.itens.filter((i) => String(i.data) >= fx.ini && String(i.data) <= fx.fim);
       const entradas = dentro.filter((i) => i.valor > 0).reduce((t, i) => t + i.valor, 0);
       const saidas = dentro.filter((i) => i.valor < 0).reduce((t, i) => t - i.valor, 0);
       // só os lançamentos do período: sem linha de saldo inicial nem de saldo final
-      corpo = (dentro.length ? dentro.map(doItem).join("") : `<div class="extrato-linha"><span></span><span class="desc dim">Nenhum lançamento no período</span><span></span><span></span></div>`);
+      corpo = (dentro.length ? dentro.map(doItem).join("") : `<div class="extrato-linha"><span></span><span class="desc dim">Nenhum lançamento no período</span><span></span><span></span><span></span></div>`);
       return `
       <div class="extrato-tabela">
-        <div class="extrato-cab"><span>Data</span><span>Descrição</span><span>Valor</span><span>Saldo</span></div>
+        <div class="extrato-cab"><span>Data</span><span>Descrição</span><span class="status">Status</span><span>Valor</span><span>Saldo</span></div>
         <div class="explica-lista extrato-banco">${corpo}</div>
         <div class="extrato-resumo" data-qtd="${dentro.length}">
           ${celResumo("Entradas", "Ent.", entradas, "+", "up")}
@@ -2577,7 +2586,8 @@
     const linhaItem = (it) => linhaEditavel(it, linha(descPainel(it),
       `<span class="col-rep">${celRep(seloDe(it, it.data))}</span>` + seloStatusPainel(it.status, it) + bancoPainel(it.banco, it) + `<span class="col-valor valor-guia ${it.cor}">${it.sinal}${brl(it.valor)}</span>`));
     const vazio = (txt) => `<div class="kv"><span class="dim">${txt}</span><b>—</b></div>`;
-    const totE = totalEntradasTodasMes(d, mes), totD = totalDespesasTodasMes(d, mes);
+    // o mês segue o status: os totais contam só o que está Pago
+    const totE = totalEntradasEfetivas(d, mes), totD = totalDespesasPagasMes(d, mes);
     const saldo = totE - totD;
     const nomeMes = new Date(mes + "-01T00:00:00").toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 
@@ -2655,8 +2665,9 @@
   function renderDashboard(d) {
     const p = I.patrimonio(d);
     const mesAtual = F.mesAtual(), mesAnt = F.mesAnterior();
-    const entradasMes = totalEntradasTodasMes(d, mesAtual), entradasAnt = totalEntradasTodasMes(d, mesAnt);
-    const despesasMes = totalDespesasTodasMes(d, mesAtual), despesasAnt = totalDespesasTodasMes(d, mesAnt);
+    // receitas e despesas do mês seguem o status: só o que está Pago
+    const entradasMes = totalEntradasEfetivas(d, mesAtual), entradasAnt = totalEntradasEfetivas(d, mesAnt);
+    const despesasMes = totalDespesasPagasMes(d, mesAtual), despesasAnt = totalDespesasPagasMes(d, mesAnt);
     const resultadoMes = entradasMes - despesasMes, resultadoAnt = entradasAnt - despesasAnt;
     const patrimonioAnt = (() => {
       const hist = histPatrimonio(d);
@@ -3320,6 +3331,10 @@
 
   // títulos das colunas nos painéis de lançamentos, no mesmo padrão das guias
   // última linha dos painéis: "Total · N lançamentos" e o valor, no padrão das linhas da lista
+  // linha "Previsto" dos painéis: o que ainda não foi pago e por isso não entra no total
+  function linhaPrevistoPainel(valor) {
+    return `<div class="kv kv-previsto"><span class="dim">Previsto · ainda não entra no total</span><b><span class="col-valor dim">${valor}</span></b></div>`;
+  }
   function linhaTotalPainel(qtd, valor, rotulo) {
     return `<div class="kv kv-total"><span class="dim">${esc(rotulo || "Total")} · ${esc(qtd)}</span><b><span class="col-valor">${valor}</span></b></div>`;
   }
@@ -3845,6 +3860,30 @@
 
   // "previsao" indica que estamos editando a repetição de um mês: o
   // registro daquele mês só é criado quando o usuário salva.
+  // status com que a janela de entrada abre: o do lançamento (ou do mês, numa
+  // repetição); num lançamento novo, Prevista se a data for futura
+  function statusEntradaInicial(e, previsao) {
+    if (previsao) return mesQuitado(e, String(previsao.data).slice(0, 7)) ? "Pago" : "Prevista";
+    if (e) return e.previsto ? "Prevista" : "Pago";
+    return "Pago";
+  }
+  // lançamento novo: enquanto o status não for escolhido à mão, ele acompanha a
+  // data — hoje ou antes = Pago; data futura = Prevista (não entra no saldo ainda)
+  function statusSegueData(idData, idStatus) {
+    const dt = document.getElementById(idData), st = document.getElementById(idStatus);
+    if (!dt || !st) return;
+    let mexeu = false;
+    st.addEventListener("change", () => { mexeu = true; });
+    const ajustar = () => {
+      if (mexeu || !dt.value) return;
+      const novo = dt.value > hojeISO() ? "Prevista" : "Pago";
+      if (st.value !== novo) { st.value = novo; st.dispatchEvent(new Event("change")); mexeu = false; }
+    };
+    dt.addEventListener("change", ajustar);
+    dt.addEventListener("input", ajustar);
+    ajustar();
+  }
+
   function abrirModalEntrada(id, bancoIdPadrao, previsao) {
     let e = id ? achar(DADOS.entradas, id) : null;
     // repetição "4º dia útil" vista de outro lugar (ex.: painel): cria o mês e abre o lançamento real
@@ -3866,7 +3905,10 @@
         <div class="campo"><label for="f_cat">Categoria</label><select id="f_cat">${opcoes(CATS_ENTRADA, e ? e.categoria : CATS_ENTRADA[0])}</select></div>
         <div class="campo"><label for="f_banco">Banco</label><select id="f_banco">${opcoesBancos(DADOS.bancos, e ? e.bancoId : (bancoIdPadrao || ""), true)}</select></div>
       </div>
-      <div class="campo"><label for="f_tipo">Tipo</label><select id="f_tipo">${opcoes(["Fixa", "Variável"], e ? e.tipo : "Fixa")}</select></div>
+      <div class="par">
+        <div class="campo"><label for="f_tipo">Tipo</label><select id="f_tipo">${opcoes(["Fixa", "Variável"], e ? e.tipo : "Fixa")}</select></div>
+        <div class="campo"><label for="f_status">Status</label><select id="f_status">${opcoes(["Pago", "Prevista"], statusEntradaInicial(e, previsao))}</select></div>
+      </div>
       <div class="campo"><label for="f_rec">Repetição</label><select id="f_rec">${opcoes(FREQUENCIAS_REP, freqDe(e))}</select>
         <div class="ajuda" id="ajudaRec">Serve para identificar entradas que se repetem; o lançamento seguinte continua sendo feito por você.</div></div>
       ${htmlPersonalizar(e && e.regraRep)}
@@ -3880,10 +3922,12 @@
     const mesDoForm = e ? String(e.data).slice(0, 7) : (mesEntradas || (document.getElementById("f_data").value || hojeISO()).slice(0, 7));   // mês aberto na guia
     const lerEmoji = ligarEmoji(e && e.emoji);
     const regraDoForm = ligarPersonalizar(mesDoForm, "O lançamento de cada mês é criado sozinho, com status Prevista, para você marcar como Pago depois.");
+    if (!e) statusSegueData("f_data", "f_status");   // lançamento novo: data futura começa como Prevista
 
     document.getElementById("btnSalvar").onclick = () => {
       const banco = document.getElementById("f_banco").value;
       if (!banco) { toast("Selecione o banco que recebeu o valor."); return; }
+      const statusEnt = document.getElementById("f_status").value;
       const desc = document.getElementById("f_desc").value.trim();
       if (!desc) { toast("Descreva a entrada."); return; }
       const registro = {
@@ -3897,7 +3941,8 @@
         tipo: document.getElementById("f_tipo").value,
         recorrencia: document.getElementById("f_rec").value,
         recorrente: document.getElementById("f_rec").value !== FREQUENCIAS[0],
-        obs: document.getElementById("f_obs").value.trim()
+        obs: document.getElementById("f_obs").value.trim(),
+        previsto: statusEnt === "Prevista"   // o status manda no saldo e em todos os totais
       };
       if (registro.recorrencia === FREQ_PERS) { registro.regraRep = regraDoForm(); registro.data = dataDoMesRegra(registro.regraRep, mesDoForm); }
       if (e && ehPers(e) && registro.recorrencia === FREQ_PERS) {
@@ -3905,10 +3950,9 @@
         escolherAlcance("Salvar alteração", (alcance) => { salvarPers("entrada", e, registro, alcance); salvarEAtualizar("Entrada atualizada."); });
         return;
       }
-      if (!e && registro.recorrencia === FREQ_PERS) registro.previsto = true;   // o mês da origem também começa pendente
       if (previsao) {
-        // muda só o mês editado, dentro do próprio lançamento recorrente
-        gravarAjuste(e, previsao.data.slice(0, 7), { valor: registro.valor });
+        // muda só o mês editado, dentro do próprio lançamento recorrente (valor e status do mês)
+        gravarAjuste(e, previsao.data.slice(0, 7), { valor: registro.valor, pago: statusEnt === "Pago" });
         e.emoji = registro.emoji;   // o emoji vale para a série toda
         if (registro.data && registro.data !== previsao.data) registrarReancoragem(e, previsao.data.slice(0, 7), registro.data);
       } else if (e) Object.assign(e, manterSerie(e, registro));
@@ -4083,6 +4127,7 @@
 
     // mostra ou esconde os campos de pagamento conforme o status
     const selStatus = document.getElementById("f_status");
+    if (!x) setTimeout(() => statusSegueData("f_data", "f_status"), 0);   // nova: data futura começa como Prevista
     selStatus.addEventListener("change", () => {
       const pago = selStatus.value === "Pago";
       document.getElementById("rotuloData").textContent = pago ? "Data" : "Data de vencimento";
@@ -5633,8 +5678,15 @@
     if (!anoRelB) anoRelB = String(new Date().getFullYear());
     const fxA = intervaloRel(mesesRelA, anoRelA);   // quadro receitas x despesas
     const fxB = intervaloRel(mesesRelB, anoRelB);   // quadro evolução patrimonial
-    const entradasP = d.entradas.filter((e) => e.data >= fxA.ini && e.data <= fxA.fim).reduce((s, e) => s + Number(e.valor), 0);
-    const despesasP = d.despesas.filter((x) => x.data >= fxA.ini && x.data <= fxA.fim).reduce((s, x) => s + Number(x.valor), 0);
+    // receitas e despesas do período seguem o status: só o que está Pago
+    // (inclui contas pagas e repetições marcadas como pagas), mês a mês
+    // "Tudo" começa no mês do lançamento mais antigo
+    const primeiraData = [...d.entradas.map((e) => e.data), ...d.despesas.map((x) => x.data), ...(d.contasPagar || []).map((c) => c.vencimento)]
+      .filter(Boolean).map(String).sort()[0] || fxA.fim;
+    const mesesDoPeriodo = [];
+    for (let m = (fxA.ini > primeiraData ? fxA.ini : primeiraData).slice(0, 7); m <= fxA.fim.slice(0, 7) && mesesDoPeriodo.length < 1200; m = proximoMes(m)) mesesDoPeriodo.push(m);
+    const entradasP = mesesDoPeriodo.reduce((t, m) => t + totalEntradasEfetivas(d, m), 0);
+    const despesasP = mesesDoPeriodo.reduce((t, m) => t + totalDespesasPagasMes(d, m), 0);
     const historicoP = histPatrimonio(d).filter((h) => h.data >= fxB.ini && h.data <= fxB.fim);
     const picoB = historicoP.length ? Math.max(...historicoP.map((h) => h.valor)) : 0;
     const OPC = [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }, { meses: 0, rotulo: "Tudo" }];
