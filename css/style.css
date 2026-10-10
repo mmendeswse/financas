@@ -1593,11 +1593,10 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 .btn-banco-depositar { color: var(--cy); border-color: rgba(0,229,255,.45); background: rgba(0,229,255,.07); }
 .btn-banco-depositar:hover { background: rgba(0,229,255,.14); border-color: var(--cy); }
 /* quadro da meta: Guardar Mês e o Adicionar na mesma linha, embaixo à direita */
-.card-meta-quadro > header { align-items: flex-start; flex-wrap: nowrap; }
 
 /* Editar e Depositar com ícone e texto, mesmo estilo e tamanho (como no PR #95);
    o Depositar em ciano para diferenciar. Usado nos bancos e nas metas */
-.cartao-item .rodape .btn.btn-banco, .card-meta-quadro .acoes .btn.btn-banco { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 11px; font-size: 11.5px; font-family: var(--ui); font-weight: 700; min-width: 0; position: relative; z-index: 2; }
+.cartao-item .rodape .btn.btn-banco, .card-meta-quadro .meta-quadro-rodape .btn.btn-banco { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 11px; font-size: 11.5px; font-family: var(--ui); font-weight: 700; min-width: 0; position: relative; z-index: 2; }
 .btn-banco .ic-btn { width: 17px; height: 17px; flex: none; }
 .card-meta-quadro .rodape-botoes { display: flex; gap: 6px; }
 .card-meta-quadro .metas-lista { padding-bottom: 12px; }
@@ -1653,8 +1652,6 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 }
 
 /* guia Metas: a bolinha de situação vai para o título, na frente do nome */
-.card-meta-quadro > header h2 .meta-bolinha { display: inline-block; vertical-align: 1px; margin-right: 8px; }
-.card-meta-quadro .meta-topo-linha > .meta-bolinha { display: none; }
 
 /* botão com ícone e texto (Editar no quadro do banco) */
 .btn.btn-com-icone { display: inline-flex; align-items: center; gap: 6px; }
@@ -1671,3 +1668,9 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 @keyframes destaque-linha { 0%, 60% { background: rgba(0,229,255,.16); box-shadow: inset 3px 0 0 var(--cy); } 100% { background: transparent; box-shadow: none; } }
 .rw.linha-destaque { animation: destaque-linha 2.6s ease-out; }
 .extrato-linha .status .selo-tag { font-size: 9.5px; padding: 1px 7px; }
+
+/* guia Metas: quadro sem título (o nome está no bloco da meta, como no Dashboard);
+   embaixo, a situação do mês e o Editar */
+.card-meta-quadro .metas-lista { padding: 12px 12px 0; }
+.meta-quadro-rodape { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px 12px; }
+.meta-quadro-situacao { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--dim); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
