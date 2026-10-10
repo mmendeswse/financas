@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.29";
+  const VERSAO_APP = "3.6.34";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1418,7 +1418,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.29" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.34" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1677,7 +1677,7 @@
       const p = objetivo > 0 ? Math.min(100, (valor / objetivo) * 100) : 0;
       const st = situacaoMeta(m);
       return `<button class="meta-item clicavel st-${st.chave}" style="--meta-cor:${esc(m.cor || "var(--up)")}" data-acao="explicar-meta" data-id="${m.id}" title="Ver detalhes da meta">
-        <div class="meta-topo meta-topo-linha"><span class="meta-nome">${nomeMeta(m)}</span><span class="meta-selos"><span class="meta-bolinha st-${st.chave}" title="${st.rotulo}"></span><span class="meta-st meta-falta" title="Guardar por mês: ${Number(m.aporteMensal) > 0 ? brl(m.aporteMensal) : "não definido"}"><span class="meta-falta-ic">💰</span>${Number(m.aporteMensal) > 0 ? brlCurto(m.aporteMensal).replace(/^R\$\s*/, "") : "—"}</span>${m.prazo ? `<span class="meta-st meta-falta" title="Data final da meta"><span class="meta-falta-ic">📅</span>${fmtData(m.prazo)}</span>` : ""}<span class="meta-st meta-falta" title="Objetivo: ${brl(objetivo)}"><span class="meta-falta-ic">🏁</span>${brlCurto(objetivo).replace(/^R\$\s*/, "")}</span></span></div>
+        <div class="meta-topo meta-topo-linha"><span class="meta-bolinha st-${st.chave}" title="${st.rotulo}"></span><span class="meta-nome">${nomeMeta(m)}</span><span class="meta-selos"><span class="meta-st meta-falta" title="Guardar por mês: ${Number(m.aporteMensal) > 0 ? brl(m.aporteMensal) : "não definido"}"><span class="meta-falta-ic">💰</span>${Number(m.aporteMensal) > 0 ? brlCurto(m.aporteMensal).replace(/^R\$\s*/, "") : "—"}</span>${m.prazo ? `<span class="meta-st meta-falta" title="Data final da meta"><span class="meta-falta-ic">📅</span>${fmtData(m.prazo)}</span>` : ""}<span class="meta-st meta-falta" title="Objetivo: ${brl(objetivo)}"><span class="meta-falta-ic">🏁</span>${brlCurto(objetivo).replace(/^R\$\s*/, "")}</span></span></div>
         <div class="meta-barra meta-barra-grande"><i style="width:${p}%"></i><b class="meta-pct-dentro">${p.toFixed(0)}%</b></div>
         <div class="meta-rodape meta-rodape-3"><span title="Valor guardado">💵 ${brlCurto(valor)}</span><span></span><span class="meta-falta-valor" title="Falta para o objetivo">${objetivo > valor ? `⏳ ${brlCurto(objetivo - valor)}` : "✅ Concluída"}</span></div>
       </button>`;
@@ -2225,8 +2225,8 @@
       const saldoAntes = antes.length ? antes[antes.length - 1].saldo : ext.saldoInicial;
       const entradas = dentro.filter((i) => i.valor > 0).reduce((t, i) => t + i.valor, 0);
       const saidas = dentro.filter((i) => i.valor < 0).reduce((t, i) => t - i.valor, 0);
-      corpo = linha(fmtDataCurta(fx.ini), antes.length ? "Saldo antes do período" : "Saldo inicial", null, saldoAntes, "marco") +
-        (dentro.length ? dentro.map(doItem).join("") : `<div class="extrato-linha"><span></span><span class="desc dim">Nenhum lançamento no período</span><span></span><span></span></div>`);
+      // começa direto nos lançamentos do período (sem a linha do saldo inicial)
+      corpo = (dentro.length ? dentro.map(doItem).join("") : `<div class="extrato-linha"><span></span><span class="desc dim">Nenhum lançamento no período</span><span></span><span></span></div>`);
       // a última linha é o saldo no fim do período (o saldo atual, se não houver
       // lançamentos depois dele); o que vem depois do período não é listado
       const saldoFim = dentro.length ? dentro[dentro.length - 1].saldo : saldoAntes;
@@ -2234,9 +2234,15 @@
         ? linha(fmtDataCurta(fx.fim), "Saldo", null, saldoFim, "marco final")
         : linha("", "Saldo atual", null, ext.saldoFinal, "marco final");
       return `
-      <div class="extrato-resumo" data-qtd="${dentro.length}"><span>Entradas <b class="up">+${brl(entradas)}</b></span><span>Saídas <b class="down">−${brl(saidas)}</b></span><span>Resultado <b class="${corSinal(entradas - saidas)}">${brlSinal(Math.round((entradas - saidas) * 100) / 100)}</b></span></div>
-      <div class="extrato-cab"><span>Data</span><span>Descrição</span><span>Valor</span><span>Saldo</span></div>
-      <div class="explica-lista extrato-banco">${corpo}</div>`;
+      <div class="extrato-tabela">
+        <div class="extrato-resumo" data-qtd="${dentro.length}">
+          <span><small>Entradas</small><b class="up">+${brl(entradas)}</b></span>
+          <span><small>Saídas</small><b class="down">−${brl(saidas)}</b></span>
+          <span><small>Resultado</small><b class="${corSinal(entradas - saidas)}">${brlSinal(Math.round((entradas - saidas) * 100) / 100)}</b></span>
+        </div>
+        <div class="extrato-cab"><span>Data</span><span>Descrição</span><span>Valor</span><span>Saldo</span></div>
+        <div class="explica-lista extrato-banco">${corpo}</div>
+      </div>`;
     }
   }
 
@@ -4467,7 +4473,9 @@
       ${aviso}
       <div class="grid g-top">
         <div class="c12">${card("", "Investimentos", "renda fixa, tesouro, fundos e cripto",
-          `<button class="btn" data-acao="buscar-investimentos" title="Atualizar os investimentos pelos índices do Banco Central (CDI, Selic, IPCA)">↻ Buscar</button>
+          `<div class="pilulas-cripto"><div class="dolar-pill cripto-pill" id="criptoBTC" style="display:none"></div>
+           <div class="dolar-pill cripto-pill" id="criptoETH" style="display:none"></div></div>
+           <button class="btn" data-acao="buscar-investimentos" title="Atualizar os investimentos pelos índices do Banco Central (CDI, Selic, IPCA)">↻ Buscar</button>
            <button class="btn primario" data-acao="novo-investimento"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`,
           corpo,
           `<span class="dim">Total líquido</span><b class="creme" style="font-size:14px;font-weight:800">${brlSinal(t.liquido)}</b>`)}</div>
@@ -5002,7 +5010,7 @@
 
   function renderDetalheCripto() {
     const m = ROTA.param;
-    const voltar = `<button class="voltar" data-acao="ir" data-secao="acoes"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONES.voltar}</svg>Voltar para Ações</button>`;
+    const voltar = `<button class="voltar" data-acao="ir" data-secao="investimentos"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONES.voltar}</svg>Voltar para Investimentos</button>`;
     if (!CRIPTOS[m]) return `${voltar}<div class="empty">Criptomoeda não encontrada.</div>`;
     const serie = seriesCripto[m] || [];
     const filtrada = filtrarPeriodo(serie.map((p) => ({ data: p.data, preco: p.preco })), periodoGrafico);
@@ -5092,9 +5100,7 @@
     return `
       <div class="grid g-top">
         <div class="c12">${card("", "Painel ativos", (configCotacoes().auto ? '<span class="selo-tag selo-acao">cotação automática · brapi.dev</span>' : '<span class="selo-tag selo-cat">preço atualizado manualmente</span>'),
-          `<div class="pilulas-cotacao"><div class="dolar-pill" id="dolarTopbar" title="Dólar comercial (AwesomeAPI)" style="display:none"></div>
-           <div class="dolar-pill cripto-pill" id="criptoBTC" style="display:none"></div>
-           <div class="dolar-pill cripto-pill" id="criptoETH" style="display:none"></div></div>
+          `<div class="pilulas-cotacao"><div class="dolar-pill" id="dolarTopbar" title="Dólar comercial (AwesomeAPI)" style="display:none"></div></div>
            <button class="btn" data-acao="buscar-cotacoes" title="Buscar cotações na internet agora">↻ Buscar</button>
            <button class="btn primario" data-acao="novo-ativo"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`,
           corpo,
@@ -5430,16 +5436,15 @@
       corpo = `<div class="c8"><div class="card"><div class="empty">Nenhuma meta cadastrada. Que tal começar por uma reserva de emergência?</div></div></div>`;
     } else {
       // cada meta num quadro igual ao quadro Metas do Dashboard (o mesmo bloco
-      // da meta), com Depositar e Editar no topo à direita (o "Guardar Mês"
-      // aparece no selo 💰 da meta); sempre com o valor de hoje
+      // da meta), com o Editar no topo à direita (o "Guardar Mês" aparece no
+      // selo 💰 da meta); sempre com o valor de hoje
       corpo = d.metas.map((m) => {
         const st = situacaoMeta(m);
         const diasPrazo = m.prazo ? F.diasEntre(m.prazo) : null;
         const vencida = diasPrazo !== null && diasPrazo < 0 && Number(m.atual || 0) < Number(m.objetivo || 0);
         const sub = vencida ? `<span class="down">prazo vencido há ${plural(Math.abs(diasPrazo), "dia")}</span>` : esc(st.rotulo);
         return `<div class="c4">${card("card-meta-quadro" + (vencida ? " card-meta-vencida" : ""), nomeMeta(m), sub,
-          `<span class="rodape-botoes"><button class="btn pequeno btn-banco btn-banco-depositar" data-acao="depositar-meta" data-id="${m.id}" title="Depositar: adicionar valor na meta">${ICONE_CAIXA_24H}Depositar</button>
-            <button class="btn pequeno btn-banco btn-banco-editar" data-acao="editar-meta" data-id="${m.id}" title="Editar a meta">${ICONE_EDITAR}Editar</button></span>`,
+          `<span class="rodape-botoes"><button class="btn pequeno btn-banco btn-banco-editar" data-acao="editar-meta" data-id="${m.id}" title="Editar a meta">${ICONE_EDITAR}Editar</button></span>`,
           `<div class="metas-lista">${itemMetaHtml(m, true)}</div>`)}</div>`;
       }).join("");
     }
