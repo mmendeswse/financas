@@ -1626,8 +1626,7 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 
 /* bolinha de situação da meta na frente do nome (sempre visível, mesmo com o nome cortado) */
 .meta-topo-linha > .meta-bolinha { flex: none; margin-right: 2px; }
-.card-meta-quadro .meta-topo.meta-topo-linha { justify-content: flex-start; }
-.card-meta-quadro .meta-topo-linha .meta-selos { margin-left: 4px; }
+.card-meta-quadro .meta-topo-linha .meta-selos { margin-left: auto; }   /* selos à direita, como no Dashboard */
 
 /* BTC e ETH no quadro Investimentos, antes dos botões Buscar e Novo */
 .pilulas-cripto { display: flex; gap: 8px; flex-wrap: wrap; }

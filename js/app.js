@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.32";
+  const VERSAO_APP = "3.6.33";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1418,7 +1418,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.32" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.33" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -5436,16 +5436,15 @@
       corpo = `<div class="c8"><div class="card"><div class="empty">Nenhuma meta cadastrada. Que tal começar por uma reserva de emergência?</div></div></div>`;
     } else {
       // cada meta num quadro igual ao quadro Metas do Dashboard (o mesmo bloco
-      // da meta), com Depositar e Editar no topo à direita (o "Guardar Mês"
-      // aparece no selo 💰 da meta); sempre com o valor de hoje
+      // da meta), com o Editar no topo à direita (o "Guardar Mês" aparece no
+      // selo 💰 da meta); sempre com o valor de hoje
       corpo = d.metas.map((m) => {
         const st = situacaoMeta(m);
         const diasPrazo = m.prazo ? F.diasEntre(m.prazo) : null;
         const vencida = diasPrazo !== null && diasPrazo < 0 && Number(m.atual || 0) < Number(m.objetivo || 0);
         const sub = vencida ? `<span class="down">prazo vencido há ${plural(Math.abs(diasPrazo), "dia")}</span>` : esc(st.rotulo);
         return `<div class="c4">${card("card-meta-quadro" + (vencida ? " card-meta-vencida" : ""), nomeMeta(m), sub,
-          `<span class="rodape-botoes"><button class="btn pequeno btn-banco btn-banco-depositar" data-acao="depositar-meta" data-id="${m.id}" title="Depositar: adicionar valor na meta">${ICONE_CAIXA_24H}Depositar</button>
-            <button class="btn pequeno btn-banco btn-banco-editar" data-acao="editar-meta" data-id="${m.id}" title="Editar a meta">${ICONE_EDITAR}Editar</button></span>`,
+          `<span class="rodape-botoes"><button class="btn pequeno btn-banco btn-banco-editar" data-acao="editar-meta" data-id="${m.id}" title="Editar a meta">${ICONE_EDITAR}Editar</button></span>`,
           `<div class="metas-lista">${itemMetaHtml(m, true)}</div>`)}</div>`;
       }).join("");
     }
