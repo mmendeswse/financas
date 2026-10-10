@@ -1782,3 +1782,15 @@ button.pill-periodo:hover { filter: brightness(1.25); }
   .extrato-com-banco .extrato-cab span:nth-child(5) { display: block; }
   .extrato-com-banco .extrato-cab span:nth-child(6) { display: none; }
 }
+/* Patrimônio → Bancos: também com Recorrência; quadro mais largo para caber tudo */
+.modal.modal-extrato.modal-bancos { width: 980px; }
+.extrato-com-banco .extrato-cab, .extrato-com-banco .extrato-linha { grid-template-columns: 78px minmax(0, 1fr) 112px 72px 140px 112px 104px; }
+.extrato-com-banco .extrato-cab .rep, .extrato-com-banco .extrato-linha .rep { text-align: left; }
+.extrato-com-banco .extrato-linha .rep .selo-tag { font-size: 9.5px; padding: 1px 6px; }
+@media (max-width: 560px) {
+  .extrato-com-banco .extrato-cab, .extrato-com-banco .extrato-linha { grid-template-columns: 68px minmax(0, 1fr) 98px; }
+  .extrato-com-banco .extrato-cab .rep, .extrato-com-banco .extrato-linha .rep { display: none; }
+  .extrato-com-banco .extrato-cab span:nth-child(5) { display: none; }
+  .extrato-com-banco .extrato-cab span:nth-child(6) { display: block; }
+  .extrato-com-banco .extrato-cab span:nth-child(7) { display: none; }
+}

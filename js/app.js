@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.86";
+  const VERSAO_APP = "3.6.87";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1451,7 +1451,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.86" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.87" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2525,8 +2525,12 @@
       bancosNaOrdem(F.listaBancosComSaldo(d)).forEach((b) => {
         const ext = F.extratoDoBanco(d, b.id);
         inicial += Number(ext.saldoInicial || 0);
-        ext.itens.forEach((i) => itens.push({ data: i.data, valor: i.valor, ref: i.ref,
-          desc: descEmoji(i) + (i.tipo === "transferencia" ? ` <span class="dim">⇄</span>` : ""), banco: b.nome,
+        // recorrência (mensal, Parcela 05/16…) e "Categoria · Tipo" embaixo da descrição, como nas guias
+        const todosReg = [...d.entradas, ...d.despesas, ...(d.contasPagar || [])];
+        const repDe = (ref) => { const o = ref && ref.id ? todosReg.find((r) => r.id === ref.id) : null; return o ? seloFreq({ ...o, data: ref.data || dataReg(o) }, true).trim() : ""; };
+        ext.itens.forEach((i) => itens.push({ data: i.data, valor: i.valor, ref: i.ref, rep: i.tipo === "transferencia" ? "" : repDe(i.ref),
+          desc: descEmoji(i) + (i.tipo === "transferencia" ? ` <span class="dim">⇄</span>` : "") +
+            (i.ref && i.tipo !== "transferencia" ? `<span class="desc-sub">${subDe({ id: i.ref.id, categoria: i.categoria })}</span>` : ""), banco: b.nome,
           status: i.tipo === "transferencia" ? selo("Transf.") : selo("Pago", "selo-pago") }));
       });
       const ent = soma(itens.filter((i) => i.valor > 0), (i) => i.valor), sai = soma(itens.filter((i) => i.valor < 0), (i) => -i.valor);
@@ -2572,7 +2576,8 @@
       <div class="extrato-linha${i.ref ? " clicavel" : ""}"${i.ref ? ` data-ir-secao="${i.ref.secao}" data-ir-id="${esc(String(i.ref.id))}" data-ir-data="${esc(String(i.ref.data || ""))}" title="Ver na guia ${i.ref.secao === "entradas" ? "Entradas" : "Despesas"}"` : ""}>
         <span class="dim">${i.data ? fmtDataCurta(i.data) : "—"}</span>
         <span class="desc"${i.banco ? ` title="${esc(i.banco)}"` : ""}>${i.desc}</span>
-        <span class="status">${i.status || ""}${comBanco ? `<span class="banco-movel">${esc(i.banco || "")}</span>` : ""}</span>
+        ${comBanco ? `<span class="rep">${celRep(i.rep)}</span>` : ""}
+        <span class="status">${i.status || ""}${comBanco && i.rep ? `<span class="rep-movel">${i.rep}</span>` : ""}${comBanco ? `<span class="banco-movel">${esc(i.banco || "")}</span>` : ""}</span>
         ${comBanco ? `<span class="banco">${i.banco ? marcaBanco(i.banco, 20) + `<span>${esc(i.banco)}</span>` : "—"}</span>` : ""}
         <b class="${corSinal(i.valor)}">${brlSinal(i.valor)}</b>
         <b class="saldo${i.saldo < 0 ? " down" : ""}">${brl(Math.abs(i.saldo))}</b>
@@ -2581,7 +2586,7 @@
     return { titulo, total: r2(saldo), qtd: itens.length, html: `
       <div class="extrato-titulo"><span>Histórico</span><span class="dim">${plural(itens.length, "lançamento")}</span></div>
       <div class="extrato-tabela extrato-classe${comBanco ? " extrato-com-banco" : ""}">
-        <div class="extrato-cab"><span>Data</span><span>Descrição</span><span class="status">Status</span>${comBanco ? `<span class="banco">Banco</span>` : ""}<span>Valor</span><span>Saldo</span></div>
+        <div class="extrato-cab"><span>Data</span><span>Descrição</span>${comBanco ? `<span class="rep">Recorrência</span>` : ""}<span class="status">Status</span>${comBanco ? `<span class="banco">Banco</span>` : ""}<span>Valor</span><span>Saldo</span></div>
         <div class="explica-lista extrato-banco">${itens.length ? itens.map(linha).join("") : `<div class="extrato-linha"><span></span><span class="desc dim">Nada por aqui ainda</span><span></span><span></span><span></span></div>`}</div>
         <div class="extrato-resumo">${resumo.map(cel).join("")}</div>
       </div>` };
@@ -2599,7 +2604,7 @@
         <button class="btn" id="btnVoltarPainel">Voltar</button>
         <button class="btn" id="btnFecharPainel">Fechar</button>
       </div>`);
-    document.getElementById("modal").classList.add("modal-extrato", ...(classe === "bancos" ? [] : ["modal-classe"]));
+    document.getElementById("modal").classList.add("modal-extrato", classe === "bancos" ? "modal-bancos" : "modal-classe");
     document.getElementById("btnIrPainel").onclick = () => { fecharModal(); navegarPara(secao); };
     document.getElementById("btnVoltarPainel").onclick = () => explicarKPI("patrimonio");
     document.getElementById("btnFecharPainel").onclick = fecharModal;
