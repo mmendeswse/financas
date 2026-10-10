@@ -1699,3 +1699,11 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 @media (max-width: 600px) {
   .modal-extrato .extrato-periodo .extrato-atalhos { grid-template-columns: auto 1fr auto 1fr 1fr 1fr; }
 }
+/* histórico do banco: quadro mais largo para a descrição caber numa linha só */
+.modal.modal-extrato { width: 760px; max-width: calc(100vw - 24px); }
+/* o campo de data (invisível por cima) não pode passar do próprio quadro, senão
+   no iPad o toque na seta ‹ ao lado abria o calendário em vez de voltar o mês */
+.campo-data-curta { overflow: hidden; }
+.modal-extrato .extrato-periodo .extrato-atalhos { margin-left: auto; padding-left: 14px; }
+@media (max-width: 600px) { .modal-extrato .extrato-periodo .extrato-atalhos { padding-left: 0; margin-top: 4px; } }
+.extrato-titulo { gap: 10px; }
