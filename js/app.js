@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.52";
+  const VERSAO_APP = "3.6.53";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1122,6 +1122,8 @@
         if (painelReabrir) painelReabrir();   // redesenha com o banco novo
         return;
       }
+      const hc = e.target.closest("[data-historico-classe]");
+      if (hc) { e.stopPropagation(); explicarHistoricoClasse(hc.dataset.historicoClasse); return; }
       const ir = e.target.closest("[data-ir-secao]");
       if (ir) { e.stopPropagation(); irParaLancamento(ir.dataset.irSecao, ir.dataset.irId, ir.dataset.irData); return; }
       const ln = e.target.closest("[data-acao-editar]");
@@ -1435,7 +1437,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.52" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.53" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1487,6 +1489,7 @@
     buscar: svgIc('<path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4.5V9h-4.5"/>'),
     transferir: svgIc('<path d="M4 8h14l-3.5-3.5"/><path d="M20 16H6l3.5 3.5"/>'),
     novo: svgIc('<path d="M12 5v14M5 12h14"/>'),
+    voltar: svgIc('<path d="M19 12H5.5"/><path d="M11 6l-6 6 6 6"/>'),
     sincronizar: svgIc('<path d="M20 11a8 8 0 0 0-14.5-4.5L4 8"/><path d="M4 4v4h4"/><path d="M4 13a8 8 0 0 0 14.5 4.5L20 16"/><path d="M20 20v-4h-4"/>'),
     desligar: svgIc('<path d="M12 3.5v8"/><path d="M6.8 6.5a7.5 7.5 0 1 0 10.4 0"/>'),
     exportar: svgIc('<path d="M12 15V3.5M7.5 8L12 3.5 16.5 8"/><path d="M4 14.5V19a1.5 1.5 0 0 0 1.5 1.5h13A1.5 1.5 0 0 0 20 19v-4.5"/>'),
@@ -1510,6 +1513,7 @@
     [(b, t) => /^(excluir|apagar|remover)/.test(t), "excluir"],
     [(b, t) => /^(depositar|adicionar)\b/.test(t), "depositar"],
     [(b, t) => /^salvar\b/.test(t), "salvar"],
+    [(b, t) => /^voltar\b/.test(t), "voltar"],
     [(b, t) => /^editar\b/.test(t), "editar"],
     [(b, t) => /^(buscar|atualizar)\b/.test(t), "buscar"],
     [(b, t) => /^transferir\b/.test(t), "transferir"],
@@ -2106,9 +2110,11 @@
         linhas: (() => {
           const investLiq = I.totalLiquidoOutros(d);
           const totalLiquido = p.bancos + investLiq + p.acoes + p.cripto - p.dividas;
-          return linha("+ Bancos", brl(p.bancos)) + linha("+ Investimentos", brl(investLiq)) +
-            linha("+ Ações e FIIs", brl(p.acoes)) + (p.cripto > 0 ? linha("+ Criptomoedas", brl(p.cripto)) : "") +
-            linha("− Dívidas", brl(p.dividas), "down") +
+          // cada classe abre o histórico dela, com data e valores, como no quadro do banco
+          const abre = (classe, html) => html.replace('<div class="kv">', `<div class="kv kv-editavel" data-historico-classe="${classe}" title="Ver o histórico">`);
+          return abre("bancos", linha("+ Bancos", brl(p.bancos))) + abre("investimentos", linha("+ Investimentos", brl(investLiq))) +
+            abre("acoes", linha("+ Ações e FIIs", brl(p.acoes))) + (p.cripto > 0 ? abre("cripto", linha("+ Criptomoedas", brl(p.cripto))) : "") +
+            abre("dividas", linha("− Dívidas", brl(p.dividas), "down")) +
             linha("Total", brl(totalLiquido), corSinal(totalLiquido));
         })(),
         secao: "bancos"
@@ -2416,6 +2422,126 @@
     if (ext) ext.scrollTop = ext.scrollHeight;   // abre no fim, onde está o saldo atual
     // o foco automático no primeiro campo abriria o calendário no iPad
     if (document.activeElement && document.activeElement.blur) setTimeout(() => document.activeElement.blur(), 40);
+  }
+
+  // Patrimônio total → cada classe (bancos, investimentos, ações, cripto,
+  // dívidas) abre uma tabela no mesmo formato do histórico do banco: data,
+  // descrição, status, valor e o total acumulado depois de cada linha
+  function itensDividas(d) {
+    const itens = [];
+    const hoje = hojeISO();
+    const selo = (dt) => String(dt) < hoje ? `<span class="selo-tag selo-atrasado">Vencida</span>` : `<span class="selo-tag selo-pendente">Pendente</span>`;
+    const add = (x, data, valor, status, mes) => itens.push({ data, desc: descEmoji(x, x.categoria || "Conta"), status, valor: -Number(valor || 0),
+      ref: { secao: "despesas", id: x.id, data } , tipo: status ? "conta" : "parcela" });
+    // contas em aberto vencidas ou do mês atual (as mesmas de F.totalDividas)
+    (d.contasPagar || []).filter((c) => c.status !== "Pago" && !(ehPers(c) && Number(regraDe(c).parcelas) > 0) && String(c.vencimento || "").slice(0, 7) <= F.mesAtual())
+      .forEach((c) => add(c, c.vencimento, c.valor, selo(c.vencimento)));
+    // parcelas que ainda faltam pagar (as mesmas de saldoDevedorParcelas)
+    const todos = [...d.despesas, ...(d.contasPagar || [])];
+    const pago = (x) => d.despesas.includes(x) || x.status === "Pago";
+    const dia = (o) => String(dataReg(o)).slice(8, 10) || "01";
+    todos.filter((o) => ehPers(o) && !o.origemRecorrente && Number(regraDe(o).parcelas) > 0).forEach((orig) => {
+      const regra = regraDe(orig), n = Number(regra.parcelas);
+      let mes = regra.primeiraParcela || mesReg(orig);
+      for (let k = 0; k < n; k++) {
+        if (k) for (let i = 0; i < Math.max(1, Number(regra.intervalo) || 1); i++) mes = proximoMes(mes);
+        const parc = `<span class="selo-tag selo-cat">Parcela ${k + 1}/${n}</span>`;
+        if (mes === mesReg(orig)) { if (!pago(orig)) add(orig, dataReg(orig), orig.valor, parc); continue; }
+        if (!ocorrenciasNoMes(orig, mes).length) continue;
+        const inst = todos.find((x) => x.origemRecorrente === orig.id && mesReg(x) === mes);
+        if (inst) { if (!pago(inst)) add(inst, dataReg(inst), inst.valor, parc); }
+        else if (!mesQuitado(orig, mes)) add(orig, `${mes}-${dia(orig)}`, valorDoMes(orig, mes), parc);
+      }
+    });
+    return itens;
+  }
+
+  function historicoClasse(d, classe) {
+    const selo = (txt, cls) => `<span class="selo-tag ${cls || "selo-cat"}">${esc(txt)}</span>`;
+    const soma = (lista, f) => lista.reduce((t, i) => t + Number(f(i) || 0), 0);
+    const r2 = (v) => Math.round(v * 100) / 100;
+    let itens = [], inicial = 0, resumo = [], titulo = "";
+    if (classe === "bancos") {
+      titulo = "Bancos";
+      bancosNaOrdem(F.listaBancosComSaldo(d)).forEach((b) => {
+        const ext = F.extratoDoBanco(d, b.id);
+        inicial += Number(ext.saldoInicial || 0);
+        ext.itens.forEach((i) => itens.push({ data: i.data, valor: i.valor, ref: i.ref,
+          desc: descEmoji(i) + (i.tipo === "transferencia" ? ` <span class="dim">⇄</span>` : ""), banco: b.nome,
+          status: i.tipo === "transferencia" ? selo("Transf.") : selo("Pago", "selo-pago") }));
+      });
+      const ent = soma(itens.filter((i) => i.valor > 0), (i) => i.valor), sai = soma(itens.filter((i) => i.valor < 0), (i) => -i.valor);
+      resumo = [["Entradas", "Ent.", ent, "+", "up"], ["Saídas", "Saí.", sai, "−", "down"], ["Saldo", "Sal.", inicial + ent - sai]];
+    } else if (classe === "investimentos") {
+      titulo = "Investimentos";
+      itens = d.investimentos.map((i) => ({ data: i.dataAplicacao || "", valor: I.valorLiquidoInvestimento(i),
+        desc: `<span class="emoji-desc">${emojiClasse(rotuloCategoriaComp(i.categoria || "Outros"))}</span>${esc(i.nome || "")}`,
+        status: selo(i.categoria || "Outros") }));
+      const aplicado = soma(d.investimentos, (i) => i.valorInvestido), total = soma(itens, (i) => i.valor);
+      resumo = [["Aplicado", "Apl.", aplicado], ["Rendimento", "Rend.", total - aplicado], ["Total", "Tot.", total]];
+    } else if (classe === "acoes") {
+      titulo = "Ações e FIIs";
+      const lista = I.listaAcoesComCalculo(d);
+      itens = lista.map((a) => ({ data: ((a.historicoPrecos || [])[0] || {}).data || a.atualizadoEm || "", valor: a.valorAtual,
+        desc: `<span class="emoji-desc">${emojiClasse(a.categoria === "FII" ? "FIIs" : a.categoria === "ETF" ? "ETFs" : "Ações")}</span>${esc(a.ticker)} <span class="dim">· ${a.quantidade} un.</span>`,
+        status: selo(a.categoria || "Ação", a.categoria === "FII" ? "selo-fii" : a.categoria === "ETF" ? "selo-etf" : "selo-acao") }));
+      const investido = soma(lista, (a) => a.valorInvestido), total = soma(lista, (a) => a.valorAtual);
+      resumo = [["Investido", "Inv.", investido], ["Resultado", "Res.", total - investido], ["Total", "Tot.", total]];
+    } else if (classe === "cripto") {
+      titulo = "Criptomoedas";
+      const lista = I.listaCripto(d);
+      const precos = (d.config || {}).criptoPrecos || {};
+      const dataPreco = (m) => (precos[m] || []).reduce((z, p) => (p.data > z ? p.data : z), "") || hojeISO();
+      itens = lista.map((c) => ({ data: dataPreco(c.moeda), valor: c.valor,
+        desc: `<span class="emoji-desc">🪙</span>${esc(c.moeda)} <span class="dim">· ${fmtQtdCripto(c.quantidade)}</span>`, status: selo(c.moeda) }));
+      const v = (m) => soma(lista.filter((c) => c.moeda === m), (c) => c.valor);
+      resumo = [["BTC", "BTC", v("BTC")], ["ETH", "ETH", v("ETH")], ["Total", "Tot.", soma(lista, (c) => c.valor)]];
+    } else if (classe === "dividas") {
+      titulo = "Dívidas";
+      itens = itensDividas(d);
+      const contas = soma(itens.filter((i) => i.tipo === "conta"), (i) => -i.valor), parcelas = soma(itens.filter((i) => i.tipo === "parcela"), (i) => -i.valor);
+      resumo = [["Contas", "Cont.", -contas], ["Parcelas", "Parc.", -parcelas], ["Total", "Tot.", -(contas + parcelas)]];
+    }
+    // ordem de data, com o total acumulado depois de cada linha
+    let saldo = inicial;
+    itens = itens.sort((a, b) => String(a.data).localeCompare(String(b.data)))
+      .map((i) => { saldo = r2(saldo + i.valor); return { ...i, saldo }; });
+    const linha = (i) => `
+      <div class="extrato-linha${i.ref ? " clicavel" : ""}"${i.ref ? ` data-ir-secao="${i.ref.secao}" data-ir-id="${esc(String(i.ref.id))}" data-ir-data="${esc(String(i.ref.data || ""))}" title="Ver na guia ${i.ref.secao === "entradas" ? "Entradas" : "Despesas"}"` : ""}>
+        <span class="dim">${i.data ? fmtDataCurta(i.data) : "—"}</span>
+        <span class="desc"${i.banco ? ` title="${esc(i.banco)}"` : ""}>${i.desc}</span>
+        <span class="status">${i.status || ""}</span>
+        <b class="${corSinal(i.valor)}">${brlSinal(i.valor)}</b>
+        <b class="saldo">${brlSinal(i.saldo)}</b>
+      </div>`;
+    const cel = ([rot, curto, v, sinal, cls]) => celResumo(rot, curto, Math.abs(r2(v)), sinal !== undefined ? sinal : (r2(v) > 0 ? "+" : r2(v) < 0 ? "−" : ""), cls || corSinal(v));
+    return { titulo, total: r2(saldo), qtd: itens.length, html: `
+      <div class="extrato-titulo"><span>Histórico</span><span class="dim">${plural(itens.length, "lançamento")}</span></div>
+      <div class="extrato-tabela">
+        <div class="extrato-cab"><span>Data</span><span>Descrição</span><span class="status">Status</span><span>Valor</span><span>Saldo</span></div>
+        <div class="explica-lista extrato-banco">${itens.length ? itens.map(linha).join("") : `<div class="extrato-linha"><span></span><span class="desc dim">Nada por aqui ainda</span><span></span><span></span><span></span></div>`}</div>
+        <div class="extrato-resumo">${resumo.map(cel).join("")}</div>
+      </div>` };
+  }
+
+  function explicarHistoricoClasse(classe) {
+    const h = historicoClasse(DADOS, classe);
+    painelReabrir = () => explicarHistoricoClasse(classe);
+    const secao = { bancos: "bancos", investimentos: "investimentos", acoes: "acoes", cripto: "investimentos", dividas: "despesas" }[classe];
+    abrirModal(`
+      <h3 class="extrato-cab-banco"><span>${h.titulo}</span><b class="${corSinal(h.total)}">${brlSinal(h.total)}</b></h3>
+      ${h.html}
+      <div class="modal-acoes">
+        <button class="btn primario salvar" id="btnIrPainel">Abrir</button>
+        <button class="btn" id="btnVoltarPainel">Voltar</button>
+        <button class="btn" id="btnFecharPainel">Fechar</button>
+      </div>`);
+    document.getElementById("modal").classList.add("modal-extrato");
+    document.getElementById("btnIrPainel").onclick = () => { fecharModal(); navegarPara(secao); };
+    document.getElementById("btnVoltarPainel").onclick = () => explicarKPI("patrimonio");
+    document.getElementById("btnFecharPainel").onclick = fecharModal;
+    const ext = document.querySelector("#modal .extrato-banco");
+    if (ext) ext.scrollTop = ext.scrollHeight;   // abre no fim, onde está o total atual
   }
 
   function explicarClasse(rotulo) {
