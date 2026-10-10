@@ -1628,3 +1628,15 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 .meta-topo-linha > .meta-bolinha { flex: none; margin-right: 2px; }
 .card-meta-quadro .meta-topo.meta-topo-linha { justify-content: flex-start; }
 .card-meta-quadro .meta-topo-linha .meta-selos { margin-left: 4px; }
+
+/* BTC e ETH no quadro Investimentos, antes dos botões Buscar e Novo */
+.pilulas-cripto { display: flex; gap: 8px; flex-wrap: wrap; }
+.pilulas-cripto .dolar-pill { white-space: nowrap; }
+@media (max-width: 980px) { .pilulas-cripto .dolar-pill small { display: inline; } }   /* BTC/ETH sempre identificados */
+@media (max-width: 600px) {
+  /* no celular: as cotações numa linha e os botões Buscar / Novo na de baixo */
+  .card header .acoes:has(.pilulas-cripto) { flex: 1 1 100%; justify-content: flex-start; }
+  .pilulas-cripto { flex: 1 1 100%; flex-wrap: nowrap; }
+  .pilulas-cripto .dolar-pill { flex: 1 1 0; min-width: 0; justify-content: center; }
+  .pilulas-cripto .dolar-pill span { display: none; }   /* só o preço */
+}
