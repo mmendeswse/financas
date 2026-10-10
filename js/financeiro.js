@@ -57,7 +57,8 @@
   function outrosMovimentos(d) {
     var lista = (d.contasPagar || [])
       .filter(function (c) { return c.status === "Pago" && c.bancoId && !c.cartaoId; })
-      .map(function (c) { return { bancoId: c.bancoId, valor: -Number(c.valor || 0), data: c.vencimento, descricao: c.descricao }; });
+      .map(function (c) { return { bancoId: c.bancoId, valor: -Number(c.valor || 0), data: c.vencimento, descricao: c.descricao,
+        emoji: c.emoji, categoria: c.categoria, ref: { secao: "despesas", id: c.id, data: c.vencimento } }; });
     // transferência entre contas: sai de uma e entra na outra (não é receita nem despesa)
     (d.transferencias || []).forEach(function (t) {
       var v = Number(t.valor || 0);
@@ -92,15 +93,17 @@
     if (!banco) return { saldoInicial: 0, itens: [], saldoFinal: 0 };
     var itens = [];
     entradasDoBanco(d, bancoId).filter(function (e) { return !e.previsto; }).forEach(function (e) {
-      itens.push({ data: e.data || "", descricao: e.descricao || e.categoria || "Entrada", valor: Number(e.valor || 0), tipo: "entrada", emoji: e.emoji, categoria: e.categoria });
+      itens.push({ data: e.data || "", descricao: e.descricao || e.categoria || "Entrada", valor: Number(e.valor || 0), tipo: "entrada", emoji: e.emoji, categoria: e.categoria,
+        ref: { secao: "entradas", id: e.id, data: e.data } });
     });
     despesasDoBanco(d, bancoId).forEach(function (x) {
-      itens.push({ data: x.data || "", descricao: x.descricao || x.categoria || "Despesa", valor: -Number(x.valor || 0), tipo: "despesa", emoji: x.emoji, categoria: x.categoria });
+      itens.push({ data: x.data || "", descricao: x.descricao || x.categoria || "Despesa", valor: -Number(x.valor || 0), tipo: "despesa", emoji: x.emoji, categoria: x.categoria,
+        ref: { secao: "despesas", id: x.id, data: x.data } });
     });
     movimentosDoBanco(d, bancoId).forEach(function (m) {
       var v = Number(m.valor || 0);
       itens.push({ data: m.data || "", descricao: m.descricao || (v >= 0 ? "Entrada" : "Despesa"), valor: v,
-        tipo: m.transferencia ? "transferencia" : v >= 0 ? "entrada" : "despesa", emoji: m.emoji || (m.transferencia ? "🔁" : ""), categoria: m.categoria });
+        tipo: m.transferencia ? "transferencia" : v >= 0 ? "entrada" : "despesa", emoji: m.emoji || (m.transferencia ? "🔁" : ""), categoria: m.categoria, ref: m.ref || null });
     });
     // mesmo dia: entradas antes das saídas, para o saldo não oscilar à toa
     itens.sort(function (a, b) { return String(a.data).localeCompare(String(b.data)) || (b.valor - a.valor); });
