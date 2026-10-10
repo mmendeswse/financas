@@ -1650,3 +1650,7 @@ button.pill-periodo:hover { filter: brightness(1.25); }
   .pilulas-cripto .dolar-pill { justify-content: space-between; }
   .pilulas-cripto .dolar-pill span { display: none; }   /* só o preço */
 }
+
+/* guia Metas: a bolinha de situação vai para o título, na frente do nome */
+.card-meta-quadro > header h2 .meta-bolinha { display: inline-block; vertical-align: 1px; margin-right: 8px; }
+.card-meta-quadro .meta-topo-linha > .meta-bolinha { display: none; }

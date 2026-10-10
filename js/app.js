@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.37";
+  const VERSAO_APP = "3.6.39";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1418,7 +1418,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.37" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.39" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -5015,7 +5015,7 @@
     const filtrada = filtrarPeriodo(serie.map((p) => ({ data: p.data, preco: p.preco })), periodoGrafico);
     const c = cripto && cripto[m];
     const q = qtdCripto(m);
-    const btnQtd = `<button class="btn primario" data-cripto-qtd="${m}">${q ? "✎ Editar" : `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>Adicionar quantidade`}</button>`;
+    const btnQtd = `<button class="btn primario" data-cripto-qtd="${m}">${q ? "✎ Editar" : `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>Adicionar`}</button>`;
     const v = c ? c.variacaoPct || 0 : 0;
     const rodape = `<span class="cripto-rodape"><span class="dim">Cotação</span><b class="creme">${c ? brl(c.valor) : "—"}</b>${c ? `<span class="${v >= 0 ? "up" : "down"}">${v >= 0 ? "▲" : "▼"} ${Math.abs(v).toFixed(2).replace(".", ",")}%</span>` : ""}</span>
       <span class="cripto-rodape"><span class="dim">${q ? `Você tem ${fmtQtdCripto(q)} ${m}` : `Você ainda não informou quantos ${m} tem`}</span>${q && precoCriptoAtual(m) ? `<b class="creme" style="font-size:14px;font-weight:800">${brl(q * precoCriptoAtual(m))}</b>` : ""}</span>`;
@@ -5442,7 +5442,7 @@
         const diasPrazo = m.prazo ? F.diasEntre(m.prazo) : null;
         const vencida = diasPrazo !== null && diasPrazo < 0 && Number(m.atual || 0) < Number(m.objetivo || 0);
         const sub = vencida ? `<span class="down">prazo vencido há ${plural(Math.abs(diasPrazo), "dia")}</span>` : esc(st.rotulo);
-        return `<div class="c4">${card("card-meta-quadro" + (vencida ? " card-meta-vencida" : ""), nomeMeta(m), sub,
+        return `<div class="c4">${card("card-meta-quadro" + (vencida ? " card-meta-vencida" : ""), `<span class="meta-bolinha st-${st.chave}" title="${esc(st.rotulo)}"></span>${nomeMeta(m)}`, sub,
           `<span class="rodape-botoes"><button class="btn pequeno btn-banco btn-banco-editar" data-acao="editar-meta" data-id="${m.id}" title="Editar a meta">${ICONE_EDITAR}Editar</button></span>`,
           `<div class="metas-lista">${itemMetaHtml(m, true)}</div>`)}</div>`;
       }).join("");
