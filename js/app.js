@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.87";
+  const VERSAO_APP = "3.6.88";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1136,6 +1136,8 @@
         if (painelReabrir) painelReabrir();   // redesenha com o banco novo
         return;
       }
+      const ab = e.target.closest("[data-abrir-banco]");
+      if (ab) { e.stopPropagation(); explicarBanco(ab.dataset.abrirBanco); return; }
       const hc = e.target.closest("[data-historico-classe]");
       if (hc) { e.stopPropagation(); explicarHistoricoClasse(hc.dataset.historicoClasse); return; }
       const ir = e.target.closest("[data-ir-secao]");
@@ -1451,7 +1453,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.87" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.88" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2145,7 +2147,7 @@
         conta: "saldo = saldo inicial + entradas − despesas",
         pct: p.bruto > 0 ? (p.bancos / p.bruto) * 100 : 0,
         pctRotulo: "do patrimônio bruto está em conta",
-        linhas: bancosNaOrdem(F.listaBancosComSaldo(d)).map((b) => linha(esc(b.nome), brlSinal(b.saldoAtual))).join("") +
+        linhas: bancosNaOrdem(F.listaBancosComSaldo(d)).map((b) => linhaBancoClicavel(b.id, linha(esc(b.nome), brlSinal(b.saldoAtual)))).join("") +
           linha("Total", brlSinal(p.bancos), corSinal(p.bancos)),
         secao: "bancos"
       },
@@ -2622,7 +2624,7 @@
     let detalhe = "";
     let secao = "investimentos";
     if (rotulo === "Bancos") {
-      detalhe = bancosNaOrdem(F.listaBancosComSaldo(d)).map((b) => linha(esc(b.nome), brlSinal(b.saldoAtual))).join("");
+      detalhe = bancosNaOrdem(F.listaBancosComSaldo(d)).map((b) => linhaBancoClicavel(b.id, linha(esc(b.nome), brlSinal(b.saldoAtual)))).join("");
       secao = "bancos";
     } else if (["Ações", "FIIs", "ETFs"].indexOf(rotulo) > -1) {
       const cat = rotulo === "Ações" ? "Ação" : rotulo === "FIIs" ? "FII" : "ETF";
@@ -3577,6 +3579,10 @@
   }
 
   // marca a linha do painel como clicável para abrir a edição
+  // linha de um banco nos quadros de detalhe: clicar abre o quadro daquele banco
+  function linhaBancoClicavel(id, html) {
+    return html.replace('<div class="kv">', `<div class="kv kv-editavel" data-abrir-banco="${esc(id)}" title="Abrir o banco">`);
+  }
   function linhaEditavel(item, html) {
     if (!item || !item.acaoEditar) return html;
     return html.replace('<div class="kv">', `<div class="kv kv-editavel" data-acao-editar="${item.acaoEditar}" data-id="${esc(item.id)}" data-data="${item.data || ""}" title="Abrir para editar">`);
