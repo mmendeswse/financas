@@ -1837,3 +1837,5 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 /* rodapés: Entradas em verde e Despesas em vermelho; os demais valores seguem em branco */
 .extrato-resumo > span b.fluxo.up { color: var(--up) !important; }
 .extrato-resumo > span b.fluxo.down { color: var(--down) !important; }
+/* valor no topo do quadro do banco e dos históricos: em branco (com o sinal) */
+.extrato-cab-banco b, .extrato-cab-banco b.up, .extrato-cab-banco b.down { color: var(--texto) !important; }
