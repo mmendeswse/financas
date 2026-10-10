@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.117";
+  const VERSAO_APP = "3.6.118";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1487,7 +1487,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil/.test(m.arquivo) ? "" : " marca-azulejo";   // Itaú e BB já têm o quadrado próprio
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.117" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.118" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2641,7 +2641,7 @@
     painelReabrir = () => explicarHistoricoClasse(classe);
     const secao = { bancos: "bancos", investimentos: "investimentos", acoes: "acoes", cripto: "investimentos", dividas: "despesas" }[classe];
     abrirModal(`
-      <h3 class="extrato-cab-banco"><span>${h.titulo}</span><b class="${corSinal(h.total)}">${brlSinal(h.total)}</b></h3>
+      <h3 class="extrato-cab-banco"><span>${h.titulo}</span><b class="${corSinal(h.total)}${classe === "dividas" ? " cab-divida" : ""}">${brlSinal(h.total)}</b></h3>
       ${h.html}
       <div class="modal-acoes">
         <button class="btn primario salvar" id="btnIrPainel">Abrir</button>
