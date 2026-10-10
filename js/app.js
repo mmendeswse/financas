@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.55";
+  const VERSAO_APP = "3.6.59";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1439,7 +1439,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.55" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.59" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1778,10 +1778,14 @@
       const objetivo = Number(m.objetivo || 0);
       const p = objetivo > 0 ? Math.min(100, (valor / objetivo) * 100) : 0;
       const st = situacaoMeta(m);
+      // situação do mês ("Guardou R$ 1.000,00 este mês") no meio, entre o guardado e o que falta
+      const diasPrazo = m.prazo ? F.diasEntre(m.prazo) : null;
+      const vencida = diasPrazo !== null && diasPrazo < 0 && Number(m.atual || 0) < objetivo;
+      const situacao = vencida ? `<span class="down">prazo vencido há ${plural(Math.abs(diasPrazo), "dia")}</span>` : esc(st.rotulo);
       return `<button class="meta-item clicavel st-${st.chave}" style="--meta-cor:${esc(m.cor || "var(--up)")}" data-acao="explicar-meta" data-id="${m.id}" title="Ver detalhes da meta">
         <div class="meta-topo meta-topo-linha"><span class="meta-bolinha st-${st.chave}" title="${st.rotulo}"></span><span class="meta-nome">${nomeMeta(m)}</span><span class="meta-selos"><span class="meta-st meta-falta" title="Guardar por mês: ${Number(m.aporteMensal) > 0 ? brl(m.aporteMensal) : "não definido"}"><span class="meta-falta-ic">💰</span>${Number(m.aporteMensal) > 0 ? brlCurto(m.aporteMensal).replace(/^R\$\s*/, "") : "—"}</span>${m.prazo ? `<span class="meta-st meta-falta" title="Data final da meta"><span class="meta-falta-ic">📅</span>${fmtData(m.prazo)}</span>` : ""}<span class="meta-st meta-falta" title="Objetivo: ${brl(objetivo)}"><span class="meta-falta-ic">🏁</span>${brlCurto(objetivo).replace(/^R\$\s*/, "")}</span></span></div>
         <div class="meta-barra meta-barra-grande"><i style="width:${p}%"></i><b class="meta-pct-dentro">${p.toFixed(0)}%</b></div>
-        <div class="meta-rodape meta-rodape-3"><span title="Valor guardado">💵 ${brlCurto(valor)}</span><span></span><span class="meta-falta-valor" title="Falta para o objetivo">${objetivo > valor ? `⏳ ${brlCurto(objetivo - valor)}` : "✅ Concluída"}</span></div>
+        <div class="meta-rodape meta-rodape-3"><span title="Valor guardado">💵 ${brlCurto(valor)}</span><span class="meta-situacao-meio" title="${esc(st.rotulo)}">${situacao}</span><span class="meta-falta-valor" title="Falta para o objetivo">${objetivo > valor ? `⏳ ${brlCurto(objetivo - valor)}` : "✅ Concluída"}</span></div>
       </button>`;
     }
   }
@@ -2241,13 +2245,15 @@
   // Histórico da conta: os lançamentos do período escolhido, cada um com o
   // saldo da conta depois dele, e o resumo do período (entradas, saídas e
   // resultado) no fim da tabela.
-  // período do histórico da conta (De / Até) — começa no período da guia
-  // Bancos ou, em "Tudo", do primeiro lançamento até hoje
-  function faixaExtratoPadrao(d, b) {
-    if (mesesBancos) return faixaBancos();
-    const itens = F.extratoDoBanco(d, b.id).itens.filter((i) => i.data);
+  // período do histórico da conta (De / Até) — sempre abre no mês atual,
+  // do primeiro ao último dia
+  function faixaMesAtual() {
     const hj = hojeISO();
-    return { ini: itens.length ? String(itens[0].data).slice(0, 10) : hj.slice(0, 8) + "01", fim: hj, tudo: true };
+    const ultimo = new Date(Number(hj.slice(0, 4)), Number(hj.slice(5, 7)), 0).getDate();
+    return { ini: hj.slice(0, 8) + "01", fim: hj.slice(0, 8) + String(ultimo).padStart(2, "0") };
+  }
+  function faixaExtratoPadrao() {
+    return faixaMesAtual();
   }
 
   const fmtDataISO = (iso) => { const p = String(iso || "").split("-"); return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : ""; };
@@ -2311,7 +2317,7 @@
           const dt = new Date(Number(hj.slice(0, 4)), Number(hj.slice(5, 7)) - 1 - (m - 1), 1);
           ini.value = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-01`;
         }
-        fim.value = hj;
+        fim.value = m === 1 ? faixaMesAtual().fim : hj;   // Mês: do dia 1 ao último dia do mês
         atualizar();
       };
     });
@@ -2604,6 +2610,10 @@
       linha("Faltam", brl(falta), falta > 0 ? "down" : "up") +
       linha("Prazo", m.prazo ? fmtData(m.prazo) : "sem prazo"),
       "metas", { rotulo: "+ Adicionar", acao: () => abrirModalDeposito(m.id) });
+    // Editar ao lado de Adicionar, no mesmo padrão do quadro do banco
+    const fechar = document.getElementById("btnFecharPainel");
+    fechar.insertAdjacentHTML("beforebegin", `<button class="btn btn-com-icone" id="btnEditarMeta" title="Editar a meta">${ICONE_EDITAR}Editar</button>`);
+    document.getElementById("btnEditarMeta").onclick = () => { fecharModal(); abrirModalMeta(m.id); };
   }
 
 
@@ -2960,11 +2970,11 @@
   // emoji de cada classe da composição; classe nova ganha um emoji sozinha
   // (por palavra-chave ou, se nada combinar, um fixo tirado do próprio nome)
   const EMOJI_CLASSE = {
-    "Bancos": "🏦", "Ações": "📈", "FIIs": "🏢", "ETFs": "🧺", "BDRs": "🌎", "Renda Fixa": "📄", "Tesouro Direto": "🏛️",
+    "Bancos": "🏦", "Ações": "📈", "FIIs": "🏢", "ETFs": "🧺", "BDRs": "🌎", "Renda Fixa": "💰", "Tesouro Direto": "🏛️",
     "Fundos": "💼", "Criptomoedas": "🪙", "Outros": "📦", "Dólar": "💵", "Poupança": "🐷", "Previdência": "🧓"
   };
   const EMOJI_CLASSE_CHAVE = [[/banco|conta/i, "🏦"], [/a[cç][aã]o|a[cç][oõ]es|bolsa/i, "📈"], [/fii|imobili/i, "🏢"], [/etf|[ií]ndice/i, "🧺"],
-    [/bdr|exterior|internacional/i, "🌎"], [/renda fixa|cdb|lci|lca|deb[eê]nt|cri\b|cra\b/i, "📄"], [/tesouro/i, "🏛️"], [/fundo/i, "💼"],
+    [/bdr|exterior|internacional/i, "🌎"], [/renda fixa|cdb|lci|lca|deb[eê]nt|cri\b|cra\b/i, "💰"], [/tesouro/i, "🏛️"], [/fundo/i, "💼"],
     [/cripto|bitcoin|btc|eth/i, "🪙"], [/d[oó]lar|c[aâ]mbio|moeda/i, "💵"], [/poupan/i, "🐷"], [/previd/i, "🧓"], [/ouro/i, "🥇"], [/im[oó]ve/i, "🏠"]];
   const EMOJIS_RESERVA = ["🔷", "🔶", "🟣", "🟢", "🔵", "🟠", "🟡", "🔺", "⭐", "💎", "🧩", "🎯"];
   function emojiClasse(rotulo) {
@@ -5750,15 +5760,13 @@
       // da meta), com o Editar no topo à direita (o "Guardar Mês" aparece no
       // selo 💰 da meta); sempre com o valor de hoje
       corpo = d.metas.map((m) => {
-        const st = situacaoMeta(m);
         const diasPrazo = m.prazo ? F.diasEntre(m.prazo) : null;
         const vencida = diasPrazo !== null && diasPrazo < 0 && Number(m.atual || 0) < Number(m.objetivo || 0);
-        const sub = vencida ? `<span class="down">prazo vencido há ${plural(Math.abs(diasPrazo), "dia")}</span>` : esc(st.rotulo);
-        // sem título repetido: o bloco da meta é o mesmo do Dashboard (bolinha, nome e
-        // selos) e, embaixo, a situação do mês e o botão Editar
+        // sem título repetido: o bloco da meta é o mesmo do Dashboard (bolinha, nome,
+        // selos e a situação do mês no meio da linha de valores) e, embaixo, o Editar
         return `<div class="c4"><section class="card card-meta-quadro${vencida ? " card-meta-vencida" : ""}">
           <div class="body"><div class="metas-lista">${itemMetaHtml(m, true)}</div></div>
-          <div class="meta-quadro-rodape"><span class="meta-quadro-situacao">${sub}</span>
+          <div class="meta-quadro-rodape">
             <button class="btn pequeno btn-banco btn-banco-editar" data-acao="editar-meta" data-id="${m.id}" title="Editar a meta">${ICONE_EDITAR}Editar</button></div>
         </section></div>`;
       }).join("");
