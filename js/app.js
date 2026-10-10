@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.109";
+  const VERSAO_APP = "3.6.110";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1468,7 +1468,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.109" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.110" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2562,7 +2562,7 @@
     } else if (classe === "investimentos") {
       titulo = "Investimentos";
       itens = d.investimentos.map((i) => ({ data: i.dataAplicacao || "", valor: I.valorLiquidoInvestimento(i),
-        desc: `<span class="emoji-desc">${emojiInvestimento(i)}</span>${esc(i.nome || "")}`,
+        desc: `<span class="emoji-desc">${emojiInvestimento(i)}</span>${esc(nomeCurtoInvestimento(i.nome))}${i.banco || i.emissor ? `<span class="desc-sub">${esc(i.banco || i.emissor)}</span>` : ""}`,
         status: selo(i.categoria || "Outros") }));
       const aplicado = soma(d.investimentos, (i) => i.valorInvestido), total = soma(itens, (i) => i.valor);
       resumo = [["Aplicado", "Apl.", aplicado], ["Rendimento", "Rend.", total - aplicado], ["Total", "Tot.", total]];
@@ -4850,6 +4850,9 @@
     });
   }
 
+  // nome na tabela sem os detalhes entre parênteses que vêm do extrato importado
+  // (ex.: "RDB Resgate Imediato (Caixinha Turbo Croma)" → "RDB Resgate Imediato")
+  const nomeCurtoInvestimento = (nome) => String(nome || "").replace(/\s*\([^)]*\)/g, "").replace(/\s{2,}/g, " ").trim() || String(nome || "");
   function renderInvestimentos(d) {
     const lista = I.listaInvestimentosComCalculo(d);
     const t = I.totaisInvestimentos(d);
@@ -4864,7 +4867,7 @@
     } else {
       const linhas = lista.map((inv) => `
         <tr data-acao="ir" data-secao="detalhe-investimento" data-id="${inv.id}">
-          <td class="papel">${esc(inv.nome)}<small>${esc(inv.tipoAtivo || inv.categoria)}</small></td>
+          <td class="papel" title="${esc(inv.nome)}">${esc(nomeCurtoInvestimento(inv.nome))}<small>${esc(inv.banco || inv.emissor || inv.tipoAtivo || inv.categoria)}</small></td>
           <td class="col-contratada">${esc(inv.indexador || "—")}${inv.taxaContratada ? " " + f2(inv.taxaContratada) + "%" : ""}</td>
           <td class="r">${fmtData(inv.dataAplicacao)}</td>
           <td class="r">${inv.quantidade ? f2(inv.quantidade) : "—"}</td>
