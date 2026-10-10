@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.82";
+  const VERSAO_APP = "3.6.83";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1097,6 +1097,18 @@
     document.getElementById("scrim").classList.add("on");
     const primeiro = m.querySelector("input, select, textarea");
     if (primeiro) setTimeout(() => primeiro.focus(), 30);
+    alinharValoresPainel(m);
+  }
+  // quadros de detalhe: a coluna dos valores fica com a largura do maior valor,
+  // encostada à direita do quadro, e cada valor começa no mesmo ponto (à esquerda)
+  function alinharValoresPainel(m) {
+    const vals = [...m.querySelectorAll(".explica-lista > .kv:not(.kv-cab):not(.kv-total):not(.kv-previsto) > b")]
+      .filter((b) => !b.parentElement.querySelector(".desc-painel"));
+    if (!vals.length) return;
+    vals.forEach((b) => { b.style.minWidth = ""; });
+    const largura = Math.max(...vals.map((b) => b.getBoundingClientRect().width));
+    const limite = (m.querySelector(".explica-lista") || m).getBoundingClientRect().width * 0.6;
+    if (largura > 0 && largura <= limite) vals.forEach((b) => { b.style.minWidth = Math.ceil(largura) + "px"; });
   }
   function fecharModal() {
     painelReabrir = null;
@@ -1439,7 +1451,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.82" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.83" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;

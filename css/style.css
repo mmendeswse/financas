@@ -1763,4 +1763,4 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 }
 /* quadros de detalhe: valores alinhados à esquerda numa coluna de largura fixa
    (as listas de lançamentos, que já têm colunas próprias, ficam de fora) */
-.explica-lista > .kv:not(:has(.desc-painel)):not(.kv-cab):not(.kv-total):not(.kv-previsto) > b { min-width: 140px; text-align: left; flex: none; }
+.explica-lista > .kv:not(:has(.desc-painel)):not(.kv-cab):not(.kv-total):not(.kv-previsto) > b { text-align: left; flex: none; }
