@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.53";
+  const VERSAO_APP = "3.6.54";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -96,7 +96,7 @@
     if (f === FREQ_PERS) {
       const regra = regraDe(reg);
       const n = numeroParcela(regra, mesReg(reg));
-      if (n > 0) return ` <span class="selo-tag selo-cat" title="Parcela ${n} de ${regra.parcelas} · ${esc(rotuloRegra(regra))}">${n}/${regra.parcelas}</span>${semSabado ? "" : seloSabado(reg)}`;
+      if (n > 0) return ` <span class="selo-tag selo-cat" title="Parcela ${n} de ${regra.parcelas} · ${esc(rotuloRegra(regra))}">Parcela ${n}/${regra.parcelas}</span>${semSabado ? "" : seloSabado(reg)}`;
       return ` <span class="selo-tag selo-cat" title="Personalizar: ${esc(rotuloRegra(regra))}, ${esc(rotuloIntervalo(regra.intervalo))}">${esc(rotuloIntervalo(regra.intervalo))}</span>${semSabado ? "" : seloSabado(reg)}`;
     }
     return f === FREQUENCIAS[0] ? "" : ` <span class="selo-tag selo-cat">${esc(f.toLowerCase())}</span>`;
@@ -125,7 +125,7 @@
     const reg = [...DADOS.entradas, ...DADOS.despesas, ...(DADOS.contasPagar || [])].find((r) => r.id === id);
     if (!ehPers(reg)) return "";
     const regra = regraDe(reg), n = numeroParcela(regra, String(data).slice(0, 7));
-    return n > 0 ? ` <span class="selo-tag selo-cat" title="Parcela ${n} de ${regra.parcelas}">${n}/${regra.parcelas}</span>` : "";
+    return n > 0 ? ` <span class="selo-tag selo-cat" title="Parcela ${n} de ${regra.parcelas}">Parcela ${n}/${regra.parcelas}</span>` : "";
   }
   // selo extra quando, na regra de dia útil, contando também os sábados, o dia cai num sábado
   function seloSabado(reg) {
@@ -222,7 +222,7 @@
 
   // Entradas e Despesas usam exatamente as mesmas larguras de coluna
   // colunas proporcionais: a descrição não "empurra" banco, status e valor para a borda
-  const GRID_LANCAMENTOS = "grid-template-columns:96px minmax(200px,1fr) 104px 120px 170px 130px";   // repetição, status, banco e valor juntos, encostados à direita
+  const GRID_LANCAMENTOS = "grid-template-columns:96px minmax(200px,1fr) 116px 120px 170px 130px";   // repetição, status, banco e valor juntos, encostados à direita
 
   let mesesBancos = 0;
   let anoBancos = null;   // período do gráfico da guia Bancos (0 = saldo atual)
@@ -1437,7 +1437,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.53" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.54" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
