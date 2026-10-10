@@ -1694,3 +1694,8 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 /* nome da meta inteiro: se não couber junto, os selos descem para a linha de baixo */
 .meta-topo.meta-topo-linha { flex-wrap: wrap; row-gap: 6px; }
 .meta-topo-linha .meta-nome { flex: 0 1 auto; }
+/* setas do histórico do banco: mês anterior / próximo mês, ao lado do "Mês" */
+.extrato-periodo .extrato-atalhos .btn.extrato-seta { font-size: 16px; line-height: 1; padding: 0 9px; font-weight: 700; }
+@media (max-width: 600px) {
+  .modal-extrato .extrato-periodo .extrato-atalhos { grid-template-columns: auto 1fr auto 1fr 1fr 1fr; }
+}
