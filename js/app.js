@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.103";
+  const VERSAO_APP = "3.6.105";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1468,7 +1468,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.103" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.105" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2302,10 +2302,12 @@
         <label>Até ${campo("extratoFim", fx.fim)}</label>
         <span class="extrato-atalhos">
           <button type="button" class="btn pequeno extrato-seta" data-extrato-passo="-1" title="Mês anterior" aria-label="Mês anterior">‹</button>
-          <button type="button" class="btn pequeno" data-extrato-meses="1">Mês</button>
-          <button type="button" class="btn pequeno" data-extrato-meses="3">3m</button>
-          <button type="button" class="btn pequeno" data-extrato-meses="12">12m</button>
-          <button type="button" class="btn pequeno" data-extrato-meses="0">Tudo</button>
+          <span class="abas abas-periodo extrato-abas">
+            <button type="button" class="ativo" data-extrato-meses="1">Mês</button>
+            <button type="button" data-extrato-meses="3">3m</button>
+            <button type="button" data-extrato-meses="12">12m</button>
+            <button type="button" data-extrato-meses="0">Tudo</button>
+          </span>
           <button type="button" class="btn pequeno extrato-seta" data-extrato-passo="1" title="Próximo mês" aria-label="Próximo mês">›</button>
         </span>
       </div>
@@ -2343,9 +2345,11 @@
       if (c && q) q.textContent = plural(Number(c.dataset.qtd), "lançamento") + " · " + rotuloPeriodoMeses(ini.value, fim.value);
     };
     contarExtrato();
+    // data digitada à mão: nenhum atalho fica marcado
+    const limparAtalho = () => caixa.querySelectorAll("[data-extrato-meses]").forEach((x) => x.classList.remove("ativo"));
     [ini, fim].forEach((el) => {
-      el.addEventListener("change", atualizar);
-      el.addEventListener("input", atualizar);
+      el.addEventListener("change", () => { limparAtalho(); atualizar(); });
+      el.addEventListener("input", () => { limparAtalho(); atualizar(); });
       // no computador, clicar em qualquer parte do campo abre o calendário
       el.addEventListener("click", () => { try { if (el.showPicker) el.showPicker(); } catch (e) { /* sem suporte */ } });
     });
@@ -2359,12 +2363,14 @@
         const mes = `${alvo.getFullYear()}-${String(alvo.getMonth() + 1).padStart(2, "0")}`;
         ini.value = `${mes}-01`;
         fim.value = `${mes}-${String(ultimo).padStart(2, "0")}`;
+        caixa.querySelectorAll("[data-extrato-meses]").forEach((x) => x.classList.toggle("ativo", x.dataset.extratoMeses === "1"));
         atualizar();
       };
     });
     caixa.querySelectorAll("[data-extrato-meses]").forEach((bt) => {
       bt.onclick = (e) => {
         e.stopPropagation();
+        caixa.querySelectorAll("[data-extrato-meses]").forEach((x) => x.classList.toggle("ativo", x === bt));
         const m = Number(bt.dataset.extratoMeses);
         const hj = hojeISO();
         if (!m) {   // Tudo: do primeiro lançamento até hoje
