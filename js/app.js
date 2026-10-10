@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.112";
+  const VERSAO_APP = "3.6.114";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1468,7 +1468,9 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.112" alt="" loading="lazy"></span>`;
+      // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
+      const azulejo = /itau|banco-do-brasil/.test(m.arquivo) ? "" : " marca-azulejo";   // Itaú e BB já têm o quadrado próprio
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.114" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2588,7 +2590,7 @@
       itens = itensDividas(d);
       // Pagas: parcelas já quitadas · Pendentes: tudo o que ainda falta pagar (a lista) · Total: a soma das duas
       const pagas = itens.pagas || 0, pendentes = soma(itens, (i) => -i.valor);
-      resumo = [["Pagas", "Pag.", pagas, "", "up"], ["Pendentes", "Pend.", -pendentes], ["Total", "Tot.", -(pagas + pendentes)]];
+      resumo = [["Pagas", "Pag.", pagas, "", "up fluxo"], ["Pendentes", "Pend.", -pendentes, undefined, "amarelo fluxo"], ["Total", "Tot.", -(pagas + pendentes), undefined, "down fluxo"]];
     }
     // ordem de data, com o total acumulado depois de cada linha
     let saldo = inicial;
