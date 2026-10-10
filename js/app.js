@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.28";
+  const VERSAO_APP = "3.6.29";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1418,7 +1418,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.28" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.29" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1747,6 +1747,16 @@
     return "selo-" + String(categoria || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   }
 
+  // bolinha da barra de data e hora: verde e pulsando com o mercado aberto
+  // (dias úteis, 9h às 18h de Brasília), vermelha com o mercado fechado
+  function renderStatusMercado(agora) {
+    const dot = document.querySelector("#statusVivo .dot-vivo"), caixa = document.getElementById("statusVivo");
+    if (!dot) return;
+    const aberto = mercadoDolarAberto(agora);
+    dot.classList.toggle("fechado", !aberto);
+    if (caixa) caixa.title = aberto ? "Mercado aberto (dias úteis, 9h às 18h)" : "Mercado fechado (abre nos dias úteis às 9h)";
+  }
+
   function renderDolar() {
     const el = document.getElementById("dolarTopbar");
     if (!el) return;
@@ -1756,8 +1766,7 @@
     el.style.cursor = "pointer";
     el.setAttribute("data-acao", "ir-dolar");
     el.setAttribute("title", "Ver histórico do dólar");
-    const aberto = mercadoDolarAberto();
-    el.innerHTML = `<i class="status-mercado ${aberto ? "aberto" : "fechado"}" title="${aberto ? "Mercado aberto" : "Mercado fechado"}"></i><small>USD/BRL</small><b>R$ ${dolar.valor.toFixed(2).replace(".", ",")}</b><span class="${v >= 0 ? "up" : "down"}">${v >= 0 ? "▲" : "▼"} ${Math.abs(v).toFixed(2).replace(".", ",")}%</span>`;
+    el.innerHTML = `<small>USD/BRL</small><b>R$ ${dolar.valor.toFixed(2).replace(".", ",")}</b><span class="${v >= 0 ? "up" : "down"}">${v >= 0 ? "▲" : "▼"} ${Math.abs(v).toFixed(2).replace(".", ",")}%</span>`;
   }
 
   // Pílulas do Bitcoin e do Ethereum ao lado do dólar. Clicando, abre a tela
@@ -1936,12 +1945,11 @@
         renderRota();
       }
       if (rel) rel.textContent = agora.toLocaleTimeString("pt-BR");
+      renderStatusMercado(agora);
       if (dataEl) dataEl.textContent = agora.toLocaleDateString("pt-BR", { weekday: "short", day: "numeric", month: "short", year: "numeric" }).replace(/\./g, "");
     };
     tick();
     setInterval(tick, 1000);
-    // a bolinha de mercado aberto/fechado do USD/BRL muda de cor na hora certa
-    setInterval(renderDolar, 60 * 1000);
   }
 
   function atualizarSidebarMeta() {
