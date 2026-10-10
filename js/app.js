@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.73";
+  const VERSAO_APP = "3.6.74";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -690,13 +690,13 @@
     if (r.avisos.length && !r.investimentos.length && !r.acoes.length) { toast(r.avisos[0]); return; }
     const dataRef = r.data || hojeISO();
     const total = r.investimentos.reduce((t, i) => t + i.valorAtual, 0) + r.acoes.reduce((t, a) => t + a.valorAtual, 0);
-    const linha = (rot, val) => `<div class="kv"><span class="dim">${rot}</span><b>${val}</b></div>`;
+    const linha = (rot, val, c) => `<div class="kv"><span class="dim">${rot}</span><b class="${c || ""}">${val}</b></div>`;
     abrirModal(`
       <h3>Importar PDF — ${esc(r.banco)} · ${fmtData(dataRef)}</h3>
       <div class="explica-lista">
-        ${r.investimentos.map((i) => linha(esc(i.nome), brl(i.valorAtual))).join("")}
-        ${r.acoes.map((a) => linha(`${esc(a.ticker)} · ${a.quantidade} un.`, brl(a.valorAtual))).join("")}
-        ${linha("Total do extrato", brl(total))}
+        ${r.investimentos.map((i) => linha(esc(i.nome), brlSinal(i.valorAtual), corSinal(i.valorAtual))).join("")}
+        ${r.acoes.map((a) => linha(`${esc(a.ticker)} · ${a.quantidade} un.`, brlSinal(a.valorAtual), corSinal(a.valorAtual))).join("")}
+        ${linha("Total do extrato", brlSinal(total), corSinal(total))}
       </div>
       <p class="campo ajuda" style="margin-top:12px"><b>Atualizar</b> mantém o que você já tem e renova os valores dos ativos do extrato (os novos são acrescentados). <b>Substituir</b> troca tudo das guias Investimentos e Ações pelo conteúdo do PDF.</p>
       <div class="modal-acoes">
@@ -1439,7 +1439,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.73" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.74" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2133,8 +2133,8 @@
         conta: "saldo = saldo inicial + entradas − despesas",
         pct: p.bruto > 0 ? (p.bancos / p.bruto) * 100 : 0,
         pctRotulo: "do patrimônio bruto está em conta",
-        linhas: bancosNaOrdem(F.listaBancosComSaldo(d)).map((b) => linha(esc(b.nome), brl(b.saldoAtual))).join("") +
-          linha("Total", brl(p.bancos), "up"),
+        linhas: bancosNaOrdem(F.listaBancosComSaldo(d)).map((b) => linha(esc(b.nome), brlSinal(b.saldoAtual), corSinal(b.saldoAtual))).join("") +
+          linha("Total", brlSinal(p.bancos), corSinal(p.bancos)),
         secao: "bancos"
       },
       investido: {
@@ -2148,7 +2148,7 @@
             linha("Renda fixa, Tesouro e Fundos", `<span class="valor-guia up">+${brl(investLiq)}</span>`) +
             linha("Ações, FIIs e ETFs", `<span class="valor-guia up">+${brl(p.acoes)}</span>`) +
             (p.cripto > 0 ? linha("Criptomoedas (BTC, ETH)", `<span class="valor-guia up">+${brl(p.cripto)}</span>`) : "") +
-            linha("Total", "+" + brl(investLiq + p.acoes + p.cripto));
+            linha("Total", brlSinal(investLiq + p.acoes + p.cripto), corSinal(investLiq + p.acoes + p.cripto));
         })(),
         secao: "investimentos"
       },
@@ -2589,24 +2589,24 @@
     let detalhe = "";
     let secao = "investimentos";
     if (rotulo === "Bancos") {
-      detalhe = bancosNaOrdem(F.listaBancosComSaldo(d)).map((b) => linha(esc(b.nome), brlSinal(b.saldoAtual))).join("");
+      detalhe = bancosNaOrdem(F.listaBancosComSaldo(d)).map((b) => linha(esc(b.nome), brlSinal(b.saldoAtual), corSinal(b.saldoAtual))).join("");
       secao = "bancos";
     } else if (["Ações", "FIIs", "ETFs"].indexOf(rotulo) > -1) {
       const cat = rotulo === "Ações" ? "Ação" : rotulo === "FIIs" ? "FII" : "ETF";
       detalhe = I.listaAcoesComCalculo(d).filter((a) => a.categoria === cat)
-        .map((a) => linha(esc(a.ticker) + " · " + a.quantidade + " un.", brlSinal(a.valorAtual))).join("");
+        .map((a) => linha(esc(a.ticker) + " · " + a.quantidade + " un.", brlSinal(a.valorAtual), corSinal(a.valorAtual))).join("");
       secao = "acoes";
     } else {
       detalhe = d.investimentos.filter((i) => rotuloCategoriaComp(i.categoria || "Outros") === rotulo)
-        .map((i) => linha(esc(i.nome), brlSinal(I.valorLiquidoInvestimento(i)))).join("");
+        .map((i) => linha(esc(i.nome), brlSinal(I.valorLiquidoInvestimento(i)), corSinal(I.valorLiquidoInvestimento(i)))).join("");
       if (rotulo === "Criptomoedas") {
-        detalhe += I.listaCripto(d).map((c) => linha(`${c.moeda} · ${fmtQtdCripto(c.quantidade)}`, brlSinal(c.valor))).join("");
+        detalhe += I.listaCripto(d).map((c) => linha(`${c.moeda} · ${fmtQtdCripto(c.quantidade)}`, brlSinal(c.valor), corSinal(c.valor))).join("");
         if (!d.investimentos.some((i) => rotuloCategoriaComp(i.categoria || "Outros") === rotulo)) secao = "acoes";
       }
     }
     painelSimples(rotulo, total > 0 ? (item.valor / total) * 100 : 0, "do seu patrimônio líquido",
       "valor deste grupo ÷ patrimônio líquido",
-      detalhe + linha("Total", brlSinal(item.valor), "up"), secao);
+      detalhe + linha("Total", brlSinal(item.valor), corSinal(item.valor)), secao);
   }
 
   // TOTAL do quadro "Composição patrimônio": quanto há em cada classe;
@@ -2616,7 +2616,7 @@
     if (!itens.length) return;
     const total = itens.reduce((s, i) => s + i.valor, 0);
     const bancos = itens.filter((i) => i.rotulo === "Bancos").reduce((s, i) => s + i.valor, 0);
-    const linhas = itens.map((i) => `<div class="kv kv-editavel" data-classe="${esc(i.rotulo)}" title="Ver detalhes"><span class="dim">${emojiClasse(i.rotulo)} ${esc(i.rotulo)} · ${(total > 0 ? (i.valor / total) * 100 : 0).toFixed(1).replace(".", ",")}%</span><b>${brlSinal(i.valor)}</b></div>`).join("");
+    const linhas = itens.map((i) => `<div class="kv kv-editavel" data-classe="${esc(i.rotulo)}" title="Ver detalhes"><span class="dim">${emojiClasse(i.rotulo)} ${esc(i.rotulo)} · ${(total > 0 ? (i.valor / total) * 100 : 0).toFixed(1).replace(".", ",")}%</span><b class="${corSinal(i.valor)}">${brlSinal(i.valor)}</b></div>`).join("");
     painelSimples("Composição patrimônio", total > 0 ? ((total - bancos) / total) * 100 : 0, "do total está investido",
       "soma dos ativos líquidos (bancos + investimentos sem IR + ações + cripto)",
       linhas + `<div class="kv"><span class="dim">Total</span><b class="${corSinal(total)}">${brlSinal(total)}</b></div>`, "investimentos");
@@ -2633,8 +2633,8 @@
     // cada linha abre a edição da meta
     const linha = (r, v, c) => `<div class="kv kv-editavel" data-acao-editar="editar-meta" data-id="${esc(m.id)}" title="Abrir para editar"><span class="dim">${rotuloPainel(r)}</span><b class="${c || ""}">${v}</b></div>`;
     painelSimples(nomeMeta(m), progresso, "do objetivo já foi guardado", "valor atual ÷ objetivo",
-      linha("Objetivo", brl(m.objetivo)) + linha("Guardado", brl(m.atual), "up") +
-      linha("Faltam", brl(falta), falta > 0 ? "down" : "up") +
+      linha("Objetivo", brlSinal(m.objetivo), corSinal(m.objetivo)) + linha("Guardado", brlSinal(m.atual), corSinal(m.atual)) +
+      linha("Faltam", brlSinal(-falta), corSinal(-falta)) +
       linha("Prazo", m.prazo ? fmtData(m.prazo) : "sem prazo"),
       "metas", { rotulo: "+ Adicionar", acao: () => abrirModalDeposito(m.id) });
     // Editar ao lado de Adicionar, no mesmo padrão do quadro do banco
@@ -2657,7 +2657,7 @@
       const taxa = entradas > 0 ? (sobra / entradas) * 100 : 0;
       painelSimples("Taxa Poupança", taxa, "das receitas do mês sobraram", "(receitas − despesas) ÷ receitas",
         linha("Saudável", "20% ou mais") +
-        linha("+ Entradas", brl(entradas), "up") + linha("− Despesas", brl(despesas), "down") +
+        linha("+ Entradas", brlSinal(entradas), corSinal(entradas)) + linha("− Despesas", brlSinal(-despesas), corSinal(-despesas)) +
         linha("Saldo", brlSinal(sobra), corSinal(sobra)), "entradas");
       return;
     }
@@ -2683,7 +2683,7 @@
         "do total gasto no mês veio deste lançamento", "maior valor entre as despesas do mês",
         linha("Descrição", descEmoji(maior)) + linha("Valor", "−" + brl(maior.valor), "down") +
         linha("Categoria", esc(maior.categoria || "—")) + linha("Data", fmtData(maior.data)) +
-        linha("Total", brl(despesas)), "despesas");
+        linha("Total", brlSinal(-despesas), corSinal(-despesas)), "despesas");
       return;
     }
     if (chave === "melhorativo") {
@@ -2693,8 +2693,8 @@
       painelSimples(`${esc(a.ticker)} · melhor ativo`, a.rentabilidade, "de rentabilidade sobre o preço médio",
         "(preço atual ÷ preço médio − 1) × 100",
         linha("Empresa", esc(a.empresa || "—")) + linha("Quantidade", String(a.quantidade)) +
-        linha("Preço médio", brl(a.precoMedio)) + linha("Preço atual", brl(a.precoAtual)) +
-        linha("Valor investido", brl(a.valorInvestido)) + linha("Valor atual", brl(a.valorAtual)) +
+        linha("Preço médio", brlSinal(a.precoMedio), corSinal(a.precoMedio)) + linha("Preço atual", brlSinal(a.precoAtual), corSinal(a.precoAtual)) +
+        linha("Valor investido", brlSinal(a.valorInvestido), corSinal(a.valorInvestido)) + linha("Valor atual", brlSinal(a.valorAtual), corSinal(a.valorAtual)) +
         linha("Resultado", brlSinal(a.resultado), corSinal(a.resultado)), "acoes");
       return;
     }
@@ -2741,35 +2741,35 @@
       const mapa = {};
       lista.forEach((m) => { const k = m.categoria || "Outros"; mapa[k] = (mapa[k] || 0) + Number(m.valor || 0); });
       return Object.keys(mapa).sort((a, b) => mapa[b] - mapa[a])
-        .map((k) => linha("· " + esc(k), (sinal || "") + brl(mapa[k]))).join("");
+        .map((k) => linha("· " + esc(k), brlSinal(sinal === "−" ? -mapa[k] : mapa[k]), corSinal(sinal === "−" ? -mapa[k] : mapa[k]))).join("");
     };
 
     if (chave === "rel-receitas") {
       painelSimples("Receitas", totE > 0 ? 100 : 0, `do que entrou no período (${periodo})`, "soma das entradas no período",
         porCategoria(entradas, "+") +
-        linha("Lançamentos", plural(entradas.length, "entrada")) + linha("Total", "+" + brl(totE), "up"), "entradas");
+        linha("Lançamentos", plural(entradas.length, "entrada")) + linha("Total", brlSinal(totE), corSinal(totE)), "entradas");
       return;
     }
     if (chave === "rel-despesas") {
       painelSimples("Despesas", totE > 0 ? (totD / totE) * 100 : 0, "das receitas do período foram gastas", "soma das despesas ÷ receitas",
         porCategoria(despesas, "−") +
-        linha("Lançamentos", plural(despesas.length, "despesa")) + linha("Total", "−" + brl(totD), "down"), "despesas");
+        linha("Lançamentos", plural(despesas.length, "despesa")) + linha("Total", brlSinal(-totD), corSinal(-totD)), "despesas");
       return;
     }
     if (chave === "rel-resultado") {
       const saldo = totE - totD;
       painelSimples("Resultado", totE > 0 ? (saldo / totE) * 100 : 0, "das receitas sobraram no período", "receitas − despesas",
         linha("Período", periodo) +
-        linha("+ Receitas", brl(totE), "up") + linha("− Despesas", brl(totD), "down") +
+        linha("+ Receitas", brlSinal(totE), corSinal(totE)) + linha("− Despesas", brlSinal(-totD), corSinal(-totD)) +
         linha("Resultado", brlSinal(saldo), corSinal(saldo)), "entradas");
       return;
     }
     if (chave === "rel-rentabilidade") {
       const rent = I.rentabilidadeCarteiraAcoes(d);
       painelSimples("Rentabilidade da carteira", rent, "acumulada em relação ao preço médio", "(valor atual ÷ valor investido − 1) × 100",
-        linha("Valor investido", brl(I.totalInvestidoAcoes(d))) +
-        linha("Valor atual", brl(I.totalCarteiraAcoes(d)), "creme") +
-        linha("Dividendos recebidos", brl(I.totalDividendosAcoes(d)), "up") +
+        linha("Valor investido", brlSinal(I.totalInvestidoAcoes(d)), corSinal(I.totalInvestidoAcoes(d))) +
+        linha("Valor atual", brlSinal(I.totalCarteiraAcoes(d)), corSinal(I.totalCarteiraAcoes(d))) +
+        linha("Dividendos recebidos", brlSinal(I.totalDividendosAcoes(d)), corSinal(I.totalDividendosAcoes(d))) +
         linha("Ativos carteira", plural(d.acoes.length, "ativo")) +
         linha("Resultado", brlSinal(I.resultadoCarteiraAcoes(d)), corSinal(I.resultadoCarteiraAcoes(d))), "acoes");
     }
@@ -2847,16 +2847,16 @@
       "bancos + investimentos + ações + cripto − dívidas",
       marco +
       secao("Resumo") +
-      linha("Patrimônio", brlSinal(ponto.valor)) +
+      linha("Patrimônio", brlSinal(ponto.valor), corSinal(ponto.valor)) +
       (anterior ? linha("Variação no mês", `${brlSinal(varMes)} (${pctTxt(pctMes)})`, corSinal(varMes)) : "") +
       linha("Desde o início", `${brlSinal(varPeriodo)} (${pctTxt(pctPeriodo)})`, corSinal(varPeriodo)) +
-      (idx !== iPico ? linha("Distância do pico", brlSinal(ponto.valor - pico.valor), "down") : "") +
+      (idx !== iPico ? linha("Distância do pico", brlSinal(ponto.valor - pico.valor), corSinal(ponto.valor - pico.valor)) : "") +
       (temComp ? secao("Composição") +
-        linha("+ Bancos", brlSinal(ponto.bancos)) +
-        linha("+ Investimentos", brlSinal(ponto.investimentos)) +
-        linha("+ Ações e FIIs", brlSinal(ponto.acoes)) +
-        (ponto.cripto > 0 ? linha("+ Criptomoedas", brlSinal(ponto.cripto)) : "") +
-        (ponto.dividas > 0 ? linha("− Dívidas", "−" + brl(ponto.dividas), "down") : "") : "") +
+        linha("+ Bancos", brlSinal(ponto.bancos), corSinal(ponto.bancos)) +
+        linha("+ Investimentos", brlSinal(ponto.investimentos), corSinal(ponto.investimentos)) +
+        linha("+ Ações e FIIs", brlSinal(ponto.acoes), corSinal(ponto.acoes)) +
+        (ponto.cripto > 0 ? linha("+ Criptomoedas", brlSinal(ponto.cripto), corSinal(ponto.cripto)) : "") +
+        (ponto.dividas > 0 ? linha("− Dívidas", brlSinal(-ponto.dividas), "down") : "") : "") +
       secao("Movimento do mês") +
       linha("+ Entradas", "+" + brl(entradasMes), "up") +
       linha("− Despesas", "−" + brl(despesasMes), "down") +
@@ -3109,12 +3109,12 @@
       <div class="grid">
         <div class="c6">${card("card-centrado", "Composição patrimônio", "ativos líquidos", `<button class="pill-periodo clicavel ${corSinal(total)}" data-acao="explicar-composicao" title="Ver o total de cada classe">TOTAL ${brlSinal(total)}</button>`, `<div class="donut-wrap"><div class="donut-centro"><canvas id="graf-patrimonio-divisao" width="150" height="150" style="width:150px;height:150px"></canvas><div class="donut-rotulo"><b>${brl(p.bruto).replace("R$", "").trim()}</b><span class="acc-laranja">BRUTO</span></div></div><div class="legenda">${legendaHtml}</div></div>`)}</div>
         <div class="c6">${card("", "Resumo patrimonial", "", "", `
-          <div class="kv"><span class="dim">Dinheiro em bancos</span><b>${brl(p.bancos)}</b></div>
-          <div class="kv"><span class="dim">+ Ações e FIIs</span><b>${brl(p.acoes)}</b></div>
-          ${p.cripto > 0 ? `<div class="kv"><span class="dim">+ Criptomoedas (BTC, ETH)</span><b>${brl(p.cripto)}</b></div>` : ""}
-          <div class="kv"><span class="dim">+ Investimentos (renda fixa, tesouro, fundos...)</span><b>${brl(p.investimentos)}</b></div>
-          <div class="kv"><span class="dim">− Dívidas (contas em aberto e parcelas a pagar)</span><b class="down">${brl(p.dividas)}</b></div>
-        `, `<span>PATRIMÔNIO LÍQUIDO</span><span class="${corSinal(p.liquido)}" style="font-size:15px">${brl(p.liquido)}</span>`)}</div>
+          <div class="kv"><span class="dim">Dinheiro em bancos</span><b class="${corSinal(p.bancos)}">${brlSinal(p.bancos)}</b></div>
+          <div class="kv"><span class="dim">+ Ações e FIIs</span><b class="${corSinal(p.acoes)}">${brlSinal(p.acoes)}</b></div>
+          ${p.cripto > 0 ? `<div class="kv"><span class="dim">+ Criptomoedas (BTC, ETH)</span><b class="${corSinal(p.cripto)}">${brlSinal(p.cripto)}</b></div>` : ""}
+          <div class="kv"><span class="dim">+ Investimentos (renda fixa, tesouro, fundos...)</span><b class="${corSinal(p.investimentos)}">${brlSinal(p.investimentos)}</b></div>
+          <div class="kv"><span class="dim">− Dívidas (contas em aberto e parcelas a pagar)</span><b class="down">${brlSinal(-p.dividas)}</b></div>
+        `, `<span>PATRIMÔNIO LÍQUIDO</span><span class="${corSinal(p.liquido)}" style="font-size:15px">${brlSinal(p.liquido)}</span>`)}</div>
       </div>
     `;
   }
@@ -4994,12 +4994,12 @@
     const linha = (r, v, c) => `<div class="kv"><span class="dim">${rotuloPainel(r)}</span><b class="${c || ""}">${v}</b></div>`;
     painelSimples(`${esc(inv.nome)} · ${fmtData(ponto.data)}`, aplicado > 0 ? (resultado / aplicado) * 100 : 0,
       "de rendimento sobre o valor aplicado", "(valor na data ÷ valor aplicado − 1) × 100",
-      linha("Valor na data", brl(ponto.valor), "creme") +
-      linha("Valor Aplicado", brl(aplicado)) +
+      linha("Valor na data", brlSinal(ponto.valor), corSinal(ponto.valor)) +
+      linha("Valor Aplicado", brlSinal(aplicado), corSinal(aplicado)) +
       linha("Resultado", brlSinal(resultado), corSinal(resultado)) +
-      (anterior ? linha("Registro anterior", `${brl(anterior.valor)} · ${fmtData(anterior.data)}`) : "") +
+      (anterior ? linha("Registro anterior", `${brlSinal(anterior.valor)} · ${fmtData(anterior.data)}`, corSinal(anterior.valor)) : "") +
       (anterior ? linha("Variação", brlSinal(varAnt), corSinal(varAnt)) : "") +
-      linha("Valor atual", brl(inv.valorAtual)),
+      linha("Valor atual", brlSinal(inv.valorAtual), corSinal(inv.valorAtual)),
       "investimentos",
       { rotulo: "Editar", acao: () => abrirModalInvestimento(inv.id) });
   }
