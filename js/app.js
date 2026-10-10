@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.86";
+  const VERSAO_APP = "3.6.92";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1093,6 +1093,7 @@
   function abrirModal(html, largo) {
     const m = document.getElementById("modal");
     m.className = "modal on" + (largo ? " largo" : "");
+    m.style.width = "";   // a largura ajustada de um histórico não passa para o próximo quadro
     m.innerHTML = html;
     document.getElementById("scrim").classList.add("on");
     const primeiro = m.querySelector("input, select, textarea");
@@ -1136,8 +1137,10 @@
         if (painelReabrir) painelReabrir();   // redesenha com o banco novo
         return;
       }
+      const ab = e.target.closest("[data-abrir-banco]");
+      if (ab) { e.stopPropagation(); explicarBanco(ab.dataset.abrirBanco); return; }
       const hc = e.target.closest("[data-historico-classe]");
-      if (hc) { e.stopPropagation(); explicarHistoricoClasse(hc.dataset.historicoClasse); return; }
+      if (hc) { e.stopPropagation(); origemHistorico = painelKpiAberto || "patrimonio"; explicarHistoricoClasse(hc.dataset.historicoClasse); return; }
       const ir = e.target.closest("[data-ir-secao]");
       if (ir) { e.stopPropagation(); irParaLancamento(ir.dataset.irSecao, ir.dataset.irId, ir.dataset.irData); return; }
       const ln = e.target.closest("[data-acao-editar]");
@@ -1451,7 +1454,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.86" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.92" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2104,6 +2107,7 @@
   // mostrando a conta com os seus próprios números
   // ---------------------------------------------------------------------
   let painelKpiAberto = null;
+  let origemHistorico = null;   // quadro de onde o histórico da classe foi aberto (para o Voltar)
   let painelReabrir = null;
   function explicarKPI(chave) {
     painelKpiAberto = chave;
@@ -2145,7 +2149,7 @@
         conta: "saldo = saldo inicial + entradas − despesas",
         pct: p.bruto > 0 ? (p.bancos / p.bruto) * 100 : 0,
         pctRotulo: "do patrimônio bruto está em conta",
-        linhas: bancosNaOrdem(F.listaBancosComSaldo(d)).map((b) => linha(esc(b.nome), brlSinal(b.saldoAtual))).join("") +
+        linhas: bancosNaOrdem(F.listaBancosComSaldo(d)).map((b) => linhaBancoClicavel(b.id, linha(esc(b.nome), brlSinal(b.saldoAtual)))).join("") +
           linha("Total", brlSinal(p.bancos), corSinal(p.bancos)),
         secao: "bancos"
       },
@@ -2156,10 +2160,12 @@
         pctRotulo: "do patrimônio bruto está investido",
         linhas: (() => {
           const investLiq = I.totalLiquidoOutros(d);
+          // cada classe abre o histórico dela, como as linhas do Patrimônio total
+          const abre = (classe, html) => html.replace('<div class="kv">', `<div class="kv kv-editavel" data-historico-classe="${classe}" title="Ver o histórico">`);
           return linha("Rentabilidade carteira", pct(I.rentabilidadeCarteiraAcoes(d)), corSinal(I.rentabilidadeCarteiraAcoes(d))) +
-            linha("Renda fixa, Tesouro e Fundos", brlSinal(investLiq)) +
-            linha("Ações, FIIs e ETFs", brlSinal(p.acoes)) +
-            (p.cripto > 0 ? linha("Criptomoedas (BTC, ETH)", brlSinal(p.cripto)) : "") +
+            abre("investimentos", linha("Renda fixa, Tesouro e Fundos", brlSinal(investLiq))) +
+            abre("acoes", linha("Ações, FIIs e ETFs", brlSinal(p.acoes))) +
+            (p.cripto > 0 ? abre("cripto", linha("Criptomoedas (BTC, ETH)", brlSinal(p.cripto))) : "") +
             linha("Total", brlSinal(investLiq + p.acoes + p.cripto), corSinal(investLiq + p.acoes + p.cripto));
         })(),
         secao: "investimentos"
@@ -2488,8 +2494,10 @@
     let pagas = 0;   // parcelas das séries que já foram pagas
     const hoje = hojeISO();
     const selo = (dt) => String(dt) < hoje ? `<span class="selo-tag selo-atrasado">Vencida</span>` : `<span class="selo-tag selo-pendente">Pendente</span>`;
+    // banco de cada dívida: o do mês (se foi trocado), o da conta ou o do cartão
+    const bancoDe = (x, data) => { const nome = bancoDoLancamento(d, { ...x, bancoId: bancoDoMes(x, String(data).slice(0, 7)) }); return nome && nome !== "—" ? nome : ""; };
     const add = (x, data, valor, status, tipo) => itens.push({ data, desc: descEmoji(x, x.categoria || "Conta"), status, valor: -Number(valor || 0),
-      ref: { secao: "despesas", id: x.id, data }, tipo: tipo || "conta" });
+      ref: { secao: "despesas", id: x.id, data }, tipo: tipo || "conta", banco: bancoDe(x, data) });
     // contas em aberto vencidas ou do mês atual (as mesmas de F.totalDividas)
     (d.contasPagar || []).filter((c) => c.status !== "Pago" && !(ehPers(c) && Number(regraDe(c).parcelas) > 0) && String(c.vencimento || "").slice(0, 7) <= F.mesAtual())
       .forEach((c) => add(c, c.vencimento, c.valor, selo(c.vencimento)));
@@ -2525,8 +2533,12 @@
       bancosNaOrdem(F.listaBancosComSaldo(d)).forEach((b) => {
         const ext = F.extratoDoBanco(d, b.id);
         inicial += Number(ext.saldoInicial || 0);
-        ext.itens.forEach((i) => itens.push({ data: i.data, valor: i.valor, ref: i.ref,
-          desc: descEmoji(i) + (i.tipo === "transferencia" ? ` <span class="dim">⇄</span>` : ""), banco: b.nome,
+        // recorrência (mensal, Parcela 05/16…) e "Categoria · Tipo" embaixo da descrição, como nas guias
+        const todosReg = [...d.entradas, ...d.despesas, ...(d.contasPagar || [])];
+        const repDe = (ref) => { const o = ref && ref.id ? todosReg.find((r) => r.id === ref.id) : null; return o ? seloFreq({ ...o, data: ref.data || dataReg(o) }, true).trim() : ""; };
+        ext.itens.forEach((i) => itens.push({ data: i.data, valor: i.valor, ref: i.ref, rep: i.tipo === "transferencia" ? "" : repDe(i.ref),
+          desc: descEmoji(i) + (i.tipo === "transferencia" ? ` <span class="dim">⇄</span>` : "") +
+            (i.ref && i.tipo !== "transferencia" ? `<span class="desc-sub">${subDe({ id: i.ref.id, categoria: i.categoria })}</span>` : ""), banco: b.nome,
           status: i.tipo === "transferencia" ? selo("Transf.") : selo("Pago", "selo-pago") }));
       });
       const ent = soma(itens.filter((i) => i.valor > 0), (i) => i.valor), sai = soma(itens.filter((i) => i.valor < 0), (i) => -i.valor);
@@ -2566,13 +2578,15 @@
     let saldo = inicial;
     itens = itens.sort((a, b) => String(a.data).localeCompare(String(b.data)))
       .map((i) => { saldo = r2(saldo + i.valor); return { ...i, saldo }; });
-    // em Bancos, a coluna Banco mostra de qual conta é cada lançamento
-    const comBanco = classe === "bancos";
+    // em Bancos e Dívidas, a coluna Banco mostra de qual conta é cada lançamento;
+    // a coluna Recorrência só em Bancos (em Dívidas o Status já mostra a parcela)
+    const comBanco = classe === "bancos" || classe === "dividas", comRep = classe === "bancos";
     const linha = (i) => `
       <div class="extrato-linha${i.ref ? " clicavel" : ""}"${i.ref ? ` data-ir-secao="${i.ref.secao}" data-ir-id="${esc(String(i.ref.id))}" data-ir-data="${esc(String(i.ref.data || ""))}" title="Ver na guia ${i.ref.secao === "entradas" ? "Entradas" : "Despesas"}"` : ""}>
         <span class="dim">${i.data ? fmtDataCurta(i.data) : "—"}</span>
         <span class="desc"${i.banco ? ` title="${esc(i.banco)}"` : ""}>${i.desc}</span>
-        <span class="status">${i.status || ""}${comBanco ? `<span class="banco-movel">${esc(i.banco || "")}</span>` : ""}</span>
+        ${comRep ? `<span class="rep">${celRep(i.rep)}</span>` : ""}
+        <span class="status">${i.status || ""}${comRep && i.rep ? `<span class="rep-movel">${i.rep}</span>` : ""}${comBanco ? `<span class="banco-movel">${esc(i.banco || "")}</span>` : ""}</span>
         ${comBanco ? `<span class="banco">${i.banco ? marcaBanco(i.banco, 20) + `<span>${esc(i.banco)}</span>` : "—"}</span>` : ""}
         <b class="${corSinal(i.valor)}">${brlSinal(i.valor)}</b>
         <b class="saldo${i.saldo < 0 ? " down" : ""}">${brl(Math.abs(i.saldo))}</b>
@@ -2580,8 +2594,8 @@
     const cel = ([rot, curto, v, sinal, cls]) => celResumo(rot, curto, Math.abs(r2(v)), sinal !== undefined ? sinal : (r2(v) > 0 ? "+" : r2(v) < 0 ? "−" : ""), cls || corSinal(v));
     return { titulo, total: r2(saldo), qtd: itens.length, html: `
       <div class="extrato-titulo"><span>Histórico</span><span class="dim">${plural(itens.length, "lançamento")}</span></div>
-      <div class="extrato-tabela extrato-classe${comBanco ? " extrato-com-banco" : ""}">
-        <div class="extrato-cab"><span>Data</span><span>Descrição</span><span class="status">Status</span>${comBanco ? `<span class="banco">Banco</span>` : ""}<span>Valor</span><span>Saldo</span></div>
+      <div class="extrato-tabela extrato-classe${comRep ? " extrato-com-banco" : comBanco ? " extrato-so-banco" : ""}">
+        <div class="extrato-cab"><span>Data</span><span>Descrição</span>${comRep ? `<span class="rep">Recorrência</span>` : ""}<span class="status">Status</span>${comBanco ? `<span class="banco">Banco</span>` : ""}<span>Valor</span><span>Saldo</span></div>
         <div class="explica-lista extrato-banco">${itens.length ? itens.map(linha).join("") : `<div class="extrato-linha"><span></span><span class="desc dim">Nada por aqui ainda</span><span></span><span></span><span></span></div>`}</div>
         <div class="extrato-resumo">${resumo.map(cel).join("")}</div>
       </div>` };
@@ -2599,12 +2613,28 @@
         <button class="btn" id="btnVoltarPainel">Voltar</button>
         <button class="btn" id="btnFecharPainel">Fechar</button>
       </div>`);
-    document.getElementById("modal").classList.add("modal-extrato", ...(classe === "bancos" ? [] : ["modal-classe"]));
+    document.getElementById("modal").classList.add("modal-extrato", classe === "bancos" ? "modal-bancos" : classe === "dividas" ? "modal-dividas" : "modal-classe");
     document.getElementById("btnIrPainel").onclick = () => { fecharModal(); navegarPara(secao); };
-    document.getElementById("btnVoltarPainel").onclick = () => explicarKPI("patrimonio");
+    document.getElementById("btnVoltarPainel").onclick = () => explicarKPI(origemHistorico || "patrimonio");
     document.getElementById("btnFecharPainel").onclick = fecharModal;
     const ext = document.querySelector("#modal .extrato-banco");
     if (ext) ext.scrollTop = ext.scrollHeight;   // abre no fim, onde está o total atual
+    ajustarLarguraHistorico();
+  }
+  // descrição numa linha só: o quadro ganha a largura exata para a maior descrição
+  // caber inteira (sem sobrar vão antes do Status); no celular, quebra linha
+  function ajustarLarguraHistorico() {
+    const m = document.getElementById("modal");
+    if (!m || window.innerWidth <= 560) return;
+    const descs = [...m.querySelectorAll(".extrato-classe .extrato-linha .desc")];
+    if (!descs.length) return;
+    m.style.width = "";
+    descs.forEach((el) => { el.style.whiteSpace = "nowrap"; });
+    const coluna = descs[0].getBoundingClientRect().width;
+    const maior = Math.max(...descs.map((el) => { const r = document.createRange(); r.selectNodeContents(el); return r.getBoundingClientRect().width; }));
+    const largura = Math.max(640, Math.ceil(m.getBoundingClientRect().width - coluna + maior + 4));
+    if (largura <= window.innerWidth - 24) m.style.width = largura + "px";
+    else descs.forEach((el) => { el.style.whiteSpace = ""; });   // não cabe na tela: volta a quebrar linha
   }
 
   function explicarClasse(rotulo) {
@@ -2617,7 +2647,7 @@
     let detalhe = "";
     let secao = "investimentos";
     if (rotulo === "Bancos") {
-      detalhe = bancosNaOrdem(F.listaBancosComSaldo(d)).map((b) => linha(esc(b.nome), brlSinal(b.saldoAtual))).join("");
+      detalhe = bancosNaOrdem(F.listaBancosComSaldo(d)).map((b) => linhaBancoClicavel(b.id, linha(esc(b.nome), brlSinal(b.saldoAtual)))).join("");
       secao = "bancos";
     } else if (["Ações", "FIIs", "ETFs"].indexOf(rotulo) > -1) {
       const cat = rotulo === "Ações" ? "Ação" : rotulo === "FIIs" ? "FII" : "ETF";
@@ -3572,6 +3602,10 @@
   }
 
   // marca a linha do painel como clicável para abrir a edição
+  // linha de um banco nos quadros de detalhe: clicar abre o quadro daquele banco
+  function linhaBancoClicavel(id, html) {
+    return html.replace('<div class="kv">', `<div class="kv kv-editavel" data-abrir-banco="${esc(id)}" title="Abrir o banco">`);
+  }
   function linhaEditavel(item, html) {
     if (!item || !item.acaoEditar) return html;
     return html.replace('<div class="kv">', `<div class="kv kv-editavel" data-acao-editar="${item.acaoEditar}" data-id="${esc(item.id)}" data-data="${item.data || ""}" title="Abrir para editar">`);
@@ -5943,14 +5977,14 @@
     const rotuloPeriodo = rotulo(mesesRelA, anoRelA);
 
     return `
-      <div class="grid g-top">
+      <div class="grid g-top rel-kpis">
         <div class="c3">${metricCard("Receitas", "+" + brl(entradasP), ICONES_STRIP.poupanca, "var(--up)", "", rotuloPeriodo, null, "0 0 24 24", "rel-receitas")}</div>
         <div class="c3">${metricCard("Despesas", "−" + brl(despesasP), ICONES_STRIP.maiorgasto, "var(--down)", "", rotuloPeriodo, null, "0 0 24 24", "rel-despesas")}</div>
         <div class="c3">${metricCard("Resultado", brlSinal(entradasP - despesasP), ICONES_STRIP.projecao, corSinal(entradasP - despesasP) === "up" ? "var(--up)" : "var(--down)", "", rotuloPeriodo, null, "0 0 24 24", "rel-resultado")}</div>
         <div class="c3">${metricCard("Rentabilidade", pct(I.rentabilidadeCarteiraAcoes(d)), ICONES_STRIP.melhorativo, "var(--vi)", "", "Acumulada · Preço Médio", null, "0 0 24 24", "rel-rentabilidade")}</div>
       </div>
       <div class="grid">
-        <div class="c12">${card("", "Receitas x despesas", `${rotulo(mesesRelA, anoRelA)}`, `<div class="filtro-mes">${seletorAnoDash("anoRelA", anoRelA, anosDashboard(d))}${abasMeses("periodo-rel-a", mesesRelA, OPC)}</div>`, `<div style="padding:10px 16px;height:220px"><canvas id="graf-rel-mensal"></canvas></div>`)}</div>
+        <div class="c12">${card("", "Receitas x despesas", `${rotulo(mesesRelA, anoRelA)}`, `<div class="filtro-mes">${seletorAnoDash("anoRelA", anoRelA, anosDashboard(d))}${abasMeses("periodo-rel-a", mesesRelA, OPC)}</div>`, `<div class="rel-grafico" style="padding:10px 16px;height:220px"><canvas id="graf-rel-mensal"></canvas></div>`)}</div>
       </div>
       <div class="grid">
         <div class="c12">${cardEvolucaoPatrimonial(d, { canvas: "graf-rel-evolucao", idAno: "anoRelB", acao: "periodo-rel-b", meses: mesesRelB, ano: anoRelB })}</div>

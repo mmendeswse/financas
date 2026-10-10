@@ -1782,3 +1782,49 @@ button.pill-periodo:hover { filter: brightness(1.25); }
   .extrato-com-banco .extrato-cab span:nth-child(5) { display: block; }
   .extrato-com-banco .extrato-cab span:nth-child(6) { display: none; }
 }
+/* Patrimônio → Bancos: também com Recorrência; quadro mais largo para caber tudo */
+.modal.modal-extrato.modal-bancos { width: 980px; }
+.extrato-com-banco .extrato-cab, .extrato-com-banco .extrato-linha { grid-template-columns: 78px minmax(0, 1fr) 112px 72px 140px 112px 104px; }
+.extrato-com-banco .extrato-cab .rep, .extrato-com-banco .extrato-linha .rep { text-align: left; }
+.extrato-com-banco .extrato-linha .rep .selo-tag { font-size: 9.5px; padding: 1px 6px; }
+@media (max-width: 560px) {
+  .extrato-com-banco .extrato-cab, .extrato-com-banco .extrato-linha { grid-template-columns: 68px minmax(0, 1fr) 98px; }
+  .extrato-com-banco .extrato-cab .rep, .extrato-com-banco .extrato-linha .rep { display: none; }
+  .extrato-com-banco .extrato-cab span:nth-child(5) { display: none; }
+  .extrato-com-banco .extrato-cab span:nth-child(6) { display: block; }
+  .extrato-com-banco .extrato-cab span:nth-child(7) { display: none; }
+}
+/* Patrimônio → Dívidas: coluna Banco depois do Status */
+.modal.modal-extrato.modal-dividas { width: 860px; }
+.extrato-so-banco .extrato-cab, .extrato-so-banco .extrato-linha { grid-template-columns: 78px minmax(0, 1fr) 130px 140px 112px 104px; }
+.extrato-so-banco .extrato-cab .status, .extrato-so-banco .extrato-linha .status, .extrato-so-banco .extrato-cab .banco { text-align: left; }
+.extrato-so-banco .extrato-linha .banco { display: inline-flex; align-items: center; gap: 6px; min-width: 0; font-size: 12.5px; color: var(--dim); }
+.extrato-so-banco .extrato-linha .banco > span { white-space: nowrap; }
+@media (max-width: 560px) {
+  .extrato-so-banco .extrato-cab, .extrato-so-banco .extrato-linha { grid-template-columns: 68px minmax(0, 1fr) 98px; }
+  .extrato-so-banco .extrato-cab .banco, .extrato-so-banco .extrato-linha .banco { display: none; }
+  .extrato-so-banco .extrato-linha .banco-movel { display: inline; margin-left: 6px; font-size: 11px; color: var(--dim); }
+  .extrato-so-banco .extrato-cab span:nth-child(5) { display: block; }
+  .extrato-so-banco .extrato-cab span:nth-child(6) { display: none; }
+}
+/* Relatórios no iPad: os 4 indicadores numa linha só e compactos, e os gráficos
+   ajustam a altura à tela para todos os quadros caberem sem arrastar a página */
+@media (min-width: 700px) {
+  .rel-kpis > .c3 { grid-column: span 3 !important; }
+  .rel-kpis .metric { padding: 10px 14px; }
+  .rel-kpis .metric .topo { margin-bottom: 4px; gap: 7px; }
+  .rel-kpis .metric .selo { width: 24px; height: 24px; }
+  .rel-kpis .metric .selo svg { width: 13px; height: 13px; }
+  .rel-kpis .metric .valor { font-size: 17px; margin-bottom: 2px; }
+  .rel-kpis .metric .legenda, .rel-kpis .metric > :last-child { font-size: 10.5px; }
+  div:has(> #graf-rel-mensal) { height: clamp(140px, calc((100vh - 420px) * 0.45), 220px) !important; }
+  div:has(> #graf-rel-evolucao) { height: clamp(150px, calc((100vh - 420px) * 0.55), 280px) !important; }
+}
+@media (min-width: 700px) {
+  .rel-kpis .metric { padding: 9px 14px 8px; min-height: 0; }
+  .rel-kpis .metric .topo { margin-bottom: 2px; }
+  .rel-kpis .metric .valor { line-height: 1.25; margin-bottom: 0; }
+  .rel-kpis .metric .legenda { margin-top: 1px; line-height: 1.2; }
+  div:has(> #graf-rel-mensal) { height: clamp(130px, calc((100vh - 400px) * 0.45), 220px) !important; }
+  div:has(> #graf-rel-evolucao) { height: clamp(140px, calc((100vh - 400px) * 0.55), 280px) !important; }
+}
