@@ -1684,3 +1684,13 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 @media (max-width: 480px) { .meta-rodape-3 .meta-situacao-meio { font-size: 9px; letter-spacing: .02em; } }
 /* guia Metas: o "+" não pode ser mais alto que os quadros das metas, senão estica o quadro ao lado */
 .card-novo.card-novo-meta { min-height: 110px; }
+
+/* descrições e nomes sempre inteiros, em todo o app: quebram linha em vez de cortar com "…" */
+.rw .nm, .rw .dim, .rw .celula-texto, .barlist-nome, .barlist-nome span, .legenda-nome, .celula-texto, .cel-banco .dim, .kv b .col-banco .dim,
+.desc-painel .dp-txt, .desc-painel .dp-sub, .meta-nome, .meta-rodape span, .meta-guardar, .meta-quadro-situacao,
+.meta-rodape-3 .meta-situacao-meio, .strip-sub {
+  white-space: normal !important; overflow: visible !important; text-overflow: clip !important; overflow-wrap: anywhere;
+}
+/* nome da meta inteiro: se não couber junto, os selos descem para a linha de baixo */
+.meta-topo.meta-topo-linha { flex-wrap: wrap; row-gap: 6px; }
+.meta-topo-linha .meta-nome { flex: 0 1 auto; }
