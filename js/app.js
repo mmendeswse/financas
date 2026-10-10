@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.88";
+  const VERSAO_APP = "3.6.89";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1139,7 +1139,7 @@
       const ab = e.target.closest("[data-abrir-banco]");
       if (ab) { e.stopPropagation(); explicarBanco(ab.dataset.abrirBanco); return; }
       const hc = e.target.closest("[data-historico-classe]");
-      if (hc) { e.stopPropagation(); explicarHistoricoClasse(hc.dataset.historicoClasse); return; }
+      if (hc) { e.stopPropagation(); origemHistorico = painelKpiAberto || "patrimonio"; explicarHistoricoClasse(hc.dataset.historicoClasse); return; }
       const ir = e.target.closest("[data-ir-secao]");
       if (ir) { e.stopPropagation(); irParaLancamento(ir.dataset.irSecao, ir.dataset.irId, ir.dataset.irData); return; }
       const ln = e.target.closest("[data-acao-editar]");
@@ -1453,7 +1453,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.88" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.89" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2106,6 +2106,7 @@
   // mostrando a conta com os seus próprios números
   // ---------------------------------------------------------------------
   let painelKpiAberto = null;
+  let origemHistorico = null;   // quadro de onde o histórico da classe foi aberto (para o Voltar)
   let painelReabrir = null;
   function explicarKPI(chave) {
     painelKpiAberto = chave;
@@ -2158,10 +2159,12 @@
         pctRotulo: "do patrimônio bruto está investido",
         linhas: (() => {
           const investLiq = I.totalLiquidoOutros(d);
+          // cada classe abre o histórico dela, como as linhas do Patrimônio total
+          const abre = (classe, html) => html.replace('<div class="kv">', `<div class="kv kv-editavel" data-historico-classe="${classe}" title="Ver o histórico">`);
           return linha("Rentabilidade carteira", pct(I.rentabilidadeCarteiraAcoes(d)), corSinal(I.rentabilidadeCarteiraAcoes(d))) +
-            linha("Renda fixa, Tesouro e Fundos", brlSinal(investLiq)) +
-            linha("Ações, FIIs e ETFs", brlSinal(p.acoes)) +
-            (p.cripto > 0 ? linha("Criptomoedas (BTC, ETH)", brlSinal(p.cripto)) : "") +
+            abre("investimentos", linha("Renda fixa, Tesouro e Fundos", brlSinal(investLiq))) +
+            abre("acoes", linha("Ações, FIIs e ETFs", brlSinal(p.acoes))) +
+            (p.cripto > 0 ? abre("cripto", linha("Criptomoedas (BTC, ETH)", brlSinal(p.cripto))) : "") +
             linha("Total", brlSinal(investLiq + p.acoes + p.cripto), corSinal(investLiq + p.acoes + p.cripto));
         })(),
         secao: "investimentos"
@@ -2608,7 +2611,7 @@
       </div>`);
     document.getElementById("modal").classList.add("modal-extrato", classe === "bancos" ? "modal-bancos" : "modal-classe");
     document.getElementById("btnIrPainel").onclick = () => { fecharModal(); navegarPara(secao); };
-    document.getElementById("btnVoltarPainel").onclick = () => explicarKPI("patrimonio");
+    document.getElementById("btnVoltarPainel").onclick = () => explicarKPI(origemHistorico || "patrimonio");
     document.getElementById("btnFecharPainel").onclick = fecharModal;
     const ext = document.querySelector("#modal .extrato-banco");
     if (ext) ext.scrollTop = ext.scrollHeight;   // abre no fim, onde está o total atual
