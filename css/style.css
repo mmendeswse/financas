@@ -1866,3 +1866,8 @@ button.pill-periodo:hover { filter: brightness(1.25); }
   .modal-extrato .extrato-periodo { gap: 6px 5px; }
   .modal-extrato .extrato-periodo label { gap: 4px; }
 }
+/* logos de banco: todos no mesmo quadrado; o desenho preenche o quadrado sem distorcer */
+.marca-logo { overflow: hidden; }
+.marca-logo img { width: 100%; height: 100%; object-fit: contain; }
+/* logos sem quadrado próprio ganham um quadrado branco do mesmo tamanho do Itaú */
+.marca-logo.marca-azulejo { background: #fff; border-radius: 5px; padding: 3px; box-sizing: border-box; }
