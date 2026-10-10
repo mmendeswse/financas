@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.36";
+  const VERSAO_APP = "3.6.37";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1418,7 +1418,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.36" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.37" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1771,7 +1771,7 @@
 
   // Pílulas do Bitcoin e do Ethereum ao lado do dólar. Clicando, abre a tela
   // da moeda (como a do USD/BRL), com o botão para informar a quantidade que
-  // você tem (o valor da posição aparece na tela da moeda, não na pílula).
+  // você tem; com quantidade, a pílula mostra também quanto ela vale em reais.
   const CRIPTOS = { BTC: "Bitcoin", ETH: "Ethereum" };
   function qtdCripto(m) {
     const q = ((DADOS.config || {}).cripto || {})[m];
@@ -1793,7 +1793,9 @@
       el.setAttribute("title", q ? `${fmtQtdCripto(q)} ${m} — ver histórico do ${CRIPTOS[m]}` : `Ver histórico do ${CRIPTOS[m]}`);
       const v = c ? c.variacaoPct || 0 : 0;
       const preco = c ? `<b>${brl(c.valor)}</b><span class="${v >= 0 ? "up" : "down"}">${v >= 0 ? "▲" : "▼"} ${Math.abs(v).toFixed(2).replace(".", ",")}%</span>` : `<b>—</b>`;
-      el.innerHTML = `<small>${m}</small>${preco}`;
+      // com quantidade informada, mostra também quanto ela vale hoje em reais
+      const meu = q && precoCriptoAtual(m) ? `<em class="cripto-meu" title="Valor dos seus ${fmtQtdCripto(q)} ${m}">${brl(q * precoCriptoAtual(m))}</em>` : "";
+      el.innerHTML = `<small>${m}</small>${preco}${meu}`;
     });
   }
   // guarda o preço do dia de cada cripto nos dados: os totais (patrimônio,
