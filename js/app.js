@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.115";
+  const VERSAO_APP = "3.6.116";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -224,7 +224,7 @@
 
   // Entradas e Despesas usam exatamente as mesmas larguras de coluna
   // colunas proporcionais: a descrição não "empurra" banco, status e valor para a borda
-  const GRID_LANCAMENTOS = "grid-template-columns:96px minmax(200px,1fr) 116px 120px 170px 130px";   // repetição, status, banco e valor juntos, encostados à direita
+  const GRID_LANCAMENTOS = "grid-template-columns:90px minmax(200px,1fr) 112px 104px 150px 120px";   // repetição, status, banco e valor juntos, encostados à direita
 
   let mesesBancos = 0;
   let anoBancos = null;   // período do gráfico da guia Bancos (0 = saldo atual)
@@ -1100,7 +1100,24 @@
     const primeiro = m.querySelector("input, select, textarea");
     if (primeiro) setTimeout(() => primeiro.focus(), 30);
     ajustarComoCalcula(m);
+    ajustarDescricoesPainel(m);
     alinharValoresPainel(m);
+  }
+  // nome do lançamento e "Categoria · Tipo" na mesma linha: o quadro fica mais
+  // largo o quanto for preciso (até o limite da tela); se não couber, quebra linha
+  function ajustarDescricoesPainel(m) {
+    const descs = [...m.querySelectorAll(".desc-painel")];
+    if (!descs.length || window.innerWidth <= 600) return;
+    const falta = Math.max(0, ...descs.map((d) => {
+      const nm = d.querySelector(".dp-nm"), sub = d.querySelector(".dp-sub");
+      if (!nm || !sub) return 0;
+      const r = document.createRange(); r.selectNodeContents(nm); const wNm = r.getBoundingClientRect().width;
+      r.selectNodeContents(sub); const wSub = r.getBoundingClientRect().width;
+      return Math.ceil(wNm + 8 + wSub + 2 - d.getBoundingClientRect().width);
+    }));
+    if (!falta) return;
+    const largura = Math.ceil(m.getBoundingClientRect().width + falta);
+    m.style.width = Math.min(largura, window.innerWidth - 24) + "px";
   }
   // "Como é calculado: …" numa linha só: o quadro fica mais largo o quanto for
   // preciso (até o limite da tela); se não couber, a frase quebra linha como antes
@@ -1470,7 +1487,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil/.test(m.arquivo) ? "" : " marca-azulejo";   // Itaú e BB já têm o quadrado próprio
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.115" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.116" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
