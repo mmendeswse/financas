@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.40";
+  const VERSAO_APP = "3.6.41";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1418,7 +1418,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.40" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.41" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2247,7 +2247,7 @@
   }
 
   // quadro do banco: só o histórico da conta, com o período De/Até e os atalhos
-  // numa linha, e os botões Depositar / Fechar
+  // numa linha, e os botões Depositar / Editar / Fechar
   function explicarBanco(id) {
     const d = DADOS;
     const b = bancosDoPeriodo(d).find((x) => x.id === id);
@@ -2258,10 +2258,12 @@
       ${extratoBancoHtml(d, b)}
       <div class="modal-acoes">
         <button class="btn primario salvar" id="btnIrPainel">Depositar</button>
+        <button class="btn btn-com-icone" id="btnEditarBanco" title="Editar os dados do banco">${ICONE_EDITAR}Editar</button>
         <button class="btn" id="btnFecharPainel">Fechar</button>
       </div>`);
     document.getElementById("modal").classList.add("modal-extrato");
     document.getElementById("btnIrPainel").onclick = () => { fecharModal(); abrirModalValorBanco(b.id); };
+    document.getElementById("btnEditarBanco").onclick = () => { fecharModal(); abrirModalBanco(b.id); };
     document.getElementById("btnFecharPainel").onclick = fecharModal;
     ligarPeriodoExtrato(b);
     const ext = document.querySelector("#modal .extrato-banco");
@@ -2833,8 +2835,6 @@
             <div class="linha1"><div class="nome-com-marca">${marcaBanco(b.nome, 26)}<div><div class="nome">${esc(b.nome)}</div><div class="tipo">${esc(b.tipo || "—")}</div>${b.agencia || b.conta ? `<div class="tipo">${b.agencia ? "Ag " + esc(b.agencia) : ""}${b.agencia && b.conta ? " · " : ""}${b.conta ? "Cc " + esc(b.conta) : ""}</div>` : ""}</div></div></div>
             <div class="saldo saldo-branco">${brlSinal(b.valor)}</div>
             <div class="rodape"><span>${mesesBancos ? `Saldo Atual ${brl(b.saldoAtual)}` : ""}</span>
-              <span class="rodape-botoes"><button class="btn pequeno btn-banco btn-banco-editar" data-acao="editar-banco" data-id="${b.id}" title="Editar os dados do banco">${ICONE_EDITAR}Editar</button>
-              <button class="btn pequeno btn-banco btn-banco-depositar" data-acao="entrada-banco" data-id="${b.id}" title="Depositar: lançar uma entrada nesta conta">${ICONE_CAIXA_24H}Depositar</button></span>
             </div>
           </div>`).join("") + `</div>`;
     }
