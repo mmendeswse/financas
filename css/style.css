@@ -1585,8 +1585,6 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 
 
 /* guia Metas: quadros no formato do quadro Metas do Dashboard */
-.card-meta-quadro .meta-topo-linha .meta-nome { display: none; }   /* o nome já está no título do quadro */
-.card-meta-quadro .meta-topo-linha .meta-selos { margin-left: 0; }
 
 .btn-banco-editar { color: var(--texto); }
 .btn-banco-depositar { color: var(--cy); border-color: rgba(0,229,255,.45); background: rgba(0,229,255,.07); }
@@ -1658,3 +1656,7 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 /* botão com ícone e texto (Editar no quadro do banco) */
 .btn.btn-com-icone { display: inline-flex; align-items: center; gap: 6px; }
 .btn-com-icone .ic-btn { width: 16px; height: 16px; flex: none; }
+
+/* ícone padronizado dos botões (o mesmo ícone para a mesma função em todo o programa) */
+.btn > svg.ic-auto { width: 15px; height: 15px; flex: none; }
+.btn.pequeno > svg.ic-auto { width: 13px; height: 13px; }

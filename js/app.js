@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.41";
+  const VERSAO_APP = "3.6.44";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1418,7 +1418,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.41" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.44" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1454,6 +1454,85 @@
     '<path d="M7 14.6h10"/><path d="M9 14.6v4.6h6v-4.6"/><path d="M11 17h2"/></svg>';
   const ICONE_EDITAR = '<svg class="ic-btn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
     '<path d="M4 20h4L19 9a2.1 2.1 0 0 0-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg>';
+  // =========================================================================
+  // ÍCONES DOS BOTÕES — um ícone por função, igual em todo o programa
+  // (Depositar sempre com o caixa 24h, Editar com o lápis, Fechar com o X…).
+  // A rotina abaixo coloca o ícone em todo botão .btn que ainda não tem um,
+  // inclusive nas janelas abertas depois, sem precisar mexer em cada tela.
+  // =========================================================================
+  const svgIc = (miolo) => `<svg class="ic-btn ic-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${miolo}</svg>`;
+  const ICONES_BOTAO = {
+    depositar: ICONE_CAIXA_24H.replace('class="ic-btn"', 'class="ic-btn ic-auto"'),
+    editar: ICONE_EDITAR.replace('class="ic-btn"', 'class="ic-btn ic-auto"'),
+    fechar: svgIc('<path d="M6 6l12 12M18 6L6 18"/>'),
+    salvar: svgIc('<path d="M5 3.5h11l3.5 3.5v12a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 19V5A1.5 1.5 0 0 1 5 3.5z"/><path d="M7.5 3.5v5h8v-5"/><rect x="7" y="13" width="10" height="7.5" rx="1"/>'),
+    excluir: svgIc('<path d="M4 7h16"/><path d="M9.5 7V4.5h5V7"/><path d="M6 7l1 13h10l1-13"/><path d="M10 11v6M14 11v6"/>'),
+    buscar: svgIc('<path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4.5V9h-4.5"/>'),
+    transferir: svgIc('<path d="M4 8h14l-3.5-3.5"/><path d="M20 16H6l3.5 3.5"/>'),
+    novo: svgIc('<path d="M12 5v14M5 12h14"/>'),
+    sincronizar: svgIc('<path d="M20 11a8 8 0 0 0-14.5-4.5L4 8"/><path d="M4 4v4h4"/><path d="M4 13a8 8 0 0 0 14.5 4.5L20 16"/><path d="M20 20v-4h-4"/>'),
+    desligar: svgIc('<path d="M12 3.5v8"/><path d="M6.8 6.5a7.5 7.5 0 1 0 10.4 0"/>'),
+    exportar: svgIc('<path d="M12 15V3.5M7.5 8L12 3.5 16.5 8"/><path d="M4 14.5V19a1.5 1.5 0 0 0 1.5 1.5h13A1.5 1.5 0 0 0 20 19v-4.5"/>'),
+    importar: svgIc('<path d="M12 3.5V15M7.5 10.5L12 15l4.5-4.5"/><path d="M4 14.5V19a1.5 1.5 0 0 0 1.5 1.5h13A1.5 1.5 0 0 0 20 19v-4.5"/>'),
+    pdf: svgIc('<path d="M14 3.5H6.5A1.5 1.5 0 0 0 5 5v14a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 19V8.5z"/><path d="M14 3.5v5h5"/><path d="M8.5 13h7M8.5 16.5h5"/>'),
+    pago: svgIc('<circle cx="12" cy="12" r="8.5"/><path d="M8 12.5l2.7 2.7L16 9.5"/>'),
+    substituir: svgIc('<path d="M17 3.5l3 3-3 3"/><path d="M4 11V9.5a3 3 0 0 1 3-3h13"/><path d="M7 20.5l-3-3 3-3"/><path d="M20 13v1.5a3 3 0 0 1-3 3H4"/>'),
+    senha: svgIc('<rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.5"/>'),
+    biometria: svgIc('<path d="M7.5 5.5A8 8 0 0 1 20 12v1.5"/><path d="M4 12a8 8 0 0 1 1.2-4.2"/><path d="M8 12a4 4 0 0 1 8 0v2.5a9 9 0 0 1-1 4"/><path d="M12 12v3a7 7 0 0 1-2.2 5"/><path d="M4.5 16.5a11 11 0 0 0 .5-3"/>'),
+    calendario: svgIc('<rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/>'),
+    nuvemBaixar: svgIc('<path d="M7 18.5A4.5 4.5 0 0 1 6.5 9.6 6 6 0 0 1 18 8.5a4 4 0 0 1-.5 8"/><path d="M12 11v9M9 17l3 3 3-3"/>'),
+    nuvemEnviar: svgIc('<path d="M7 18.5A4.5 4.5 0 0 1 6.5 9.6 6 6 0 0 1 18 8.5a4 4 0 0 1-.5 8"/><path d="M12 20v-9M9 14l3-3 3 3"/>'),
+    pasta: svgIc('<path d="M3.5 7A1.5 1.5 0 0 1 5 5.5h4.5l2 2.5H19A1.5 1.5 0 0 1 20.5 9.5V18a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 18z"/>'),
+    abrir: svgIc('<path d="M5 12h13M13 6.5l5.5 5.5-5.5 5.5"/>')
+  };
+  // qual ícone combina com o botão: pela ação/id e pelo texto (ordem importa)
+  const REGRAS_ICONE = [
+    [(b, t) => b.id === "btnFecharPainel" || /^(fechar|cancelar)\b/.test(t), "fechar"],
+    [(b, t) => /digital|face id/.test(t), "biometria"],
+    [(b, t) => /senha/.test(t) || b.dataset.acao === "criar-senha", "senha"],
+    [(b, t) => /^(excluir|apagar|remover)/.test(t), "excluir"],
+    [(b, t) => /^(depositar|adicionar)\b/.test(t), "depositar"],
+    [(b, t) => /^salvar\b/.test(t), "salvar"],
+    [(b, t) => /^editar\b/.test(t), "editar"],
+    [(b, t) => /^(buscar|atualizar)\b/.test(t), "buscar"],
+    [(b, t) => /^transferir\b/.test(t), "transferir"],
+    [(b, t) => /^desligar\b/.test(t), "desligar"],
+    [(b, t) => /^(sincronizar|ligar)\b/.test(t), "sincronizar"],
+    [(b, t) => /^exportar/.test(t), "exportar"],
+    [(b, t) => /pdf/.test(t), "pdf"],
+    [(b, t) => /^importar/.test(t), "importar"],
+    [(b, t) => /pago/.test(t), "pago"],
+    [(b, t) => /^substituir/.test(t), "substituir"],
+    [(b, t) => /este e os próximos|somente este mês/.test(t), "calendario"],
+    [(b, t) => /cofre/.test(t), "nuvemBaixar"],
+    [(b, t) => /^enviar/.test(t), "nuvemEnviar"],
+    [(b, t) => /pasta/.test(t), "pasta"],
+    [(b, t) => /^(novo|nova|criar|acrescentar)\b/.test(t), "novo"],
+    [(b, t) => /^(abrir|continuar)\b/.test(t), "abrir"]
+  ];
+  function iconizarBotoes(raiz) {
+    (raiz || document).querySelectorAll("button.btn:not([data-ic])").forEach((b) => {
+      b.dataset.ic = "1";
+      if (b.querySelector("svg") || b.dataset.extratoMeses || b.dataset.acao === "ordenar-historico") return;
+      // tira o símbolo de texto antigo (+ ✎ ↻ ⇄): o ícone de verdade entra no lugar
+      const prim = [...b.childNodes].find((n) => n.nodeType === 3 && n.textContent.trim());
+      if (prim) prim.textContent = prim.textContent.replace(/^\s*[+✎↻⇄]\s*/, "");
+      const t = b.textContent.trim().toLowerCase();
+      if (!t) return;
+      const regra = REGRAS_ICONE.find(([teste]) => teste(b, t));
+      if (regra) b.insertAdjacentHTML("afterbegin", ICONES_BOTAO[regra[1]]);
+    });
+  }
+  // qualquer tela, janela ou painel desenhado depois também ganha os ícones
+  if (typeof MutationObserver === "function") {
+    let agendado = false;
+    new MutationObserver(() => {
+      if (agendado) return;
+      agendado = true;
+      requestAnimationFrame(() => { agendado = false; iconizarBotoes(document); });
+    }).observe(document.documentElement, { childList: true, subtree: true });
+  }
+
   const ICONES = {
     patrimonio: '<path d="M3 6.2A2.2 2.2 0 0 1 5.2 4h8.6A2.2 2.2 0 0 1 16 6.2v1H6a2 2 0 0 0 0 4h10v2.6A2.2 2.2 0 0 1 13.8 16H5.2A2.2 2.2 0 0 1 3 13.8V6.2z"/><circle cx="12.6" cy="9.2" r=".9" fill="currentColor" stroke="none"/>',
     banco: '<path d="M3 8l7-4 7 4"/><path d="M4 8h12v1H4z"/><path d="M5 9v6M9 9v6M13 9v6"/><path d="M3 16h14"/>',
@@ -1688,7 +1767,7 @@
   function resumoMetas(d) {
     if (!d.metas.length) return "progressos";
     const ok = d.metas.filter((m) => situacaoMeta(m).chave === "ok").length;
-    return `${ok} de ${d.metas.length} com o mês guardado`;
+    return `${ok} de ${d.metas.length} guardado mês`;
   }
 
   function stripKpis(itens) {
@@ -1935,7 +2014,7 @@
     const rel = document.getElementById("relogioTopbar");
     const dataEl = document.getElementById("dataTopbar");
     // virada do mês: refaz a tela para o monitoramento das metas (bolinha e
-    // "N de M com o mês guardado") recomeçar no mês novo, mesmo com o app aberto
+    // "N de M guardado mês") recomeçar no mês novo, mesmo com o app aberto
     let mesVisto = `${new Date().getFullYear()}-${new Date().getMonth()}`;
     const tick = () => {
       const agora = new Date();
