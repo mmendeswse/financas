@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.26";
+  const VERSAO_APP = "3.6.29";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1418,7 +1418,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.26" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.29" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1747,6 +1747,16 @@
     return "selo-" + String(categoria || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   }
 
+  // bolinha da barra de data e hora: verde e pulsando com o mercado aberto
+  // (dias úteis, 9h às 18h de Brasília), vermelha com o mercado fechado
+  function renderStatusMercado(agora) {
+    const dot = document.querySelector("#statusVivo .dot-vivo"), caixa = document.getElementById("statusVivo");
+    if (!dot) return;
+    const aberto = mercadoDolarAberto(agora);
+    dot.classList.toggle("fechado", !aberto);
+    if (caixa) caixa.title = aberto ? "Mercado aberto (dias úteis, 9h às 18h)" : "Mercado fechado (abre nos dias úteis às 9h)";
+  }
+
   function renderDolar() {
     const el = document.getElementById("dolarTopbar");
     if (!el) return;
@@ -1756,8 +1766,7 @@
     el.style.cursor = "pointer";
     el.setAttribute("data-acao", "ir-dolar");
     el.setAttribute("title", "Ver histórico do dólar");
-    const aberto = mercadoDolarAberto();
-    el.innerHTML = `<i class="status-mercado ${aberto ? "aberto" : "fechado"}" title="${aberto ? "Mercado aberto" : "Mercado fechado"}"></i><small>USD/BRL</small><b>R$ ${dolar.valor.toFixed(2).replace(".", ",")}</b><span class="${v >= 0 ? "up" : "down"}">${v >= 0 ? "▲" : "▼"} ${Math.abs(v).toFixed(2).replace(".", ",")}%</span>`;
+    el.innerHTML = `<small>USD/BRL</small><b>R$ ${dolar.valor.toFixed(2).replace(".", ",")}</b><span class="${v >= 0 ? "up" : "down"}">${v >= 0 ? "▲" : "▼"} ${Math.abs(v).toFixed(2).replace(".", ",")}%</span>`;
   }
 
   // Pílulas do Bitcoin e do Ethereum ao lado do dólar. Clicando, abre a tela
@@ -1936,12 +1945,11 @@
         renderRota();
       }
       if (rel) rel.textContent = agora.toLocaleTimeString("pt-BR");
+      renderStatusMercado(agora);
       if (dataEl) dataEl.textContent = agora.toLocaleDateString("pt-BR", { weekday: "short", day: "numeric", month: "short", year: "numeric" }).replace(/\./g, "");
     };
     tick();
     setInterval(tick, 1000);
-    // a bolinha de mercado aberto/fechado do USD/BRL muda de cor na hora certa
-    setInterval(renderDolar, 60 * 1000);
   }
 
   function atualizarSidebarMeta() {
@@ -2132,12 +2140,17 @@
     return { ini: itens.length ? String(itens[0].data).slice(0, 10) : hj.slice(0, 8) + "01", fim: hj, tudo: true };
   }
 
+  const fmtDataISO = (iso) => { const p = String(iso || "").split("-"); return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : ""; };
   function extratoBancoHtml(d, b, faixa) {
     const fx = faixa || faixaExtratoPadrao(d, b);
+    // a data aparece como 10/07/2026 num texto por cima do campo (o iPad escreveria
+    // "10 de jul. de 2026" em duas linhas); tocar abre o calendário do aparelho
+    const campo = (id, v) => `<span class="campo-data-curta"><span class="data-txt" id="${id}Txt">${fmtDataISO(v)}</span><input type="date" id="${id}" value="${v}" aria-label="${id === "extratoIni" ? "Data inicial" : "Data final"}"></span>`;
     return `
+      <div class="extrato-titulo"><span>Histórico da conta</span><span class="dim" id="extratoQtd"></span></div>
       <div class="extrato-periodo" data-banco="${b.id}">
-        <label>De <input type="date" id="extratoIni" value="${fx.ini}"></label>
-        <label>Até <input type="date" id="extratoFim" value="${fx.fim}"></label>
+        <label>De ${campo("extratoIni", fx.ini)}</label>
+        <label>Até ${campo("extratoFim", fx.fim)}</label>
         <span class="extrato-atalhos">
           <button type="button" class="btn pequeno" data-extrato-meses="1">Mês</button>
           <button type="button" class="btn pequeno" data-extrato-meses="3">3m</button>
@@ -2157,12 +2170,25 @@
       let a = ini.value, z = fim.value;
       if (!a || !z) return;
       if (a > z) { [a, z] = [z, a]; ini.value = a; fim.value = z; }
+      document.getElementById("extratoIniTxt").textContent = fmtDataISO(a);
+      document.getElementById("extratoFimTxt").textContent = fmtDataISO(z);
       document.getElementById("extratoConteudo").innerHTML = extratoBancoCorpo(DADOS, b, { ini: a, fim: z });
+      contarExtrato();
       const ext = document.querySelector("#modal .extrato-banco");
       if (ext) ext.scrollTop = ext.scrollHeight;
     };
-    ini.addEventListener("change", atualizar);
-    fim.addEventListener("change", atualizar);
+    // quantos lançamentos no período, na linha do título
+    const contarExtrato = () => {
+      const c = document.querySelector("#extratoConteudo [data-qtd]"), q = document.getElementById("extratoQtd");
+      if (c && q) q.textContent = plural(Number(c.dataset.qtd), "lançamento") + " no período";
+    };
+    contarExtrato();
+    [ini, fim].forEach((el) => {
+      el.addEventListener("change", atualizar);
+      el.addEventListener("input", atualizar);
+      // no computador, clicar em qualquer parte do campo abre o calendário
+      el.addEventListener("click", () => { try { if (el.showPicker) el.showPicker(); } catch (e) { /* sem suporte */ } });
+    });
     caixa.querySelectorAll("[data-extrato-meses]").forEach((bt) => {
       bt.onclick = (e) => {
         e.stopPropagation();
@@ -2205,11 +2231,10 @@
       // lançamentos depois dele); o que vem depois do período não é listado
       const saldoFim = dentro.length ? dentro[dentro.length - 1].saldo : saldoAntes;
       corpo += depois.length
-        ? linha(fmtDataCurta(fx.fim), "Saldo no fim do período", null, saldoFim, "marco final")
+        ? linha(fmtDataCurta(fx.fim), "Saldo", null, saldoFim, "marco final")
         : linha("", "Saldo atual", null, ext.saldoFinal, "marco final");
       return `
-      <div class="extrato-titulo"><span>Histórico da conta</span><span class="dim">${plural(dentro.length, "lançamento")} no período</span></div>
-      <div class="extrato-resumo"><span>Entradas <b class="up">+${brl(entradas)}</b></span><span>Saídas <b class="down">−${brl(saidas)}</b></span><span>Resultado <b class="${corSinal(entradas - saidas)}">${brlSinal(Math.round((entradas - saidas) * 100) / 100)}</b></span></div>
+      <div class="extrato-resumo" data-qtd="${dentro.length}"><span>Entradas <b class="up">+${brl(entradas)}</b></span><span>Saídas <b class="down">−${brl(saidas)}</b></span><span>Resultado <b class="${corSinal(entradas - saidas)}">${brlSinal(Math.round((entradas - saidas) * 100) / 100)}</b></span></div>
       <div class="extrato-cab"><span>Data</span><span>Descrição</span><span>Valor</span><span>Saldo</span></div>
       <div class="explica-lista extrato-banco">${corpo}</div>`;
     }
