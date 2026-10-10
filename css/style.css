@@ -1727,3 +1727,6 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 .extrato-titulo > #extratoQtd { text-align: right; }
 /* histórico do banco: "Categoria · Tipo" embaixo da descrição, como nas guias */
 .extrato-linha .desc-sub { display: block; font-size: 11px; color: var(--dim); font-weight: 400; margin-top: 2px; }
+/* Recorrência e Status alinhados à esquerda, como nas guias Entradas e Despesas */
+.extrato-com-rep .extrato-cab .rep, .extrato-com-rep .extrato-cab .status,
+.extrato-com-rep .extrato-linha .rep, .extrato-com-rep .extrato-linha .status { text-align: left; }
