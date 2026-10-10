@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.89";
+  const VERSAO_APP = "3.6.90";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1453,7 +1453,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.89" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.90" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2493,8 +2493,10 @@
     let pagas = 0;   // parcelas das séries que já foram pagas
     const hoje = hojeISO();
     const selo = (dt) => String(dt) < hoje ? `<span class="selo-tag selo-atrasado">Vencida</span>` : `<span class="selo-tag selo-pendente">Pendente</span>`;
+    // banco de cada dívida: o do mês (se foi trocado), o da conta ou o do cartão
+    const bancoDe = (x, data) => { const nome = bancoDoLancamento(d, { ...x, bancoId: bancoDoMes(x, String(data).slice(0, 7)) }); return nome && nome !== "—" ? nome : ""; };
     const add = (x, data, valor, status, tipo) => itens.push({ data, desc: descEmoji(x, x.categoria || "Conta"), status, valor: -Number(valor || 0),
-      ref: { secao: "despesas", id: x.id, data }, tipo: tipo || "conta" });
+      ref: { secao: "despesas", id: x.id, data }, tipo: tipo || "conta", banco: bancoDe(x, data) });
     // contas em aberto vencidas ou do mês atual (as mesmas de F.totalDividas)
     (d.contasPagar || []).filter((c) => c.status !== "Pago" && !(ehPers(c) && Number(regraDe(c).parcelas) > 0) && String(c.vencimento || "").slice(0, 7) <= F.mesAtual())
       .forEach((c) => add(c, c.vencimento, c.valor, selo(c.vencimento)));
@@ -2575,14 +2577,15 @@
     let saldo = inicial;
     itens = itens.sort((a, b) => String(a.data).localeCompare(String(b.data)))
       .map((i) => { saldo = r2(saldo + i.valor); return { ...i, saldo }; });
-    // em Bancos, a coluna Banco mostra de qual conta é cada lançamento
-    const comBanco = classe === "bancos";
+    // em Bancos e Dívidas, a coluna Banco mostra de qual conta é cada lançamento;
+    // a coluna Recorrência só em Bancos (em Dívidas o Status já mostra a parcela)
+    const comBanco = classe === "bancos" || classe === "dividas", comRep = classe === "bancos";
     const linha = (i) => `
       <div class="extrato-linha${i.ref ? " clicavel" : ""}"${i.ref ? ` data-ir-secao="${i.ref.secao}" data-ir-id="${esc(String(i.ref.id))}" data-ir-data="${esc(String(i.ref.data || ""))}" title="Ver na guia ${i.ref.secao === "entradas" ? "Entradas" : "Despesas"}"` : ""}>
         <span class="dim">${i.data ? fmtDataCurta(i.data) : "—"}</span>
         <span class="desc"${i.banco ? ` title="${esc(i.banco)}"` : ""}>${i.desc}</span>
-        ${comBanco ? `<span class="rep">${celRep(i.rep)}</span>` : ""}
-        <span class="status">${i.status || ""}${comBanco && i.rep ? `<span class="rep-movel">${i.rep}</span>` : ""}${comBanco ? `<span class="banco-movel">${esc(i.banco || "")}</span>` : ""}</span>
+        ${comRep ? `<span class="rep">${celRep(i.rep)}</span>` : ""}
+        <span class="status">${i.status || ""}${comRep && i.rep ? `<span class="rep-movel">${i.rep}</span>` : ""}${comBanco ? `<span class="banco-movel">${esc(i.banco || "")}</span>` : ""}</span>
         ${comBanco ? `<span class="banco">${i.banco ? marcaBanco(i.banco, 20) + `<span>${esc(i.banco)}</span>` : "—"}</span>` : ""}
         <b class="${corSinal(i.valor)}">${brlSinal(i.valor)}</b>
         <b class="saldo${i.saldo < 0 ? " down" : ""}">${brl(Math.abs(i.saldo))}</b>
@@ -2590,8 +2593,8 @@
     const cel = ([rot, curto, v, sinal, cls]) => celResumo(rot, curto, Math.abs(r2(v)), sinal !== undefined ? sinal : (r2(v) > 0 ? "+" : r2(v) < 0 ? "−" : ""), cls || corSinal(v));
     return { titulo, total: r2(saldo), qtd: itens.length, html: `
       <div class="extrato-titulo"><span>Histórico</span><span class="dim">${plural(itens.length, "lançamento")}</span></div>
-      <div class="extrato-tabela extrato-classe${comBanco ? " extrato-com-banco" : ""}">
-        <div class="extrato-cab"><span>Data</span><span>Descrição</span>${comBanco ? `<span class="rep">Recorrência</span>` : ""}<span class="status">Status</span>${comBanco ? `<span class="banco">Banco</span>` : ""}<span>Valor</span><span>Saldo</span></div>
+      <div class="extrato-tabela extrato-classe${comRep ? " extrato-com-banco" : comBanco ? " extrato-so-banco" : ""}">
+        <div class="extrato-cab"><span>Data</span><span>Descrição</span>${comRep ? `<span class="rep">Recorrência</span>` : ""}<span class="status">Status</span>${comBanco ? `<span class="banco">Banco</span>` : ""}<span>Valor</span><span>Saldo</span></div>
         <div class="explica-lista extrato-banco">${itens.length ? itens.map(linha).join("") : `<div class="extrato-linha"><span></span><span class="desc dim">Nada por aqui ainda</span><span></span><span></span><span></span></div>`}</div>
         <div class="extrato-resumo">${resumo.map(cel).join("")}</div>
       </div>` };
@@ -2609,7 +2612,7 @@
         <button class="btn" id="btnVoltarPainel">Voltar</button>
         <button class="btn" id="btnFecharPainel">Fechar</button>
       </div>`);
-    document.getElementById("modal").classList.add("modal-extrato", classe === "bancos" ? "modal-bancos" : "modal-classe");
+    document.getElementById("modal").classList.add("modal-extrato", classe === "bancos" ? "modal-bancos" : classe === "dividas" ? "modal-dividas" : "modal-classe");
     document.getElementById("btnIrPainel").onclick = () => { fecharModal(); navegarPara(secao); };
     document.getElementById("btnVoltarPainel").onclick = () => explicarKPI(origemHistorico || "patrimonio");
     document.getElementById("btnFecharPainel").onclick = fecharModal;

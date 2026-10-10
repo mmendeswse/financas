@@ -1794,3 +1794,16 @@ button.pill-periodo:hover { filter: brightness(1.25); }
   .extrato-com-banco .extrato-cab span:nth-child(6) { display: block; }
   .extrato-com-banco .extrato-cab span:nth-child(7) { display: none; }
 }
+/* Patrimônio → Dívidas: coluna Banco depois do Status */
+.modal.modal-extrato.modal-dividas { width: 860px; }
+.extrato-so-banco .extrato-cab, .extrato-so-banco .extrato-linha { grid-template-columns: 78px minmax(0, 1fr) 130px 140px 112px 104px; }
+.extrato-so-banco .extrato-cab .status, .extrato-so-banco .extrato-linha .status, .extrato-so-banco .extrato-cab .banco { text-align: left; }
+.extrato-so-banco .extrato-linha .banco { display: inline-flex; align-items: center; gap: 6px; min-width: 0; font-size: 12.5px; color: var(--dim); }
+.extrato-so-banco .extrato-linha .banco > span { white-space: nowrap; }
+@media (max-width: 560px) {
+  .extrato-so-banco .extrato-cab, .extrato-so-banco .extrato-linha { grid-template-columns: 68px minmax(0, 1fr) 98px; }
+  .extrato-so-banco .extrato-cab .banco, .extrato-so-banco .extrato-linha .banco { display: none; }
+  .extrato-so-banco .extrato-linha .banco-movel { display: inline; margin-left: 6px; font-size: 11px; color: var(--dim); }
+  .extrato-so-banco .extrato-cab span:nth-child(5) { display: block; }
+  .extrato-so-banco .extrato-cab span:nth-child(6) { display: none; }
+}
