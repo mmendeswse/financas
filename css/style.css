@@ -1554,7 +1554,7 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 /* histórico da conta: resumo do período (uma linha com 3 colunas), cabeçalho e
    lançamentos dentro da mesma tabela, com uma borda só */
 .extrato-tabela { border: 1px solid var(--linha); border-radius: 8px; overflow: hidden; background: var(--painel); }
-.extrato-tabela .extrato-resumo { display: grid; grid-template-columns: repeat(3, 1fr); background: var(--painel-2); border-bottom: 1px solid var(--linha); }
+.extrato-tabela .extrato-resumo { display: grid; grid-template-columns: repeat(3, 1fr); background: var(--painel-2); border-top: 1px solid var(--linha); }   /* rodapé da tabela */
 .extrato-tabela .extrato-resumo > span { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 6px; min-width: 0; }
 .extrato-tabela .extrato-resumo > span + span { border-left: 1px solid var(--linha); }
 .extrato-tabela .extrato-resumo small { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); font-weight: 700; }
