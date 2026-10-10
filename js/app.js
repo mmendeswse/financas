@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.38";
+  const VERSAO_APP = "3.6.39";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1418,7 +1418,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.38" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.39" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -5442,7 +5442,7 @@
         const diasPrazo = m.prazo ? F.diasEntre(m.prazo) : null;
         const vencida = diasPrazo !== null && diasPrazo < 0 && Number(m.atual || 0) < Number(m.objetivo || 0);
         const sub = vencida ? `<span class="down">prazo vencido há ${plural(Math.abs(diasPrazo), "dia")}</span>` : esc(st.rotulo);
-        return `<div class="c4">${card("card-meta-quadro" + (vencida ? " card-meta-vencida" : ""), nomeMeta(m), sub,
+        return `<div class="c4">${card("card-meta-quadro" + (vencida ? " card-meta-vencida" : ""), `<span class="meta-bolinha st-${st.chave}" title="${esc(st.rotulo)}"></span>${nomeMeta(m)}`, sub,
           `<span class="rodape-botoes"><button class="btn pequeno btn-banco btn-banco-editar" data-acao="editar-meta" data-id="${m.id}" title="Editar a meta">${ICONE_EDITAR}Editar</button></span>`,
           `<div class="metas-lista">${itemMetaHtml(m, true)}</div>`)}</div>`;
       }).join("");
