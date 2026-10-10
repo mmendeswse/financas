@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.67";
+  const VERSAO_APP = "3.6.68";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1439,7 +1439,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.67" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.68" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2380,10 +2380,17 @@
       <div class="extrato-linha ${classe || ""}${previsto ? " linha-prevista" : ""}${ref ? " clicavel" : ""}"${ref ? ` data-ir-secao="${ref.secao}" data-ir-id="${esc(String(ref.id))}" data-ir-data="${esc(String(ref.data || ""))}" title="Ver na guia ${ref.secao === "entradas" ? "Entradas" : "Despesas"}"` : ""}>
         <span class="dim">${data}</span>
         <span class="desc">${desc}</span>
-        <span class="status">${tipo ? seloStatus(tipo, previsto) : ""}</span>
+        <span class="rep">${celRep(repDe(ref))}</span>
+        <span class="status">${tipo ? seloStatus(tipo, previsto) : ""}${repDe(ref) ? `<span class="rep-movel">${repDe(ref)}</span>` : ""}</span>
         <b class="${valor === null ? "vazio" : corSinal(valor)}">${valor === null ? "" : brlSinal(valor)}</b>
         <b class="saldo">${brlSinal(saldo)}</b>
       </div>`;
+    // coluna Recorrência: o mesmo selo das guias (mensal, Parcela 05/16…) ou "—"
+    const todos = [...d.entradas, ...d.despesas, ...(d.contasPagar || [])];
+    const repDe = (ref) => {
+      const orig = ref && ref.id ? todos.find((r) => r.id === ref.id) : null;
+      return orig ? seloFreq({ ...orig, data: ref.data || dataReg(orig) }, true).trim() : "";
+    };
     // o emoji do lançamento (o escolhido ou o da categoria) na frente da descrição
     const doItem = (i) => linha(fmtDataCurta(i.data), descEmoji(i) + (i.tipo === "transferencia" ? ` <span class="dim">⇄</span>` : ""), i.valor, i.saldo, "", i.ref, i.tipo, i.previsto);
     let corpo;
@@ -2407,10 +2414,10 @@
       const entradas = dentro.filter((i) => i.valor > 0).reduce((t, i) => t + i.valor, 0);
       const saidas = dentro.filter((i) => i.valor < 0).reduce((t, i) => t - i.valor, 0);
       // só os lançamentos do período: sem linha de saldo inicial nem de saldo final
-      corpo = (dentro.length ? dentro.map(doItem).join("") : `<div class="extrato-linha"><span></span><span class="desc dim">Nenhum lançamento no período</span><span></span><span></span><span></span></div>`);
+      corpo = (dentro.length ? dentro.map(doItem).join("") : `<div class="extrato-linha"><span></span><span class="desc dim">Nenhum lançamento no período</span><span></span><span></span><span></span><span></span></div>`);
       return `
-      <div class="extrato-tabela">
-        <div class="extrato-cab"><span>Data</span><span>Descrição</span><span class="status">Status</span><span>Valor</span><span>Saldo</span></div>
+      <div class="extrato-tabela extrato-com-rep">
+        <div class="extrato-cab"><span>Data</span><span>Descrição</span><span class="rep">Recorrência</span><span class="status">Status</span><span>Valor</span><span>Saldo</span></div>
         <div class="explica-lista extrato-banco">${corpo}</div>
         <div class="extrato-resumo" data-qtd="${dentro.length}">
           ${celResumo("Entradas", "Ent.", entradas, "+", "up")}
