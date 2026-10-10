@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.93";
+  const VERSAO_APP = "3.6.94";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1098,7 +1098,20 @@
     document.getElementById("scrim").classList.add("on");
     const primeiro = m.querySelector("input, select, textarea");
     if (primeiro) setTimeout(() => primeiro.focus(), 30);
+    ajustarComoCalcula(m);
     alinharValoresPainel(m);
+  }
+  // "Como é calculado: …" numa linha só: o quadro fica mais largo o quanto for
+  // preciso (até o limite da tela); se não couber, a frase quebra linha como antes
+  function ajustarComoCalcula(m) {
+    const p = m.querySelector("p.campo.ajuda");
+    if (!p) return;
+    p.style.whiteSpace = "nowrap";
+    const falta = p.scrollWidth - p.clientWidth;
+    if (falta <= 0) return;
+    const largura = Math.ceil(m.getBoundingClientRect().width + falta + 2);
+    if (largura <= window.innerWidth - 24) m.style.width = largura + "px";
+    else p.style.whiteSpace = "";
   }
   // quadros de detalhe: a coluna dos valores fica com a largura do maior valor,
   // encostada à direita do quadro, e cada valor começa no mesmo ponto (à esquerda)
@@ -1454,7 +1467,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.93" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.94" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
