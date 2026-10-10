@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.35";
+  const VERSAO_APP = "3.6.36";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1418,7 +1418,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.35" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.36" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2207,6 +2207,12 @@
     });
   }
 
+  // célula do resumo do período: rótulo e valor na mesma linha; no celular o
+  // rótulo fica curto (Ent., Saí., Res.) e o "R$" some, para caber numa linha
+  function celResumo(rotulo, curto, valor, sinal, classe) {
+    return `<span><small><i class="rot-longo">${rotulo}</i><i class="rot-curto">${curto}</i></small><b class="${classe}">${sinal}<i class="rs">R$ </i>${brl(valor).replace(/^R\$\s*/, "")}</b></span>`;
+  }
+
   function extratoBancoCorpo(d, b, fx) {
     const ext = F.extratoDoBanco(d, b.id);
     const linha = (data, desc, valor, saldo, classe) => `
@@ -2229,9 +2235,9 @@
         <div class="extrato-cab"><span>Data</span><span>Descrição</span><span>Valor</span><span>Saldo</span></div>
         <div class="explica-lista extrato-banco">${corpo}</div>
         <div class="extrato-resumo" data-qtd="${dentro.length}">
-          <span><small>Entradas</small><b class="up">+${brl(entradas)}</b></span>
-          <span><small>Saídas</small><b class="down">−${brl(saidas)}</b></span>
-          <span><small>Resultado</small><b class="${corSinal(entradas - saidas)}">${brlSinal(Math.round((entradas - saidas) * 100) / 100)}</b></span>
+          ${celResumo("Entradas", "Ent.", entradas, "+", "up")}
+          ${celResumo("Saídas", "Saí.", saidas, "−", "down")}
+          ${celResumo("Resultado", "Res.", Math.abs(Math.round((entradas - saidas) * 100) / 100), entradas - saidas > 0 ? "+" : entradas - saidas < 0 ? "−" : "", corSinal(entradas - saidas))}
         </div>
       </div>`;
     }

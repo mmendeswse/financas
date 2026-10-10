@@ -1555,10 +1555,20 @@ button.pill-periodo:hover { filter: brightness(1.25); }
    lançamentos dentro da mesma tabela, com uma borda só */
 .extrato-tabela { border: 1px solid var(--linha); border-radius: 8px; overflow: hidden; background: var(--painel); }
 .extrato-tabela .extrato-resumo { display: grid; grid-template-columns: repeat(3, 1fr); background: var(--painel-2); border-top: 1px solid var(--linha); }   /* rodapé da tabela */
-.extrato-tabela .extrato-resumo > span { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 6px; min-width: 0; }
+.extrato-tabela .extrato-resumo > span { display: flex; flex-direction: row; align-items: baseline; justify-content: center; gap: 6px; padding: 7px 6px; min-width: 0; white-space: nowrap; }   /* rótulo e valor na mesma linha */
 .extrato-tabela .extrato-resumo > span + span { border-left: 1px solid var(--linha); }
 .extrato-tabela .extrato-resumo small { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); font-weight: 700; }
-.extrato-tabela .extrato-resumo b { font-family: var(--mono); font-size: 13px; white-space: nowrap; }
+.extrato-tabela .extrato-resumo b { font-family: var(--mono); font-size: 12.5px; white-space: nowrap; }
+.extrato-resumo i { font-style: normal; }
+.extrato-resumo .rot-curto { display: none; }
+@media (max-width: 600px) {
+  /* no celular: rótulos curtos e sem o "R$" para caber na mesma linha */
+  .extrato-tabela .extrato-resumo > span { gap: 4px; padding: 7px 3px; }
+  .extrato-tabela .extrato-resumo small { font-size: 9.5px; letter-spacing: .02em; }
+  .extrato-tabela .extrato-resumo b { font-size: 11.5px; }
+  .extrato-resumo .rot-longo, .extrato-resumo .rs { display: none; }
+  .extrato-resumo .rot-curto { display: inline; }
+}
 .extrato-tabela .extrato-cab { padding: 7px 14px 6px; border-bottom: 1px solid var(--linha); }
 .extrato-tabela .explica-lista { border: none; border-radius: 0; }
 .cartao-item .rodape-botoes { display: flex; gap: 6px; }
