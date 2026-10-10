@@ -234,16 +234,6 @@
   // ---------------------------------------------------------------------
   // Barras horizontais (saldo por banco, gastos por banco)
   // ---------------------------------------------------------------------
-  // cor clara (amarelo, ciano claro…) pede texto escuro por cima
-  function corClara(cor) {
-    var m = String(cor || "").trim().match(/^#?([0-9a-f]{3}|[0-9a-f]{6})$/i);
-    if (!m) return false;
-    var h = m[1].length === 3 ? m[1].split("").map(function (x) { return x + x; }).join("") : m[1];
-    var lin = function (v) { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
-    var l = 0.2126 * lin(parseInt(h.slice(0, 2), 16)) + 0.7152 * lin(parseInt(h.slice(2, 4), 16)) + 0.0722 * lin(parseInt(h.slice(4, 6), 16));
-    return l > 0.4;
-  }
-
   function renderSaldoBancos(canvasId, bancos, opcoes) {
     opcoes = opcoes || {};
     destruir(canvasId);
@@ -262,32 +252,19 @@
         meta.data.forEach(function (barra, i) {
           var v = Number(bancos[i].saldoAtual) || 0;
           var txt = ((Math.abs(v) / total) * 100).toFixed(1).replace(".", ",") + "%";
-          // o percentual fica no fim da faixa; se a barra chega até ele, a cor segue a barra
-          var corDaBarra = v < 0 ? CORES.down : (bancos[i].cor || CORES.cy);
-          var largPct = c.measureText(txt).width;
-          var sobBarra = v < 0 ? barra.x <= grafico.chartArea.left + 6 + largPct : barra.x >= grafico.chartArea.right - 6 - largPct;
-          c.fillStyle = sobBarra && corClara(corDaBarra) ? "#0B1420" : "#FFFFFF";
+          c.fillStyle = "#FFFFFF";
           if (v < 0) { c.textAlign = "left"; c.fillText(txt, grafico.chartArea.left + 6, barra.y); }
           else { c.textAlign = "right"; c.fillText(txt, grafico.chartArea.right - 6, barra.y); }
-          // o valor em reais alinhado à esquerda, no começo da barra. Se couber dentro,
-          // a cor do texto depende da barra: escuro em barra clara (ex.: amarelo),
-          // branco em barra escura. Se não couber, vai logo depois da ponta, em branco.
+          // o valor em reais alinhado à esquerda, em branco, no começo da barra
           // (barras negativas: logo depois do zero, do lado direito)
           var val = moeda(v);
           c.font = "700 11.5px 'Segoe UI', Roboto, sans-serif";
+          c.fillStyle = "#FFFFFF";
           c.textAlign = "left";
+          c.shadowColor = "rgba(0,0,0,.55)"; c.shadowBlur = 3;   // legível sobre barras claras
           var zero = grafico.scales.x.getPixelForValue(0);
-          var inicio = v < 0 ? zero : Math.max(zero, grafico.chartArea.left);
-          var largTexto = c.measureText(val).width;
-          var largBarra = Math.abs(barra.x - zero);
-          if (v >= 0 && largTexto + 16 <= largBarra) {
-            var corBarra = Number(bancos[i].saldoAtual) < 0 ? CORES.down : (bancos[i].cor || CORES.cy);
-            c.fillStyle = corClara(corBarra) ? "#0B1420" : "#FFFFFF";
-            c.fillText(val, inicio + 8, barra.y);
-          } else {
-            c.fillStyle = "#FFFFFF";
-            c.fillText(val, (v < 0 ? zero : barra.x) + 8, barra.y);
-          }
+          c.fillText(val, (v < 0 ? zero : Math.max(zero, grafico.chartArea.left)) + 8, barra.y);
+          c.shadowBlur = 0;
           c.font = "800 11px 'Segoe UI', Roboto, sans-serif";
         });
         c.restore();
