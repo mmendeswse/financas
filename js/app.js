@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.92";
+  const VERSAO_APP = "3.6.93";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1454,7 +1454,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.92" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.93" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2140,7 +2140,7 @@
           return lv("bancos", "+ Bancos", p.bancos) + lv("investimentos", "+ Investimentos", investLiq) +
             lv("acoes", "+ Ações e FIIs", p.acoes) + (p.cripto > 0 ? lv("cripto", "+ Criptomoedas", p.cripto) : "") +
             lv("dividas", "− Dívidas", -p.dividas) +
-            linha("Total", brlSinal(totalLiquido), corSinal(totalLiquido));
+            linha("Saldo", brlSinal(totalLiquido), corSinal(totalLiquido));
         })(),
         secao: "bancos"
       },
