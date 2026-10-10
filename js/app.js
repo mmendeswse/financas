@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.29";
+  const VERSAO_APP = "3.6.30";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1418,7 +1418,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.29" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.30" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2234,9 +2234,15 @@
         ? linha(fmtDataCurta(fx.fim), "Saldo", null, saldoFim, "marco final")
         : linha("", "Saldo atual", null, ext.saldoFinal, "marco final");
       return `
-      <div class="extrato-resumo" data-qtd="${dentro.length}"><span>Entradas <b class="up">+${brl(entradas)}</b></span><span>Saídas <b class="down">−${brl(saidas)}</b></span><span>Resultado <b class="${corSinal(entradas - saidas)}">${brlSinal(Math.round((entradas - saidas) * 100) / 100)}</b></span></div>
-      <div class="extrato-cab"><span>Data</span><span>Descrição</span><span>Valor</span><span>Saldo</span></div>
-      <div class="explica-lista extrato-banco">${corpo}</div>`;
+      <div class="extrato-tabela">
+        <div class="extrato-resumo" data-qtd="${dentro.length}">
+          <span><small>Entradas</small><b class="up">+${brl(entradas)}</b></span>
+          <span><small>Saídas</small><b class="down">−${brl(saidas)}</b></span>
+          <span><small>Resultado</small><b class="${corSinal(entradas - saidas)}">${brlSinal(Math.round((entradas - saidas) * 100) / 100)}</b></span>
+        </div>
+        <div class="extrato-cab"><span>Data</span><span>Descrição</span><span>Valor</span><span>Saldo</span></div>
+        <div class="explica-lista extrato-banco">${corpo}</div>
+      </div>`;
     }
   }
 
