@@ -1852,3 +1852,17 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 .extrato-periodo .extrato-atalhos > .extrato-seta:first-child { order: 0; }
 .extrato-periodo .extrato-atalhos > .extrato-abas { order: 1; }
 .extrato-periodo .extrato-atalhos > .extrato-seta:last-child { order: 2; }
+/* setas do mês ao lado das datas: ‹ antes do "De" e › depois do segundo campo */
+.extrato-periodo > .btn.extrato-seta { flex: none; height: 32px; padding: 0 10px; font-size: 16px; line-height: 1; font-weight: 700; }
+.modal-extrato .extrato-periodo .extrato-atalhos { padding-left: 0; }
+@media (max-width: 600px) {
+  .modal-extrato .extrato-periodo > .btn.extrato-seta { padding: 0 8px; }
+  .modal-extrato .extrato-periodo .extrato-atalhos { margin-top: 2px; }
+}
+@media (max-width: 600px) {
+  /* celular: sem o ícone do calendário dentro do campo, para a data caber ao lado das setas */
+  .modal-extrato .campo-data-curta { padding: 0 8px; justify-content: center; }
+  .modal-extrato .campo-data-curta::after { display: none; }
+  .modal-extrato .extrato-periodo { gap: 6px 5px; }
+  .modal-extrato .extrato-periodo label { gap: 4px; }
+}
