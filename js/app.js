@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.71";
+  const VERSAO_APP = "3.6.72";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1439,7 +1439,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.71" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.72" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2463,8 +2463,8 @@
     const itens = [];
     const hoje = hojeISO();
     const selo = (dt) => String(dt) < hoje ? `<span class="selo-tag selo-atrasado">Vencida</span>` : `<span class="selo-tag selo-pendente">Pendente</span>`;
-    const add = (x, data, valor, status, mes) => itens.push({ data, desc: descEmoji(x, x.categoria || "Conta"), status, valor: -Number(valor || 0),
-      ref: { secao: "despesas", id: x.id, data } , tipo: status ? "conta" : "parcela" });
+    const add = (x, data, valor, status, tipo) => itens.push({ data, desc: descEmoji(x, x.categoria || "Conta"), status, valor: -Number(valor || 0),
+      ref: { secao: "despesas", id: x.id, data }, tipo: tipo || "conta" });
     // contas em aberto vencidas ou do mês atual (as mesmas de F.totalDividas)
     (d.contasPagar || []).filter((c) => c.status !== "Pago" && !(ehPers(c) && Number(regraDe(c).parcelas) > 0) && String(c.vencimento || "").slice(0, 7) <= F.mesAtual())
       .forEach((c) => add(c, c.vencimento, c.valor, selo(c.vencimento)));
@@ -2478,11 +2478,11 @@
       for (let k = 0; k < n; k++) {
         if (k) for (let i = 0; i < Math.max(1, Number(regra.intervalo) || 1); i++) mes = proximoMes(mes);
         const parc = `<span class="selo-tag selo-cat">Parcela ${dd(k + 1)}/${dd(n)}</span>`;
-        if (mes === mesReg(orig)) { if (!pago(orig)) add(orig, dataReg(orig), orig.valor, parc); continue; }
+        if (mes === mesReg(orig)) { if (!pago(orig)) add(orig, dataReg(orig), orig.valor, parc, "parcela"); continue; }
         if (!ocorrenciasNoMes(orig, mes).length) continue;
         const inst = todos.find((x) => x.origemRecorrente === orig.id && mesReg(x) === mes);
-        if (inst) { if (!pago(inst)) add(inst, dataReg(inst), inst.valor, parc); }
-        else if (!mesQuitado(orig, mes)) add(orig, `${mes}-${dia(orig)}`, valorDoMes(orig, mes), parc);
+        if (inst) { if (!pago(inst)) add(inst, dataReg(inst), inst.valor, parc, "parcela"); }
+        else if (!mesQuitado(orig, mes)) add(orig, `${mes}-${dia(orig)}`, valorDoMes(orig, mes), parc, "parcela");
       }
     });
     return itens;
