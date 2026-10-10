@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.68";
+  const VERSAO_APP = "3.6.69";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1439,7 +1439,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.68" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.69" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2392,7 +2392,9 @@
       return orig ? seloFreq({ ...orig, data: ref.data || dataReg(orig) }, true).trim() : "";
     };
     // o emoji do lançamento (o escolhido ou o da categoria) na frente da descrição
-    const doItem = (i) => linha(fmtDataCurta(i.data), descEmoji(i) + (i.tipo === "transferencia" ? ` <span class="dim">⇄</span>` : ""), i.valor, i.saldo, "", i.ref, i.tipo, i.previsto);
+    // embaixo da descrição, "Categoria · Tipo" como nas guias Entradas e Despesas
+    const subItem = (i) => i.ref && i.tipo !== "transferencia" ? `<span class="desc-sub">${subDe({ id: i.ref.id, categoria: i.categoria })}</span>` : "";
+    const doItem = (i) => linha(fmtDataCurta(i.data), descEmoji(i) + (i.tipo === "transferencia" ? ` <span class="dim">⇄</span>` : "") + subItem(i), i.valor, i.saldo, "", i.ref, i.tipo, i.previsto);
     let corpo;
     {
       const pagos = ext.itens.filter((i) => String(i.data) >= fx.ini && String(i.data) <= fx.fim);

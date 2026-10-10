@@ -1725,3 +1725,5 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 }
 .extrato-titulo > span:first-child { white-space: nowrap; }
 .extrato-titulo > #extratoQtd { text-align: right; }
+/* histórico do banco: "Categoria · Tipo" embaixo da descrição, como nas guias */
+.extrato-linha .desc-sub { display: block; font-size: 11px; color: var(--dim); font-weight: 400; margin-top: 2px; }
