@@ -2,11 +2,11 @@
    Arquivos do app: cache primeiro. Cotações (APIs): sempre rede. */
 const CACHE = "muller-mendes-v389";
 const ARQUIVOS = [
-  "./", "./index.html", "./css/style.css?v=3.6.46", "./manifest.json", "./manifest.webmanifest",
+  "./", "./index.html", "./css/style.css?v=3.6.47", "./manifest.json", "./manifest.webmanifest",
   "./js/vendor/chart.umd.min.js",
-  "./js/bloqueio.js?v=3.6.46", "./js/armazenamento.js?v=3.6.46", "./js/financeiro.js?v=3.6.46", "./js/investimentos.js?v=3.6.46",
-  "./js/graficos.js?v=3.6.46", "./js/extrato.js?v=3.6.46", "./js/vendor/pdf.min.js", "./js/vendor/pdf.worker.min.js", "./js/cotacoes.js?v=3.6.46", "./js/sincronizacao.js?v=3.6.46", "./js/app.js?v=3.6.46",
-  "./assets/icons/bancos/nubank.svg?v=3.6.46", "./assets/icons/bancos/itau.svg?v=3.6.46", "./assets/icons/bancos/inter.svg?v=3.6.46", "./assets/icons/bancos/banco-do-brasil.svg?v=3.6.46", "./assets/icons/bancos/caixa.svg?v=3.6.46", "./assets/icons/bancos/mercado-pago.svg?v=3.6.46",
+  "./js/bloqueio.js?v=3.6.47", "./js/armazenamento.js?v=3.6.47", "./js/financeiro.js?v=3.6.47", "./js/investimentos.js?v=3.6.47",
+  "./js/graficos.js?v=3.6.47", "./js/extrato.js?v=3.6.47", "./js/vendor/pdf.min.js", "./js/vendor/pdf.worker.min.js", "./js/cotacoes.js?v=3.6.47", "./js/sincronizacao.js?v=3.6.47", "./js/app.js?v=3.6.47",
+  "./assets/icons/bancos/nubank.svg?v=3.6.47", "./assets/icons/bancos/itau.svg?v=3.6.47", "./assets/icons/bancos/inter.svg?v=3.6.47", "./assets/icons/bancos/banco-do-brasil.svg?v=3.6.47", "./assets/icons/bancos/caixa.svg?v=3.6.47", "./assets/icons/bancos/mercado-pago.svg?v=3.6.47",
   "./assets/icons/icon-192.png", "./assets/icons/icon-512.png",
   "./apple-touch-icon.png", "./apple-touch-icon-180.png", "./apple-touch-icon-167.png", "./apple-touch-icon-152.png", "./apple-touch-icon-precomposed.png"
 ];

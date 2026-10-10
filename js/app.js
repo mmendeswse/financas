@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.46";
+  const VERSAO_APP = "3.6.47";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1435,7 +1435,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.46" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.47" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2313,25 +2313,30 @@
 
   function extratoBancoCorpo(d, b, fx) {
     const ext = F.extratoDoBanco(d, b.id);
-    const linha = (data, desc, valor, saldo, classe, ref) => `
+    // status do lançamento, com o mesmo selo das guias Entradas e Despesas (tudo o
+    // que aparece no histórico já mexeu no saldo, então está pago)
+    const seloStatus = (tipo) => tipo === "transferencia"
+      ? `<span class="selo-tag selo-cat">Transf.</span>` : `<span class="selo-tag selo-pago">Pago</span>`;
+    const linha = (data, desc, valor, saldo, classe, ref, tipo) => `
       <div class="extrato-linha ${classe || ""}${ref ? " clicavel" : ""}"${ref ? ` data-ir-secao="${ref.secao}" data-ir-id="${esc(String(ref.id))}" data-ir-data="${esc(String(ref.data || ""))}" title="Ver na guia ${ref.secao === "entradas" ? "Entradas" : "Despesas"}"` : ""}>
         <span class="dim">${data}</span>
         <span class="desc">${desc}</span>
+        <span class="status">${tipo ? seloStatus(tipo) : ""}</span>
         <b class="${valor === null ? "vazio" : corSinal(valor)}">${valor === null ? "" : brlSinal(valor)}</b>
         <b class="saldo">${brlSinal(saldo)}</b>
       </div>`;
     // o emoji do lançamento (o escolhido ou o da categoria) na frente da descrição
-    const doItem = (i) => linha(fmtDataCurta(i.data), descEmoji(i) + (i.tipo === "transferencia" ? ` <span class="dim">⇄</span>` : ""), i.valor, i.saldo, "", i.ref);
+    const doItem = (i) => linha(fmtDataCurta(i.data), descEmoji(i) + (i.tipo === "transferencia" ? ` <span class="dim">⇄</span>` : ""), i.valor, i.saldo, "", i.ref, i.tipo);
     let corpo;
     {
       const dentro = ext.itens.filter((i) => String(i.data) >= fx.ini && String(i.data) <= fx.fim);
       const entradas = dentro.filter((i) => i.valor > 0).reduce((t, i) => t + i.valor, 0);
       const saidas = dentro.filter((i) => i.valor < 0).reduce((t, i) => t - i.valor, 0);
       // só os lançamentos do período: sem linha de saldo inicial nem de saldo final
-      corpo = (dentro.length ? dentro.map(doItem).join("") : `<div class="extrato-linha"><span></span><span class="desc dim">Nenhum lançamento no período</span><span></span><span></span></div>`);
+      corpo = (dentro.length ? dentro.map(doItem).join("") : `<div class="extrato-linha"><span></span><span class="desc dim">Nenhum lançamento no período</span><span></span><span></span><span></span></div>`);
       return `
       <div class="extrato-tabela">
-        <div class="extrato-cab"><span>Data</span><span>Descrição</span><span>Valor</span><span>Saldo</span></div>
+        <div class="extrato-cab"><span>Data</span><span>Descrição</span><span class="status">Status</span><span>Valor</span><span>Saldo</span></div>
         <div class="explica-lista extrato-banco">${corpo}</div>
         <div class="extrato-resumo" data-qtd="${dentro.length}">
           ${celResumo("Entradas", "Ent.", entradas, "+", "up")}

@@ -932,9 +932,10 @@ table.tab-investimentos th.col-contratada, table.tab-investimentos td.col-contra
 
 /* extrato da conta no painel do gráfico Saldo bancos */
 .extrato-titulo { display: flex; justify-content: space-between; align-items: baseline; margin: 16px 2px 6px; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
-.extrato-cab, .extrato-linha { display: grid; grid-template-columns: 78px minmax(0, 1fr) auto 104px; gap: 10px; align-items: center; }
+.extrato-cab, .extrato-linha { display: grid; grid-template-columns: 78px minmax(0, 1fr) 64px 112px 104px; gap: 10px; align-items: center; }   /* colunas fixas: tudo alinhado */
 .extrato-cab { padding: 0 14px 6px; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); }
-.extrato-cab span:nth-child(n+3) { text-align: right; }
+.extrato-cab span:nth-child(n+4) { text-align: right; }
+.extrato-cab .status, .extrato-linha .status { text-align: center; }
 .extrato-banco { max-height: 300px; overflow-y: auto; }
 .extrato-linha { padding: 8px 14px; font-size: 12.5px; border-top: 1px solid var(--linha); }
 .extrato-linha:first-child { border-top: none; }
@@ -945,9 +946,11 @@ table.tab-investimentos th.col-contratada, table.tab-investimentos td.col-contra
 .extrato-linha.marco .desc, .extrato-linha.marco .saldo { color: inherit; font-weight: 700; }
 .extrato-linha.final { position: sticky; bottom: 0; border-top: 1px solid var(--linha-2); }
 @media (max-width: 560px) {
+  /* no celular: o status vai para baixo da descrição */
   .extrato-cab, .extrato-linha { grid-template-columns: 74px minmax(0, 1fr) auto; gap: 2px 8px; }
-  .extrato-cab span:nth-child(4), .extrato-linha .vazio { display: none; }
-  .extrato-linha .saldo { grid-column: 3; font-size: 11px; }
+  .extrato-cab span:nth-child(5), .extrato-cab .status, .extrato-linha .vazio { display: none; }
+  .extrato-linha .status { grid-column: 2; grid-row: 2; text-align: left; }
+  .extrato-linha .saldo { grid-column: 3; grid-row: 2; font-size: 11px; }
   .extrato-linha.marco .saldo { grid-row: 1; font-size: 12.5px; }
 }
 
@@ -1667,3 +1670,4 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 /* lançamento aberto a partir do histórico da conta: destaque por um instante */
 @keyframes destaque-linha { 0%, 60% { background: rgba(0,229,255,.16); box-shadow: inset 3px 0 0 var(--cy); } 100% { background: transparent; box-shadow: none; } }
 .rw.linha-destaque { animation: destaque-linha 2.6s ease-out; }
+.extrato-linha .status .selo-tag { font-size: 9.5px; padding: 1px 7px; }
