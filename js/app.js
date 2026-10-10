@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.60";
+  const VERSAO_APP = "3.6.61";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1439,7 +1439,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.60" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.61" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2483,7 +2483,7 @@
     } else if (classe === "investimentos") {
       titulo = "Investimentos";
       itens = d.investimentos.map((i) => ({ data: i.dataAplicacao || "", valor: I.valorLiquidoInvestimento(i),
-        desc: `<span class="emoji-desc">${emojiClasse(rotuloCategoriaComp(i.categoria || "Outros"))}</span>${esc(i.nome || "")}`,
+        desc: `<span class="emoji-desc">${emojiInvestimento(i)}</span>${esc(i.nome || "")}`,
         status: selo(i.categoria || "Outros") }));
       const aplicado = soma(d.investimentos, (i) => i.valorInvestido), total = soma(itens, (i) => i.valor);
       resumo = [["Aplicado", "Apl.", aplicado], ["Rendimento", "Rend.", total - aplicado], ["Total", "Tot.", total]];
@@ -2977,6 +2977,20 @@
     [/bdr|exterior|internacional/i, "🌎"], [/renda fixa|cdb|lci|lca|deb[eê]nt|cri\b|cra\b/i, "💰"], [/tesouro/i, "🏛️"], [/fundo/i, "💼"],
     [/cripto|bitcoin|btc|eth/i, "🪙"], [/d[oó]lar|c[aâ]mbio|moeda/i, "💵"], [/poupan/i, "🐷"], [/previd/i, "🧓"], [/ouro/i, "🥇"], [/im[oó]ve/i, "🏠"]];
   const EMOJIS_RESERVA = ["🔷", "🔶", "🟣", "🟢", "🔵", "🟠", "🟡", "🔺", "⭐", "💎", "🧩", "🎯"];
+  // emoji de cada aplicação pelo tipo do ativo (ou pelo nome): CDB, RDB, LCI...
+  // cada um com o seu; sem tipo reconhecido, fica o emoji da classe
+  const EMOJI_TIPO_ATIVO = [
+    [/^cdb\b/i, "💰"], [/^rdb\b/i, "💎"], [/^lci\b/i, "🏠"], [/^lca\b/i, "🌾"], [/^lc\b/i, "💳"],
+    [/^cri\b/i, "🏘️"], [/^cra\b/i, "🚜"], [/deb[eê]nture/i, "📜"], [/tesouro/i, "🏛️"], [/poupan/i, "🐷"],
+    [/fundo imobili/i, "🏢"], [/fundo/i, "💼"], [/cripto/i, "🪙"]
+  ];
+  function emojiInvestimento(i) {
+    for (const txt of [i.tipoAtivo, i.nome]) {
+      const r = txt && EMOJI_TIPO_ATIVO.find(([re]) => re.test(String(txt).trim()));
+      if (r) return r[1];
+    }
+    return emojiClasse(rotuloCategoriaComp(i.categoria || "Outros"));
+  }
   function emojiClasse(rotulo) {
     const r = String(rotulo || "");
     if (EMOJI_CLASSE[r]) return EMOJI_CLASSE[r];
