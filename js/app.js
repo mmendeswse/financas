@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.99";
+  const VERSAO_APP = "3.6.100";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1468,7 +1468,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.99" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.100" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2427,7 +2427,7 @@
         <span class="rep">${celRep(repDe(ref))}</span>
         <span class="status">${tipo ? seloStatus(tipo, previsto) : ""}${repDe(ref) ? `<span class="rep-movel">${repDe(ref)}</span>` : ""}</span>
         <b class="${valor === null ? "vazio" : corSinal(valor)}">${valor === null ? "" : brlSinal(valor)}</b>
-        <b class="saldo${saldo < 0 ? " down" : ""}">${brl(Math.abs(saldo))}</b>
+        <b class="saldo${saldo < 0 ? " down" : ""}">${saldo === null ? '<span class="dim">—</span>' : brl(Math.abs(saldo))}</b>
       </div>`;
     // coluna Recorrência: o mesmo selo das guias (mensal, Parcela 05/16…) ou "—"
     const todos = [...d.entradas, ...d.despesas, ...(d.contasPagar || [])];
@@ -2445,20 +2445,18 @@
       const previstas = previstasDoBanco(d, b.id, fx.ini, fx.fim);
       let dentro = pagos;
       if (previstas.length) {
-        // com previstas no período, o saldo de cada linha é projetado: parte do saldo
-        // antes do período e soma pagos e previstos em ordem de data
+        // previstas aparecem na lista, mas seguem o status: não mexem no saldo nem nos
+        // totais até serem marcadas como pagas (a linha prevista mostra "—" no Saldo)
         const antes = ext.itens.filter((i) => String(i.data) < fx.ini);
         let saldo = antes.length ? antes[antes.length - 1].saldo : ext.saldoInicial;
-        // período no futuro: soma também as previstas de hoje até o início do período
-        const desde = hojeISO().slice(0, 7) + "-01";
-        if (fx.ini > desde) previstasDoBanco(d, b.id, desde, fx.ini).filter((i) => String(i.data) < fx.ini)
-          .forEach((i) => { saldo = Math.round((saldo + i.valor) * 100) / 100; });
         dentro = [...pagos, ...previstas]
           .sort((a, b2) => String(a.data).localeCompare(String(b2.data)) || (b2.valor - a.valor))
-          .map((i) => { saldo = Math.round((saldo + i.valor) * 100) / 100; return { ...i, saldo }; });
+          .map((i) => { if (i.previsto) return { ...i, saldo: null }; saldo = Math.round((saldo + i.valor) * 100) / 100; return { ...i, saldo }; });
       }
-      const entradas = dentro.filter((i) => i.valor > 0).reduce((t, i) => t + i.valor, 0);
-      const saidas = dentro.filter((i) => i.valor < 0).reduce((t, i) => t - i.valor, 0);
+      // Entradas, Saídas e Saldo do rodapé: só o que está Pago
+      const efetivos = dentro.filter((i) => !i.previsto);
+      const entradas = efetivos.filter((i) => i.valor > 0).reduce((t, i) => t + i.valor, 0);
+      const saidas = efetivos.filter((i) => i.valor < 0).reduce((t, i) => t - i.valor, 0);
       // só os lançamentos do período: sem linha de saldo inicial nem de saldo final
       corpo = (dentro.length ? dentro.map(doItem).join("") : `<div class="extrato-linha"><span></span><span class="desc dim">Nenhum lançamento no período</span><span></span><span></span><span></span><span></span></div>`);
       return `
