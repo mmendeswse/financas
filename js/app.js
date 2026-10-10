@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.96";
+  const VERSAO_APP = "3.6.101";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -248,7 +248,8 @@
   const brl = (v) => fmtBRL.format(Number(v) || 0);
   const brlSinal = (v) => { const n = Number(v) || 0; return (n > 0 ? "+" : n < 0 ? "−" : "") + fmtBRL.format(Math.abs(n)); };
   const pct = (v) => { const n = Number(v) || 0; return (n > 0 ? "+" : n < 0 ? "−" : "") + Math.abs(n).toFixed(1).replace(".", ",") + "%"; };
-  const corSinal = (v) => (Number(v) >= 0 ? "up" : "down");
+  // cor do valor: verde se positivo, vermelho se negativo e branco (sem cor) quando é zero
+  const corSinal = (v) => { const n = Math.round((Number(v) || 0) * 100); return n > 0 ? "up" : n < 0 ? "down" : ""; };
   // todas as datas do sistema no formato dia/mês/ano (ex.: 03/04/2026)
   const OPCOES_DATA = { day: "2-digit", month: "2-digit", year: "numeric" };
   const fmtData = (iso) => !iso ? "—" : new Date(iso + "T00:00:00").toLocaleDateString("pt-BR", OPCOES_DATA);
@@ -1467,7 +1468,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.96" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.101" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2426,7 +2427,7 @@
         <span class="rep">${celRep(repDe(ref))}</span>
         <span class="status">${tipo ? seloStatus(tipo, previsto) : ""}${repDe(ref) ? `<span class="rep-movel">${repDe(ref)}</span>` : ""}</span>
         <b class="${valor === null ? "vazio" : corSinal(valor)}">${valor === null ? "" : brlSinal(valor)}</b>
-        <b class="saldo${saldo < 0 ? " down" : ""}">${brl(Math.abs(saldo))}</b>
+        <b class="saldo${saldo < 0 ? " down" : ""}">${saldo === null ? '<span class="dim">—</span>' : brl(Math.abs(saldo))}</b>
       </div>`;
     // coluna Recorrência: o mesmo selo das guias (mensal, Parcela 05/16…) ou "—"
     const todos = [...d.entradas, ...d.despesas, ...(d.contasPagar || [])];
@@ -2444,20 +2445,18 @@
       const previstas = previstasDoBanco(d, b.id, fx.ini, fx.fim);
       let dentro = pagos;
       if (previstas.length) {
-        // com previstas no período, o saldo de cada linha é projetado: parte do saldo
-        // antes do período e soma pagos e previstos em ordem de data
+        // previstas aparecem na lista, mas seguem o status: não mexem no saldo nem nos
+        // totais até serem marcadas como pagas (a linha prevista mostra "—" no Saldo)
         const antes = ext.itens.filter((i) => String(i.data) < fx.ini);
         let saldo = antes.length ? antes[antes.length - 1].saldo : ext.saldoInicial;
-        // período no futuro: soma também as previstas de hoje até o início do período
-        const desde = hojeISO().slice(0, 7) + "-01";
-        if (fx.ini > desde) previstasDoBanco(d, b.id, desde, fx.ini).filter((i) => String(i.data) < fx.ini)
-          .forEach((i) => { saldo = Math.round((saldo + i.valor) * 100) / 100; });
         dentro = [...pagos, ...previstas]
           .sort((a, b2) => String(a.data).localeCompare(String(b2.data)) || (b2.valor - a.valor))
-          .map((i) => { saldo = Math.round((saldo + i.valor) * 100) / 100; return { ...i, saldo }; });
+          .map((i) => { if (i.previsto) return { ...i, saldo: null }; saldo = Math.round((saldo + i.valor) * 100) / 100; return { ...i, saldo }; });
       }
-      const entradas = dentro.filter((i) => i.valor > 0).reduce((t, i) => t + i.valor, 0);
-      const saidas = dentro.filter((i) => i.valor < 0).reduce((t, i) => t - i.valor, 0);
+      // Entradas, Saídas e Saldo do rodapé: só o que está Pago
+      const efetivos = dentro.filter((i) => !i.previsto);
+      const entradas = efetivos.filter((i) => i.valor > 0).reduce((t, i) => t + i.valor, 0);
+      const saidas = efetivos.filter((i) => i.valor < 0).reduce((t, i) => t - i.valor, 0);
       // só os lançamentos do período: sem linha de saldo inicial nem de saldo final
       corpo = (dentro.length ? dentro.map(doItem).join("") : `<div class="extrato-linha"><span></span><span class="desc dim">Nenhum lançamento no período</span><span></span><span></span><span></span><span></span></div>`);
       return `
@@ -2869,7 +2868,7 @@
     const nomeMes = new Date(mes + "-01T00:00:00").toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 
     painelSimples(nomeMes.charAt(0).toUpperCase() + nomeMes.slice(1),
-      totE > 0 ? (saldo / totE) * 100 : 0, "das receitas sobraram neste mês", "receitas − despesas do mês",
+      totE > 0 ? (saldo / totE) * 100 : 0, saldo < 0 ? "das receitas: o mês fechou no negativo" : "das receitas sobraram neste mês", "receitas − despesas do mês",
       cabecalhoColunasPainel() +
       (todos.length ? todos.sort((a, b) => String(a.data || "").localeCompare(String(b.data || ""))).map(linhaItem).join("") : vazio("Nenhum lançamento no mês")) +
       // rodapé igual ao dos históricos: Entradas, Despesas e Saldo do mês (só o que está Pago)
@@ -2879,6 +2878,8 @@
         ${celResumo("Saldo", "Sal.", Math.abs(saldo), saldo > 0 ? "+" : saldo < 0 ? "−" : "", corSinal(saldo))}
       </div></div>`,
       "despesas", { rotulo: "Abrir", acao: () => { navegarPara("despesas"); mesDespesas = mes; renderRota(); } });
+    // mês no negativo: o percentual aparece com "−" e em vermelho
+    if (saldo < 0) { const b = document.querySelector("#modal .explica-pct b"); if (b) { b.textContent = "−" + b.textContent; b.classList.add("down"); } }
   }
 
 
@@ -5853,8 +5854,8 @@
         <div class="c7">
           <div class="grid">
             <div class="c6">${metricCard("Valor total da carteira", brl(total), ICONES.investimento, "var(--cy)")}</div>
-            <div class="c6">${metricCard("Resultado", brlSinal(resultado), ICONES.resultado, corSinal(resultado) === "up" ? "var(--up)" : "var(--down)")}</div>
-            <div class="c6">${metricCard("Rentabilidade", pct(rent), ICONES.resultado, corSinal(rent) === "up" ? "var(--up)" : "var(--down)")}</div>
+            <div class="c6">${metricCard("Resultado", brlSinal(resultado), ICONES.resultado, corSinal(resultado) !== "down" ? "var(--up)" : "var(--down)")}</div>
+            <div class="c6">${metricCard("Rentabilidade", pct(rent), ICONES.resultado, corSinal(rent) !== "down" ? "var(--up)" : "var(--down)")}</div>
             <div class="c6">${metricCard("Dividendos recebidos", brl(dividendos), ICONES.entrada, "var(--up)")}</div>
           </div>
         </div>
@@ -5993,7 +5994,7 @@
       <div class="grid g-top rel-kpis">
         <div class="c3">${metricCard("Receitas", "+" + brl(entradasP), ICONES_STRIP.poupanca, "var(--up)", "", rotuloPeriodo, null, "0 0 24 24", "rel-receitas")}</div>
         <div class="c3">${metricCard("Despesas", "−" + brl(despesasP), ICONES_STRIP.maiorgasto, "var(--down)", "", rotuloPeriodo, null, "0 0 24 24", "rel-despesas")}</div>
-        <div class="c3">${metricCard("Resultado", brlSinal(entradasP - despesasP), ICONES_STRIP.projecao, corSinal(entradasP - despesasP) === "up" ? "var(--up)" : "var(--down)", "", rotuloPeriodo, null, "0 0 24 24", "rel-resultado")}</div>
+        <div class="c3">${metricCard("Resultado", brlSinal(entradasP - despesasP), ICONES_STRIP.projecao, corSinal(entradasP - despesasP) !== "down" ? "var(--up)" : "var(--down)", "", rotuloPeriodo, null, "0 0 24 24", "rel-resultado")}</div>
         <div class="c3">${metricCard("Rentabilidade", pct(I.rentabilidadeCarteiraAcoes(d)), ICONES_STRIP.melhorativo, "var(--vi)", "", "Acumulada · Preço Médio", null, "0 0 24 24", "rel-rentabilidade")}</div>
       </div>
       <div class="grid">
