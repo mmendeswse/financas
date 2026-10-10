@@ -1656,3 +1656,7 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 /* botão com ícone e texto (Editar no quadro do banco) */
 .btn.btn-com-icone { display: inline-flex; align-items: center; gap: 6px; }
 .btn-com-icone .ic-btn { width: 16px; height: 16px; flex: none; }
+
+/* ícone padronizado dos botões (o mesmo ícone para a mesma função em todo o programa) */
+.btn > svg.ic-auto { width: 15px; height: 15px; flex: none; }
+.btn.pequeno > svg.ic-auto { width: 13px; height: 13px; }
