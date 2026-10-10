@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.51";
+  const VERSAO_APP = "3.6.52";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1435,7 +1435,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.51" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.52" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2315,25 +2315,66 @@
     return `<span><small><i class="rot-longo">${rotulo}</i><i class="rot-curto">${curto}</i></small><b class="${classe}">${sinal}<i class="rs">R$ </i>${brl(valor).replace(/^R\$\s*/, "")}</b></span>`;
   }
 
+  // entradas e despesas PREVISTAS do banco num período (ainda não mexeram no
+  // saldo): entradas marcadas como previstas, contas a pagar pendentes e as
+  // repetições do mês que ainda não foram marcadas como pagas
+  function previstasDoBanco(d, bancoId, ini, fim) {
+    const itens = [];
+    const dentro = (dt) => dt && String(dt) >= ini && String(dt) <= fim;
+    const add = (x, data, valor, tipo, secao, id) => itens.push({ data, descricao: x.descricao || x.categoria || (tipo === "entrada" ? "Entrada" : "Despesa"),
+      valor, tipo, previsto: true, emoji: x.emoji, categoria: x.categoria, ref: { secao, id, data } });
+    d.entradas.filter((e) => e.previsto && e.bancoId === bancoId && dentro(e.data))
+      .forEach((e) => add(e, e.data, Number(e.valor || 0), "entrada", "entradas", e.id));
+    (d.contasPagar || []).filter((c) => c.status !== "Pago" && c.bancoId === bancoId && !c.cartaoId && dentro(c.vencimento))
+      .forEach((c) => add(c, c.vencimento, -Number(c.valor || 0), "despesa", "despesas", c.id));
+    // repetições ainda não pagas, mês a mês dentro do período
+    const meses = [];
+    for (let m = String(ini).slice(0, 7); m <= String(fim).slice(0, 7) && meses.length < 240; m = proximoMes(m)) meses.push(m);
+    const doBanco = (reg, m) => bancoDoMes(reg, m) === bancoId && !reg.cartaoId && !mesQuitado(reg, m);
+    meses.forEach((mes) => {
+      repeticoesPrevistas(d.entradas, mes, (reg, data) => { if (dentro(data) && doBanco(reg, mes)) add(reg, data, valorDoMes(reg, mes), "entrada", "entradas", reg.id); return null; });
+      const contasDoMes = (d.contasPagar || []).filter((c) => String(c.vencimento || "").slice(0, 7) === mes)
+        .map((c) => ({ descricao: c.descricao, categoria: c.categoria, valor: c.valor, data: c.vencimento, origemRecorrente: c.origemRecorrente }));
+      repeticoesPrevistas(d.despesas, mes, (reg, data) => { if (dentro(data) && doBanco(reg, mes)) add(reg, data, -valorDoMes(reg, mes), "despesa", "despesas", reg.id); return null; }, contasDoMes);
+      repeticoesPrevistas((d.contasPagar || []).map((c) => ({ ...c, data: c.vencimento })), mes,
+        (reg, data) => { if (dentro(data) && doBanco(reg, mes)) add(reg, data, -valorDoMes(reg, mes), "despesa", "despesas", reg.id); return null; }, []);
+    });
+    return itens;
+  }
+
   function extratoBancoCorpo(d, b, fx) {
     const ext = F.extratoDoBanco(d, b.id);
-    // status do lançamento, com o mesmo selo das guias Entradas e Despesas (tudo o
-    // que aparece no histórico já mexeu no saldo, então está pago)
-    const seloStatus = (tipo) => tipo === "transferencia"
-      ? `<span class="selo-tag selo-cat">Transf.</span>` : `<span class="selo-tag selo-pago">Pago</span>`;
-    const linha = (data, desc, valor, saldo, classe, ref, tipo) => `
-      <div class="extrato-linha ${classe || ""}${ref ? " clicavel" : ""}"${ref ? ` data-ir-secao="${ref.secao}" data-ir-id="${esc(String(ref.id))}" data-ir-data="${esc(String(ref.data || ""))}" title="Ver na guia ${ref.secao === "entradas" ? "Entradas" : "Despesas"}"` : ""}>
+    // status do lançamento, com o mesmo selo das guias Entradas e Despesas
+    const seloStatus = (tipo, previsto) => previsto ? `<span class="selo-tag selo-prevista">Prevista</span>`
+      : tipo === "transferencia" ? `<span class="selo-tag selo-cat">Transf.</span>` : `<span class="selo-tag selo-pago">Pago</span>`;
+    const linha = (data, desc, valor, saldo, classe, ref, tipo, previsto) => `
+      <div class="extrato-linha ${classe || ""}${previsto ? " linha-prevista" : ""}${ref ? " clicavel" : ""}"${ref ? ` data-ir-secao="${ref.secao}" data-ir-id="${esc(String(ref.id))}" data-ir-data="${esc(String(ref.data || ""))}" title="Ver na guia ${ref.secao === "entradas" ? "Entradas" : "Despesas"}"` : ""}>
         <span class="dim">${data}</span>
         <span class="desc">${desc}</span>
-        <span class="status">${tipo ? seloStatus(tipo) : ""}</span>
+        <span class="status">${tipo ? seloStatus(tipo, previsto) : ""}</span>
         <b class="${valor === null ? "vazio" : corSinal(valor)}">${valor === null ? "" : brlSinal(valor)}</b>
         <b class="saldo">${brlSinal(saldo)}</b>
       </div>`;
     // o emoji do lançamento (o escolhido ou o da categoria) na frente da descrição
-    const doItem = (i) => linha(fmtDataCurta(i.data), descEmoji(i) + (i.tipo === "transferencia" ? ` <span class="dim">⇄</span>` : ""), i.valor, i.saldo, "", i.ref, i.tipo);
+    const doItem = (i) => linha(fmtDataCurta(i.data), descEmoji(i) + (i.tipo === "transferencia" ? ` <span class="dim">⇄</span>` : ""), i.valor, i.saldo, "", i.ref, i.tipo, i.previsto);
     let corpo;
     {
-      const dentro = ext.itens.filter((i) => String(i.data) >= fx.ini && String(i.data) <= fx.fim);
+      const pagos = ext.itens.filter((i) => String(i.data) >= fx.ini && String(i.data) <= fx.fim);
+      const previstas = previstasDoBanco(d, b.id, fx.ini, fx.fim);
+      let dentro = pagos;
+      if (previstas.length) {
+        // com previstas no período, o saldo de cada linha é projetado: parte do saldo
+        // antes do período e soma pagos e previstos em ordem de data
+        const antes = ext.itens.filter((i) => String(i.data) < fx.ini);
+        let saldo = antes.length ? antes[antes.length - 1].saldo : ext.saldoInicial;
+        // período no futuro: soma também as previstas de hoje até o início do período
+        const desde = hojeISO().slice(0, 7) + "-01";
+        if (fx.ini > desde) previstasDoBanco(d, b.id, desde, fx.ini).filter((i) => String(i.data) < fx.ini)
+          .forEach((i) => { saldo = Math.round((saldo + i.valor) * 100) / 100; });
+        dentro = [...pagos, ...previstas]
+          .sort((a, b2) => String(a.data).localeCompare(String(b2.data)) || (b2.valor - a.valor))
+          .map((i) => { saldo = Math.round((saldo + i.valor) * 100) / 100; return { ...i, saldo }; });
+      }
       const entradas = dentro.filter((i) => i.valor > 0).reduce((t, i) => t + i.valor, 0);
       const saidas = dentro.filter((i) => i.valor < 0).reduce((t, i) => t - i.valor, 0);
       // só os lançamentos do período: sem linha de saldo inicial nem de saldo final

@@ -1674,3 +1674,7 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 .card-meta-quadro .metas-lista { padding: 12px 12px 0; }
 .meta-quadro-rodape { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px 12px; }
 .meta-quadro-situacao { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--dim); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* histórico da conta: lançamento previsto (ainda não mexeu no saldo) */
+.extrato-linha.linha-prevista .desc, .extrato-linha.linha-prevista b { opacity: .8; }
+.extrato-linha.linha-prevista .saldo { font-style: italic; }
