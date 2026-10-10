@@ -1884,3 +1884,4 @@ button.pill-periodo:hover { filter: brightness(1.25); }
   .kv:has(> span > .desc-painel) > b .col-banco, .kv.kv-cab b .col-banco { width: 140px; }
   .kv:has(> span > .desc-painel) > b .col-rep, .kv.kv-cab b .col-rep { width: 96px; margin-left: 10px; }
 }
+.extrato-cab-banco b.cab-divida { color: var(--down) !important; }   /* Dívidas: o total no topo em vermelho */
