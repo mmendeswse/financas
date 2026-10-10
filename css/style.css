@@ -1752,3 +1752,12 @@ button.pill-periodo:hover { filter: brightness(1.25); }
   .kv:has(> span > .desc-painel) > b .col-banco { flex: 1 0 auto; }
   .kv:has(> span > .desc-painel) > b .col-valor { margin-left: auto; }
 }
+/* históricos: Valor e Saldo alinhados à esquerda da coluna (títulos também) */
+.extrato-linha > b, .extrato-linha > b.saldo { justify-self: start !important; text-align: left !important; }
+.extrato-cab > span:nth-last-child(-n+2) { justify-self: start; text-align: left; }
+.extrato-tabela .extrato-cab span:nth-child(n+4) { text-align: left; }
+@media (max-width: 560px) {
+  /* coluna dos valores com largura fixa, para todos começarem no mesmo ponto */
+  .extrato-cab, .extrato-linha, .extrato-com-rep .extrato-cab, .extrato-com-rep .extrato-linha,
+  .extrato-classe .extrato-cab, .extrato-classe .extrato-linha { grid-template-columns: 68px minmax(0, 1fr) 98px; gap: 2px 6px; }
+}
