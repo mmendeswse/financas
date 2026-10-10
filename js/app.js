@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.90";
+  const VERSAO_APP = "3.6.91";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1093,6 +1093,7 @@
   function abrirModal(html, largo) {
     const m = document.getElementById("modal");
     m.className = "modal on" + (largo ? " largo" : "");
+    m.style.width = "";   // a largura ajustada de um histórico não passa para o próximo quadro
     m.innerHTML = html;
     document.getElementById("scrim").classList.add("on");
     const primeiro = m.querySelector("input, select, textarea");
@@ -1453,7 +1454,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.90" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.91" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2618,6 +2619,22 @@
     document.getElementById("btnFecharPainel").onclick = fecharModal;
     const ext = document.querySelector("#modal .extrato-banco");
     if (ext) ext.scrollTop = ext.scrollHeight;   // abre no fim, onde está o total atual
+    ajustarLarguraHistorico();
+  }
+  // descrição numa linha só: o quadro ganha a largura exata para a maior descrição
+  // caber inteira (sem sobrar vão antes do Status); no celular, quebra linha
+  function ajustarLarguraHistorico() {
+    const m = document.getElementById("modal");
+    if (!m || window.innerWidth <= 560) return;
+    const descs = [...m.querySelectorAll(".extrato-classe .extrato-linha .desc")];
+    if (!descs.length) return;
+    m.style.width = "";
+    descs.forEach((el) => { el.style.whiteSpace = "nowrap"; });
+    const coluna = descs[0].getBoundingClientRect().width;
+    const maior = Math.max(...descs.map((el) => { const r = document.createRange(); r.selectNodeContents(el); return r.getBoundingClientRect().width; }));
+    const largura = Math.max(640, Math.ceil(m.getBoundingClientRect().width - coluna + maior + 4));
+    if (largura <= window.innerWidth - 24) m.style.width = largura + "px";
+    else descs.forEach((el) => { el.style.whiteSpace = ""; });   // não cabe na tela: volta a quebrar linha
   }
 
   function explicarClasse(rotulo) {
