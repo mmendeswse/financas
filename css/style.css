@@ -1828,3 +1828,5 @@ button.pill-periodo:hover { filter: brightness(1.25); }
   div:has(> #graf-rel-mensal) { height: clamp(130px, calc((100vh - 400px) * 0.45), 220px) !important; }
   div:has(> #graf-rel-evolucao) { height: clamp(140px, calc((100vh - 400px) * 0.55), 280px) !important; }
 }
+/* rodapé de totais (Entradas · Despesas · Saldo) dentro da lista de um quadro */
+.explica-lista > .extrato-tabela.rodape-painel { border: none; border-radius: 0; background: none; }
