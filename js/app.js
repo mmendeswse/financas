@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.91";
+  const VERSAO_APP = "3.6.92";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1454,7 +1454,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.91" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.92" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -5977,14 +5977,14 @@
     const rotuloPeriodo = rotulo(mesesRelA, anoRelA);
 
     return `
-      <div class="grid g-top">
+      <div class="grid g-top rel-kpis">
         <div class="c3">${metricCard("Receitas", "+" + brl(entradasP), ICONES_STRIP.poupanca, "var(--up)", "", rotuloPeriodo, null, "0 0 24 24", "rel-receitas")}</div>
         <div class="c3">${metricCard("Despesas", "−" + brl(despesasP), ICONES_STRIP.maiorgasto, "var(--down)", "", rotuloPeriodo, null, "0 0 24 24", "rel-despesas")}</div>
         <div class="c3">${metricCard("Resultado", brlSinal(entradasP - despesasP), ICONES_STRIP.projecao, corSinal(entradasP - despesasP) === "up" ? "var(--up)" : "var(--down)", "", rotuloPeriodo, null, "0 0 24 24", "rel-resultado")}</div>
         <div class="c3">${metricCard("Rentabilidade", pct(I.rentabilidadeCarteiraAcoes(d)), ICONES_STRIP.melhorativo, "var(--vi)", "", "Acumulada · Preço Médio", null, "0 0 24 24", "rel-rentabilidade")}</div>
       </div>
       <div class="grid">
-        <div class="c12">${card("", "Receitas x despesas", `${rotulo(mesesRelA, anoRelA)}`, `<div class="filtro-mes">${seletorAnoDash("anoRelA", anoRelA, anosDashboard(d))}${abasMeses("periodo-rel-a", mesesRelA, OPC)}</div>`, `<div style="padding:10px 16px;height:220px"><canvas id="graf-rel-mensal"></canvas></div>`)}</div>
+        <div class="c12">${card("", "Receitas x despesas", `${rotulo(mesesRelA, anoRelA)}`, `<div class="filtro-mes">${seletorAnoDash("anoRelA", anoRelA, anosDashboard(d))}${abasMeses("periodo-rel-a", mesesRelA, OPC)}</div>`, `<div class="rel-grafico" style="padding:10px 16px;height:220px"><canvas id="graf-rel-mensal"></canvas></div>`)}</div>
       </div>
       <div class="grid">
         <div class="c12">${cardEvolucaoPatrimonial(d, { canvas: "graf-rel-evolucao", idAno: "anoRelB", acao: "periodo-rel-b", meses: mesesRelB, ano: anoRelB })}</div>
