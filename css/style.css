@@ -1830,3 +1830,6 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 }
 /* rodapé de totais (Entradas · Despesas · Saldo) dentro da lista de um quadro */
 .explica-lista > .extrato-tabela.rodape-painel { border: none; border-radius: 0; background: none; }
+/* rodapés de totais (Entradas · Saídas · Saldo e afins): os dois primeiros valores
+   em branco; só o último (Saldo/Total) fica verde ou vermelho */
+.extrato-resumo > span:not(:last-child) b { color: var(--texto) !important; }
