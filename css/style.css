@@ -1871,3 +1871,4 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 .marca-logo img { width: 100%; height: 100%; object-fit: contain; }
 /* logos sem quadrado próprio ganham um quadrado branco do mesmo tamanho do Itaú */
 .marca-logo.marca-azulejo { background: #fff; border-radius: 5px; padding: 3px; box-sizing: border-box; }
+.extrato-resumo > span b.fluxo.amarelo { color: var(--acc) !important; }
