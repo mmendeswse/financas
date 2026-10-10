@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.55";
+  const VERSAO_APP = "3.6.56";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1439,7 +1439,7 @@
     const chave = String(nome || "").trim().toLowerCase();
     const m = MARCAS_BANCO[chave];
     if (m && m.arquivo) {
-      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.55" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo" style="height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.56" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2241,13 +2241,15 @@
   // Histórico da conta: os lançamentos do período escolhido, cada um com o
   // saldo da conta depois dele, e o resumo do período (entradas, saídas e
   // resultado) no fim da tabela.
-  // período do histórico da conta (De / Até) — começa no período da guia
-  // Bancos ou, em "Tudo", do primeiro lançamento até hoje
-  function faixaExtratoPadrao(d, b) {
-    if (mesesBancos) return faixaBancos();
-    const itens = F.extratoDoBanco(d, b.id).itens.filter((i) => i.data);
+  // período do histórico da conta (De / Até) — sempre abre no mês atual,
+  // do primeiro ao último dia
+  function faixaMesAtual() {
     const hj = hojeISO();
-    return { ini: itens.length ? String(itens[0].data).slice(0, 10) : hj.slice(0, 8) + "01", fim: hj, tudo: true };
+    const ultimo = new Date(Number(hj.slice(0, 4)), Number(hj.slice(5, 7)), 0).getDate();
+    return { ini: hj.slice(0, 8) + "01", fim: hj.slice(0, 8) + String(ultimo).padStart(2, "0") };
+  }
+  function faixaExtratoPadrao() {
+    return faixaMesAtual();
   }
 
   const fmtDataISO = (iso) => { const p = String(iso || "").split("-"); return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : ""; };
@@ -2311,7 +2313,7 @@
           const dt = new Date(Number(hj.slice(0, 4)), Number(hj.slice(5, 7)) - 1 - (m - 1), 1);
           ini.value = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-01`;
         }
-        fim.value = hj;
+        fim.value = m === 1 ? faixaMesAtual().fim : hj;   // Mês: do dia 1 ao último dia do mês
         atualizar();
       };
     });
