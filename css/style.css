@@ -1945,3 +1945,15 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 .campo .saldo-origem b { font-family: var(--mono); font-weight: 700; color: var(--texto); }
 .campo .saldo-origem b.up { color: var(--up); }
 .campo .saldo-origem b.down { color: var(--down); }
+
+/* Meus bancos: todos os cartões na mesma linha, dividindo a largura; em
+   telas estreitas, a linha rola para o lado em vez de quebrar */
+.grade-bancos { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(150px, 1fr); overflow-x: auto; }
+.grade-bancos .cartao-item { min-width: 0; padding: 14px 12px; }
+.grade-bancos .nome-com-marca, .grade-bancos .nome-com-marca > div { min-width: 0; }
+.grade-bancos .linha1 { min-width: 0; }
+.grade-bancos .nome { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.grade-bancos .tipo { overflow-wrap: break-word; }
+.grade-bancos .saldo { font-size: clamp(15px, 1.3vw, 20px); white-space: nowrap; margin-top: auto; }   /* saldos alinhados embaixo */
+.grade-bancos .sem-quebra { white-space: nowrap; }
+.grade-bancos .cartao-item .rodape:last-child { margin-top: 0; }
