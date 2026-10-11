@@ -1422,6 +1422,7 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 .meta-rodape-3 .meta-guardar svg { display: inline-block; vertical-align: -2px; margin-right: 4px; }
 .meta-rodape-3 i.rot { font-style: normal; }
 .metas-lista { container-type: inline-size; }
+.metas-lista.metas-rolagem { overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }   /* mais de 3 metas: rola dentro do quadro */
 @container (max-width: 400px) { .meta-rodape-3 i.rot { display: none; } }
 .meta-rodape-3 { font-size: 10.5px; gap: 6px; }
 .meta-rodape-3 > span:first-child { flex: none; }
