@@ -1978,12 +1978,10 @@ button.pill-periodo:hover { filter: brightness(1.25); }
    botões em tamanho normal, alinhados na mesma altura; o app estica os
    quadros até a linha do rodapé (ajustarAlturaConfig) */
 .cfg-grid > div { grid-column: span 12; }   /* celular: um embaixo do outro */
-@media (min-width: 700px) {   /* tablet e computador: Backup (mais largo) + Senha; Sincronização + Cotações + Zona Risco */
-  .cfg-grid > .cfg-backup { grid-column: span 7; }
-  .cfg-grid > .cfg-senha { grid-column: span 5; }
-  .cfg-grid > .cfg-sync { grid-column: span 5; }
-  .cfg-grid > .cfg-cotacoes { grid-column: span 4; }
-  .cfg-grid > .cfg-zona { grid-column: span 3; }
+@media (min-width: 700px) {   /* tablet e computador: Backup e Senha do mesmo tamanho; Sincronização, Cotações e Zona Risco do mesmo tamanho */
+  .cfg-grid > .cfg-backup, .cfg-grid > .cfg-senha { grid-column: span 6; }
+  .cfg-grid > .cfg-sync, .cfg-grid > .cfg-cotacoes, .cfg-grid > .cfg-zona { grid-column: span 4; }
+}
 .cfg-grid .card > .body { flex: 1 1 auto; display: flex; flex-direction: column; }
 .cfg-grid .body.pad { flex: 1 1 auto; display: flex; flex-direction: column; gap: 10px; padding-top: 14px; padding-bottom: 14px; }
 .cfg-grid .cfg-texto { margin: 0; font-size: 13px; line-height: 1.5; color: var(--texto); }
