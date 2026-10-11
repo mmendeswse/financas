@@ -1977,7 +1977,14 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 /* guia Configurações: tudo cabe na tela sem rolar. O app aumenta a escala
    --cfg-k (textos, botões e espaços) até a página encostar no rodapé e estica
    os quadros com o que ainda sobrar (ajustarAlturaConfig) */
-@media (min-width: 700px) { .cfg-grid > .c4 { grid-column: span 4; } }   /* Backup, Senha e Zona Risco lado a lado também no iPad */
+.cfg-grid > div { grid-column: span 12; }   /* celular: um embaixo do outro */
+@media (min-width: 700px) {   /* tablet e computador: Backup (mais largo) + Senha; Sincronização + Cotações + Zona Risco */
+  .cfg-grid > .cfg-backup { grid-column: span 7; }
+  .cfg-grid > .cfg-senha { grid-column: span 5; }
+  .cfg-grid > .cfg-sync { grid-column: span 5; }
+  .cfg-grid > .cfg-cotacoes { grid-column: span 4; }
+  .cfg-grid > .cfg-zona { grid-column: span 3; }
+}
 .cfg-grid { --cfg-k: 1; }
 .cfg-grid .body.pad { padding-top: calc(10px * var(--cfg-k)); padding-bottom: calc(10px * var(--cfg-k)); }
 .cfg-grid .cfg-botoes { display: flex; gap: calc(8px * var(--cfg-k)); flex-wrap: wrap; }

@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.158";
+  const VERSAO_APP = "3.6.159";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1576,7 +1576,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.158" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.159" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -6524,12 +6524,12 @@
   // CONFIGURAÇÕES — backup, importação de Excel, privacidade
   // =========================================================================
   function renderConfiguracoes(d) {
-    // quadros compactos (como Bancos e Relatórios): Backup, Senha e Zona Risco
-    // na primeira linha, Sincronização e Cotações na segunda — tudo cabe na
-    // tela, com o rodapé, sem arrastar a página
+    // quadros compactos (como Bancos e Relatórios): Backup (mais largo) e Senha
+    // na primeira linha; Sincronização, Cotações e Zona Risco (sempre a última)
+    // na segunda — tudo cabe na tela, com o rodapé, sem arrastar a página
     return `
       <div class="grid g-top cfg-grid">
-        <div class="c4">${card("", "Backup Dados", A.ehDesktop ? "arquivo do programa, com cópia automática (dados.bak.json)" : "tudo fica salvo só neste navegador", "", `
+        <div class="cfg-backup">${card("", "Backup Dados", A.ehDesktop ? "arquivo do programa, com cópia automática (dados.bak.json)" : "tudo fica salvo só neste navegador", "", `
           ${A.ehDesktop ? `<p class="campo ajuda" style="padding:8px 16px 0" id="caminhoBanco">Local do banco: carregando…</p><div style="padding:0 16px 6px"><button class="btn pequeno" data-acao="abrir-pasta-banco">Abrir pasta do banco de dados</button></div>` : ""}
           <div class="body pad">
             <div class="cfg-botoes">
@@ -6540,7 +6540,7 @@
             <p class="campo ajuda">Guarde uma cópia de vez em quando. Importar um backup substitui todos os dados atuais — o sistema pede confirmação antes de aplicar.</p>
           </div>
         `)}</div>
-        <div class="c4">${card("", "Senha Acesso", "protege o sistema neste aparelho", "", `
+        <div class="cfg-senha">${card("", "Senha Acesso", "protege o sistema neste aparelho", "", `
           <div class="body pad">
             ${window.Bloqueio && Bloqueio.ativo() ? `
               <div id="areaBiometria" style="margin:0 0 10px"></div>
@@ -6553,14 +6553,7 @@
             `}
             <p class="campo ajuda">Válido exclusivamente neste dispositivo. Em caso de esquecimento da senha, será necessário apagar os dados e restaurar um backup.</p>
           </div>`)}</div>
-        <div class="c4"><div class="card" style="border-color:rgba(255,84,104,.3)">
-          <header><div><h2 class="down">Zona Risco</h2><div class="sub">esta ação não pode ser desfeita</div></div></header>
-          <div class="body pad">
-            <div class="cfg-botoes"><button class="btn perigo" data-acao="apagar-tudo">Apagar</button></div>
-            <p class="campo ajuda">Não há como desfazer. Exporte um backup antes, se houver algo que você queira guardar.</p>
-          </div>
-        </div></div>
-        <div class="c6">${(() => {
+        <div class="cfg-sync">${(() => {
           const sc = cfgSync();
           const ultima = sc.ultima ? new Date(sc.ultima).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
           const corpo = sc.ligada ? `
@@ -6587,7 +6580,7 @@
           </div>`;
           return card("", "Sincronização", "entre aparelhos · web, iPad e Windows", "", corpo);
         })()}</div>
-        <div class="c6">${card("", "Cotações automáticas", "dólar via AwesomeAPI (sem chave) · ações via brapi.dev", "", `
+        <div class="cfg-cotacoes">${card("", "Cotações automáticas", "dólar via AwesomeAPI (sem chave) · ações via brapi.dev", "", `
           <div class="body pad">
             <label class="chk-linha"><input type="checkbox" id="cfgCotacoesAuto" ${configCotacoes().auto ? "checked" : ""}> Buscar cotações automaticamente ao abrir o sistema e a cada 5 minutos</label>
             <div class="campo"><label for="cfgBrapiToken">Token da brapi.dev</label>
@@ -6596,6 +6589,13 @@
               <div class="ajuda">Já vem com um token configurado — não precisa mexer. Se a internet cair, o sistema mantém os últimos preços e continua funcionando.</div></div>
             ${dolar ? `<p class="campo ajuda">Dólar agora: <b class="acc-laranja">R$ ${dolar.valor.toFixed(2).replace(".", ",")}</b></p>` : ""}
           </div>`)}</div>
+        <div class="cfg-zona"><div class="card" style="border-color:rgba(255,84,104,.3)">
+          <header><div><h2 class="down">Zona Risco</h2><div class="sub">esta ação não pode ser desfeita</div></div></header>
+          <div class="body pad">
+            <div class="cfg-botoes"><button class="btn perigo" data-acao="apagar-tudo">Apagar</button></div>
+            <p class="campo ajuda">Não há como desfazer. Exporte um backup antes, se houver algo que você queira guardar.</p>
+          </div>
+        </div></div>
       </div>
     `;
   }
