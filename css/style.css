@@ -1246,19 +1246,6 @@ table.tab-acoes th.col-atualiz, table.tab-acoes td.col-atualiz { display: none; 
 .rp-prevista { color: #FFD633; border-color: rgba(255,214,51,.32); background: rgba(255,214,51,.07); }
 .rp-prevista .rp-ic { background: rgba(255,214,51,.16); }
 .rp-atrasado { color: var(--down); border-color: rgba(255,77,122,.35); background: rgba(255,77,122,.07); }
-.rp-receita { color: var(--up); border-color: rgba(46,229,157,.32); background: rgba(46,229,157,.07); }
-.rp-receita .rp-ic { background: rgba(46,229,157,.16); }
-.rp-despesa { color: var(--down); border-color: rgba(255,92,106,.35); background: rgba(255,92,106,.07); }
-.rp-despesa .rp-ic { background: rgba(255,92,106,.16); }
-/* Relatórios · quadro A: totais de receitas e despesas ao lado do ano */
-.rel-totais { display: inline-flex; gap: 8px; flex-wrap: wrap; }
-.rel-totais .resumo-pill { cursor: default; }
-@media (max-width: 760px) {
-  .filtro-mes:has(.rel-totais) { flex-wrap: wrap; }
-  .rel-totais { flex: 1 1 100%; }
-  .rel-totais .resumo-pill { flex: 1 1 0; min-width: 0; }
-  .rel-totais .resumo-pill b { font-size: 13px; }
-}
 .rp-atrasado .rp-ic { background: rgba(255,77,122,.16); }
 /* "Total · N Lançamentos" no mesmo estilo dos títulos das colunas */
 .kv.kv-total > span { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); font-weight: 700; }
