@@ -1318,7 +1318,7 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 .grafico-tela-cheia { min-height: 260px; }   /* a altura exata é calculada no app (até a linha do rodapé) */
 /* emoji na frente da descrição e lista de emojis do formulário */
 .emoji-desc { display: inline-block; margin-right: 6px; font-size: 15px; line-height: 1; vertical-align: -1px; }
-.seletor-emoji { display: grid; grid-template-columns: repeat(auto-fill, minmax(36px, 1fr)); gap: 4px; max-height: 128px; overflow-y: auto;
+.seletor-emoji { display: grid; grid-template-columns: repeat(auto-fill, minmax(36px, 1fr)); gap: 4px;   /* todas as opções à vista, sem rolar */
   padding: 6px; border: 1px solid var(--linha-2); border-radius: 10px; background: var(--painel-2); }
 .opcao-emoji { height: 36px; border: 1px solid transparent; border-radius: 8px; background: transparent; font-size: 19px; line-height: 1; cursor: pointer; padding: 0; }
 .opcao-emoji:hover { background: var(--painel-3); }
@@ -1974,16 +1974,22 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 .leg-graf .leg-despesas { background: rgba(255,92,106,.28); border-color: var(--down); }
 @media (max-width: 600px) { .leg-graf { display: none; } }   /* no celular a legenda fica no gráfico */
 
-/* guia Configurações: quadros compactos, para tudo caber na tela sem rolar */
+/* guia Configurações: tudo cabe na tela sem rolar. O app aumenta a escala
+   --cfg-k (textos, botões e espaços) até a página encostar no rodapé e estica
+   os quadros com o que ainda sobrar (ajustarAlturaConfig) */
 @media (min-width: 700px) { .cfg-grid > .c4 { grid-column: span 4; } }   /* Backup, Senha e Zona Risco lado a lado também no iPad */
-.cfg-grid .cfg-botoes .btn { padding: 7px 11px; font-size: 12.5px; }
-.cfg-grid p.campo.ajuda, .cfg-grid .campo .ajuda { font-size: 12px; line-height: 1.45; }
-.cfg-grid .body.pad { padding-top: 10px; padding-bottom: 10px; }
-.cfg-grid .cfg-botoes { display: flex; gap: 8px; flex-wrap: wrap; }
+.cfg-grid { --cfg-k: 1; }
+.cfg-grid .body.pad { padding-top: calc(10px * var(--cfg-k)); padding-bottom: calc(10px * var(--cfg-k)); }
+.cfg-grid .cfg-botoes { display: flex; gap: calc(8px * var(--cfg-k)); flex-wrap: wrap; }
+.cfg-grid .cfg-botoes .btn, .cfg-grid .cfg-linha .btn { padding: calc(7px * var(--cfg-k)) calc(11px * var(--cfg-k)); font-size: calc(12.5px * var(--cfg-k)); }
 .cfg-grid .cfg-linha { display: flex; gap: 8px; align-items: center; }
-.cfg-grid .cfg-linha input { flex: 1 1 auto; min-width: 0; }
+.cfg-grid .campo .cfg-linha input { flex: 1 1 auto; min-width: 0; font-size: calc(14px * var(--cfg-k)); padding-top: calc(9px * var(--cfg-k)); padding-bottom: calc(9px * var(--cfg-k)); min-height: 0; }
+.cfg-grid .btn svg { width: calc(14px * var(--cfg-k)); height: calc(14px * var(--cfg-k)); }
 .cfg-grid .cfg-linha .btn { flex: none; }
-.cfg-grid p.campo.ajuda { margin: 8px 0 0; }
-.cfg-grid .campo { margin-bottom: 8px; }
+.cfg-grid p.campo.ajuda, .cfg-grid .campo .ajuda { font-size: calc(12px * var(--cfg-k)); line-height: 1.5; }
+.cfg-grid p.campo.ajuda { margin: calc(8px * var(--cfg-k)) 0 0; }
+.cfg-grid .campo { margin-bottom: calc(8px * var(--cfg-k)); }
 .cfg-grid .campo:last-child { margin-bottom: 0; }
-.cfg-grid .chk-linha { margin-bottom: 10px; }
+.cfg-grid .campo > label, .cfg-grid .chk-linha, .cfg-grid .sync-estado { font-size: calc(13px * var(--cfg-k)); }
+.cfg-grid .chk-linha { margin-bottom: calc(10px * var(--cfg-k)); }
+.cfg-grid .sync-estado { margin-bottom: calc(6px * var(--cfg-k)); }

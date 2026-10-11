@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.156";
+  const VERSAO_APP = "3.6.158";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1576,7 +1576,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.156" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.158" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -6632,7 +6632,26 @@
     area.style.minHeight = alt + "px";
     area.style.height = alt + "px";
   }
-  window.addEventListener("resize", () => { ajustarAlturaGrafico(); });
+  // guia Configurações (tablet e computador): os quadros crescem até a linha
+  // do rodapé, para usar a tela toda sem sobrar faixa vazia nem precisar rolar
+  function ajustarAlturaConfig() {
+    const grade = document.querySelector("#conteudo .cfg-grid");
+    if (!grade) return;
+    grade.style.minHeight = "";
+    grade.style.setProperty("--cfg-k", "1");
+    if (window.innerWidth < 700) return;
+    const rod = document.querySelector(".rodape-app"), cont = document.getElementById("conteudo");
+    const folga = (cont ? parseFloat(getComputedStyle(cont).paddingBottom) || 0 : 0) + (rod ? parseFloat(getComputedStyle(rod).marginTop) || 0 : 0);
+    const sobra = () => (rod ? rod.getBoundingClientRect().top - grade.getBoundingClientRect().bottom - folga : 0);
+    const cabe = () => sobra() >= 0 && document.documentElement.scrollHeight <= window.innerHeight;
+    // aumenta a escala enquanto couber (até 1,3×) e volta um passo quando passar
+    let k = 1;
+    while (k < 1.3 && cabe()) { k = Math.round((k + 0.05) * 100) / 100; grade.style.setProperty("--cfg-k", String(k)); }
+    if (k > 1 && !cabe()) grade.style.setProperty("--cfg-k", String(Math.round((k - 0.05) * 100) / 100));
+    const resto = sobra();
+    if (resto > 1) grade.style.minHeight = Math.floor(grade.offsetHeight + resto) + "px";
+  }
+  window.addEventListener("resize", () => { ajustarAlturaGrafico(); ajustarAlturaConfig(); });
 
   function montarGraficosDaRota() {
     const d = DADOS;
@@ -6744,6 +6763,11 @@
         if (comp.length) G.renderDoughnutGenerico("graf-carteira-acoes", comp, { semLegenda: true });
         break;
       }
+      case "configuracoes":
+        // mede de novo depois que os ícones entram nos botões (no quadro seguinte)
+        ajustarAlturaConfig();
+        requestAnimationFrame(() => requestAnimationFrame(ajustarAlturaConfig));
+        break;
       case "relatorios": {
         // como na guia Bancos: no tablet e no computador os dois gráficos
         // dividem a altura que sobra até o rodapé, crescendo ou encolhendo
