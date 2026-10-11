@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.141";
+  const VERSAO_APP = "3.6.142";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1491,7 +1491,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.141" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.142" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2447,7 +2447,7 @@
         (reg, data) => { if (dentro(data) && doBanco(reg, mes)) add(reg, data, -valorDoMes(reg, mes), "despesa", "despesas", reg.id); return null; }, []);
     });
     // transferências automáticas de meses em que a entrada ainda não caiu
-    movimentosTransfAuto(d, false).filter((m) => m.bancoId === bancoId && dentro(m.data))
+    movimentosTransfAuto(d, false, String(fim).slice(0, 7)).filter((m) => m.bancoId === bancoId && dentro(m.data))
       .forEach((m) => itens.push({ ...m, tipo: "transferencia", previsto: true, emoji: "🔁" }));
     return itens;
   }
@@ -3499,10 +3499,12 @@
     const m = (regra.meses || {})[mes] || {};
     return m.valor !== undefined ? Number(m.valor) : valorAutoTransf(d, regra, mes, g === undefined ? gatilhoDoMes(d, regra, mes) : g);
   }
-  // cada mês de cada regra, do início até dois meses à frente (os meses
-  // pulados vêm com valor zero); recebida = a entrada já caiu, então mexe no saldo
-  function ocorrenciasTransfAuto(d) {
-    const saida = [], ate = proximoMes(proximoMes(F.mesAtual()));
+  // cada mês de cada regra, do início até dois meses à frente — ou até o mês
+  // "ate", para mostrar as previstas de qualquer período, como as recorrências
+  // (os meses pulados vêm com valor zero); recebida = a entrada já caiu, então mexe no saldo
+  function ocorrenciasTransfAuto(d, ateMes) {
+    const padrao = proximoMes(proximoMes(F.mesAtual()));
+    const saida = [], ate = ateMes && ateMes > padrao ? ateMes : padrao;
     (d.transfAuto || []).forEach((regra) => {
       for (let mes = regra.desde || F.mesAtual(), n = 0; mes <= ate && n < 240; mes = proximoMes(mes), n++) {
         const g = gatilhoDoMes(d, regra, mes);
@@ -3513,9 +3515,9 @@
     return saida;
   }
   // as duas pontas de cada transferência automática (sai de um, entra no outro)
-  function movimentosTransfAuto(d, recebidas) {
+  function movimentosTransfAuto(d, recebidas, ateMes) {
     const saida = [];
-    ocorrenciasTransfAuto(d).filter((o) => o.recebida === recebidas && o.valor > 0).forEach((o) => {
+    ocorrenciasTransfAuto(d, ateMes).filter((o) => o.recebida === recebidas && o.valor > 0).forEach((o) => {
       const auto = { id: o.regra.id, mes: o.mes }, obs = o.regra.obs ? " · " + o.regra.obs : "";
       saida.push({ bancoId: o.regra.deBancoId, valor: -o.valor, data: o.data, transferencia: true, auto, descricao: "Transferência", sub: "Para · " + F.nomeBanco(d, o.regra.paraBancoId) + obs });
       saida.push({ bancoId: o.regra.paraBancoId, valor: o.valor, data: o.data, transferencia: true, auto, descricao: "Transferência", sub: "De · " + F.nomeBanco(d, o.regra.deBancoId) + obs });
