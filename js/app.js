@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.174";
+  const VERSAO_APP = "3.6.175";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1598,7 +1598,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.174" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.175" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1853,7 +1853,7 @@
   // situação da meta: concluída, prazo vencido, ou se o "Guardar Mês" dá
   // conta do que falta até o prazo (sem prazo, basta ter um valor por mês)
   const isoLocal = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  // quanto entrou na meta no mês corrente: soma dos depósitos feitos com "+ Adicionar"
+  // quanto entrou na meta no mês corrente: soma dos depósitos feitos com "Depositar"
   // (metas sem nenhum depósito registrado usam a diferença do histórico de valores)
   function guardadoNoMes(m) {
     const mes = isoLocal(new Date()).slice(0, 7);
@@ -2846,8 +2846,8 @@
       linha("Objetivo", brlSinal(m.objetivo)) + linha("Guardado", brlSinal(m.atual)) +
       linha("Faltam", brlSinal(-falta), corSinal(-falta)) +
       linha("Prazo", m.prazo ? fmtData(m.prazo) : "sem prazo"),
-      "metas", { rotulo: "+ Adicionar", acao: () => abrirModalDeposito(m.id) });
-    // Editar ao lado de Adicionar, no mesmo padrão do quadro do banco
+      "metas", { rotulo: "Depositar", acao: () => abrirModalDeposito(m.id) });
+    // Editar ao lado de Depositar, no mesmo padrão do quadro do banco
     const fechar = document.getElementById("btnFecharPainel");
     fechar.insertAdjacentHTML("beforebegin", `<button class="btn btn-com-icone" id="btnEditarMeta" title="Editar a meta">${ICONE_EDITAR}Editar</button>`);
     document.getElementById("btnEditarMeta").onclick = () => { fecharModal(); abrirModalMeta(m.id); };
@@ -7150,9 +7150,9 @@
     const m = achar(DADOS.metas, id);
     if (!m) return;
     abrirModal(`
-      <h3>Adicionar valor — ${nomeMeta(m)}</h3>
-      <div class="campo"><label for="f_valor">Quanto você quer adicionar?</label>${campoMoeda("f_valor", "")}</div>
-      <div class="modal-acoes"><button class="btn primario salvar" id="btnSalvar">Adicionar</button></div>`);
+      <h3>Depositar — ${nomeMeta(m)}</h3>
+      <div class="campo"><label for="f_valor">Quanto você quer depositar?</label>${campoMoeda("f_valor", "")}</div>
+      <div class="modal-acoes"><button class="btn primario salvar" id="btnSalvar">Depositar</button></div>`);
     document.getElementById("btnSalvar").onclick = () => {
       const v = numIn(document.getElementById("f_valor").value);
       if (v <= 0) { toast("Informe um valor maior que zero."); return; }
