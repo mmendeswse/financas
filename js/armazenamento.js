@@ -77,6 +77,7 @@
       cartoes: [],
       contasPagar: [],
       transferencias: [],   // { id, data, deBancoId, paraBancoId, valor, obs }
+      transfAuto: [],       // transferências automáticas: { id, deBancoId, paraBancoId, valor, entradaId, entradaDesc, desde, obs, meses }
       investimentos: [],
       acoes: [],
       metas: [],
