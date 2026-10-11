@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.152";
+  const VERSAO_APP = "3.6.153";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1576,7 +1576,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.152" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.153" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1889,15 +1889,6 @@
     if (periodoMetas === -1) return (Array.isArray(m.historico) && m.historico.length) ? m.historico[0].data : hojeISO();
     const d = new Date(dataRefAnoMetas() + "T12:00:00"); d.setMonth(d.getMonth() - periodoMetas);
     return d.toISOString().slice(0, 10);
-  }
-  // anos do seletor: do 1º registro de histórico das metas até o ano atual
-  function anosMetas(d) {
-    const atual = new Date().getFullYear();
-    let primeiro = atual;
-    d.metas.forEach((m) => (m.historico || []).forEach((h) => { const a = Number(String(h.data).slice(0, 4)); if (a > 1900 && a < primeiro) primeiro = a; }));
-    const lista = [];
-    for (let a = primeiro; a <= atual; a++) lista.push(String(a));
-    return lista;
   }
 
   function metasMini(d) {
@@ -3159,7 +3150,7 @@
           </div>`)}</div>
         <div class="c3">${card("", "Receitas x despesas", `${mesesRD} ${mesesRD === 1 ? "mês" : "meses"} de ${anoRD}`,
           `<div class="filtro-mes">${LEGENDA_RD}${abasMeses("periodo-rd", mesesRD, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }])}</div>`, `<div class="grafico-cheio" style="padding:8px 14px 12px;min-height:236px"><div class="grafico-cheio-area"><canvas id="graf-receitas-despesas"></canvas></div></div>`)}</div>
-        <div class="c3">${card("", "Metas", resumoMetas(d), `<div class="filtro-mes">${seletorAnoDash("anoMetas", anoMetas || String(new Date().getFullYear()), anosMetas(d))}` + abasMeses("periodo-metas", periodoMetas, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }, { meses: 0, rotulo: "Tudo" }]) + `</div>`, metasMini(d))}</div>
+        <div class="c3">${card("", "Metas", resumoMetas(d), `<div class="filtro-mes">` + abasMeses("periodo-metas", periodoMetas, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }, { meses: 0, rotulo: "Tudo" }]) + `</div>`, metasMini(d))}</div>
       </div>
 
       <div class="grid">
@@ -6987,7 +6978,6 @@
       if (id === "anoRelA") { anoRelA = e.target.value; renderRota(); return; }
       if (id === "anoRelB") { anoRelB = e.target.value; renderRota(); return; }
       if (id === "anoBancos") { anoBancos = e.target.value; renderRota(); return; }
-      if (id === "anoMetas") { anoMetas = e.target.value; renderRota(); return; }
       if (id === "anoEvo") { anoEvo = e.target.value; renderRota(); return; }
       if (id === "anoEntradas") { mesEntradas = e.target.value + mesEntradas.slice(4); filtroEntradas = null; renderRota(); return; }
       if (id === "anoDespesas") { mesDespesas = e.target.value + mesDespesas.slice(4); filtroDespesas = null; renderRota(); return; }
