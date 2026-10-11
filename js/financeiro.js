@@ -63,8 +63,8 @@
     (d.transferencias || []).forEach(function (t) {
       var v = Number(t.valor || 0);
       var obs = t.obs ? " · " + t.obs : "";
-      lista.push({ bancoId: t.deBancoId, valor: -v, data: t.data, transferencia: true, descricao: "Transferência", sub: "Para · " + nomeBanco(d, t.paraBancoId) + obs });
-      lista.push({ bancoId: t.paraBancoId, valor: v, data: t.data, transferencia: true, descricao: "Transferência", sub: "De · " + nomeBanco(d, t.deBancoId) + obs });
+      lista.push({ bancoId: t.deBancoId, valor: -v, data: t.data, transferencia: true, transfId: t.id, descricao: "Transferência", sub: "Para · " + nomeBanco(d, t.paraBancoId) + obs });
+      lista.push({ bancoId: t.paraBancoId, valor: v, data: t.data, transferencia: true, transfId: t.id, descricao: "Transferência", sub: "De · " + nomeBanco(d, t.deBancoId) + obs });
     });
     return movimentosExtras ? lista.concat(movimentosExtras(d) || []) : lista;
   }
@@ -112,7 +112,7 @@
     movimentosDoBanco(d, bancoId).forEach(function (m) {
       var v = Number(m.valor || 0);
       itens.push({ data: m.data || "", descricao: m.descricao || (v >= 0 ? "Entrada" : "Despesa"), valor: v,
-        tipo: m.transferencia ? "transferencia" : v >= 0 ? "entrada" : "despesa", emoji: m.emoji || (m.transferencia ? "🔁" : ""), categoria: m.categoria, ref: m.ref || null, auto: m.auto || null, sub: m.sub || "" });
+        tipo: m.transferencia ? "transferencia" : v >= 0 ? "entrada" : "despesa", emoji: m.emoji || (m.transferencia ? "🔁" : ""), categoria: m.categoria, ref: m.ref || null, auto: m.auto || null, transfId: m.transfId || null, sub: m.sub || "" });
     });
     // mesmo dia: entradas antes das saídas, para o saldo não oscilar à toa;
     // entre as entradas, o pagamento antes da bonificação

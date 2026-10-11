@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.142";
+  const VERSAO_APP = "3.6.144";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1176,6 +1176,8 @@
       if (hc) { e.stopPropagation(); origemHistorico = painelKpiAberto || "patrimonio"; explicarHistoricoClasse(hc.dataset.historicoClasse); return; }
       const ta = e.target.closest("[data-transf-auto]");
       if (ta) { e.stopPropagation(); abrirModalTransfAutoMes(ta.dataset.transfAuto, ta.dataset.mes); return; }
+      const tm = e.target.closest("[data-transf-id]");
+      if (tm) { e.stopPropagation(); abrirModalTransferencia(tm.dataset.transfId); return; }
       const ir = e.target.closest("[data-ir-secao]");
       if (ir) { e.stopPropagation(); irParaLancamento(ir.dataset.irSecao, ir.dataset.irId, ir.dataset.irData); return; }
       const ln = e.target.closest("[data-acao-editar]");
@@ -1491,7 +1493,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.142" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.144" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2457,8 +2459,8 @@
     // status do lançamento, com o mesmo selo das guias Entradas e Despesas
     const seloStatus = (tipo, previsto) => previsto ? `<span class="selo-tag selo-prevista">Prevista</span>`
       : tipo === "transferencia" ? `<span class="selo-tag selo-cat">Transf.</span>` : `<span class="selo-tag selo-pago">Pago</span>`;
-    const linha = (data, desc, valor, saldo, classe, ref, tipo, previsto, auto) => `
-      <div class="extrato-linha ${classe || ""}${previsto ? " linha-prevista" : ""}${ref || auto ? " clicavel" : ""}"${auto ? ` data-transf-auto="${esc(auto.id)}" data-mes="${auto.mes}" title="Mudar o valor deste mês"` : ""}${ref ? ` data-ir-secao="${ref.secao}" data-ir-id="${esc(String(ref.id))}" data-ir-data="${esc(String(ref.data || ""))}" title="Ver na guia ${ref.secao === "entradas" ? "Entradas" : "Despesas"}"` : ""}>
+    const linha = (data, desc, valor, saldo, classe, ref, tipo, previsto, auto, transfId) => `
+      <div class="extrato-linha ${classe || ""}${previsto ? " linha-prevista" : ""}${ref || auto || transfId ? " clicavel" : ""}"${auto ? ` data-transf-auto="${esc(auto.id)}" data-mes="${auto.mes}" title="Mudar o valor deste mês"` : ""}${transfId ? ` data-transf-id="${esc(String(transfId))}" title="Editar a transferência"` : ""}${ref ? ` data-ir-secao="${ref.secao}" data-ir-id="${esc(String(ref.id))}" data-ir-data="${esc(String(ref.data || ""))}" title="Ver na guia ${ref.secao === "entradas" ? "Entradas" : "Despesas"}"` : ""}>
         <span class="dim">${data}</span>
         <span class="desc">${desc}</span>
         <span class="rep">${auto ? `<span class="selo-tag selo-cat" title="Transferência automática">Automática</span>` : celRep(repDe(ref))}</span>
@@ -2477,7 +2479,7 @@
     // transferência: "Para · Banco" (ou "De · Banco") embaixo, como o "Categoria · Tipo" dos lançamentos
     const subItem = (i) => i.tipo === "transferencia" ? (i.sub ? `<span class="desc-sub sem-quebra">${esc(i.sub)}</span>` : "")
       : i.ref ? `<span class="desc-sub">${subDe({ id: i.ref.id, categoria: i.categoria })}</span>` : "";
-    const doItem = (i) => linha(fmtDataCurta(i.data), descEmoji(i) + subItem(i), i.valor, i.saldo, "", i.ref, i.tipo, i.previsto, i.auto);
+    const doItem = (i) => linha(fmtDataCurta(i.data), descEmoji(i) + subItem(i), i.valor, i.saldo, "", i.ref, i.tipo, i.previsto, i.auto, i.transfId);
     let corpo;
     {
       const pagos = ext.itens.filter((i) => String(i.data) >= fx.ini && String(i.data) <= fx.fim);
@@ -3273,54 +3275,27 @@
           <div class="cartao-item" style="border-left-color:${esc(b.cor || "#3FC1E0")}" data-acao="explicar-banco" data-id="${b.id}" title="Ver o histórico de transações">
             <div class="linha1"><div class="nome-com-marca">${marcaBanco(b.nome, 26)}<div><div class="nome">${esc(b.nome)}</div><div class="tipo">${esc(b.tipo || "—")}</div>${b.agencia || b.conta ? `<div class="tipo">${b.agencia ? `<span class="sem-quebra">Ag ${esc(b.agencia)}</span>` : ""}${b.agencia && b.conta ? " · " : ""}${b.conta ? `<span class="sem-quebra">Cc ${esc(b.conta)}</span>` : ""}</div>` : ""}</div></div></div>
             <div class="saldo saldo-branco">${brlSinal(b.valor)}</div>
-            <div class="rodape"><span>${mesesBancos ? `Saldo Atual ${brl(b.saldoAtual)}` : ""}</span>
-            </div>
+            ${mesesBancos ? `<div class="rodape"><span>Saldo Atual ${brl(b.saldoAtual)}</span></div>` : ""}
           </div>`).join("") + `</div>`;
     }
     return `
       ${faixaDemo(d)}
       <div class="grid g-top">
-        <div class="c12">${card("c12", "Meus bancos", `${bancos.length} ${bancos.length === 1 ? "Conta Cadastrada" : "Contas Cadastradas"}`, `${d.bancos.length > 1 ? `<button class="btn" data-acao="nova-transferencia" title="Passar dinheiro de um banco para outro">⇄ TRANSFERIR</button>` : ""}<button class="btn primario" data-acao="nova-banco"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`, listaHtml, `<span class="dim">Total</span><b style="font-size:14px;font-weight:800;color:#FFFFFF">${brlSinal(total)}</b>`)}</div>
+        <div class="c12">${card("c12", "Meus bancos", `${bancos.length} ${bancos.length === 1 ? "Conta Cadastrada" : "Contas Cadastradas"}`, `${bancos.length ? `<span class="pill-periodo ${corSinal(total)}" title="Soma de todas as contas">TOTAL ${brlSinal(total)}</span>` : ""}${d.bancos.length > 1 ? `<button class="btn" data-acao="nova-transferencia" title="Passar dinheiro de um banco para outro">⇄ TRANSFERIR</button>` : ""}<button class="btn primario" data-acao="nova-banco"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`, listaHtml)}</div>
       </div>
       <div class="grid">
         <div class="c12">${card("", "Saldo bancos", mesesBancos ? `Movimentação · ${mesesBancos} ${mesesBancos === 1 ? "mês" : "meses"} de ${anoBancos}` : "comparação entre contas",
           `<div class="filtro-mes">${seletorAnoDash("anoBancos", anoBancos, anosDashboard(d))}${abasMeses("periodo-bancos", mesesBancos, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }, { meses: 0, rotulo: "Tudo" }])}</div>`,
-          `<div style="padding:12px 18px 16px;height:${Math.max(190, bancos.length * 52)}px"><canvas id="graf-saldo-bancos"></canvas></div>`)}</div>
+          `<div style="padding:8px 18px 10px;height:${Math.max(150, bancos.length * 40)}px"><canvas id="graf-saldo-bancos"></canvas></div>`)}</div>
       </div>
-      ${listaTransferencias(d)}
     `;
   }
 
   // ---------------------------------------------------------------------
   // TRANSFERÊNCIAS entre os próprios bancos: tiram de um e põem no outro,
-  // sem contar como receita ou despesa do mês.
+  // sem contar como receita ou despesa do mês. Ficam no extrato de cada
+  // banco, onde a linha abre a transferência para editar.
   // ---------------------------------------------------------------------
-  function listaTransferencias(d) {
-    // as automáticas já feitas entram na lista junto com as avulsas
-    const feitas = ocorrenciasTransfAuto(d).filter((o) => o.recebida && !o.pulado)
-      .map((o) => ({ auto: o, data: o.data, deBancoId: o.regra.deBancoId, paraBancoId: o.regra.paraBancoId, valor: o.valor, obs: o.regra.obs }));
-    const lista = [...(d.transferencias || []), ...feitas].sort((a, b) => String(b.data).localeCompare(String(a.data)));
-    const regras = d.transfAuto || [];
-    if (!lista.length && !regras.length) return "";
-    const rota = (t) => `${esc(F.nomeBanco(d, t.deBancoId))} → ${esc(F.nomeBanco(d, t.paraBancoId))}`;
-    const corpoRegras = regras.map((r) => `
-        <div class="kv kv-editavel" data-acao="editar-transf-auto" data-id="${r.id}" title="Editar a transferência automática">
-          <span class="dim">🔁 ${r.obs ? esc(r.obs) + " · " : ""}${esc(textoCond(r))} · ${rota(r)}</span>
-          <b>${modoDe(r) === "fixo" ? brl(r.valor) : `<span class="dim">${esc(textoModo(r))}</span>`}</b>
-        </div>`).join("");
-    const corpo = lista.map((t) => t.auto ? `
-        <div class="kv kv-editavel" data-acao="transf-auto-mes" data-id="${t.auto.regra.id}" data-mes="${t.auto.mes}" title="Mudar o valor deste mês">
-          <span class="dim">${fmtDataCurta(t.data)} · ${rota(t)} · automática${t.obs ? " · " + esc(t.obs) : ""}</span>
-          <b>${brl(t.valor)}</b>
-        </div>` : `
-        <div class="kv kv-editavel" data-acao="editar-transferencia" data-id="${t.id}" title="Abrir para editar">
-          <span class="dim">${fmtDataCurta(t.data)} · ${rota(t)}${t.obs ? " · " + esc(t.obs) : ""}</span>
-          <b>${brl(t.valor)}</b>
-        </div>`).join("");
-    const sub = [regras.length ? `${regras.length} ${regras.length === 1 ? "automática" : "automáticas"}` : "", `${lista.length} ${lista.length === 1 ? "transferência" : "transferências"} entre suas contas`].filter(Boolean).join(" · ");
-    return `<div class="grid"><div class="c12">${card("", "Transferências", sub, "", `<div style="padding:4px 18px 12px">${corpoRegras}${regras.length && lista.length ? `<div style="height:10px"></div>` : ""}${corpo}</div>`)}</div></div>`;
-  }
-
   // Tipo da transferência (só ao criar): trocar abre a outra janela com o que já foi preenchido
   const campoTipoTransf = (auto) => `<div class="campo"><label for="f_tipoTransf">Tipo</label><select id="f_tipoTransf">
         <option value="unica"${auto ? "" : " selected"}>Única</option>
@@ -6576,8 +6551,9 @@
       case "bancos": {
         if (!d.bancos.length) break;
         // tablet e computador: o gráfico ocupa a altura que sobra até o rodapé
-        // (a página termina junto com a tela, sem faixa vazia); nunca fica
-        // menor que o tamanho original
+        // (a página termina junto com a tela, sem faixa vazia) e encolhe quando
+        // a página passaria da tela, para tudo caber sem rolar — até um mínimo
+        // em que as barras ainda ficam legíveis
         const caixaGraf = document.getElementById("graf-saldo-bancos") && document.getElementById("graf-saldo-bancos").parentElement;
         if (caixaGraf && window.innerWidth > 760) {
           // espaço vazio entre o fim do conteúdo e o rodapé (o rodapé fica preso embaixo)
@@ -6586,6 +6562,11 @@
           const folga = (cont ? parseFloat(getComputedStyle(cont).paddingBottom) || 0 : 0) + (rod ? parseFloat(getComputedStyle(rod).marginTop) || 0 : 0);
           const sobra = rod && ultimo ? rod.getBoundingClientRect().top - ultimo.getBoundingClientRect().bottom - folga : 0;
           if (sobra > 1) caixaGraf.style.height = Math.floor(caixaGraf.clientHeight + sobra) + "px";
+          else {
+            const excesso = document.documentElement.scrollHeight - window.innerHeight;
+            const minimo = Math.max(120, d.bancos.length * 24 + 50);
+            if (excesso > 0) caixaGraf.style.height = Math.max(minimo, Math.floor(caixaGraf.clientHeight - excesso)) + "px";
+          }
         }
         G.renderSaldoBancos("graf-saldo-bancos", bancosNaOrdem(bancosDoPeriodo(d)).map((b) => Object.assign({}, b, { saldoAtual: b.valor })),
           { aoClicar: (b) => explicarBanco(b.id) });
