@@ -1192,6 +1192,36 @@ table.tab-acoes th.col-atualiz, table.tab-acoes td.col-atualiz { display: none; 
 /* o título com as caixas não encolhe: Pagas, Previstas e Atrasadas ficam sempre na mesma linha
    (se faltar espaço, é o seletor de ano/meses que desce para a linha de baixo) */
 .card > header > div:first-child:has(.resumo-pills) { flex: 0 1 auto; min-width: min(100%, max-content); }
+/* em tela larga, título + caixas de status + ano/meses + NOVO numa linha só;
+   conforme a tela estreita, tudo fica mais compacto em vez de quebrar */
+@media (min-width: 1000px) {
+  .card > header:has(.resumo-pills) { flex-wrap: nowrap; align-items: center; }
+  .card > header:has(.resumo-pills) > div:first-child { flex: 0 0 auto; min-width: 0; }
+  .card > header:has(.resumo-pills) h2 { white-space: nowrap; }
+  .card header h2 .resumo-pills { overflow: visible; }
+  .card > header:has(.resumo-pills) .acoes { flex: 0 1 auto; min-width: 0; flex-wrap: nowrap; }
+  .card > header:has(.resumo-pills) .filtro-mes { min-width: 0; }
+  .card > header:has(.resumo-pills) .abas-periodo { min-width: 0; overflow-x: auto; scrollbar-width: none; }
+  .card > header:has(.resumo-pills) .abas-periodo::-webkit-scrollbar { display: none; }
+}
+@media (min-width: 1000px) and (max-width: 1400px) {
+  .card header h2 .resumo-pills { gap: 6px; margin-left: 10px; }
+  .card > header:has(.resumo-pills) .resumo-pill { padding: 4px 9px; }
+  .card > header:has(.resumo-pills) .resumo-pill .rp-ic { display: none; }
+  .card > header:has(.resumo-pills) .resumo-pill b { font-size: 12.5px; }
+  .card > header:has(.resumo-pills) .resumo-pill small { font-size: 8.5px; }
+  .card > header:has(.resumo-pills) .acoes { gap: 6px; }
+  .card > header:has(.resumo-pills) .filtro-mes { gap: 6px; }
+  .card > header:has(.resumo-pills) .abas-periodo button { padding: 6px 5px; font-size: 10.5px; }
+  .card > header:has(.resumo-pills) .acoes .btn { padding-left: 10px; padding-right: 10px; }
+}
+/* tela mais estreita: o NOVO vira só o "+" (o título do botão continua no leitor de tela) */
+@media (min-width: 1000px) and (max-width: 1200px) {
+  .card > header:has(.resumo-pills) .resumo-pill { padding: 4px 7px; }
+  .card > header:has(.resumo-pills) .resumo-pill b { font-size: 11.5px; }
+  .card > header:has(.resumo-pills) .abas-periodo button { padding: 6px 3px; font-size: 10px; }
+  .card > header:has(.resumo-pills) .acoes .btn.primario { font-size: 0; gap: 0; padding: 9px 11px; }
+}
 .resumo-pill { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px 5px 6px; border-radius: 10px; border: 1px solid; }
 .resumo-pill .rp-ic { display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 8px; }
 .resumo-pill .rp-txt { display: flex; flex-direction: column; line-height: 1.15; }
