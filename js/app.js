@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.124";
+  const VERSAO_APP = "3.6.125";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1487,7 +1487,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.124" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.125" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2473,7 +2473,8 @@
         const antes = ext.itens.filter((i) => String(i.data) < fx.ini);
         let saldo = antes.length ? antes[antes.length - 1].saldo : ext.saldoInicial;
         dentro = [...pagos, ...previstas]
-          .sort((a, b2) => String(a.data).localeCompare(String(b2.data)) || (b2.valor - a.valor))
+          .sort((a, b2) => String(a.data).localeCompare(String(b2.data)) ||
+            ((a.valor >= 0 && b2.valor >= 0) ? F.ordemNoDia(a) - F.ordemNoDia(b2) : 0) || (b2.valor - a.valor))
           .map((i) => { if (i.previsto) return { ...i, saldo: null }; saldo = Math.round((saldo + i.valor) * 100) / 100; return { ...i, saldo }; });
       }
       // Entradas, Saídas e Saldo do rodapé: só o que está Pago
@@ -2893,7 +2894,7 @@
     painelSimples(nomeMes.charAt(0).toUpperCase() + nomeMes.slice(1),
       totE > 0 ? (saldo / totE) * 100 : 0, saldo < 0 ? "das receitas: o mês fechou no negativo" : "das receitas sobraram neste mês", "receitas − despesas do mês",
       cabecalhoColunasPainel() +
-      (todos.length ? todos.sort((a, b) => String(a.data || "").localeCompare(String(b.data || ""))).map(linhaItem).join("") : vazio("Nenhum lançamento no mês")) +
+      (todos.length ? todos.sort((a, b) => String(a.data || "").localeCompare(String(b.data || "")) || (a.sinal === "+" && b.sinal === "+" ? F.ordemNoDia(a) - F.ordemNoDia(b) : 0)).map(linhaItem).join("") : vazio("Nenhum lançamento no mês")) +
       // rodapé igual ao dos históricos: Entradas, Despesas e Saldo do mês (só o que está Pago)
       `<div class="extrato-tabela rodape-painel"><div class="extrato-resumo">
         ${celResumo("Entradas", "Ent.", totE, "+", "up fluxo")}
@@ -4119,8 +4120,8 @@
     const lista = [...d.entradas.filter((e) => String(e.data || "").slice(0, 7) === mesEntradas), ...previstasEnt]
       .map((e) => ({ ...e, banco: F.nomeBanco(d, e.bancoId), status: e.prevista ? (e.recebidaNoMes ? "Pago" : "Prevista") : (e.previsto ? "Prevista" : "Pago") }))
       .sort((a, b) => {
-        if (ordemEntradas.campo === "cronologica") return (a.data || "").localeCompare(b.data || "");
-        return comparar(a, b, ordemEntradas.campo, ordemEntradas.dir);
+        if (ordemEntradas.campo === "cronologica") return (a.data || "").localeCompare(b.data || "") || F.ordemNoDia(a) - F.ordemNoDia(b);
+        return comparar(a, b, ordemEntradas.campo, ordemEntradas.dir) || (ordemEntradas.campo === "data" ? F.ordemNoDia(a) - F.ordemNoDia(b) : 0);
       });
     const totalMes = totalEntradasEfetivas(d, mesEntradas);
     const totalPrevisto = previstasEnt.filter((e) => !e.recebidaNoMes).reduce((t, e) => t + Number(e.valor || 0), 0) + F.totalEntradasPrevistasMes(d, mesEntradas);

@@ -85,6 +85,14 @@
 
   var centavos = function (v) { return Math.round(v * 100) / 100; };
 
+  // mesmo dia: o pagamento (salário) vem antes da bonificação na lista
+  function ordemNoDia(m) {
+    var t = String((m && (m.descricao || m.categoria)) || "").toLowerCase();
+    if (/pagamento|sal[aá]rio/.test(t)) return 0;
+    if (/bonifica/.test(t)) return 2;
+    return 1;
+  }
+
   // Extrato da conta: saldo inicial e cada lançamento que mexe no saldo, em
   // ordem de data, com o saldo acumulado após cada um. Usa exatamente as
   // mesmas parcelas de saldoProprio, então o último saldo é o saldo atual.
@@ -105,8 +113,12 @@
       itens.push({ data: m.data || "", descricao: m.descricao || (v >= 0 ? "Entrada" : "Despesa"), valor: v,
         tipo: m.transferencia ? "transferencia" : v >= 0 ? "entrada" : "despesa", emoji: m.emoji || (m.transferencia ? "🔁" : ""), categoria: m.categoria, ref: m.ref || null });
     });
-    // mesmo dia: entradas antes das saídas, para o saldo não oscilar à toa
-    itens.sort(function (a, b) { return String(a.data).localeCompare(String(b.data)) || (b.valor - a.valor); });
+    // mesmo dia: entradas antes das saídas, para o saldo não oscilar à toa;
+    // entre as entradas, o pagamento antes da bonificação
+    itens.sort(function (a, b) {
+      return String(a.data).localeCompare(String(b.data)) ||
+        ((a.valor >= 0 && b.valor >= 0) ? ordemNoDia(a) - ordemNoDia(b) : 0) || (b.valor - a.valor);
+    });
     var saldo = Number(banco.saldoInicial || 0);
     itens.forEach(function (i) { saldo += i.valor; i.saldo = centavos(saldo); });
     return { saldoInicial: centavos(Number(banco.saldoInicial || 0)), itens: itens, saldoFinal: centavos(saldo) };
@@ -412,6 +424,7 @@
     listaBancosComSaldo: listaBancosComSaldo,
     totalBancos: totalBancos,
     nomeBanco: nomeBanco,
+    ordemNoDia: ordemNoDia,
 
     entradasNoMes: entradasNoMes,
     despesasNoMes: despesasNoMes,
