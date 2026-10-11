@@ -1366,13 +1366,13 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 /* selo de repetição (MENSAL, 5/16…) na linha de baixo, junto de categoria · tipo */
 .rw .sub .selo-tag, .desc-painel .dp-sub .selo-tag { font-size: 9px; padding: 0 5px; line-height: 15px; margin-left: 4px; vertical-align: 1px; }
 /* coluna Recorrência (MENSAL, 5/16…) à esquerda do Status */
-.kv b .col-rep { display: inline-block; width: 100px; margin-left: 14px; text-align: left; vertical-align: middle; }
-.kv b .col-rep + .col-status { margin-left: 8px; }
+.kv b .col-rep { display: inline-block; width: 112px; margin-left: 14px; text-align: left; vertical-align: middle; }
+.kv b .col-rep + .col-status { margin-left: 14px; }   /* folga entre "PARCELA 04/16" e o status */
 .kv b .col-rep .selo-tag { font-size: 9.5px; padding: 1px 6px; }
 .cel-rep { display: flex; align-items: center; gap: 4px; }
 @media (max-width: 600px) {
   .kv:has(> span > .desc-painel) > b .col-rep { width: auto; margin-left: 0; }
-  .kv:has(> span > .desc-painel) > b .col-rep + .col-status { margin-left: 8px; }
+  .kv:has(> span > .desc-painel) > b .col-rep + .col-status { margin-left: 12px; }
   .kv:has(> span > .desc-painel) > b .col-rep:not(:has(.selo-tag)) { display: none; }
   .kv:has(> span > .desc-painel) > b .col-rep:not(:has(.selo-tag)) + .col-status { margin-left: 0; }
 }
@@ -1928,7 +1928,7 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 @media (min-width: 601px) {
   /* colunas um pouco mais justas para o nome e "Categoria · Tipo" caberem numa linha */
   .kv:has(> span > .desc-painel) > b .col-banco, .kv.kv-cab b .col-banco { width: 140px; }
-  .kv:has(> span > .desc-painel) > b .col-rep, .kv.kv-cab b .col-rep { width: 96px; margin-left: 10px; }
+  .kv:has(> span > .desc-painel) > b .col-rep, .kv.kv-cab b .col-rep { width: 110px; margin-left: 10px; }
 }
 .extrato-cab-banco b.cab-divida { color: var(--down) !important; }   /* Dívidas: o total no topo em vermelho */
 
