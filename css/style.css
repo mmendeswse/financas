@@ -1957,5 +1957,7 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 .grade-bancos .saldo { font-size: clamp(15px, 1.3vw, 20px); white-space: nowrap; margin-top: auto; }   /* saldos alinhados embaixo */
 .grade-bancos .sem-quebra { white-space: nowrap; }
 .grade-bancos .cartao-item .rodape:last-child { margin-top: 0; }
-/* subtítulo da transferência no extrato: sempre na linha de baixo, inteiro */
-.extrato-linha .desc-sub.sem-quebra { display: block; margin: 2px 0 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* transferência no extrato: título e "Para · Banco" na mesma linha; se não
+   couber, o fim do subtítulo vira reticências */
+.extrato-linha .desc:has(> .desc-sub.sem-quebra) { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.extrato-linha .desc-sub.sem-quebra { display: inline; margin: 0 0 0 8px; white-space: nowrap; }

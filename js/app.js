@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.140";
+  const VERSAO_APP = "3.6.141";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1491,7 +1491,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.140" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.141" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2461,7 +2461,7 @@
       <div class="extrato-linha ${classe || ""}${previsto ? " linha-prevista" : ""}${ref || auto ? " clicavel" : ""}"${auto ? ` data-transf-auto="${esc(auto.id)}" data-mes="${auto.mes}" title="Mudar o valor deste mês"` : ""}${ref ? ` data-ir-secao="${ref.secao}" data-ir-id="${esc(String(ref.id))}" data-ir-data="${esc(String(ref.data || ""))}" title="Ver na guia ${ref.secao === "entradas" ? "Entradas" : "Despesas"}"` : ""}>
         <span class="dim">${data}</span>
         <span class="desc">${desc}</span>
-        <span class="rep">${celRep(repDe(ref))}</span>
+        <span class="rep">${auto ? `<span class="selo-tag selo-cat" title="Transferência automática">Automática</span>` : celRep(repDe(ref))}</span>
         <span class="status">${tipo ? seloStatus(tipo, previsto) : ""}${repDe(ref) ? `<span class="rep-movel">${repDe(ref)}</span>` : ""}</span>
         <b class="${valor === null ? "vazio" : corSinal(valor)}">${valor === null ? "" : brlSinal(valor)}</b>
         <b class="saldo${saldo < 0 ? " down" : ""}">${saldo === null ? '<span class="dim">—</span>' : brl(Math.abs(saldo))}</b>
@@ -3517,8 +3517,8 @@
     const saida = [];
     ocorrenciasTransfAuto(d).filter((o) => o.recebida === recebidas && o.valor > 0).forEach((o) => {
       const auto = { id: o.regra.id, mes: o.mes }, obs = o.regra.obs ? " · " + o.regra.obs : "";
-      saida.push({ bancoId: o.regra.deBancoId, valor: -o.valor, data: o.data, transferencia: true, auto, descricao: "Transferência Automática", sub: "Para · " + F.nomeBanco(d, o.regra.paraBancoId) + obs });
-      saida.push({ bancoId: o.regra.paraBancoId, valor: o.valor, data: o.data, transferencia: true, auto, descricao: "Transferência Automática", sub: "De · " + F.nomeBanco(d, o.regra.deBancoId) + obs });
+      saida.push({ bancoId: o.regra.deBancoId, valor: -o.valor, data: o.data, transferencia: true, auto, descricao: "Transferência", sub: "Para · " + F.nomeBanco(d, o.regra.paraBancoId) + obs });
+      saida.push({ bancoId: o.regra.paraBancoId, valor: o.valor, data: o.data, transferencia: true, auto, descricao: "Transferência", sub: "De · " + F.nomeBanco(d, o.regra.deBancoId) + obs });
     });
     return saida;
   }
