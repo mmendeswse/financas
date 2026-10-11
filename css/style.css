@@ -262,7 +262,6 @@ svg { display: block; }
 .selo-atrasado { background: rgba(255,77,122,0.16); color: var(--down); border: 1px solid rgba(255,77,122,.4); }
 .selo-demo { background: rgba(255,194,51,0.16); color: var(--acc); }
 .selo-cat { background: var(--painel-2); color: var(--dim); border: 1px solid var(--linha-2); }
-.selo-transf { background: rgba(166,107,255,.14); color: var(--vi); border: 1px solid rgba(166,107,255,.35); }
 
 /* barras de progresso */
 .progresso { height: 8px; border-radius: 5px; background: var(--linha); overflow: hidden; }
@@ -1247,19 +1246,6 @@ table.tab-acoes th.col-atualiz, table.tab-acoes td.col-atualiz { display: none; 
 .rp-prevista { color: #FFD633; border-color: rgba(255,214,51,.32); background: rgba(255,214,51,.07); }
 .rp-prevista .rp-ic { background: rgba(255,214,51,.16); }
 .rp-atrasado { color: var(--down); border-color: rgba(255,77,122,.35); background: rgba(255,77,122,.07); }
-.rp-receita { color: var(--up); border-color: rgba(46,229,157,.32); background: rgba(46,229,157,.07); }
-.rp-receita .rp-ic { background: rgba(46,229,157,.16); }
-.rp-despesa { color: var(--down); border-color: rgba(255,92,106,.35); background: rgba(255,92,106,.07); }
-.rp-despesa .rp-ic { background: rgba(255,92,106,.16); }
-/* Relatórios · quadro A: totais de receitas e despesas ao lado do ano */
-.rel-totais { display: inline-flex; gap: 8px; flex-wrap: wrap; }
-.rel-totais .resumo-pill { cursor: default; }
-@media (max-width: 760px) {
-  .filtro-mes:has(.rel-totais) { flex-wrap: wrap; }
-  .rel-totais { flex: 1 1 100%; }
-  .rel-totais .resumo-pill { flex: 1 1 0; min-width: 0; }
-  .rel-totais .resumo-pill b { font-size: 13px; }
-}
 .rp-atrasado .rp-ic { background: rgba(255,77,122,.16); }
 /* "Total · N Lançamentos" no mesmo estilo dos títulos das colunas */
 .kv.kv-total > span { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); font-weight: 700; }
@@ -1772,7 +1758,7 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 .extrato-titulo { gap: 10px; }
 /* histórico do banco com a coluna Recorrência antes do Status */
 .modal.modal-extrato { width: 860px; }
-.extrato-com-rep .extrato-cab, .extrato-com-rep .extrato-linha { grid-template-columns: 78px minmax(0, 1fr) 112px 88px 112px 104px; }
+.extrato-com-rep .extrato-cab, .extrato-com-rep .extrato-linha { grid-template-columns: 78px minmax(0, 1fr) 112px 72px 112px 104px; }
 .extrato-com-rep .extrato-cab .rep, .extrato-com-rep .extrato-cab .status, .extrato-com-rep .extrato-linha .rep { text-align: center; }
 .extrato-com-rep .extrato-linha .rep .selo-tag { font-size: 9.5px; padding: 1px 6px; }
 .extrato-linha .rep-movel { display: none; }
