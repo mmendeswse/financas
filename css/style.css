@@ -1196,29 +1196,80 @@ table.tab-acoes th.col-atualiz, table.tab-acoes td.col-atualiz { display: none; 
    conforme a tela estreita, tudo fica mais compacto em vez de quebrar */
 @media (min-width: 1000px) {
   .card > header:has(.resumo-pills) { flex-wrap: nowrap; align-items: center; }
-  .card > header:has(.resumo-pills) > div:first-child { flex: 0 0 auto; min-width: 0; }
-  .card > header:has(.resumo-pills) h2 { white-space: nowrap; }
-  .card header h2 .resumo-pills { overflow: visible; }
-  .card > header:has(.resumo-pills) .acoes { flex: 0 1 auto; min-width: 0; flex-wrap: nowrap; }
+  /* o título com as caixas ocupa todo o espaço que sobra até o ano/meses */
+  .card > header:has(.resumo-pills) > div:first-child { flex: 1 1 0; min-width: 0; }
+  .card > header:has(.resumo-pills) h2 { display: flex; align-items: center; white-space: nowrap; }
+  #conteudo .grid .card > header:has(.resumo-pills) h2::before { margin-right: .3em; }   /* no flex o espaço do "(a) " some */
+  .card header h2 .resumo-pills { flex: 1 1 auto; min-width: 0; overflow: visible; margin-right: 6px; }
+  .card > header:has(.resumo-pills) .resumo-pill { flex: 1 1 0; min-width: 0; container-type: inline-size; }
+  .card > header:has(.resumo-pills) .acoes { flex: none; flex-wrap: nowrap; }
   .card > header:has(.resumo-pills) .filtro-mes { min-width: 0; }
   .card > header:has(.resumo-pills) .abas-periodo { min-width: 0; overflow-x: auto; scrollbar-width: none; }
   .card > header:has(.resumo-pills) .abas-periodo::-webkit-scrollbar { display: none; }
 }
 @media (min-width: 1000px) and (max-width: 1400px) {
-  .card header h2 .resumo-pills { gap: 6px; margin-left: 10px; }
-  .card > header:has(.resumo-pills) .resumo-pill { padding: 4px 9px; }
-  .card > header:has(.resumo-pills) .resumo-pill .rp-ic { display: none; }
-  .card > header:has(.resumo-pills) .resumo-pill b { font-size: 12.5px; }
-  .card > header:has(.resumo-pills) .resumo-pill small { font-size: 8.5px; }
   .card > header:has(.resumo-pills) .acoes { gap: 6px; }
   .card > header:has(.resumo-pills) .filtro-mes { gap: 6px; }
   .card > header:has(.resumo-pills) .abas-periodo button { padding: 6px 5px; font-size: 10.5px; }
   .card > header:has(.resumo-pills) .acoes .btn { padding-left: 10px; padding-right: 10px; }
 }
+/* cada caixa ocupa a mesma parte do espaço livre e o conteúdo cresce conforme a largura
+   dela: do mais compacto (sem ícone, letra menor) ao maior que cabe, sempre numa linha só
+   (os limites cabem um valor de até "−R$ 12.345,67") */
+@media (min-width: 1000px) {
+  .card > header:has(.resumo-pills) .resumo-pill { gap: 8px; padding: 4px 8px 4px 5px; }
+  .card > header:has(.resumo-pills) .resumo-pill .rp-ic { display: none; }
+  .card > header:has(.resumo-pills) .resumo-pill b { font-size: 11px; }
+  .card > header:has(.resumo-pills) .resumo-pill small { font-size: 8px; }
+  @container (min-width: 95px) {
+    .card > header:has(.resumo-pills) .resumo-pill b { font-size: 12.5px; }
+    .card > header:has(.resumo-pills) .resumo-pill small { font-size: 8.5px; }
+  }
+  @container (min-width: 125px) {
+    .card > header:has(.resumo-pills) .resumo-pill .rp-ic { display: flex; width: 22px; height: 22px; }
+    .card > header:has(.resumo-pills) .resumo-pill .rp-ic svg { width: 13px; height: 13px; }
+    .card > header:has(.resumo-pills) .resumo-pill b { font-size: 13px; }
+    .card > header:has(.resumo-pills) .resumo-pill small { font-size: 9px; }
+  }
+  @container (min-width: 145px) {
+    .card > header:has(.resumo-pills) .resumo-pill .rp-ic { display: flex; width: 26px; height: 26px; }
+    .card > header:has(.resumo-pills) .resumo-pill .rp-ic svg { width: 15px; height: 15px; }
+    .card > header:has(.resumo-pills) .resumo-pill b { font-size: 15px; }
+    .card > header:has(.resumo-pills) .resumo-pill small { font-size: 9.5px; }
+  }
+  @container (min-width: 163px) {
+    .card > header:has(.resumo-pills) .resumo-pill .rp-ic { display: flex; width: 30px; height: 30px; }
+    .card > header:has(.resumo-pills) .resumo-pill .rp-ic svg { width: 17px; height: 17px; }
+    .card > header:has(.resumo-pills) .resumo-pill b { font-size: 17px; }
+    .card > header:has(.resumo-pills) .resumo-pill small { font-size: 10.5px; }
+  }
+  @container (min-width: 190px) {
+    .card > header:has(.resumo-pills) .resumo-pill .rp-ic { display: flex; width: 34px; height: 34px; }
+    .card > header:has(.resumo-pills) .resumo-pill .rp-ic svg { width: 20px; height: 20px; }
+    .card > header:has(.resumo-pills) .resumo-pill b { font-size: 20px; }
+    .card > header:has(.resumo-pills) .resumo-pill small { font-size: 11.5px; }
+  }
+  @container (min-width: 215px) {
+    .card > header:has(.resumo-pills) .resumo-pill .rp-ic { display: flex; width: 38px; height: 38px; }
+    .card > header:has(.resumo-pills) .resumo-pill .rp-ic svg { width: 22px; height: 22px; }
+    .card > header:has(.resumo-pills) .resumo-pill b { font-size: 23px; }
+    .card > header:has(.resumo-pills) .resumo-pill small { font-size: 12.5px; }
+  }
+  @container (min-width: 240px) {
+    .card > header:has(.resumo-pills) .resumo-pill .rp-ic { display: flex; width: 42px; height: 42px; }
+    .card > header:has(.resumo-pills) .resumo-pill .rp-ic svg { width: 24px; height: 24px; }
+    .card > header:has(.resumo-pills) .resumo-pill b { font-size: 26px; }
+    .card > header:has(.resumo-pills) .resumo-pill small { font-size: 13.5px; }
+  }
+  @container (min-width: 265px) {
+    .card > header:has(.resumo-pills) .resumo-pill .rp-ic { display: flex; width: 46px; height: 46px; }
+    .card > header:has(.resumo-pills) .resumo-pill .rp-ic svg { width: 27px; height: 27px; }
+    .card > header:has(.resumo-pills) .resumo-pill b { font-size: 29px; }
+    .card > header:has(.resumo-pills) .resumo-pill small { font-size: 14.5px; }
+  }
+}
 /* tela mais estreita: o NOVO vira só o "+" (o título do botão continua no leitor de tela) */
 @media (min-width: 1000px) and (max-width: 1200px) {
-  .card > header:has(.resumo-pills) .resumo-pill { padding: 4px 7px; }
-  .card > header:has(.resumo-pills) .resumo-pill b { font-size: 11.5px; }
   .card > header:has(.resumo-pills) .abas-periodo button { padding: 6px 3px; font-size: 10px; }
   .card > header:has(.resumo-pills) .acoes .btn.primario { font-size: 0; gap: 0; padding: 9px 11px; }
 }
