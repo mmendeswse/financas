@@ -2458,7 +2458,7 @@
     const ext = F.extratoDoBanco(d, b.id);
     // status do lançamento, com o mesmo selo das guias Entradas e Despesas
     const seloStatus = (tipo, previsto) => previsto ? `<span class="selo-tag selo-prevista">Prevista</span>`
-      : tipo === "transferencia" ? `<span class="selo-tag selo-cat">Transf.</span>` : `<span class="selo-tag selo-pago">Pago</span>`;
+      : tipo === "transferencia" ? `<span class="selo-tag selo-transf">Transferido</span>` : `<span class="selo-tag selo-pago">Pago</span>`;
     const linha = (data, desc, valor, saldo, classe, ref, tipo, previsto, auto, transfId) => `
       <div class="extrato-linha ${classe || ""}${previsto ? " linha-prevista" : ""}${ref || auto || transfId ? " clicavel" : ""}"${auto ? ` data-transf-auto="${esc(auto.id)}" data-mes="${auto.mes}" title="Mudar o valor deste mês"` : ""}${transfId ? ` data-transf-id="${esc(String(transfId))}" title="Editar a transferência"` : ""}${ref ? ` data-ir-secao="${ref.secao}" data-ir-id="${esc(String(ref.id))}" data-ir-data="${esc(String(ref.data || ""))}" title="Ver na guia ${ref.secao === "entradas" ? "Entradas" : "Despesas"}"` : ""}>
         <span class="dim">${data}</span>
