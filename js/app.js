@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.148";
+  const VERSAO_APP = "3.6.149";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -147,6 +147,73 @@
       if (x.recorrencia === FREQ_4DU_ANTIGA) { x.recorrencia = FREQ_PERS; x.regraRep = { ...REGRA_PADRAO }; mudou = true; }
     }));
     if (mudou) A.salvarDados(DADOS, true, true);
+  }
+
+  // Correção única: VR e VT eram despesas mensais, mas são só dinheiro do
+  // salário separado para o Inter (alimentação e transporte). Viram
+  // transferências automáticas "quando o salário cair", com o mesmo valor,
+  // e as despesas param daqui pra frente (os meses que já passaram ficam
+  // como estão). Quem usava o valor do VR/VT numa transferência automática
+  // passa a usar o valor fixo, com os meses passados congelados no valor
+  // que tinham. Devolve a mensagem para o aviso, ou "" se nada mudou.
+  function migrarVrVtParaTransferencia() {
+    const d = DADOS;
+    d.config = d.config || {};
+    if (d.config.migracaoVrVt) return "";
+    const feitos = [], cur = F.mesAtual();
+    ["VR", "VT"].forEach((nome) => {
+      const reg = seriesRecorrentes(d.despesas).find((x) => descIgual(x.descricao, nome) && !(x.ateMes && x.ateMes < cur));
+      if (!reg) return;
+      const ref = { id: reg.id, desc: reg.descricao };
+      // se o deste mês já foi pago, a troca começa no mês seguinte
+      const ocAtual = ocorrenciaNoMes(d, ref, cur, "despesa");
+      const desde = ocAtual && ocAtual.recebida ? proximoMes(cur) : cur;
+      const valor = Math.round(valorDoMes(reg, desde) * 100) / 100;
+      const paraBancoId = bancoDoMes(reg, desde);
+      if (!(valor > 0) || !paraBancoId) return;
+      // transferências automáticas que dependiam deste lançamento
+      const usaValor = (r) => modoDe(r) === "lanc" && r.lanc && casaRef(r.lanc)(reg);
+      const usaGatilho = (r) => condDe(r) === "despesa" && gatilhosDe(r).some((g) => casaRef(g)(reg));
+      const dependentes = (d.transfAuto || []).filter((r) => usaValor(r) || usaGatilho(r));
+      // congela os meses que já passaram no valor que tinham
+      dependentes.forEach((r) => {
+        for (let mes = r.desde || desde, n = 0; mes < desde && n < 240; mes = proximoMes(mes), n++) {
+          const g = gatilhoDoMes(d, r, mes);
+          if (!g) continue;
+          r.meses = r.meses || {};
+          if (!r.meses[mes] || r.meses[mes].valor === undefined) r.meses[mes] = Object.assign({}, r.meses[mes], { valor: valorTransfAuto(d, r, mes, g) });
+        }
+      });
+      // o salário: a mesma condição de outra transferência "quando cair a entrada",
+      // ou a entrada mensal de Salário que cai num banco diferente do Inter
+      const regraSalario = (d.transfAuto || []).find((r) => condDe(r) === "entrada" && gatilhosDe(r).length && r.deBancoId !== paraBancoId);
+      const salario = entradasGatilho(d).filter((e) => e.bancoId && e.bancoId !== paraBancoId && /sal[aá]rio/i.test(String(e.categoria || "") + " " + String(e.descricao || "")))
+        .sort((a, b) => String(dataReg(b)).localeCompare(String(dataReg(a))))[0];
+      const condSalario = regraSalario ? { cond: "entrada", gatilhos: gatilhosDe(regraSalario).map((g) => ({ id: g.id, desc: g.desc })), deBancoId: regraSalario.deBancoId }
+        : salario ? { cond: "entrada", gatilhos: [{ id: salario.id, desc: salario.descricao }], deBancoId: salario.bancoId } : null;
+      // reaproveita a transferência que já levava este valor para o Inter
+      let regra = dependentes.find((r) => r.paraBancoId === paraBancoId && usaValor(r) && !usaGatilho(r));
+      if (regra) Object.assign(regra, { modo: "fixo", valor, lanc: undefined, obs: regra.obs || reg.descricao });
+      else if (condSalario) {
+        d.transfAuto = d.transfAuto || [];
+        regra = { id: A.novoId(), deBancoId: condSalario.deBancoId, paraBancoId, cond: condSalario.cond, gatilhos: condSalario.gatilhos,
+          modo: "fixo", valor, desde, obs: reg.descricao, meses: {} };
+        d.transfAuto.push(regra);
+      } else return;   // sem o salário para disparar: deixa a despesa como está
+      // as outras que dependiam dele: valor fixo e, se o VR/VT era a condição, passam a cair com o salário
+      dependentes.filter((r) => r !== regra).forEach((r) => {
+        if (usaValor(r)) Object.assign(r, { modo: "fixo", valor, lanc: undefined });
+        if (usaGatilho(r) && condSalario) Object.assign(r, { cond: "entrada", gatilhos: condSalario.gatilhos });
+      });
+      // a despesa para no mês anterior à troca (o histórico fica)
+      const fim = mesAnterior(desde);
+      d.despesas = d.despesas.filter((x) => !((x.id === reg.id && String(x.data || "").slice(0, 7) >= desde) ||
+        (x.origemRecorrente === reg.id && String(x.data || "").slice(0, 7) >= desde)));
+      reg.ateMes = fim;
+      feitos.push(`${reg.descricao} (${brl(valor)})`);
+    });
+    d.config.migracaoVrVt = true;
+    return feitos.length ? `${feitos.join(" e ")} agora ${feitos.length === 1 ? "é transferência automática" : "são transferências automáticas"} do salário para o ${F.nomeBanco(d, (d.transfAuto || []).slice(-1)[0].paraBancoId)}.` : "";
   }
 
   const COR_META_PADRAO = "#00E5FF";
@@ -417,6 +484,7 @@
          .then((id) => { gravarCfgSync({ cofre: id }); return id; });
 
     return garantirCofre.then((cofre) => S.baixar(cfg.token, cofre).then((remoto) => {
+      syncBaixado = true;   // o cofre respondeu: os dados locais já são os mais novos
       const hrLocal = DADOS.atualizadoEm || "";
       const hrRemoto = (remoto && remoto.atualizadoEm) || "";
       if (hrRemoto && hrRemoto > hrLocal) {
@@ -438,6 +506,8 @@
       if (!silencioso) toast("Sincronização: " + e.message);
     }).then(() => { sincronizando = false; });
   }
+
+  let syncBaixado = false;
 
   function agendarEnvioSync() {                       // chamado após cada alteração
     if (!cfgSync().token) return;
@@ -977,7 +1047,13 @@
     atualizarCotacoesAutomaticas(true).then(() => setTimeout(buscarNoticiasEmSegundoPlano, 3000));
     setInterval(buscarNoticiasEmSegundoPlano, 30 * 60 * 1000);
     setInterval(() => atualizarCotacoesAutomaticas(true), 5 * 60 * 1000);
-    sincronizar(true);                                   // ao abrir/atualizar a página
+    // ao abrir/atualizar a página; a correção do VR/VT só roda depois de
+    // trazer os dados do cofre, para nunca mexer numa cópia velha
+    sincronizar(true).then(() => {
+      if (cfgSync().token && !syncBaixado) return;
+      const msg = migrarVrVtParaTransferencia();
+      if (msg) { salvarEAtualizar(msg); renderRota(); }
+    });
     setInterval(() => { if (document.visibilityState !== "hidden") sincronizar(true); }, 30 * 1000);
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "visible") sincronizar(true);   // voltou para a aba/app
@@ -1493,7 +1569,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.148" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.149" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
