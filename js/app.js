@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.168";
+  const VERSAO_APP = "3.6.170";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -68,6 +68,8 @@
   const FREQ_PERS = "Personalizar";
   const FREQ_4DU_ANTIGA = "Mensal – 4º dia útil";           // versão anterior, convertida ao carregar
   const FREQUENCIAS_REP = [...FREQUENCIAS, FREQ_PERS];
+  // nome mostrado na tela; o valor gravado nos lançamentos continua o mesmo
+  const ROTULO_FREQ = { [FREQUENCIAS[0]]: "Única", [FREQ_PERS]: "Personalizada" };
   const REGRA_PADRAO = { tipo: "diaUtil", n: 4, ajuste: "proximo", intervalo: 1 };
   const ehPers = (reg) => !!reg && reg.recorrencia === FREQ_PERS;
   const regraDe = (reg) => ({ ...REGRA_PADRAO, ...((reg && reg.regraRep) || {}) });
@@ -99,7 +101,7 @@
       const regra = regraDe(reg);
       const n = numeroParcela(regra, mesReg(reg));
       if (n > 0) return ` <span class="selo-tag selo-cat" title="Parcela ${n} de ${regra.parcelas} · ${esc(rotuloRegra(regra))}">Parcela ${dd(n)}/${dd(regra.parcelas)}</span>${semSabado ? "" : seloSabado(reg)}`;
-      return ` <span class="selo-tag selo-cat" title="Personalizar: ${esc(rotuloRegra(regra))}, ${esc(rotuloIntervalo(regra.intervalo))}">${esc(rotuloIntervalo(regra.intervalo))}</span>${semSabado ? "" : seloSabado(reg)}`;
+      return ` <span class="selo-tag selo-cat" title="Personalizada: ${esc(rotuloRegra(regra))}, ${esc(rotuloIntervalo(regra.intervalo))}">${esc(rotuloIntervalo(regra.intervalo))}</span>${semSabado ? "" : seloSabado(reg)}`;
     }
     return f === FREQUENCIAS[0] ? "" : ` <span class="selo-tag selo-cat">${esc(f.toLowerCase())}</span>`;
   }
@@ -381,7 +383,7 @@
 
   function opcoes(lista, atual, comVazio) {
     let html = comVazio ? '<option value="">Selecione…</option>' : "";
-    html += lista.map((v) => `<option value="${esc(v)}" ${v === atual ? "selected" : ""}>${esc(v)}</option>`).join("");
+    html += lista.map((v) => `<option value="${esc(v)}" ${v === atual ? "selected" : ""}>${esc(ROTULO_FREQ[v] || v)}</option>`).join("");
     return html;
   }
   function opcoesBancos(bancos, atual, comVazio) {
@@ -1583,7 +1585,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.168" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.170" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -4499,16 +4501,15 @@
     const r = { ...REGRA_PADRAO, ...(regra || {}) };
     const op = (lista, atual) => lista.map(([v, t]) => `<option value="${v}"${String(v) === String(atual) ? " selected" : ""}>${t}</option>`).join("");
     return `<div class="bloco-personalizar" id="blocoPers" style="display:none">
-        <div class="par">
+        <div class="par par-3">
           <div class="campo"><label for="p_tipo">Regra da data</label><select id="p_tipo">${op([["diaUtil", "Nº dia útil do mês"], ["ultimoDiaUtil", "Último dia útil do mês"], ["diaFixo", "Dia fixo do mês"]], r.tipo)}</select></div>
           <div class="campo" id="p_campoN"><label for="p_n" id="p_rotuloN">Qual dia útil</label><input id="p_n" type="number" min="1" max="31" value="${r.n}"></div>
+          <div class="campo" id="p_campoAjuste"><label for="p_ajuste" title="Se cair em fim de semana ou feriado">Fim de semana/feriado</label><select id="p_ajuste">${op([["proximo", "Próximo dia útil"], ["anterior", "Dia útil anterior"], ["manter", "Manter a data"]], r.ajuste)}</select></div>
         </div>
         <div class="par">
-          <div class="campo" id="p_campoAjuste"><label for="p_ajuste">Se cair em fim de semana ou feriado</label><select id="p_ajuste">${op([["proximo", "Próximo dia útil"], ["anterior", "Dia útil anterior"], ["manter", "Manter a data"]], r.ajuste)}</select></div>
           <div class="campo"><label for="p_intervalo">Repetir</label><select id="p_intervalo">${op([[1, "Todo mês"], [2, "A cada 2 meses"], [3, "A cada 3 meses"], [6, "A cada 6 meses"], [12, "Uma vez por ano"]], r.intervalo)}</select></div>
+          <div class="campo"><label for="p_parcelas">Parcelas</label><input id="p_parcelas" type="number" min="0" max="600" inputmode="numeric" placeholder="Vazio = sem fim" title="Deixe vazio para repetir sem data para acabar" value="${Number(r.parcelas) > 0 ? r.parcelas : ""}" data-primeira="${esc(r.primeiraParcela || "")}"></div>
         </div>
-        <div class="campo"><label for="p_parcelas">Quantidade de parcelas</label><input id="p_parcelas" type="number" min="0" max="600" inputmode="numeric" placeholder="Sem fim" value="${Number(r.parcelas) > 0 ? r.parcelas : ""}" data-primeira="${esc(r.primeiraParcela || "")}">
-          <div class="ajuda">Deixe vazio para repetir sem data para acabar.</div></div>
         <div class="ajuda" id="p_previa"></div>
       </div>`;
   }
@@ -4732,12 +4733,12 @@
         <div class="campo"><label for="f_cat">Categoria</label><select id="f_cat">${opcoes(CATS_ENTRADA, e ? e.categoria : CATS_ENTRADA[0])}</select></div>
         <div class="campo"><label for="f_banco">Banco</label><select id="f_banco">${opcoesBancos(DADOS.bancos, e ? e.bancoId : (bancoIdPadrao || ""), true)}</select></div>
       </div>
-      <div class="par">
+      <div class="par par-3">
         <div class="campo"><label for="f_tipo">Tipo</label><select id="f_tipo">${opcoes(["Fixa", "Variável"], e ? e.tipo : "Fixa")}</select></div>
         <div class="campo"><label for="f_status">Status</label><select id="f_status">${opcoes(["Pago", "Prevista"], statusEntradaInicial(e, previsao))}</select></div>
+        <div class="campo"><label for="f_rec">Repetição</label><select id="f_rec">${opcoes(FREQUENCIAS_REP, freqDe(e))}</select></div>
       </div>
-      <div class="campo"><label for="f_rec">Repetição</label><select id="f_rec">${opcoes(FREQUENCIAS_REP, freqDe(e))}</select>
-        <div class="ajuda" id="ajudaRec">Serve para identificar entradas que se repetem; o lançamento seguinte continua sendo feito por você.</div></div>
+      <div class="ajuda ajuda-rec" id="ajudaRec">Serve para identificar entradas que se repetem; o lançamento seguinte continua sendo feito por você.</div>
       ${htmlPersonalizar(e && e.regraRep)}
       <div class="campo"><label for="f_obs">Observação</label><textarea id="f_obs" placeholder="Opcional">${e ? esc(e.obs || "") : ""}</textarea></div>
       <div class="modal-acoes">
@@ -4938,12 +4939,12 @@
         <div class="campo"><label for="f_status">Status</label><select id="f_status">${opcoes(["Pago", "Prevista"], statusAtual)}</select></div>
       </div>
       <div id="camposPagamento">
-        <div class="par">
+        <div class="par par-3">
           <div class="campo"><label for="f_pagarcom">Banco</label><select id="f_pagarcom">${opcoesPagarCom(DADOS, x ? x.bancoId : "", x && !ehConta ? x.cartaoId : "")}</select></div>
           <div class="campo"><label for="f_forma">Forma</label><select id="f_forma">${opcoes(FORMAS_PAGAMENTO, x ? x.formaPagamento : FORMAS_PAGAMENTO[0])}</select></div>
+          <div class="campo"><label for="f_rec">Repetição</label><select id="f_rec">${opcoes(FREQUENCIAS_REP, freqDe(x))}</select></div>
         </div>
-        <div class="campo"><label for="f_rec">Repetição</label><select id="f_rec">${opcoes(FREQUENCIAS_REP, freqDe(x))}</select>
-          <div class="ajuda" id="ajudaRec"></div></div>
+        <div class="ajuda ajuda-rec" id="ajudaRec"></div>
       ${htmlPersonalizar(x && x.regraRep)}
       </div>
       <div class="campo"><label for="f_obs">Observação</label><textarea id="f_obs" placeholder="Opcional">${x ? esc(x.obs || "") : ""}</textarea></div>

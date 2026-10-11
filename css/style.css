@@ -1266,6 +1266,7 @@ input.somente-leitura { opacity: .75; cursor: not-allowed; }
 .bloco-personalizar { border: 1px solid var(--linha-2); border-radius: 10px; padding: 12px 12px 4px; margin: -4px 0 14px; background: var(--painel-2); }
 .bloco-personalizar .campo { margin-bottom: 10px; }
 .bloco-personalizar #p_previa { margin: 0 0 8px; color: var(--cy); }
+.ajuda.ajuda-rec { margin: -4px 0 10px; font-size: 11px; color: var(--dim); line-height: 1.4; }   /* ajuda da repetição, embaixo da linha de campos */
 /* status Atrasado: mesmo vermelho de sempre, com negrito reforçado para ter
    o mesmo destaque visual de Pago e Prevista */
 .selo-atrasado { font-weight: 800; }
@@ -2022,6 +2023,15 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 .par.par-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 @media (max-width: 560px) { .par.par-3 { grid-template-columns: 1fr 1fr; } .par.par-3 > :last-child { grid-column: 1 / -1; } }
 @media (min-width: 700px) {
-  .modal.modal-lanc { width: 640px; max-height: calc(100vh - 20px); }
-  .modal.modal-lanc textarea { min-height: 48px; height: 48px; }
+  .modal.modal-lanc { width: 640px; max-height: calc(100vh - 14px); }
+  .modal.modal-lanc { padding-top: 14px; padding-bottom: 16px; }
+  .modal.modal-lanc textarea { min-height: 38px; height: 38px; }
+  /* espaços menores para caber mesmo com a repetição Personalizar aberta */
+  .modal.modal-lanc h3 { margin-bottom: 12px; }
+  .modal.modal-lanc .campo { margin-bottom: 10px; }
+  .modal.modal-lanc .campo label { margin-bottom: 4px; }
+  .modal.modal-lanc .campo input, .modal.modal-lanc .campo select { padding-top: 8px; padding-bottom: 8px; }
+  .modal.modal-lanc .campo-emoji .emoji-atual { height: 38px; }
+  .modal.modal-lanc .bloco-personalizar { padding: 10px 10px 2px; margin: 0 0 10px; }
+  .modal.modal-lanc .bloco-personalizar .campo { margin-bottom: 8px; }
 }
