@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.175";
+  const VERSAO_APP = "3.6.177";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1376,7 +1376,9 @@
     if (!pendentes.length) return null;
     const nenhum = pendentes.some((m) => situacaoMeta(m).chave === "nada");
     // todas as metas, cada uma com o emoji e o valor do "Guardar Mês"
-    const partes = d.metas.map((m) => `${emojiMeta(m)} ${esc(m.nome)}${Number(m.aporteMensal || 0) > 0 ? ` ${brl(m.aporteMensal)}` : ""}`);
+    // atrasada: o valor para ficar em dia; as outras: o "Guardar Mês"
+    const partes = metasPorStatus(d.metas).map((m) => { const st = situacaoMeta(m);
+      return `${emojiMeta(m)} ${esc(m.nome)}${st.atrasado ? ` ${brl(st.deposito)} (atrasada)` : Number(m.aporteMensal || 0) > 0 ? ` ${brl(m.aporteMensal)}` : ""}`; });
     return { tipo: nenhum ? "perigo" : "aviso", rota: "metas",
       texto: `Seu salário foi pago (${fmtData(pagamento)}):<span class="notif-lista">${partes.map((x) => `<span class="notif-item">${x}</span>`).join("")}</span>` };
   }
@@ -1598,7 +1600,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.175" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.177" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1866,13 +1868,50 @@
   // situação da meta pela bolinha, comparando o que entrou no mês com o "Guardar Mês":
   // verde = soma do mês igual ou maior (ou meta concluída), amarela = já houve depósito
   // no mês mas ainda falta, vermelha = nenhum depósito no mês
+  // metas na ordem do status: vermelho (nada guardado no mês), amarelo
+  // (guardou parte) e verde (em dia ou concluída); empate fica na ordem cadastrada
+  const ORDEM_STATUS_META = { nada: 0, atencao: 1, ok: 2 };
+  const metasPorStatus = (lista) => lista.map((m, i) => ({ m, i, o: ORDEM_STATUS_META[situacaoMeta(m).chave] }))
+    .sort((a, b) => a.o - b.o || a.i - b.i).map((x) => x.m);
+  // mês em que a meta começou a valer (o "Guardar Mês" é cobrado a partir dele):
+  // a data de criação ou, nas metas antigas, o 1º registro do histórico — se
+  // ele for o último dia de um mês (valor de antes, gravado no fim do mês
+  // anterior), a cobrança começa no mês seguinte
+  function mesInicioMeta(m) {
+    if (m.criadoEm) return String(m.criadoEm).slice(0, 7);
+    const h = Array.isArray(m.historico) && m.historico[0];
+    if (!h || !h.data) return null;
+    const [a, me, di] = String(h.data).split("-").map(Number);
+    return di === new Date(a, me, 0).getDate() ? proximoMes(String(h.data).slice(0, 7)) : String(h.data).slice(0, 7);
+  }
+  const fimDoMes = (mes) => { const [a, me] = mes.split("-").map(Number); return `${mes}-${String(new Date(a, me, 0).getDate()).padStart(2, "0")}`; };
+  // o que ficou faltando dos meses anteriores: o "Guardar Mês" de cada mês
+  // desde o início da meta até o mês passado, menos o que entrou nesses meses
+  // (um mês com depósito a mais compensa outro com depósito a menos)
+  function atrasoMeta(m) {
+    const mensal = Number(m.aporteMensal || 0), inicio = mesInicioMeta(m), atual = isoLocal(new Date()).slice(0, 7);
+    if (!(mensal > 0) || !inicio || inicio >= atual) return 0;
+    let meses = 0;
+    for (let x = inicio; x < atual && meses < 600; x = proximoMes(x)) meses++;
+    const entrou = valorMetaEm(m, fimDoMes(mesAnterior(atual))) - valorMetaEm(m, fimDoMes(mesAnterior(inicio)));
+    return Math.max(0, Math.round((meses * mensal - entrou) * 100) / 100);
+  }
   function situacaoMeta(m) {
     const atual = Number(m.atual || 0), objetivo = Number(m.objetivo || 0);
     if (objetivo > 0 && atual >= objetivo) return { chave: "ok", rotulo: "Meta concluída" };
     const mensal = Number(m.aporteMensal || 0), noMes = guardadoNoMes(m);
-    if (noMes <= 0) return { chave: "nada", rotulo: mensal > 0 ? `Nenhum depósito este mês · guardar ${brl(mensal)}` : "Nenhum depósito este mês" };
+    // devendo de meses anteriores: vermelho até depositar o atrasado e o do mês
+    const atraso = atrasoMeta(m);
+    if (atraso > 0) {
+      const falta = objetivo > 0 ? objetivo - atual : Infinity;
+      const paraFicarEmDia = Math.min(falta, atraso + mensal - noMes);
+      if (paraFicarEmDia > 0.005) return { chave: "nada", atrasado: true, deposito: paraFicarEmDia,
+        rotulo: `Atrasado ${brl(atraso)} · deposite ${brl(paraFicarEmDia)} para ficar em dia` };
+      return { chave: "ok", rotulo: `Em dia · guardou ${brl(noMes)} este mês` };
+    }
+    if (noMes <= 0) return { chave: "nada", deposito: mensal, rotulo: mensal > 0 ? `Nenhum depósito este mês · guardar ${brl(mensal)}` : "Nenhum depósito este mês" };
     if (!(mensal > 0) || noMes >= mensal - 0.005) return { chave: "ok", rotulo: `Guardou ${brl(noMes)} este mês` };
-    return { chave: "atencao", rotulo: `Guardou ${brl(noMes)} · falta ${brl(mensal - noMes)} este mês` };
+    return { chave: "atencao", deposito: mensal - noMes, rotulo: `Guardou ${brl(noMes)} · falta ${brl(mensal - noMes)} este mês` };
   }
 
   const ICONE_GUARDAR_MES = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M12 13.2v5M9.8 15.4h4.4"/></svg>';
@@ -1917,7 +1956,7 @@
     if (!d.metas.length) return `<div class="empty" style="padding:14px">Nenhuma meta cadastrada.</div>`;
     // todas as metas; a lista mostra 3 de cada vez (mesma altura do quadro
     // Receitas x despesas) e rola dentro do quadro para ver as outras
-    return `<div class="metas-lista${d.metas.length > 3 ? " metas-rolagem" : ""}">` + d.metas.map(itemMetaHtml).join("") + `</div>`;
+    return `<div class="metas-lista${d.metas.length > 3 ? " metas-rolagem" : ""}">` + metasPorStatus(d.metas).map(itemMetaHtml).join("") + `</div>`;
   }
 
   // uma meta como no quadro Metas do Dashboard (usado também nos quadros da guia Metas)
@@ -6428,7 +6467,7 @@
       // cada meta num quadro igual ao quadro Metas do Dashboard (o mesmo bloco
       // da meta), com o Editar no topo à direita (o "Guardar Mês" aparece no
       // selo 💰 da meta); sempre com o valor de hoje
-      corpo = d.metas.map((m) => {
+      corpo = metasPorStatus(d.metas).map((m) => {
         const diasPrazo = m.prazo ? F.diasEntre(m.prazo) : null;
         const vencida = diasPrazo !== null && diasPrazo < 0 && Number(m.atual || 0) < Number(m.objetivo || 0);
         // sem título repetido: o bloco da meta é o mesmo do Dashboard (bolinha, nome,
@@ -6478,6 +6517,7 @@
         prazo: document.getElementById("f_prazo").value,
         aporteMensal: numIn(document.getElementById("f_mensal").value),
         cor: m ? (m.cor || COR_META_PADRAO) : COR_META_PADRAO,   // meta nova sempre em ciano, a cor padrão do sistema
+        criadoEm: m ? m.criadoEm : hojeISO(),   // o "Guardar Mês" é cobrado a partir deste mês
         emoji: lerEmojiMeta()
       };
       const atualAntes = m ? Number(m.atual || 0) : undefined;
