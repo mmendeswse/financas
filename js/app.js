@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.136";
+  const VERSAO_APP = "3.6.137";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1491,7 +1491,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.136" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.137" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -3303,7 +3303,7 @@
     const rota = (t) => `${esc(F.nomeBanco(d, t.deBancoId))} → ${esc(F.nomeBanco(d, t.paraBancoId))}`;
     const corpoRegras = regras.map((r) => `
         <div class="kv kv-editavel" data-acao="editar-transf-auto" data-id="${r.id}" title="Editar a transferência automática">
-          <span class="dim">🔁 ${r.obs ? esc(r.obs) + " · " : ""}Quando cair ${esc(nomesGatilhos(r))} · ${rota(r)}</span>
+          <span class="dim">🔁 ${r.obs ? esc(r.obs) + " · " : ""}${esc(textoCond(r))} · ${rota(r)}</span>
           <b>${modoDe(r) === "fixo" ? brl(r.valor) : `<span class="dim">${esc(textoModo(r))}</span>`}</b>
         </div>`).join("");
     const corpo = lista.map((t) => t.auto ? `
@@ -3396,17 +3396,22 @@
   }
 
   // ---------------------------------------------------------------------
-  // TRANSFERÊNCIAS AUTOMÁTICAS: todo mês em que as entradas escolhidas
-  // (o salário, por ex.) caem, passa um valor de um banco para outro.
+  // TRANSFERÊNCIAS AUTOMÁTICAS: todo mês, quando a condição escolhida
+  // acontece, passa um valor de um banco para outro. Condições (cond):
+  //  - "entrada": as entradas marcadas caem (o salário, por ex.);
+  //  - "despesa": as despesas marcadas são pagas;
+  //  - "dia": num dia fixo do mês;
+  //  - "transf": depois que outra transferência automática acontece.
   // O valor de cada mês vem de um destes modos:
   //  - "fixo": um valor padrão;
-  //  - "soma": a soma das entradas que dispararam (Pagamento + Bonificação),
-  //    acompanhando o valor que elas tiverem naquele mês;
+  //  - "soma": a soma dos lançamentos da condição (Pagamento + Bonificação),
+  //    acompanhando o valor que eles tiverem naquele mês — ou, na condição
+  //    "transf", o mesmo valor da outra transferência;
   //  - "lanc": o valor de um lançamento (a despesa VR, por ex.) no mesmo
   //    mês ou no mês seguinte.
   // Em qualquer modo o valor de um mês pode ser trocado só naquele mês.
-  // DADOS.transfAuto: [{ id, deBancoId, paraBancoId, gatilhos: [{ id, desc }],
-  //   modo, valor, lanc: { id, desc, tipo, mesSeguinte }, desde: "AAAA-MM", obs,
+  // DADOS.transfAuto: [{ id, deBancoId, paraBancoId, cond, gatilhos: [{ id, desc }],
+  //   dia, depoisDe, modo, valor, lanc: { id, desc, tipo, mesSeguinte }, desde: "AAAA-MM", obs,
   //   meses: { "AAAA-MM": { valor, pulado, visto } } }]
   // ---------------------------------------------------------------------
   const descIgual = (a, b) => String(a || "").trim().toLowerCase() === String(b || "").trim().toLowerCase();
@@ -3414,7 +3419,16 @@
   // a primeira versão guardava uma só entrada (entradaId/entradaDesc)
   const gatilhosDe = (regra) => regra.gatilhos || (regra.entradaId || regra.entradaDesc ? [{ id: regra.entradaId, desc: regra.entradaDesc }] : []);
   const modoDe = (regra) => regra.modo || "fixo";
-  const nomesGatilhos = (regra) => gatilhosDe(regra).map((g) => g.desc || "a entrada").join(" + ") || "a entrada";
+  const nomesGatilhos = (regra) => gatilhosDe(regra).map((g) => g.desc || "o lançamento").join(" + ") || "o lançamento";
+  // regras antigas, sem condição, eram todas "quando cair uma entrada"
+  const condDe = (regra) => regra.cond || "entrada";
+  const rotuloTransfAuto = (regra) => (regra.obs ? regra.obs + " · " : "") + F.nomeBanco(DADOS, regra.deBancoId) + " → " + F.nomeBanco(DADOS, regra.paraBancoId);
+  function textoCond(regra) {
+    const c = condDe(regra);
+    if (c === "dia") return "Todo dia " + (regra.dia || "?");
+    if (c === "transf") { const o = achar(DADOS.transfAuto || [], regra.depoisDe); return "Depois de " + (o ? rotuloTransfAuto(o) : "outra transferência (excluída)"); }
+    return (c === "despesa" ? "Quando pagar " : "Quando cair ") + nomesGatilhos(regra);
+  }
 
   // séries recorrentes (uma por descrição), para escolher na janela
   function seriesRecorrentes(lista) {
@@ -3423,6 +3437,7 @@
       .filter((e) => { const k = String(e.descricao || "").trim().toLowerCase(); if (!k || vistas.has(k)) return false; vistas.add(k); return true; });
   }
   const entradasGatilho = (d) => seriesRecorrentes(d.entradas);
+  const despesasGatilho = (d) => seriesRecorrentes([...d.despesas, ...(d.contasPagar || [])]);
   const lancamentosValor = (d) => [...entradasGatilho(d).map((e) => ({ reg: e, tipo: "entrada" })),
     ...seriesRecorrentes([...d.despesas, ...(d.contasPagar || [])]).map((x) => ({ reg: x, tipo: "despesa" }))];
 
@@ -3444,10 +3459,25 @@
     achados.sort((a, b) => String(a.data).localeCompare(String(b.data)));
     return achados.find((a) => a.recebida) || achados[0] || null;
   }
-  // as entradas que disparam a regra no mês: dispara quando alguma já caiu,
-  // na data da última que caiu; soma = o que já caiu (ou tudo, se nada caiu)
-  function gatilhoDoMes(d, regra, mes) {
-    const ocs = gatilhosDe(regra).map((g) => ocorrenciaNoMes(d, g, mes, "entrada")).filter(Boolean);
+  // a condição da regra no mês: { data, recebida (já aconteceu), soma } ou null.
+  // Entradas/despesas: acontece quando alguma já caiu (foi paga), na data da
+  // última; soma = o que já caiu (ou tudo, se nada caiu).
+  function gatilhoDoMes(d, regra, mes, prof) {
+    const c = condDe(regra);
+    if (c === "dia") {
+      const [a, m] = mes.split("-").map(Number);
+      const dia = Math.min(Math.max(1, Number(regra.dia) || 1), new Date(a, m, 0).getDate());
+      const data = `${mes}-${String(dia).padStart(2, "0")}`;
+      return { data, recebida: data <= hojeISO(), soma: 0 };
+    }
+    if (c === "transf") {
+      // acompanha a outra regra (com limite, para uma cadeia que volte nela mesma)
+      const o = (d.transfAuto || []).find((x) => x.id === regra.depoisDe);
+      if (!o || o === regra || (prof || 0) > 8 || mes < (o.desde || mes) || ((o.meses || {})[mes] || {}).pulado) return null;
+      const g = gatilhoDoMes(d, o, mes, (prof || 0) + 1);
+      return g ? { data: g.data, recebida: g.recebida, soma: valorTransfAuto(d, o, mes, g) } : null;
+    }
+    const ocs = gatilhosDe(regra).map((g) => ocorrenciaNoMes(d, g, mes, c === "despesa" ? "despesa" : "entrada")).filter(Boolean);
     if (!ocs.length) return null;
     const caidas = ocs.filter((o) => o.recebida), base = caidas.length ? caidas : ocs;
     const datas = base.map((o) => String(o.data)).sort();
@@ -3491,59 +3521,71 @@
     return saida;
   }
 
-  // "Começa em": o mês atual, ou o próximo se as entradas deste mês já caíram
-  function inicioSugerido(gatilhos) {
+  // "Começa em": o mês atual, ou o próximo se a condição deste mês já aconteceu
+  function inicioSugerido(regra) {
     const mes = F.mesAtual();
-    const g = gatilhos.length ? gatilhoDoMes(DADOS, { gatilhos }, mes) : null;
+    const g = regra.cond ? gatilhoDoMes(DADOS, regra, mes) : null;
     return g && g.recebida ? proximoMes(mes) : mes;
   }
   const textoModo = (regra) => {
     const modo = modoDe(regra);
-    if (modo === "soma") return "soma de " + nomesGatilhos(regra);
+    if (modo === "soma") return condDe(regra) === "transf" ? "o mesmo valor" : "soma de " + nomesGatilhos(regra);
     if (modo === "lanc" && regra.lanc) return "valor de " + regra.lanc.desc + (regra.lanc.mesSeguinte ? " (mês seguinte)" : "");
     return "valor fixo";
   };
 
-  // criar ou editar a regra
+  // criar ou editar a regra: a condição é escolhida na hora, sem nada marcado
   function abrirModalTransfAuto(id, inicial) {
     const r = id ? achar(DADOS.transfAuto || [], id) : null;
     const v = r || inicial || {};
-    const gatilhos = entradasGatilho(DADOS);
-    if (!gatilhos.length) { toast("Cadastre antes uma entrada recorrente (o salário, por ex.) em Entradas."); return; }
-    // sugestão ao criar: as entradas de Salário já marcadas e o valor pela soma
-    // delas (ou o valor digitado na janela Transferir); tudo pode ser trocado
-    const salarios = gatilhos.filter((e) => /sal[aá]rio/i.test(e.categoria || ""));
-    const marcados = r ? gatilhosDe(r) : (salarios.length ? salarios : [gatilhos[0]]).map((e) => ({ id: e.id, desc: e.descricao }));
+    const cond = r ? condDe(r) : "";
+    const entradas = entradasGatilho(DADOS), despesas = despesasGatilho(DADOS);
+    const outras = (DADOS.transfAuto || []).filter((x) => x !== r);
+    const marcados = r ? gatilhosDe(r) : [];
     const marcado = (e) => marcados.some((g) => casaRef(g)(e));
-    const modo = r ? modoDe(r) : v.modo || (v.valor ? "fixo" : "soma"), lancs = lancamentosValor(DADOS);
+    const modo = r ? modoDe(r) : v.modo || "fixo", lancs = lancamentosValor(DADOS);
     const lancAtual = v.lanc ? lancs.find((l) => l.tipo === v.lanc.tipo && casaRef(v.lanc)(l.reg)) : null;
     const nomeLanc = (l) => `${l.tipo === "entrada" ? "Entrada" : "Despesa"}: ${esc(l.reg.descricao || l.reg.categoria || "")}${l.reg.bancoId ? " · " + esc(F.nomeBanco(DADOS, l.reg.bancoId)) : ""}`;
+    const caixas = (lista, classe, vazio) => lista.length ? lista.map((e) => `
+        <label class="chk-linha"><input type="checkbox" class="${classe}" value="${e.id}"${cond && marcado(e) ? " checked" : ""}> ${esc(e.descricao || e.categoria || "")}${e.bancoId ? ` <span class="dim">· ${esc(F.nomeBanco(DADOS, e.bancoId))}</span>` : ""}</label>`).join("")
+      : `<div class="ajuda">${vazio}</div>`;
+    const opc = (valor, texto, atual) => `<option value="${valor}"${valor === atual ? " selected" : ""}>${texto}</option>`;
     const ultimos = r ? ocorrenciasTransfAuto(DADOS).filter((o) => o.regra === r).slice(-6).reverse() : [];
     abrirModal(`
       <h3>${r ? "Editar transferência automática" : "Transferir entre bancos"}</h3>
       ${r ? "" : campoTipoTransf(true)}
-      <div class="campo"><label>Quando cair</label>${gatilhos.map((e) => `
-        <label class="chk-linha"><input type="checkbox" class="f_gat" value="${e.id}"${marcado(e) ? " checked" : ""}> ${esc(e.descricao || e.categoria || "Entrada")}${e.bancoId ? ` <span class="dim">· ${esc(F.nomeBanco(DADOS, e.bancoId))}</span>` : ""}</label>`).join("")}
-      </div>
+      <div class="campo"><label for="f_cond">Condição</label><select id="f_cond">
+        ${r ? "" : opc("", "Escolha a condição…", cond)}
+        ${opc("entrada", "Quando cair uma entrada", cond)}
+        ${opc("despesa", "Quando pagar uma despesa", cond)}
+        ${opc("dia", "Num dia fixo do mês", cond)}
+        ${opc("transf", "Depois de outra transferência automática", cond)}
+      </select></div>
+      <div class="campo bloco-cond" data-cond="entrada"><label>Entradas</label>${caixas(entradas, "f_gat", "Nenhuma entrada recorrente cadastrada em Entradas.")}</div>
+      <div class="campo bloco-cond" data-cond="despesa"><label>Despesas</label>${caixas(despesas, "f_gatDesp", "Nenhuma despesa recorrente cadastrada em Despesas.")}</div>
+      <div class="campo bloco-cond" data-cond="dia"><label for="f_dia">Dia do mês</label><input id="f_dia" type="number" min="1" max="31" inputmode="numeric" value="${esc(String(v.dia || ""))}" placeholder="1 a 31"><div class="ajuda">Em meses mais curtos, vale o último dia.</div></div>
+      <div class="campo bloco-cond" data-cond="transf"><label for="f_depois">Transferência</label>${outras.length
+        ? `<select id="f_depois">${outras.map((x) => opc(x.id, esc(rotuloTransfAuto(x)), v.depoisDe || "")).join("")}</select>`
+        : `<div class="ajuda">Crie antes outra transferência automática.</div>`}</div>
       <div class="par">
-        <div class="campo"><label for="f_de">De</label><select id="f_de">${opcoesBancos(DADOS.bancos, r ? r.deBancoId : (gatilhos.find(marcado) || {}).bancoId || v.deBancoId || "", true)}</select></div>
+        <div class="campo"><label for="f_de">De</label><select id="f_de">${opcoesBancos(DADOS.bancos, v.deBancoId || "", true)}</select></div>
         <div class="campo"><label for="f_para">Para</label><select id="f_para">${opcoesBancos(DADOS.bancos, v.paraBancoId || "", true)}</select></div>
       </div>
       <div class="campo"><label for="f_modo">Valor</label><select id="f_modo">
-        <option value="fixo"${modo === "fixo" ? " selected" : ""}>Valor fixo</option>
-        <option value="soma"${modo === "soma" ? " selected" : ""}>Soma das entradas marcadas acima</option>
-        <option value="lanc"${modo === "lanc" ? " selected" : ""}>Valor de um lançamento (VR, VT…)</option>
+        ${opc("fixo", "Valor fixo", modo)}
+        <option value="soma"${modo === "soma" ? " selected" : ""} id="opcSoma">Soma</option>
+        ${opc("lanc", "Valor de um lançamento (VR, VT…)", modo)}
       </select></div>
       <div class="par" id="blocoLanc">
         <div class="campo"><label for="f_lanc">Lançamento</label><select id="f_lanc">${lancs.map((l, i) => `<option value="${i}"${l === lancAtual ? " selected" : ""}>${nomeLanc(l)}</option>`).join("")}</select></div>
         <div class="campo"><label for="f_lancMes">Do mês</label><select id="f_lancMes">
-          <option value="0"${v.lanc && !v.lanc.mesSeguinte ? " selected" : ""}>O mesmo das entradas</option>
+          <option value="0"${v.lanc && !v.lanc.mesSeguinte ? " selected" : ""}>O mesmo da condição</option>
           <option value="1"${v.lanc && v.lanc.mesSeguinte ? " selected" : ""}>O mês seguinte</option>
         </select></div>
       </div>
       <div class="par">
         <div class="campo" id="blocoValor"><label for="f_valor" id="rotValor">Valor padrão</label>${campoMoeda("f_valor", v.valor || "")}</div>
-        <div class="campo"><label for="f_desde">Começa em</label><input id="f_desde" type="month" value="${r ? r.desde : inicioSugerido(gatilhos.filter(marcado).map((e) => ({ id: e.id, desc: e.descricao })))}"></div>
+        <div class="campo"><label for="f_desde">Começa em</label><input id="f_desde" type="month" value="${r ? r.desde : F.mesAtual()}"></div>
       </div>
       <div class="campo"><label for="f_obs">Observação</label><input id="f_obs" value="${esc(v.obs || "")}" placeholder="Opcional (VR, VT…)"><div class="ajuda" id="ajudaModo"></div></div>
       ${ultimos.length ? `<div class="campo"><label>Meses</label>${ultimos.map((o) => `
@@ -3551,48 +3593,83 @@
           <span class="dim">${fmtMesRotulo(o.mes)} · ${o.pulado ? "não transferido" : o.recebida ? fmtDataCurta(o.data) : "prevista"}</span><b>${brl(o.valor)}</b>
         </div>`).join("")}</div>` : ""}
       <div class="modal-acoes">${r ? `<button class="btn perigo" id="btnExcluir">Excluir</button>` : ""}<button class="btn primario salvar" id="btnSalvar">Salvar</button></div>`);
-    const selModo = document.getElementById("f_modo");
-    const lerGatilhos = () => [...document.querySelectorAll("#modal .f_gat:checked")].map((c) => achar(DADOS.entradas, c.value)).filter(Boolean)
-      .map((e) => ({ id: e.id, desc: e.descricao }));
-    const ajustarModo = () => {
-      const m = selModo.value;
-      document.getElementById("blocoLanc").style.display = m === "lanc" ? "" : "none";
-      document.getElementById("blocoValor").style.visibility = m === "soma" ? "hidden" : "";
-      document.getElementById("rotValor").textContent = m === "lanc" ? "Valor se o lançamento faltar" : "Valor padrão";
-      document.getElementById("ajudaModo").textContent = (m === "soma" ? "O valor de cada mês é a soma das entradas marcadas, com o valor que você editar nelas. "
-        : m === "lanc" ? "O valor de cada mês é o do lançamento escolhido, com o valor que você editar nele. " : "")
-        + "Quando as entradas forem marcadas como recebidas, o valor sai do primeiro banco e entra no segundo, na mesma data. Dá para mudar o valor de um mês clicando na transferência.";
+    const $ = (sel) => document.getElementById(sel);
+    const selCond = $("f_cond"), selModo = $("f_modo");
+    // a regra como está na janela agora (para a sugestão de "Começa em" e para salvar)
+    const lerGatilhos = () => {
+      const c = selCond.value;
+      if (c !== "entrada" && c !== "despesa") return [];
+      const lista = c === "entrada" ? DADOS.entradas : [...DADOS.despesas, ...(DADOS.contasPagar || [])];
+      return [...document.querySelectorAll(`#modal .${c === "entrada" ? "f_gat" : "f_gatDesp"}:checked`)]
+        .map((x) => lista.find((e) => e.id === x.value)).filter(Boolean).map((e) => ({ id: e.id, desc: e.descricao }));
     };
-    selModo.onchange = ajustarModo; ajustarModo();
-    ligarSaldoOrigem(null, true);   // automática: o "depois" só vale no dia em que cair
+    const lerRegra = () => ({ cond: selCond.value, gatilhos: lerGatilhos(), dia: Number($("f_dia").value) || 0, depoisDe: $("f_depois") ? $("f_depois").value : "" });
+    const sugerirInicio = () => { if (!r) $("f_desde").value = inicioSugerido(lerRegra()); };
+    const ajustar = () => {
+      const c = selCond.value, m = selModo.value;
+      document.querySelectorAll("#modal .bloco-cond").forEach((b) => { b.style.display = b.dataset.cond === c ? "" : "none"; });
+      const opcSoma = $("opcSoma");
+      opcSoma.textContent = c === "despesa" ? "Soma das despesas marcadas" : c === "transf" ? "O mesmo valor da outra transferência" : "Soma das entradas marcadas";
+      opcSoma.disabled = c === "dia" || !c;
+      if (opcSoma.disabled && m === "soma") selModo.value = "fixo";
+      const m2 = selModo.value;
+      $("blocoLanc").style.display = m2 === "lanc" ? "" : "none";
+      $("blocoValor").style.visibility = m2 === "soma" ? "hidden" : "";
+      $("rotValor").textContent = m2 === "lanc" ? "Valor se o lançamento faltar" : "Valor padrão";
+      const quando = { entrada: "Quando as entradas marcadas forem recebidas", despesa: "Quando as despesas marcadas forem pagas",
+        dia: "No dia escolhido de cada mês", transf: "Quando a outra transferência acontecer" }[c];
+      $("ajudaModo").textContent = (m2 === "soma" ? (c === "transf" ? "O valor de cada mês é o mesmo da outra transferência. " : "O valor de cada mês é a soma dos lançamentos marcados, com o valor que você editar neles. ")
+        : m2 === "lanc" ? "O valor de cada mês é o do lançamento escolhido, com o valor que você editar nele. " : "")
+        + (quando ? quando + ", o valor sai do primeiro banco e entra no segundo, na mesma data. " : "")
+        + "Dá para mudar o valor de um mês clicando na transferência.";
+    };
+    selCond.onchange = () => {
+      ajustar(); sugerirInicio();
+      // depois de outra transferência: o dinheiro sai de onde a outra entrou
+      if (selCond.value === "transf" && $("f_depois")) { const o = achar(outras, $("f_depois").value); if (o) $("f_de").value = o.paraBancoId; }
+    };
+    selModo.onchange = ajustar; ajustar();
+    ligarSaldoOrigem(null, true);   // automática: o "depois" só vale no dia em que acontecer
     if (!r) ligarTipoTransf((dados) => abrirModalTransferencia(null, dados));
-    if (!r) document.querySelectorAll("#modal .f_gat").forEach((c) => { c.onchange = () => {
-      const gs = lerGatilhos(), e = gs.length ? achar(DADOS.entradas, gs[0].id) : null;
-      if (e && e.bancoId) document.getElementById("f_de").value = e.bancoId;
-      document.getElementById("f_desde").value = inicioSugerido(gs);
-    }; });
+    if (!r) {
+      document.querySelectorAll("#modal .f_gat, #modal .f_gatDesp").forEach((c) => { c.onchange = () => {
+        const gs = lerGatilhos(), lista = [...DADOS.entradas, ...DADOS.despesas, ...(DADOS.contasPagar || [])];
+        const e = gs.length ? lista.find((x) => x.id === gs[0].id) : null;
+        if (e && e.bancoId) { $("f_de").value = e.bancoId; $("f_de").dispatchEvent(new Event("change")); }
+        sugerirInicio();
+      }; });
+      $("f_dia").oninput = sugerirInicio;
+      if ($("f_depois")) $("f_depois").onchange = () => { const o = achar(outras, $("f_depois").value); if (o) { $("f_de").value = o.paraBancoId; $("f_de").dispatchEvent(new Event("change")); } sugerirInicio(); };
+    }
     document.querySelectorAll("#modal [data-transf-auto]").forEach((el) => { el.onclick = () => abrirModalTransfAutoMes(el.dataset.transfAuto, el.dataset.mes); });
-    document.getElementById("btnSalvar").onclick = () => {
-      const de = document.getElementById("f_de").value, para = document.getElementById("f_para").value;
-      const valor = numIn(document.getElementById("f_valor").value), modoNovo = selModo.value, gs = lerGatilhos();
-      const l = lancs[Number(document.getElementById("f_lanc").value)];
-      if (!gs.length) { toast("Marque ao menos uma entrada."); return; }
+    $("btnSalvar").onclick = () => {
+      const de = $("f_de").value, para = $("f_para").value, cnd = lerRegra();
+      const valor = numIn($("f_valor").value), modoNovo = selModo.value;
+      const l = lancs[Number($("f_lanc").value)];
+      if (!cnd.cond) { toast("Escolha a condição."); return; }
+      if (cnd.cond === "entrada" && !cnd.gatilhos.length) { toast("Marque ao menos uma entrada."); return; }
+      if (cnd.cond === "despesa" && !cnd.gatilhos.length) { toast("Marque ao menos uma despesa."); return; }
+      if (cnd.cond === "dia" && !(cnd.dia >= 1 && cnd.dia <= 31)) { toast("Informe um dia de 1 a 31."); return; }
+      if (cnd.cond === "transf" && !cnd.depoisDe) { toast("Escolha a outra transferência."); return; }
       if (!de || !para) { toast("Escolha os dois bancos."); return; }
       if (de === para) { toast("Escolha bancos diferentes."); return; }
       if (modoNovo === "fixo" && !(valor > 0)) { toast("Informe um valor maior que zero."); return; }
       if (modoNovo === "lanc" && !l) { toast("Escolha o lançamento."); return; }
-      const registro = { deBancoId: de, paraBancoId: para, gatilhos: gs, modo: modoNovo, valor: modoNovo === "soma" ? 0 : valor,
-        lanc: modoNovo === "lanc" ? { id: l.reg.id, desc: l.reg.descricao, tipo: l.tipo, mesSeguinte: document.getElementById("f_lancMes").value === "1" } : undefined,
-        desde: document.getElementById("f_desde").value || F.mesAtual(), obs: document.getElementById("f_obs").value.trim(),
-        entradaId: undefined, entradaDesc: undefined };
+      const registro = { deBancoId: de, paraBancoId: para, cond: cnd.cond, gatilhos: cnd.gatilhos,
+        dia: cnd.cond === "dia" ? cnd.dia : undefined, depoisDe: cnd.cond === "transf" ? cnd.depoisDe : undefined,
+        modo: modoNovo, valor: modoNovo === "soma" ? 0 : valor,
+        lanc: modoNovo === "lanc" ? { id: l.reg.id, desc: l.reg.descricao, tipo: l.tipo, mesSeguinte: $("f_lancMes").value === "1" } : undefined,
+        desde: $("f_desde").value || F.mesAtual(), obs: $("f_obs").value.trim(), entradaId: undefined, entradaDesc: undefined };
       DADOS.transfAuto = DADOS.transfAuto || [];
       if (r) Object.assign(r, registro); else DADOS.transfAuto.push({ id: A.novoId(), ...registro, meses: {} });
       fecharModal();
-      salvarEAtualizar(r ? "Transferência automática atualizada." : `Quando cair ${nomesGatilhos(registro)}, ${textoModo(registro)} vai de ${F.nomeBanco(DADOS, de)} para ${F.nomeBanco(DADOS, para)}.`);
+      salvarEAtualizar(r ? "Transferência automática atualizada." : `${textoCond(registro)}: ${textoModo(registro)} vai de ${F.nomeBanco(DADOS, de)} para ${F.nomeBanco(DADOS, para)}.`);
     };
-    if (r) document.getElementById("btnExcluir").onclick = () => {
+    if (r) $("btnExcluir").onclick = () => {
+      const dependentes = (DADOS.transfAuto || []).filter((x) => condDe(x) === "transf" && x.depoisDe === r.id);
       fecharModal();
-      confirmarExclusao("Excluir esta transferência automática? As transferências que ela já fez também saem dos saldos.", () => {
+      confirmarExclusao("Excluir esta transferência automática? As transferências que ela já fez também saem dos saldos." +
+        (dependentes.length ? ` ${dependentes.length === 1 ? "Uma transferência depende" : dependentes.length + " transferências dependem"} dela e deixa${dependentes.length === 1 ? "" : "m"} de acontecer.` : ""), () => {
         DADOS.transfAuto = DADOS.transfAuto.filter((x) => x.id !== r.id);
         salvarEAtualizar("Transferência automática excluída.");
       });
@@ -3609,10 +3686,10 @@
     r.meses = r.meses || {};
     r.meses[mes] = { ...ajuste, visto: true };
     A.salvarDados(DADOS, true);
-    const quem = esc(nomesGatilhos(r));
+    const quando = esc(textoCond(r));
     abrirModal(`
       <h3>Transferência automática · ${fmtMesRotulo(mes)}</h3>
-      <p class="campo ajuda" style="margin:0 0 14px">${g && g.recebida ? `${quem} caiu em ${fmtDataCurta(g.data)}.` : `${quem} ainda não caiu neste mês.`}
+      <p class="campo ajuda" style="margin:0 0 14px">${quando}: ${g && g.recebida ? `aconteceu em ${fmtDataCurta(g.data)}.` : g ? `prevista para ${fmtDataCurta(g.data)}.` : "não acontece neste mês."}
         Quanto vai de <b>${esc(F.nomeBanco(DADOS, r.deBancoId))}</b> para <b>${esc(F.nomeBanco(DADOS, r.paraBancoId))}</b>${r.obs ? ` (${esc(r.obs)})` : ""}?</p>
       <div class="campo"><label for="f_valor">Valor deste mês</label>${campoMoeda("f_valor", valorTransfAuto(DADOS, r, mes, g))}<div class="ajuda">${modoDe(r) === "fixo" ? "Valor padrão" : "Valor automático (" + esc(textoModo(r)) + ")"}: ${brl(auto)}. Um valor diferente vale só para ${fmtMesRotulo(mes)}.</div></div>
       <div class="modal-acoes" style="flex-wrap:wrap">
