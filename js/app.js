@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.145";
+  const VERSAO_APP = "3.6.146";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1493,7 +1493,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.145" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.146" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2457,8 +2457,8 @@
   function extratoBancoCorpo(d, b, fx) {
     const ext = F.extratoDoBanco(d, b.id);
     // status do lançamento, com o mesmo selo das guias Entradas e Despesas
-    const seloStatus = (tipo, previsto) => previsto ? `<span class="selo-tag selo-prevista">Prevista</span>`
-      : tipo === "transferencia" ? `<span class="selo-tag selo-transf">Transferido</span>` : `<span class="selo-tag selo-pago">Pago</span>`;
+    // (transferência já feita também conta como Pago)
+    const seloStatus = (tipo, previsto) => previsto ? `<span class="selo-tag selo-prevista">Prevista</span>` : `<span class="selo-tag selo-pago">Pago</span>`;
     const linha = (data, desc, valor, saldo, classe, ref, tipo, previsto, auto, transfId) => `
       <div class="extrato-linha ${classe || ""}${previsto ? " linha-prevista" : ""}${ref || auto || transfId ? " clicavel" : ""}"${auto ? ` data-transf-auto="${esc(auto.id)}" data-mes="${auto.mes}" title="Mudar o valor deste mês"` : ""}${transfId ? ` data-transf-id="${esc(String(transfId))}" title="Editar a transferência"` : ""}${ref ? ` data-ir-secao="${ref.secao}" data-ir-id="${esc(String(ref.id))}" data-ir-data="${esc(String(ref.data || ""))}" title="Ver na guia ${ref.secao === "entradas" ? "Entradas" : "Despesas"}"` : ""}>
         <span class="dim">${data}</span>

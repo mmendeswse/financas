@@ -262,7 +262,6 @@ svg { display: block; }
 .selo-atrasado { background: rgba(255,77,122,0.16); color: var(--down); border: 1px solid rgba(255,77,122,.4); }
 .selo-demo { background: rgba(255,194,51,0.16); color: var(--acc); }
 .selo-cat { background: var(--painel-2); color: var(--dim); border: 1px solid var(--linha-2); }
-.selo-transf { background: rgba(166,107,255,.14); color: var(--vi); border: 1px solid rgba(166,107,255,.35); }
 
 /* barras de progresso */
 .progresso { height: 8px; border-radius: 5px; background: var(--linha); overflow: hidden; }
@@ -1772,7 +1771,7 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 .extrato-titulo { gap: 10px; }
 /* histórico do banco com a coluna Recorrência antes do Status */
 .modal.modal-extrato { width: 860px; }
-.extrato-com-rep .extrato-cab, .extrato-com-rep .extrato-linha { grid-template-columns: 78px minmax(0, 1fr) 112px 88px 112px 104px; }
+.extrato-com-rep .extrato-cab, .extrato-com-rep .extrato-linha { grid-template-columns: 78px minmax(0, 1fr) 112px 72px 112px 104px; }
 .extrato-com-rep .extrato-cab .rep, .extrato-com-rep .extrato-cab .status, .extrato-com-rep .extrato-linha .rep { text-align: center; }
 .extrato-com-rep .extrato-linha .rep .selo-tag { font-size: 9.5px; padding: 1px 6px; }
 .extrato-linha .rep-movel { display: none; }

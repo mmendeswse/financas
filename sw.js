@@ -1,12 +1,12 @@
 /* Service worker — deixa o app abrir sem internet no iPad/iPhone.
    Arquivos do app: cache primeiro. Cotações (APIs): sempre rede. */
-const CACHE = "muller-mendes-v396";
+const CACHE = "muller-mendes-v397";
 const ARQUIVOS = [
-  "./", "./index.html", "./css/style.css?v=3.6.145", "./manifest.json", "./manifest.webmanifest",
+  "./", "./index.html", "./css/style.css?v=3.6.146", "./manifest.json", "./manifest.webmanifest",
   "./js/vendor/chart.umd.min.js",
-  "./js/bloqueio.js?v=3.6.145", "./js/armazenamento.js?v=3.6.145", "./js/financeiro.js?v=3.6.145", "./js/investimentos.js?v=3.6.145",
-  "./js/graficos.js?v=3.6.145", "./js/extrato.js?v=3.6.145", "./js/vendor/pdf.min.js", "./js/vendor/pdf.worker.min.js", "./js/cotacoes.js?v=3.6.145", "./js/sincronizacao.js?v=3.6.145", "./js/app.js?v=3.6.145",
-  "./assets/icons/bancos/nubank.svg?v=3.6.145", "./assets/icons/bancos/itau.svg?v=3.6.145", "./assets/icons/bancos/inter.svg?v=3.6.145", "./assets/icons/bancos/banco-do-brasil.svg?v=3.6.145", "./assets/icons/bancos/caixa.svg?v=3.6.145", "./assets/icons/bancos/mercado-pago.svg?v=3.6.145",
+  "./js/bloqueio.js?v=3.6.146", "./js/armazenamento.js?v=3.6.146", "./js/financeiro.js?v=3.6.146", "./js/investimentos.js?v=3.6.146",
+  "./js/graficos.js?v=3.6.146", "./js/extrato.js?v=3.6.146", "./js/vendor/pdf.min.js", "./js/vendor/pdf.worker.min.js", "./js/cotacoes.js?v=3.6.146", "./js/sincronizacao.js?v=3.6.146", "./js/app.js?v=3.6.146",
+  "./assets/icons/bancos/nubank.svg?v=3.6.146", "./assets/icons/bancos/itau.svg?v=3.6.146", "./assets/icons/bancos/inter.svg?v=3.6.146", "./assets/icons/bancos/banco-do-brasil.svg?v=3.6.146", "./assets/icons/bancos/caixa.svg?v=3.6.146", "./assets/icons/bancos/mercado-pago.svg?v=3.6.146",
   "./assets/icons/icon-192.png", "./assets/icons/icon-512.png",
   "./apple-touch-icon.png", "./apple-touch-icon-180.png", "./apple-touch-icon-167.png", "./apple-touch-icon-152.png", "./apple-touch-icon-precomposed.png"
 ];
