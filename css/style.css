@@ -1973,3 +1973,17 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 .leg-graf .leg-receitas { background: rgba(46,229,157,.28); border-color: var(--up); }
 .leg-graf .leg-despesas { background: rgba(255,92,106,.28); border-color: var(--down); }
 @media (max-width: 600px) { .leg-graf { display: none; } }   /* no celular a legenda fica no gráfico */
+
+/* guia Configurações: quadros compactos, para tudo caber na tela sem rolar */
+@media (min-width: 700px) { .cfg-grid > .c4 { grid-column: span 4; } }   /* Backup, Senha e Zona Risco lado a lado também no iPad */
+.cfg-grid .cfg-botoes .btn { padding: 7px 11px; font-size: 12.5px; }
+.cfg-grid p.campo.ajuda, .cfg-grid .campo .ajuda { font-size: 12px; line-height: 1.45; }
+.cfg-grid .body.pad { padding-top: 10px; padding-bottom: 10px; }
+.cfg-grid .cfg-botoes { display: flex; gap: 8px; flex-wrap: wrap; }
+.cfg-grid .cfg-linha { display: flex; gap: 8px; align-items: center; }
+.cfg-grid .cfg-linha input { flex: 1 1 auto; min-width: 0; }
+.cfg-grid .cfg-linha .btn { flex: none; }
+.cfg-grid p.campo.ajuda { margin: 8px 0 0; }
+.cfg-grid .campo { margin-bottom: 8px; }
+.cfg-grid .campo:last-child { margin-bottom: 0; }
+.cfg-grid .chk-linha { margin-bottom: 10px; }
