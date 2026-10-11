@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.166";
+  const VERSAO_APP = "3.6.167";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1583,7 +1583,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.166" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.167" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -4712,24 +4712,32 @@
     }
     abrirModal(`
       <h3>${e ? "Editar entrada" : "Nova entrada"}</h3>
-      <div class="par">
-        <div class="campo"><label for="f_data">Data</label><input id="f_data" type="date" value="${previsao ? previsao.data : (e ? e.data : hojeISO())}"></div>
-        <div class="campo"><label for="f_valor">Valor</label>${campoMoeda("f_valor", e ? (previsao ? valorDoMes(e, previsao.data.slice(0, 7)) : e.valor) : "")}</div>
+      <div class="form-lanc">
+        <div class="fl-topo">
+          <div class="par">
+            <div class="campo"><label for="f_data">Data</label><input id="f_data" type="date" value="${previsao ? previsao.data : (e ? e.data : hojeISO())}"></div>
+            <div class="campo"><label for="f_valor">Valor</label>${campoMoeda("f_valor", e ? (previsao ? valorDoMes(e, previsao.data.slice(0, 7)) : e.valor) : "")}</div>
+          </div>
+        </div>
+        <div class="fl-emoji">
+          ${campoEmoji(EMOJIS_ENTRADA, e && e.emoji)}
+        </div>
+        <div class="fl-resto">
+          <div class="campo"><label for="f_desc">Descrição</label><input id="f_desc" value="${e ? esc(e.descricao) : ""}" placeholder="Salário"></div>
+          <div class="par">
+            <div class="campo"><label for="f_cat">Categoria</label><select id="f_cat">${opcoes(CATS_ENTRADA, e ? e.categoria : CATS_ENTRADA[0])}</select></div>
+            <div class="campo"><label for="f_banco">Banco</label><select id="f_banco">${opcoesBancos(DADOS.bancos, e ? e.bancoId : (bancoIdPadrao || ""), true)}</select></div>
+          </div>
+          <div class="par">
+            <div class="campo"><label for="f_tipo">Tipo</label><select id="f_tipo">${opcoes(["Fixa", "Variável"], e ? e.tipo : "Fixa")}</select></div>
+            <div class="campo"><label for="f_status">Status</label><select id="f_status">${opcoes(["Pago", "Prevista"], statusEntradaInicial(e, previsao))}</select></div>
+          </div>
+          <div class="campo"><label for="f_rec">Repetição</label><select id="f_rec">${opcoes(FREQUENCIAS_REP, freqDe(e))}</select>
+            <div class="ajuda" id="ajudaRec">Serve para identificar entradas que se repetem; o lançamento seguinte continua sendo feito por você.</div></div>
+          ${htmlPersonalizar(e && e.regraRep)}
+          <div class="campo"><label for="f_obs">Observação</label><textarea id="f_obs" placeholder="Opcional">${e ? esc(e.obs || "") : ""}</textarea></div>
+        </div>
       </div>
-      ${campoEmoji(EMOJIS_ENTRADA, e && e.emoji)}
-      <div class="campo"><label for="f_desc">Descrição</label><input id="f_desc" value="${e ? esc(e.descricao) : ""}" placeholder="Salário"></div>
-      <div class="par">
-        <div class="campo"><label for="f_cat">Categoria</label><select id="f_cat">${opcoes(CATS_ENTRADA, e ? e.categoria : CATS_ENTRADA[0])}</select></div>
-        <div class="campo"><label for="f_banco">Banco</label><select id="f_banco">${opcoesBancos(DADOS.bancos, e ? e.bancoId : (bancoIdPadrao || ""), true)}</select></div>
-      </div>
-      <div class="par">
-        <div class="campo"><label for="f_tipo">Tipo</label><select id="f_tipo">${opcoes(["Fixa", "Variável"], e ? e.tipo : "Fixa")}</select></div>
-        <div class="campo"><label for="f_status">Status</label><select id="f_status">${opcoes(["Pago", "Prevista"], statusEntradaInicial(e, previsao))}</select></div>
-      </div>
-      <div class="campo"><label for="f_rec">Repetição</label><select id="f_rec">${opcoes(FREQUENCIAS_REP, freqDe(e))}</select>
-        <div class="ajuda" id="ajudaRec">Serve para identificar entradas que se repetem; o lançamento seguinte continua sendo feito por você.</div></div>
-      ${htmlPersonalizar(e && e.regraRep)}
-      <div class="campo"><label for="f_obs">Observação</label><textarea id="f_obs" placeholder="Opcional">${e ? esc(e.obs || "") : ""}</textarea></div>
       <div class="modal-acoes">
         <button class="btn primario salvar" id="btnSalvar">Salvar</button>
         ${e ? `<button class="btn perigo" id="btnExcluir">Excluir</button>` : ""}
@@ -4737,6 +4745,7 @@
 
     // "Personalizar": a data vira calculada (somente leitura) para o mês escolhido
     const mesDoForm = e ? String(e.data).slice(0, 7) : (mesEntradas || (document.getElementById("f_data").value || hojeISO()).slice(0, 7));   // mês aberto na guia
+    document.getElementById("modal").classList.add("modal-lanc");   // computador/iPad: campos à esquerda, emojis à direita
     const lerEmoji = ligarEmoji(e && e.emoji);
     const regraDoForm = ligarPersonalizar(mesDoForm, "O lançamento de cada mês é criado sozinho, com status Prevista, para você marcar como Pago depois.");
     if (!e) statusSegueData("f_data", "f_status");   // lançamento novo: data futura começa como Prevista
@@ -4916,27 +4925,35 @@
 
     abrirModal(`
       <h3>${x ? "Editar lançamento" : "Nova despesa"}</h3>
-      <div class="par">
-        <div class="campo"><label for="f_data"><span id="rotuloData">${statusAtual === "Pago" ? "Data" : "Data de vencimento"}</span></label><input id="f_data" type="date" value="${dataAtual}"></div>
-        <div class="campo"><label for="f_valor">Valor</label>${campoMoeda("f_valor", x ? (previsao ? valorDoMes(x, previsao.data.slice(0, 7)) : x.valor) : "")}</div>
-      </div>
-      ${campoEmoji(EMOJIS_DESPESA, x && x.emoji)}
-      <div class="campo"><label for="f_desc">Descrição</label><input id="f_desc" value="${x ? esc(x.descricao) : ""}" placeholder="Supermercado"></div>
-      <div class="par">
-        <div class="campo"><label for="f_cat">Categoria</label><select id="f_cat">${opcoes(CATS_DESPESA, x ? x.categoria : CATS_DESPESA[0])}</select></div>
-        <div class="campo"><label for="f_tipo">Tipo</label><select id="f_tipo">${opcoes(["Fixa", "Variável"], x && x.tipo ? x.tipo : "Variável")}</select></div>
-      </div>
-      <div class="campo"><label for="f_status">Status</label><select id="f_status">${opcoes(["Pago", "Prevista"], statusAtual)}</select></div>
-      <div id="camposPagamento">
-        <div class="par">
-          <div class="campo"><label for="f_pagarcom">Banco</label><select id="f_pagarcom">${opcoesPagarCom(DADOS, x ? x.bancoId : "", x && !ehConta ? x.cartaoId : "")}</select></div>
-          <div class="campo"><label for="f_forma">Forma</label><select id="f_forma">${opcoes(FORMAS_PAGAMENTO, x ? x.formaPagamento : FORMAS_PAGAMENTO[0])}</select></div>
+      <div class="form-lanc">
+        <div class="fl-topo">
+          <div class="par">
+            <div class="campo"><label for="f_data"><span id="rotuloData">${statusAtual === "Pago" ? "Data" : "Data de vencimento"}</span></label><input id="f_data" type="date" value="${dataAtual}"></div>
+            <div class="campo"><label for="f_valor">Valor</label>${campoMoeda("f_valor", x ? (previsao ? valorDoMes(x, previsao.data.slice(0, 7)) : x.valor) : "")}</div>
+          </div>
         </div>
-        <div class="campo"><label for="f_rec">Repetição</label><select id="f_rec">${opcoes(FREQUENCIAS_REP, freqDe(x))}</select>
-          <div class="ajuda" id="ajudaRec"></div></div>
-      ${htmlPersonalizar(x && x.regraRep)}
+        <div class="fl-emoji">
+          ${campoEmoji(EMOJIS_DESPESA, x && x.emoji)}
+        </div>
+        <div class="fl-resto">
+          <div class="campo"><label for="f_desc">Descrição</label><input id="f_desc" value="${x ? esc(x.descricao) : ""}" placeholder="Supermercado"></div>
+          <div class="par">
+            <div class="campo"><label for="f_cat">Categoria</label><select id="f_cat">${opcoes(CATS_DESPESA, x ? x.categoria : CATS_DESPESA[0])}</select></div>
+            <div class="campo"><label for="f_tipo">Tipo</label><select id="f_tipo">${opcoes(["Fixa", "Variável"], x && x.tipo ? x.tipo : "Variável")}</select></div>
+          </div>
+          <div class="campo"><label for="f_status">Status</label><select id="f_status">${opcoes(["Pago", "Prevista"], statusAtual)}</select></div>
+          <div id="camposPagamento">
+            <div class="par">
+              <div class="campo"><label for="f_pagarcom">Banco</label><select id="f_pagarcom">${opcoesPagarCom(DADOS, x ? x.bancoId : "", x && !ehConta ? x.cartaoId : "")}</select></div>
+              <div class="campo"><label for="f_forma">Forma</label><select id="f_forma">${opcoes(FORMAS_PAGAMENTO, x ? x.formaPagamento : FORMAS_PAGAMENTO[0])}</select></div>
+            </div>
+            <div class="campo"><label for="f_rec">Repetição</label><select id="f_rec">${opcoes(FREQUENCIAS_REP, freqDe(x))}</select>
+              <div class="ajuda" id="ajudaRec"></div></div>
+          ${htmlPersonalizar(x && x.regraRep)}
+          </div>
+          <div class="campo"><label for="f_obs">Observação</label><textarea id="f_obs" placeholder="Opcional">${x ? esc(x.obs || "") : ""}</textarea></div>
+        </div>
       </div>
-      <div class="campo"><label for="f_obs">Observação</label><textarea id="f_obs" placeholder="Opcional">${x ? esc(x.obs || "") : ""}</textarea></div>
       <div class="modal-acoes">
         <button class="btn primario salvar" id="btnSalvar">Salvar</button>
         ${x && !previsao ? `<button class="btn perigo" id="btnExcluir">Excluir</button>` : ""}
@@ -4951,6 +4968,7 @@
     });
 
     const mesDoFormD = x ? String(ehConta ? x.vencimento : x.data).slice(0, 7) : (mesDespesas || hojeISO().slice(0, 7));   // mês aberto na guia
+    document.getElementById("modal").classList.add("modal-lanc");   // computador/iPad: campos à esquerda, emojis à direita
     const lerEmojiD = ligarEmoji(x && x.emoji);
     const regraDoFormD = ligarPersonalizar(mesDoFormD, "O lançamento de cada mês é criado sozinho, com status Prevista, para você marcar como Pago depois.");
 

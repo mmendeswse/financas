@@ -2008,3 +2008,18 @@ button.pill-periodo:hover { filter: brightness(1.25); }
   .cfg-grid .cfg-acoes { padding-top: 9px; }
   .cfg-grid .cfg-lista { gap: 3px; }
 }
+
+/* formulários de entrada e despesa: no computador e no iPad, os campos à
+   esquerda e a lista de emojis à direita, ocupando a altura toda — o
+   formulário cabe na tela sem rolar. No celular, um campo embaixo do outro. */
+@media (min-width: 900px) {
+  .modal.modal-lanc { width: 900px; max-height: calc(100vh - 20px); }
+  .form-lanc { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "topo emoji" "resto emoji"; column-gap: 24px; align-items: start; }
+  .form-lanc .fl-topo { grid-area: topo; }
+  .form-lanc .fl-resto { grid-area: resto; }
+  .form-lanc .fl-resto textarea { min-height: 44px; height: 44px; }
+  .form-lanc .fl-emoji { grid-area: emoji; align-self: stretch; display: flex; flex-direction: column; min-height: 0; }
+  .form-lanc .fl-emoji > .campo { flex: 1 1 auto; display: flex; flex-direction: column; margin-bottom: 0; min-height: 0; }
+  /* a caixa estica até o fim dos campos sem empurrar a altura da janela */
+  .form-lanc .fl-emoji .seletor-emoji { flex: 1 1 0; height: 0; min-height: 220px; max-height: none; }
+}
