@@ -62,9 +62,8 @@
     // transferência entre contas: sai de uma e entra na outra (não é receita nem despesa)
     (d.transferencias || []).forEach(function (t) {
       var v = Number(t.valor || 0);
-      var obs = t.obs ? " · " + t.obs : "";
-      lista.push({ bancoId: t.deBancoId, valor: -v, data: t.data, transferencia: true, descricao: "Transferência", sub: "Para · " + nomeBanco(d, t.paraBancoId) + obs });
-      lista.push({ bancoId: t.paraBancoId, valor: v, data: t.data, transferencia: true, descricao: "Transferência", sub: "De · " + nomeBanco(d, t.deBancoId) + obs });
+      lista.push({ bancoId: t.deBancoId, valor: -v, data: t.data, transferencia: true, descricao: "Transferência", sub: "Única · " + nomeBanco(d, t.paraBancoId) });
+      lista.push({ bancoId: t.paraBancoId, valor: v, data: t.data, transferencia: true, descricao: "Transferência", sub: "Única · " + nomeBanco(d, t.deBancoId) });
     });
     return movimentosExtras ? lista.concat(movimentosExtras(d) || []) : lista;
   }
