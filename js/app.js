@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.161";
+  const VERSAO_APP = "3.6.162";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -120,8 +120,15 @@
   function descPainel(x) {
     return `<span class="dp-data-col">${fmtDataCurta(x.data)}</span><span class="desc-painel"><span class="dp-nm"><span class="emoji-desc">${emojiDe(x)}</span><span class="dp-txt">${esc(x.descricao || "")}</span></span><span class="dp-sub">${subDe(x)}</span></span>`;
   }
-  // célula da coluna Recorrência (selo MENSAL, 5/16… ou "—")
-  const celRep = (selo) => selo ? selo.trim() : '<span class="dim">—</span>';
+  // célula da coluna Recorrência (selo MENSAL, 5/16…); lançamento que não se
+  // repete ganha o selo ÚNICA (unica = true); o resto (transferências…) fica "—"
+  const SELO_UNICA = '<span class="selo-tag selo-unica" title="Lançamento que não se repete">Única</span>';
+  const celRep = (selo, unica) => selo ? selo.trim() : unica ? SELO_UNICA : '<span class="dim">—</span>';
+  // a mesma célula achando o lançamento pelo id (painéis e listas)
+  function repColuna(x, data) {
+    const orig = x && x.id ? [...DADOS.entradas, ...DADOS.despesas, ...(DADOS.contasPagar || [])].find((r) => r.id === x.id) : null;
+    return celRep(orig ? seloFreq({ ...orig, data: data || dataReg(x) }) : "", !!orig);
+  }
   function seloParcela(id, data) {
     if (!id || !data) return "";
     const reg = [...DADOS.entradas, ...DADOS.despesas, ...(DADOS.contasPagar || [])].find((r) => r.id === id);
@@ -1576,7 +1583,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.161" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.162" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2298,7 +2305,7 @@
         linhas: (() => {
           const itensR = listaEntradasTodasMes(d, mes);
           return cabecalhoColunasPainel() +
-            itensR.map((e) => linhaEditavel(e, linha(descPainel(e), `<span class="col-rep">${celRep(seloDe(e, e.data))}</span>` + seloStatusPainel(e.status, e) + bancoPainel(e.banco, e) + `<span class="col-valor valor-guia up">+${brl(e.valor)}</span>`))).join("") +
+            itensR.map((e) => linhaEditavel(e, linha(descPainel(e), `<span class="col-rep">${repColuna(e, e.data)}</span>` + seloStatusPainel(e.status, e) + bancoPainel(e.banco, e) + `<span class="col-valor valor-guia up">+${brl(e.valor)}</span>`))).join("") +
             linhaTotalPainel(plural(itensR.filter((e) => e.status === "Pago").length, "Lançamento pago", "Lançamentos pagos"), `+${brl(entradas)}`);
         })(),
         secao: "entradas"
@@ -2311,7 +2318,7 @@
         linhas: (() => {
           const itensD = listaDespesasTodasMes(d, mes);
           return cabecalhoColunasPainel() +
-            itensD.map((x) => linhaEditavel(x, linha(descPainel(x), `<span class="col-rep">${celRep(seloDe(x, x.data))}</span>` + seloStatusPainel(x.status, x) + bancoPainel(x.banco, x) + `<span class="col-valor valor-guia down">−${brl(x.valor)}</span>`))).join("") +
+            itensD.map((x) => linhaEditavel(x, linha(descPainel(x), `<span class="col-rep">${repColuna(x, x.data)}</span>` + seloStatusPainel(x.status, x) + bancoPainel(x.banco, x) + `<span class="col-valor valor-guia down">−${brl(x.valor)}</span>`))).join("") +
             linhaTotalPainel(plural(itensD.filter((x) => x.status === "Pago").length, "Lançamento pago", "Lançamentos pagos"), `−${brl(despesas)}`);
         })(),
         secao: "despesas"
@@ -2546,7 +2553,7 @@
     const todos = [...d.entradas, ...d.despesas, ...(d.contasPagar || [])];
     const repDe = (ref) => {
       const orig = ref && ref.id ? todos.find((r) => r.id === ref.id) : null;
-      return orig ? seloFreq({ ...orig, data: ref.data || dataReg(orig) }, true).trim() : "";
+      return orig ? seloFreq({ ...orig, data: ref.data || dataReg(orig) }, true).trim() || SELO_UNICA : "";
     };
     // o emoji do lançamento (o escolhido ou o da categoria) na frente da descrição
     // embaixo da descrição, "Categoria · Tipo" como nas guias Entradas e Despesas
@@ -2663,7 +2670,7 @@
         inicial += Number(ext.saldoInicial || 0);
         // recorrência (mensal, Parcela 05/16…) e "Categoria · Tipo" embaixo da descrição, como nas guias
         const todosReg = [...d.entradas, ...d.despesas, ...(d.contasPagar || [])];
-        const repDe = (ref) => { const o = ref && ref.id ? todosReg.find((r) => r.id === ref.id) : null; return o ? seloFreq({ ...o, data: ref.data || dataReg(o) }, true).trim() : ""; };
+        const repDe = (ref) => { const o = ref && ref.id ? todosReg.find((r) => r.id === ref.id) : null; return o ? seloFreq({ ...o, data: ref.data || dataReg(o) }, true).trim() || SELO_UNICA : ""; };
         ext.itens.forEach((i) => itens.push({ data: i.data, valor: i.valor, ref: i.ref, rep: i.tipo === "transferencia" ? "" : repDe(i.ref),
           desc: descEmoji(i) + (i.tipo === "transferencia" ? (i.sub ? `<span class="desc-sub sem-quebra">${esc(i.sub)}</span>` : "")
             : i.ref ? `<span class="desc-sub">${subDe({ id: i.ref.id, categoria: i.categoria })}</span>` : ""), banco: b.nome,
@@ -2857,7 +2864,7 @@
         "do seu saldo em bancos já está comprometido", "despesas previstas para o próximo mês",
         (itens.length
           ? cabecalhoColunasPainel() + itens.map((x) => linhaEditavel(x, linha(descPainel(x),
-              `<span class="col-rep">${celRep(seloDe(x, x.data))}</span>` + seloStatusPainel(x.status, x) + bancoPainel(x.banco, x) + `<span class="col-valor valor-guia down">−${brl(x.valor)}</span>`))).join("")
+              `<span class="col-rep">${repColuna(x, x.data)}</span>` + seloStatusPainel(x.status, x) + bancoPainel(x.banco, x) + `<span class="col-valor valor-guia down">−${brl(x.valor)}</span>`))).join("")
           : `<div class="kv"><span class="dim">Nenhuma conta prevista para o mês que vem</span><b>—</b></div>`) +
         linhaTotalPainel(plural(itens.length, "Lançamento"), "−" + brl(aVir)), "despesas");
       return;
@@ -2895,7 +2902,7 @@
         (itens.length ? cabecalhoColunasPainel() : "") +
         (itens.length
           ? itens.map((x) => linhaEditavel(x, linha(descPainel(x),
-              `<span class="col-rep">${celRep(seloDe(x, x.data))}</span>` + seloStatusPainel(x.status, x) + bancoPainel(x.banco, x) + `<span class="col-valor valor-guia down">−${brl(x.valor)}</span>`))).join("")
+              `<span class="col-rep">${repColuna(x, x.data)}</span>` + seloStatusPainel(x.status, x) + bancoPainel(x.banco, x) + `<span class="col-valor valor-guia down">−${brl(x.valor)}</span>`))).join("")
           : `<div class="kv"><span class="dim">Nenhuma conta pendente no mês atual</span><b>—</b></div>`) +
         linhaTotalPainel(plural(itens.length, "Lançamento"), `−${brl(total)}`), "despesas");
       return;
@@ -2927,7 +2934,7 @@
     const meses = mesesDoPeriodoRel(d, fx);
     const comEntradas = chave !== "rel-despesas", comDespesas = chave !== "rel-receitas";
     const todosReg = [...d.entradas, ...d.despesas, ...(d.contasPagar || [])];
-    const repDe = (x) => { const o = todosReg.find((r) => r.id === x.id); return o ? seloFreq({ ...o, data: x.data }, true).trim() : ""; };
+    const repDe = (x) => { const o = todosReg.find((r) => r.id === x.id); return o ? seloFreq({ ...o, data: x.data }, true).trim() || SELO_UNICA : ""; };
     let itens = [];
     meses.forEach((mes) => {
       if (comEntradas) listaEntradasTodasMes(d, mes).filter((x) => x.status === "Pago").forEach((x) => itens.push({ ...x, valor: Number(x.valor || 0), secao: "entradas" }));
@@ -3001,7 +3008,7 @@
     const itensD = listaDespesasTodasMes(d, mes).map((x) => ({ ...x, sinal: "−", cor: "down" }));
     const todos = [...itensR, ...itensD];
     const linhaItem = (it) => linhaEditavel(it, linha(descPainel(it),
-      `<span class="col-rep">${celRep(seloDe(it, it.data))}</span>` + seloStatusPainel(it.status, it) + bancoPainel(it.banco, it) + `<span class="col-valor valor-guia ${it.cor}">${it.sinal}${brl(it.valor)}</span>`));
+      `<span class="col-rep">${repColuna(it, it.data)}</span>` + seloStatusPainel(it.status, it) + bancoPainel(it.banco, it) + `<span class="col-valor valor-guia ${it.cor}">${it.sinal}${brl(it.valor)}</span>`));
     const vazio = (txt) => `<div class="kv"><span class="dim">${txt}</span><b>—</b></div>`;
     // o mês segue o status: os totais contam só o que está Pago
     const totE = totalEntradasEfetivas(d, mes), totD = totalDespesasPagasMes(d, mes);
@@ -4614,7 +4621,7 @@
         <div class="rw clicavel${e.prevista ? " linha-prevista" : ""}" style="${grid}" data-acao="${e.prevista ? "editar-previsao-entrada" : "editar-entrada"}" data-id="${e.id}" data-data="${e.data}" title="${e.prevista ? "Abre este mês para edição (o valor muda só aqui)" : "Abrir para editar"}">
           <div class="dim cel-data" style="font-size:12px">${fmtDataCurta(e.data)}${seloSabado(e)}</div>
           <div><div class="nm">${descEmoji(e)}</div><div class="sub">${esc(e.categoria)} · ${esc(e.tipo || "")}</div></div>
-          <div class="cel-rep">${celRep(seloFreq(e, true))}</div>
+          <div class="cel-rep">${celRep(seloFreq(e, true), true)}</div>
           <div>${e.prevista
             ? `<button class="selo-tag ${e.recebidaNoMes ? "selo-pago" : "selo-prevista"} selo-botao" data-acao="quitar-mes-entrada" data-id="${e.id}" data-mes="${e.mesRef}" title="${e.recebidaNoMes ? "Marcar como prevista" : "Marcar como paga"}">${e.status}</button>`
             : `<button class="selo-tag ${e.previsto ? "selo-prevista" : "selo-pago"} selo-botao" data-acao="alternar-prevista-entrada" data-id="${e.id}" title="${e.previsto ? "Marcar como paga" : "Marcar como prevista"}">${e.status}</button>`}</div>
@@ -4844,7 +4851,7 @@
         <div class="rw clicavel${x.prevista ? " linha-prevista" : ""}" style="${gridD}" data-acao="${x.prevista ? (x.origem === "conta" ? "editar-previsao-conta" : "editar-previsao") : (x.origem === "despesa" ? "editar-despesa" : "editar-conta")}" data-id="${x.id}" data-data="${x.data}" title="${x.prevista ? "Abre este mês para edição (o valor muda só aqui)" : "Abrir para editar"}">
           <div class="dim cel-data" style="font-size:12px">${fmtData(x.data)}${seloSabado({ ...(registrosSerie("despesa").find((y) => y.id === x.id) || {}), data: x.data })}</div>
           <div><div class="nm">${descEmoji(x)}</div><div class="sub">${esc(x.categoria || "—")} · ${esc(x.tipo || "Variável")}</div></div>
-          <div class="cel-rep">${celRep(seloFreq({ ...(registrosSerie("despesa").find((y) => y.id === x.id) || {}), recorrencia: x.recorrencia, data: x.data }, true))}</div>
+          <div class="cel-rep">${celRep(seloFreq({ ...(registrosSerie("despesa").find((y) => y.id === x.id) || {}), recorrencia: x.recorrencia, data: x.data }, true), true)}</div>
           <div>${x.prevista
             ? `<button class="selo-tag ${x.status === "Pago" ? "selo-pago" : "selo-prevista"} selo-botao" data-acao="${x.origem === "conta" ? "quitar-mes-conta" : "quitar-mes"}" data-id="${x.id}" data-mes="${x.mesRef}" title="Confirmar: cria o lançamento deste mês">${x.status}</button>`
             : `<button class="selo-tag selo-${x.status.toLowerCase()} selo-botao" data-acao="${x.origem === "conta" ? "alternar-pago" : "tornar-pendente"}" data-id="${x.id}" title="${x.origem === "conta" ? (x.status === "Pago" ? "Marcar como prevista" : "Marcar como paga") : "Marcar como prevista (vira conta a pagar)"}">${x.status}</button>`}</div>

@@ -262,6 +262,7 @@ svg { display: block; }
 .selo-atrasado { background: rgba(255,77,122,0.16); color: var(--down); border: 1px solid rgba(255,77,122,.4); }
 .selo-demo { background: rgba(255,194,51,0.16); color: var(--acc); }
 .selo-cat { background: var(--painel-2); color: var(--dim); border: 1px solid var(--linha-2); }
+.selo-unica { background: transparent; color: var(--dim); border: 1px dashed var(--linha-2); }   /* lançamento que não se repete */
 
 /* barras de progresso */
 .progresso { height: 8px; border-radius: 5px; background: var(--linha); overflow: hidden; }
