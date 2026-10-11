@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.133";
+  const VERSAO_APP = "3.6.134";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1491,7 +1491,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.133" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.134" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -3319,25 +3319,36 @@
     return `<div class="grid"><div class="c12">${card("", "Transferências", sub, "", `<div style="padding:4px 18px 12px">${corpoRegras}${regras.length && lista.length ? `<div style="height:10px"></div>` : ""}${corpo}</div>`)}</div></div>`;
   }
 
-  function abrirModalTransferencia(id) {
+  // Tipo da transferência (só ao criar): trocar abre a outra janela com o que já foi preenchido
+  const campoTipoTransf = (auto) => `<div class="campo"><label for="f_tipoTransf">Tipo</label><select id="f_tipoTransf">
+        <option value="unica"${auto ? "" : " selected"}>Única (uma vez, na data)</option>
+        <option value="auto"${auto ? " selected" : ""}>Automática (todo mês, quando cair uma entrada)</option>
+      </select></div>`;
+  function ligarTipoTransf(abrirOutra) {
+    const sel = document.getElementById("f_tipoTransf");
+    if (sel) sel.onchange = () => abrirOutra({ deBancoId: document.getElementById("f_de").value, paraBancoId: document.getElementById("f_para").value,
+      valor: numIn(document.getElementById("f_valor").value) || "", obs: document.getElementById("f_obs").value.trim() });
+  }
+
+  function abrirModalTransferencia(id, inicial) {
     const t = id ? achar(DADOS.transferencias || [], id) : null;
+    const v = t || inicial || {};
     // sugestão: tirar do banco com mais saldo
     const maior = F.listaBancosComSaldo(DADOS).slice().sort((a, b) => b.saldoAtual - a.saldoAtual)[0];
     abrirModal(`
       <h3>${t ? "Editar transferência" : "Transferir entre bancos"}</h3>
+      ${t ? "" : campoTipoTransf(false)}
       <div class="par">
-        <div class="campo"><label for="f_de">De</label><select id="f_de">${opcoesBancos(DADOS.bancos, t ? t.deBancoId : (maior ? maior.id : ""), true)}</select></div>
-        <div class="campo"><label for="f_para">Para</label><select id="f_para">${opcoesBancos(DADOS.bancos, t ? t.paraBancoId : "", true)}</select></div>
+        <div class="campo"><label for="f_de">De</label><select id="f_de">${opcoesBancos(DADOS.bancos, v.deBancoId || (maior ? maior.id : ""), true)}</select></div>
+        <div class="campo"><label for="f_para">Para</label><select id="f_para">${opcoesBancos(DADOS.bancos, v.paraBancoId || "", true)}</select></div>
       </div>
       <div class="par">
-        <div class="campo"><label for="f_valor">Valor</label>${campoMoeda("f_valor", t ? t.valor : "")}</div>
+        <div class="campo"><label for="f_valor">Valor</label>${campoMoeda("f_valor", v.valor || "")}</div>
         <div class="campo"><label for="f_data">Data</label><input id="f_data" type="date" value="${t ? t.data : hojeISO()}"></div>
       </div>
-      <div class="campo"><label for="f_obs">Observação</label><input id="f_obs" value="${t ? esc(t.obs || "") : ""}" placeholder="Opcional"><div class="ajuda">O valor sai do primeiro banco e entra no segundo. Não conta como receita nem despesa.</div></div>
-      <div class="modal-acoes" style="flex-wrap:wrap">${t ? `<button class="btn perigo" id="btnExcluir">Excluir</button>` : `<button class="btn" id="btnAuto" title="Repetir todo mês quando cair o salário (ou outra entrada recorrente)">🔁 Todo mês, quando cair o salário</button>`}<button class="btn primario salvar" id="btnSalvar">${t ? "Salvar" : "Transferir"}</button></div>`);
-    if (!t) document.getElementById("btnAuto").onclick = () => abrirModalTransfAuto(null, {
-      deBancoId: document.getElementById("f_de").value, paraBancoId: document.getElementById("f_para").value,
-      valor: numIn(document.getElementById("f_valor").value) || "", obs: document.getElementById("f_obs").value.trim() });
+      <div class="campo"><label for="f_obs">Observação</label><input id="f_obs" value="${esc(v.obs || "")}" placeholder="Opcional"><div class="ajuda">O valor sai do primeiro banco e entra no segundo. Não conta como receita nem despesa.</div></div>
+      <div class="modal-acoes">${t ? `<button class="btn perigo" id="btnExcluir">Excluir</button>` : ""}<button class="btn primario salvar" id="btnSalvar">${t ? "Salvar" : "Transferir"}</button></div>`);
+    if (!t) ligarTipoTransf((dados) => abrirModalTransfAuto(null, dados));
     document.getElementById("btnSalvar").onclick = () => {
       const de = document.getElementById("f_de").value, para = document.getElementById("f_para").value;
       const valor = numIn(document.getElementById("f_valor").value);
@@ -3475,14 +3486,18 @@
     const v = r || inicial || {};
     const gatilhos = entradasGatilho(DADOS);
     if (!gatilhos.length) { toast("Cadastre antes uma entrada recorrente (o salário, por ex.) em Entradas."); return; }
-    const marcados = r ? gatilhosDe(r) : [];
-    const marcado = (e) => marcados.length ? marcados.some((g) => casaRef(g)(e)) : e === gatilhos[0];
-    const modo = modoDe(v), lancs = lancamentosValor(DADOS);
+    // sugestão ao criar: as entradas de Salário já marcadas e o valor pela soma
+    // delas (ou o valor digitado na janela Transferir); tudo pode ser trocado
+    const salarios = gatilhos.filter((e) => /sal[aá]rio/i.test(e.categoria || ""));
+    const marcados = r ? gatilhosDe(r) : (salarios.length ? salarios : [gatilhos[0]]).map((e) => ({ id: e.id, desc: e.descricao }));
+    const marcado = (e) => marcados.some((g) => casaRef(g)(e));
+    const modo = r ? modoDe(r) : v.modo || (v.valor ? "fixo" : "soma"), lancs = lancamentosValor(DADOS);
     const lancAtual = v.lanc ? lancs.find((l) => l.tipo === v.lanc.tipo && casaRef(v.lanc)(l.reg)) : null;
     const nomeLanc = (l) => `${l.tipo === "entrada" ? "Entrada" : "Despesa"}: ${esc(l.reg.descricao || l.reg.categoria || "")}${l.reg.bancoId ? " · " + esc(F.nomeBanco(DADOS, l.reg.bancoId)) : ""}`;
     const ultimos = r ? ocorrenciasTransfAuto(DADOS).filter((o) => o.regra === r).slice(-6).reverse() : [];
     abrirModal(`
-      <h3>${r ? "Editar transferência automática" : "Transferência automática"}</h3>
+      <h3>${r ? "Editar transferência automática" : "Transferir entre bancos"}</h3>
+      ${r ? "" : campoTipoTransf(true)}
       <div class="campo"><label>Quando cair</label>${gatilhos.map((e) => `
         <label class="chk-linha"><input type="checkbox" class="f_gat" value="${e.id}"${marcado(e) ? " checked" : ""}> ${esc(e.descricao || e.categoria || "Entrada")}${e.bancoId ? ` <span class="dim">· ${esc(F.nomeBanco(DADOS, e.bancoId))}</span>` : ""}</label>`).join("")}
       </div>
@@ -3525,6 +3540,7 @@
         + "Quando as entradas forem marcadas como recebidas, o valor sai do primeiro banco e entra no segundo, na mesma data. Dá para mudar o valor de um mês clicando na transferência.";
     };
     selModo.onchange = ajustarModo; ajustarModo();
+    if (!r) ligarTipoTransf((dados) => abrirModalTransferencia(null, dados));
     if (!r) document.querySelectorAll("#modal .f_gat").forEach((c) => { c.onchange = () => {
       const gs = lerGatilhos(), e = gs.length ? achar(DADOS.entradas, gs[0].id) : null;
       if (e && e.bancoId) document.getElementById("f_de").value = e.bancoId;
