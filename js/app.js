@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.175";
+  const VERSAO_APP = "3.6.176";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1376,7 +1376,7 @@
     if (!pendentes.length) return null;
     const nenhum = pendentes.some((m) => situacaoMeta(m).chave === "nada");
     // todas as metas, cada uma com o emoji e o valor do "Guardar Mês"
-    const partes = d.metas.map((m) => `${emojiMeta(m)} ${esc(m.nome)}${Number(m.aporteMensal || 0) > 0 ? ` ${brl(m.aporteMensal)}` : ""}`);
+    const partes = metasPorStatus(d.metas).map((m) => `${emojiMeta(m)} ${esc(m.nome)}${Number(m.aporteMensal || 0) > 0 ? ` ${brl(m.aporteMensal)}` : ""}`);
     return { tipo: nenhum ? "perigo" : "aviso", rota: "metas",
       texto: `Seu salário foi pago (${fmtData(pagamento)}):<span class="notif-lista">${partes.map((x) => `<span class="notif-item">${x}</span>`).join("")}</span>` };
   }
@@ -1598,7 +1598,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.175" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.176" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1866,6 +1866,11 @@
   // situação da meta pela bolinha, comparando o que entrou no mês com o "Guardar Mês":
   // verde = soma do mês igual ou maior (ou meta concluída), amarela = já houve depósito
   // no mês mas ainda falta, vermelha = nenhum depósito no mês
+  // metas na ordem do status: vermelho (nada guardado no mês), amarelo
+  // (guardou parte) e verde (em dia ou concluída); empate fica na ordem cadastrada
+  const ORDEM_STATUS_META = { nada: 0, atencao: 1, ok: 2 };
+  const metasPorStatus = (lista) => lista.map((m, i) => ({ m, i, o: ORDEM_STATUS_META[situacaoMeta(m).chave] }))
+    .sort((a, b) => a.o - b.o || a.i - b.i).map((x) => x.m);
   function situacaoMeta(m) {
     const atual = Number(m.atual || 0), objetivo = Number(m.objetivo || 0);
     if (objetivo > 0 && atual >= objetivo) return { chave: "ok", rotulo: "Meta concluída" };
@@ -1917,7 +1922,7 @@
     if (!d.metas.length) return `<div class="empty" style="padding:14px">Nenhuma meta cadastrada.</div>`;
     // todas as metas; a lista mostra 3 de cada vez (mesma altura do quadro
     // Receitas x despesas) e rola dentro do quadro para ver as outras
-    return `<div class="metas-lista${d.metas.length > 3 ? " metas-rolagem" : ""}">` + d.metas.map(itemMetaHtml).join("") + `</div>`;
+    return `<div class="metas-lista${d.metas.length > 3 ? " metas-rolagem" : ""}">` + metasPorStatus(d.metas).map(itemMetaHtml).join("") + `</div>`;
   }
 
   // uma meta como no quadro Metas do Dashboard (usado também nos quadros da guia Metas)
@@ -6428,7 +6433,7 @@
       // cada meta num quadro igual ao quadro Metas do Dashboard (o mesmo bloco
       // da meta), com o Editar no topo à direita (o "Guardar Mês" aparece no
       // selo 💰 da meta); sempre com o valor de hoje
-      corpo = d.metas.map((m) => {
+      corpo = metasPorStatus(d.metas).map((m) => {
         const diasPrazo = m.prazo ? F.diasEntre(m.prazo) : null;
         const vencida = diasPrazo !== null && diasPrazo < 0 && Number(m.atual || 0) < Number(m.objetivo || 0);
         // sem título repetido: o bloco da meta é o mesmo do Dashboard (bolinha, nome,
