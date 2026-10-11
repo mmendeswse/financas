@@ -939,7 +939,7 @@ table.tab-investimentos th.col-contratada, table.tab-investimentos td.col-contra
 .extrato-banco { max-height: 300px; overflow-y: auto; }
 .extrato-linha { padding: 8px 14px; font-size: 12.5px; border-top: 1px solid var(--linha); }
 .extrato-linha:first-child { border-top: none; }
-.extrato-linha .desc { white-space: normal; overflow-wrap: anywhere; line-height: 1.3; }   /* descrição inteira, quebrando linha se precisar */
+.extrato-linha .desc { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; line-height: 1.3; }   /* descrição sempre numa linha; se não couber, termina em reticências */
 .extrato-linha b { font-family: var(--mono); font-weight: 600; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .extrato-linha .saldo { color: var(--dim); }
 .extrato-linha.marco { background: var(--painel-2); }
@@ -1953,10 +1953,10 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 .grade-bancos .saldo { font-size: clamp(15px, 1.3vw, 20px); white-space: nowrap; margin-top: auto; }   /* saldos alinhados embaixo */
 .grade-bancos .sem-quebra { white-space: nowrap; }
 .grade-bancos .cartao-item .rodape:last-child { margin-top: 0; }
-/* transferência no extrato: título e "Para · Banco" na mesma linha; se não
-   couber, o fim do subtítulo vira reticências */
-.extrato-linha .desc:has(> .desc-sub.sem-quebra) { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-.extrato-linha .desc-sub.sem-quebra { display: inline; margin: 0 0 0 8px; white-space: nowrap; }
+/* descrição do extrato sempre numa linha: título e "Categoria · Tipo" (ou
+   "Para · Banco") lado a lado; se não couber, o fim vira reticências */
+.extrato-linha .desc, .extrato-linha .desc:has(> .desc-sub) { white-space: nowrap !important; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.extrato-linha .desc-sub { display: inline; margin: 0 0 0 8px; white-space: nowrap; }
 
 /* guia Bancos: cartões dos bancos mais baixos, para os dois quadros caberem na tela sem rolar */
 .grade-bancos { gap: 12px; padding: 10px 16px 12px; }

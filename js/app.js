@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.151";
+  const VERSAO_APP = "3.6.155";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -221,6 +221,8 @@
     return feitos.length ? `${feitos.join(" e ")} agora ${feitos.length === 1 ? "é transferência automática" : "são transferências automáticas"} do salário para o ${F.nomeBanco(d, (d.transfAuto || []).slice(-1)[0].paraBancoId)}.` : "";
   }
 
+  // legenda dos gráficos Receitas x despesas, no cabeçalho do quadro (no celular fica no gráfico)
+  const LEGENDA_RD = `<span class="leg-graf"><span><i class="leg-receitas"></i>Receitas</span><span><i class="leg-despesas"></i>Despesas</span></span>`;
   const COR_META_PADRAO = "#00E5FF";
 
   // Estado da interface (não persistido — só a sessão atual)
@@ -1574,7 +1576,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.151" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.155" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1887,15 +1889,6 @@
     if (periodoMetas === -1) return (Array.isArray(m.historico) && m.historico.length) ? m.historico[0].data : hojeISO();
     const d = new Date(dataRefAnoMetas() + "T12:00:00"); d.setMonth(d.getMonth() - periodoMetas);
     return d.toISOString().slice(0, 10);
-  }
-  // anos do seletor: do 1º registro de histórico das metas até o ano atual
-  function anosMetas(d) {
-    const atual = new Date().getFullYear();
-    let primeiro = atual;
-    d.metas.forEach((m) => (m.historico || []).forEach((h) => { const a = Number(String(h.data).slice(0, 4)); if (a > 1900 && a < primeiro) primeiro = a; }));
-    const lista = [];
-    for (let a = primeiro; a <= atual; a++) lista.push(String(a));
-    return lista;
   }
 
   function metasMini(d) {
@@ -3156,12 +3149,12 @@
             <div class="legenda">${legendaComp}</div>
           </div>`)}</div>
         <div class="c3">${card("", "Receitas x despesas", `${mesesRD} ${mesesRD === 1 ? "mês" : "meses"} de ${anoRD}`,
-          `<div class="filtro-mes">${seletorAnoDash("anoRD", anoRD, anosDashboard(d))}${abasMeses("periodo-rd", mesesRD, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }])}</div>`, `<div class="grafico-cheio" style="padding:8px 14px 12px;min-height:236px"><div class="grafico-cheio-area"><canvas id="graf-receitas-despesas"></canvas></div></div>`)}</div>
-        <div class="c3">${card("", "Metas", resumoMetas(d), `<div class="filtro-mes">${seletorAnoDash("anoMetas", anoMetas || String(new Date().getFullYear()), anosMetas(d))}` + abasMeses("periodo-metas", periodoMetas, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }, { meses: 0, rotulo: "Tudo" }]) + `</div>`, metasMini(d))}</div>
+          `<div class="filtro-mes">${LEGENDA_RD}${abasMeses("periodo-rd", mesesRD, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }])}</div>`, `<div class="grafico-cheio" style="padding:8px 14px 12px;min-height:236px"><div class="grafico-cheio-area"><canvas id="graf-receitas-despesas"></canvas></div></div>`)}</div>
+        <div class="c3">${card("", "Metas", resumoMetas(d), `<div class="filtro-mes">` + abasMeses("periodo-metas", periodoMetas, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }, { meses: 0, rotulo: "Tudo" }]) + `</div>`, metasMini(d))}</div>
       </div>
 
       <div class="grid">
-        <div class="c12">${cardEvolucaoPatrimonial(d, { canvas: "graf-evolucao", idAno: "anoEvo", acao: "periodo-evo", meses: mesesEvo, ano: anoEvo })}</div>
+        <div class="c12">${cardEvolucaoPatrimonial(d, { canvas: "graf-evolucao", acao: "periodo-evo", meses: mesesEvo, ano: anoEvo })}</div>
       </div>
 
       ${stripKpis([
@@ -6246,12 +6239,13 @@
     const fx = intervaloAnoMeses(ano, meses);
     return h.filter((x) => x.data >= fx.ini && x.data <= fx.fim);
   }
+  // sem cfg.idAno (Dashboard) o quadro não tem seletor de ano: usa sempre o ano atual
   function cardEvolucaoPatrimonial(d, cfg) {
     const hist = histEvolucao(d, cfg.meses, cfg.ano);
     const varPer = hist.length >= 2 ? hist[hist.length - 1].valor - hist[0].valor : 0;
     return card("", "Evolução patrimonial", `patrimônio líquido · ${cfg.meses ? cfg.meses + " meses de " + cfg.ano : "todo histórico"}`,
       (hist.length >= 2 ? `<span class="pill-periodo ${corSinal(varPer)}">PERÍODO ${brlSinal(varPer)}</span>` : "") +
-      `<div class="filtro-mes">${seletorAnoDash(cfg.idAno, cfg.ano, anosDashboard(d))}${abasMeses(cfg.acao, cfg.meses, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }, { meses: 0, rotulo: "Tudo" }])}</div>`,
+      `<div class="filtro-mes">${cfg.idAno ? seletorAnoDash(cfg.idAno, cfg.ano, anosDashboard(d)) : ""}${abasMeses(cfg.acao, cfg.meses, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }, { meses: 0, rotulo: "Tudo" }])}</div>`,
       hist.length >= 2
         ? `<div${cfg.classe ? ` class="${cfg.classe}"` : ""} style="padding:8px 14px 12px;height:280px"><canvas id="${cfg.canvas}"></canvas></div>`
         : `<div class="empty">Sem registros de patrimônio em ${cfg.meses ? `${cfg.meses} ${cfg.meses === 1 ? "mês" : "meses"} de ${cfg.ano}` : "todo histórico"}.</div>`);
@@ -6514,7 +6508,7 @@
         <div class="c3">${metricCard("Resultado", brlSinal(entradasP - despesasP), ICONES_STRIP.projecao, corSinal(entradasP - despesasP) !== "down" ? "var(--up)" : "var(--down)", "", rotuloPeriodo, null, "0 0 24 24", "rel-resultado")}</div>
       </div>
       <div class="grid">
-        <div class="c12">${card("", "Receitas x despesas", `${rotulo(mesesRelA, anoRelA)}`, `<div class="filtro-mes"><span class="leg-graf"><span><i class="leg-receitas"></i>Receitas</span><span><i class="leg-despesas"></i>Despesas</span></span>${seletorAnoDash("anoRelA", anoRelA, anosDashboard(d))}${abasMeses("periodo-rel-a", mesesRelA, OPC)}</div>`, `<div class="rel-grafico rel-alto" style="padding:10px 16px;height:220px"><canvas id="graf-rel-mensal"></canvas></div>`)}</div>
+        <div class="c12">${card("", "Receitas x despesas", `${rotulo(mesesRelA, anoRelA)}`, `<div class="filtro-mes">${LEGENDA_RD}${seletorAnoDash("anoRelA", anoRelA, anosDashboard(d))}${abasMeses("periodo-rel-a", mesesRelA, OPC)}</div>`, `<div class="rel-grafico rel-alto" style="padding:10px 16px;height:220px"><canvas id="graf-rel-mensal"></canvas></div>`)}</div>
       </div>
       <div class="grid">
         <div class="c12">${cardEvolucaoPatrimonial(d, { canvas: "graf-rel-evolucao", classe: "rel-alto", idAno: "anoRelB", acao: "periodo-rel-b", meses: mesesRelB, ano: anoRelB })}</div>
@@ -6646,7 +6640,7 @@
         if (hist.length < 2) break;
         if (hist.length >= 2) G.renderEvolucaoPatrimonio("graf-evolucao", hist, { aoClicar: explicarPatrimonio });
         else G.destruir("graf-evolucao");
-        G.renderReceitasDespesas("graf-receitas-despesas", serieRD(d), { aoClicar: explicarMes });
+        G.renderReceitasDespesas("graf-receitas-despesas", serieRD(d), { aoClicar: explicarMes, semLegenda: window.innerWidth > 600 });   // a legenda fica no cabeçalho
         if (itensPatrimonio(d).length) G.renderDoughnutGenerico("graf-dash-composicao", itensPatrimonio(d), { semLegenda: true, aoClicar: (item) => explicarClasse(item.rotulo) });
         break;
       }
@@ -6985,9 +6979,6 @@
       if (id === "anoRelA") { anoRelA = e.target.value; renderRota(); return; }
       if (id === "anoRelB") { anoRelB = e.target.value; renderRota(); return; }
       if (id === "anoBancos") { anoBancos = e.target.value; renderRota(); return; }
-      if (id === "anoRD") { anoRD = e.target.value; renderRota(); return; }
-      if (id === "anoMetas") { anoMetas = e.target.value; renderRota(); return; }
-      if (id === "anoEvo") { anoEvo = e.target.value; renderRota(); return; }
       if (id === "anoEntradas") { mesEntradas = e.target.value + mesEntradas.slice(4); filtroEntradas = null; renderRota(); return; }
       if (id === "anoDespesas") { mesDespesas = e.target.value + mesDespesas.slice(4); filtroDespesas = null; renderRota(); return; }
       if (id === "filtroPeriodo") { filtrosHistorico.periodo = e.target.value; renderRota(); }
