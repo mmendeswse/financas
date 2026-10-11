@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.147";
+  const VERSAO_APP = "3.6.150";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -147,6 +147,78 @@
       if (x.recorrencia === FREQ_4DU_ANTIGA) { x.recorrencia = FREQ_PERS; x.regraRep = { ...REGRA_PADRAO }; mudou = true; }
     }));
     if (mudou) A.salvarDados(DADOS, true, true);
+  }
+
+  // Correção única: VR e VT eram despesas mensais, mas são só dinheiro do
+  // salário separado para o Inter (alimentação e transporte). Viram
+  // transferências automáticas "quando o salário cair", com o mesmo valor,
+  // e as despesas param daqui pra frente (os meses que já passaram ficam
+  // como estão). Quem usava o valor do VR/VT numa transferência automática
+  // passa a usar o valor fixo, com os meses passados congelados no valor
+  // que tinham. Devolve a mensagem para o aviso, ou "" se nada mudou.
+  function migrarVrVtParaTransferencia() {
+    const d = DADOS;
+    d.config = d.config || {};
+    if (d.config.migracaoVrVt) return "";
+    const feitos = [], cur = F.mesAtual();
+    ["VR", "VT"].forEach((nome) => {
+      const reg = seriesRecorrentes(d.despesas).find((x) => descIgual(x.descricao, nome) && !(x.ateMes && x.ateMes < cur));
+      if (!reg) return;
+      const ref = { id: reg.id, desc: reg.descricao };
+      // se o deste mês já foi pago, a troca começa no mês seguinte
+      const ocAtual = ocorrenciaNoMes(d, ref, cur, "despesa");
+      const desde = ocAtual && ocAtual.recebida ? proximoMes(cur) : cur;
+      const valor = Math.round(valorDoMes(reg, desde) * 100) / 100;
+      const paraBancoId = bancoDoMes(reg, desde);
+      if (!(valor > 0) || !paraBancoId) return;
+      // transferências automáticas que dependiam deste lançamento
+      const usaValor = (r) => modoDe(r) === "lanc" && r.lanc && casaRef(r.lanc)(reg);
+      const usaGatilho = (r) => condDe(r) === "despesa" && gatilhosDe(r).some((g) => casaRef(g)(reg));
+      const dependentes = (d.transfAuto || []).filter((r) => usaValor(r) || usaGatilho(r));
+      // congela os meses que já passaram no valor que tinham
+      dependentes.forEach((r) => {
+        for (let mes = r.desde || desde, n = 0; mes < desde && n < 240; mes = proximoMes(mes), n++) {
+          const g = gatilhoDoMes(d, r, mes);
+          if (!g) continue;
+          r.meses = r.meses || {};
+          if (!r.meses[mes] || r.meses[mes].valor === undefined) r.meses[mes] = Object.assign({}, r.meses[mes], { valor: valorTransfAuto(d, r, mes, g) });
+        }
+      });
+      // o salário é a soma das entradas mensais de categoria Salário do mesmo
+      // banco (Pagamento + Bonificação): a transferência acontece quando elas
+      // caem. Se já houver uma transferência "quando cair a entrada", usa a mesma condição.
+      const regraSalario = (d.transfAuto || []).find((r) => condDe(r) === "entrada" && gatilhosDe(r).length && r.deBancoId !== paraBancoId);
+      const ehSalario = (e) => /sal[aá]rio/i.test(String(e.categoria || ""));
+      const porBanco = {};
+      entradasGatilho(d).filter((e) => ehSalario(e) && e.bancoId && e.bancoId !== paraBancoId && !(e.ateMes && e.ateMes < desde))
+        .forEach((e) => { (porBanco[e.bancoId] = porBanco[e.bancoId] || []).push(e); });
+      const somaSal = (lista) => lista.reduce((t, e) => t + valorDoMes(e, desde), 0);
+      const bancoSal = Object.keys(porBanco).sort((a, b) => somaSal(porBanco[b]) - somaSal(porBanco[a]))[0];
+      const condSalario = regraSalario ? { cond: "entrada", gatilhos: gatilhosDe(regraSalario).map((g) => ({ id: g.id, desc: g.desc })), deBancoId: regraSalario.deBancoId }
+        : bancoSal ? { cond: "entrada", gatilhos: porBanco[bancoSal].map((e) => ({ id: e.id, desc: e.descricao })), deBancoId: bancoSal } : null;
+      // reaproveita a transferência que já levava este valor para o Inter
+      let regra = dependentes.find((r) => r.paraBancoId === paraBancoId && usaValor(r) && !usaGatilho(r));
+      if (regra) Object.assign(regra, { modo: "fixo", valor, lanc: undefined, obs: regra.obs || reg.descricao });
+      else if (condSalario) {
+        d.transfAuto = d.transfAuto || [];
+        regra = { id: A.novoId(), deBancoId: condSalario.deBancoId, paraBancoId, cond: condSalario.cond, gatilhos: condSalario.gatilhos,
+          modo: "fixo", valor, desde, obs: reg.descricao, meses: {} };
+        d.transfAuto.push(regra);
+      } else return;   // sem o salário para disparar: deixa a despesa como está
+      // as outras que dependiam dele: valor fixo e, se o VR/VT era a condição, passam a cair com o salário
+      dependentes.filter((r) => r !== regra).forEach((r) => {
+        if (usaValor(r)) Object.assign(r, { modo: "fixo", valor, lanc: undefined });
+        if (usaGatilho(r) && condSalario) Object.assign(r, { cond: "entrada", gatilhos: condSalario.gatilhos });
+      });
+      // a despesa para no mês anterior à troca (o histórico fica)
+      const fim = mesAnterior(desde);
+      d.despesas = d.despesas.filter((x) => !((x.id === reg.id && String(x.data || "").slice(0, 7) >= desde) ||
+        (x.origemRecorrente === reg.id && String(x.data || "").slice(0, 7) >= desde)));
+      reg.ateMes = fim;
+      feitos.push(`${reg.descricao} (${brl(valor)})`);
+    });
+    d.config.migracaoVrVt = true;
+    return feitos.length ? `${feitos.join(" e ")} agora ${feitos.length === 1 ? "é transferência automática" : "são transferências automáticas"} do salário para o ${F.nomeBanco(d, (d.transfAuto || []).slice(-1)[0].paraBancoId)}.` : "";
   }
 
   const COR_META_PADRAO = "#00E5FF";
@@ -417,6 +489,7 @@
          .then((id) => { gravarCfgSync({ cofre: id }); return id; });
 
     return garantirCofre.then((cofre) => S.baixar(cfg.token, cofre).then((remoto) => {
+      syncBaixado = true;   // o cofre respondeu: os dados locais já são os mais novos
       const hrLocal = DADOS.atualizadoEm || "";
       const hrRemoto = (remoto && remoto.atualizadoEm) || "";
       if (hrRemoto && hrRemoto > hrLocal) {
@@ -438,6 +511,8 @@
       if (!silencioso) toast("Sincronização: " + e.message);
     }).then(() => { sincronizando = false; });
   }
+
+  let syncBaixado = false;
 
   function agendarEnvioSync() {                       // chamado após cada alteração
     if (!cfgSync().token) return;
@@ -977,7 +1052,13 @@
     atualizarCotacoesAutomaticas(true).then(() => setTimeout(buscarNoticiasEmSegundoPlano, 3000));
     setInterval(buscarNoticiasEmSegundoPlano, 30 * 60 * 1000);
     setInterval(() => atualizarCotacoesAutomaticas(true), 5 * 60 * 1000);
-    sincronizar(true);                                   // ao abrir/atualizar a página
+    // ao abrir/atualizar a página; a correção do VR/VT só roda depois de
+    // trazer os dados do cofre, para nunca mexer numa cópia velha
+    sincronizar(true).then(() => {
+      if (cfgSync().token && !syncBaixado) return;
+      const msg = migrarVrVtParaTransferencia();
+      if (msg) { salvarEAtualizar(msg); renderRota(); }
+    });
     setInterval(() => { if (document.visibilityState !== "hidden") sincronizar(true); }, 30 * 1000);
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "visible") sincronizar(true);   // voltou para a aba/app
@@ -1493,7 +1574,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.147" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.150" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2593,7 +2674,7 @@
         ext.itens.forEach((i) => itens.push({ data: i.data, valor: i.valor, ref: i.ref, rep: i.tipo === "transferencia" ? "" : repDe(i.ref),
           desc: descEmoji(i) + (i.tipo === "transferencia" ? (i.sub ? `<span class="desc-sub sem-quebra">${esc(i.sub)}</span>` : "")
             : i.ref ? `<span class="desc-sub">${subDe({ id: i.ref.id, categoria: i.categoria })}</span>` : ""), banco: b.nome,
-          status: i.tipo === "transferencia" ? selo("Transf.") : selo("Pago", "selo-pago") }));
+          status: selo("Pago", "selo-pago") }));
       });
       const ent = soma(itens.filter((i) => i.valor > 0), (i) => i.valor), sai = soma(itens.filter((i) => i.valor < 0), (i) => -i.valor);
       resumo = [["Entradas", "Ent.", ent, "+", "up fluxo"], ["Despesas", "Desp.", sai, "−", "down fluxo"], ["Saldo", "Sal.", inicial + ent - sai]];
@@ -2839,54 +2920,79 @@
   }
 
 
+  // quadros da guia Relatórios: clicar abre o histórico com cada lançamento
+  // que entra no valor do quadro (só o que está Pago, como os totais), no
+  // mesmo formato do histórico dos Bancos
   function explicarRelatorio(chave) {
     const d = DADOS;
-    const fxA = intervaloRel(mesesRelA, anoRelA);
-    const entradas = d.entradas.filter((e) => e.data >= fxA.ini && e.data <= fxA.fim);
-    const despesas = d.despesas.filter((x) => x.data >= fxA.ini && x.data <= fxA.fim);
-    const totE = entradas.reduce((s, e) => s + Number(e.valor || 0), 0);
-    const totD = despesas.reduce((s, x) => s + Number(x.valor || 0), 0);
-    const meses = mesesRelA || Math.max(1, new Set(entradas.concat(despesas).map((m) => String(m.data).slice(0, 7))).size);
-    const periodo = mesesRelA ? `últimos ${mesesRelA} meses` : "todo histórico";
-    const linha = (r, v, c) => `<div class="kv"><span class="dim">${rotuloPainel(r)}</span><b class="${c || ""}">${v}</b></div>`;
-    const porCategoria = (lista, sinal) => {
-      const mapa = {};
-      lista.forEach((m) => { const k = m.categoria || "Outros"; mapa[k] = (mapa[k] || 0) + Number(m.valor || 0); });
-      return Object.keys(mapa).sort((a, b) => mapa[b] - mapa[a])
-        .map((k) => linha("· " + esc(k), brlSinal(sinal === "−" ? -mapa[k] : mapa[k]))).join("");
-    };
-
-    if (chave === "rel-receitas") {
-      painelSimples("Receitas", totE > 0 ? 100 : 0, `do que entrou no período (${periodo})`, "soma das entradas no período",
-        porCategoria(entradas, "+") +
-        linha("Lançamentos", plural(entradas.length, "entrada")) + linha("Total", brlSinal(totE), corSinal(totE)), "entradas");
-      return;
-    }
-    if (chave === "rel-despesas") {
-      painelSimples("Despesas", totE > 0 ? (totD / totE) * 100 : 0, "das receitas do período foram gastas", "soma das despesas ÷ receitas",
-        porCategoria(despesas, "−") +
-        linha("Lançamentos", plural(despesas.length, "despesa")) + linha("Total", brlSinal(-totD), corSinal(-totD)), "despesas");
-      return;
-    }
-    if (chave === "rel-resultado") {
-      const saldo = totE - totD;
-      painelSimples("Resultado", totE > 0 ? (saldo / totE) * 100 : 0, "das receitas sobraram no período", "receitas − despesas",
-        linha("Período", periodo) +
-        linha("+ Receitas", brlSinal(totE), corSinal(totE)) + linha("− Despesas", brlSinal(-totD), corSinal(-totD)) +
-        linha("Resultado", brlSinal(saldo), corSinal(saldo)), "entradas");
-      return;
-    }
     if (chave === "rel-rentabilidade") {
-      const rent = I.rentabilidadeCarteiraAcoes(d);
-      painelSimples("Rentabilidade da carteira", rent, "acumulada em relação ao preço médio", "(valor atual ÷ valor investido − 1) × 100",
-        linha("Valor investido", brlSinal(I.totalInvestidoAcoes(d))) +
-        linha("Valor atual", brlSinal(I.totalCarteiraAcoes(d))) +
-        linha("Dividendos recebidos", brlSinal(I.totalDividendosAcoes(d))) +
-        linha("Ativos carteira", plural(d.acoes.length, "ativo")) +
-        linha("Resultado", brlSinal(I.resultadoCarteiraAcoes(d)), corSinal(I.resultadoCarteiraAcoes(d))), "acoes");
+      const h = historicoClasse(d, "acoes"), rent = I.rentabilidadeCarteiraAcoes(d);
+      abrirHistoricoRelatorio("Rentabilidade", pct(rent), corSinal(rent), h.html, "acoes", chave);
+      return;
     }
+    const fx = intervaloRel(mesesRelA, anoRelA);
+    const meses = mesesDoPeriodoRel(d, fx);
+    const comEntradas = chave !== "rel-despesas", comDespesas = chave !== "rel-receitas";
+    const todosReg = [...d.entradas, ...d.despesas, ...(d.contasPagar || [])];
+    const repDe = (x) => { const o = todosReg.find((r) => r.id === x.id); return o ? seloFreq({ ...o, data: x.data }, true).trim() : ""; };
+    let itens = [];
+    meses.forEach((mes) => {
+      if (comEntradas) listaEntradasTodasMes(d, mes).filter((x) => x.status === "Pago").forEach((x) => itens.push({ ...x, valor: Number(x.valor || 0), secao: "entradas" }));
+      if (comDespesas) despesasPagasMes(d, mes).forEach((x) => itens.push({ ...x, valor: -Number(x.valor || 0), secao: "despesas" }));
+    });
+    let saldo = 0;
+    itens = itens.sort((a, b) => String(a.data).localeCompare(String(b.data)))
+      .map((x) => { saldo = Math.round((saldo + x.valor) * 100) / 100; return { ...x, saldo }; });
+    const ent = itens.filter((x) => x.valor > 0).reduce((t, x) => t + x.valor, 0);
+    const sai = itens.filter((x) => x.valor < 0).reduce((t, x) => t - x.valor, 0);
+    const linha = (x) => {
+      const rep = repDe(x), banco = x.banco && x.banco !== "—" ? x.banco : "";
+      return `
+      <div class="extrato-linha clicavel" data-ir-secao="${x.secao}" data-ir-id="${esc(String(x.id))}" data-ir-data="${esc(String(x.data || ""))}" title="Ver na guia ${x.secao === "entradas" ? "Entradas" : "Despesas"}">
+        <span class="dim">${fmtDataCurta(x.data)}</span>
+        <span class="desc"${banco ? ` title="${esc(banco)}"` : ""}>${descEmoji(x)}<span class="desc-sub">${subDe(x)}</span></span>
+        <span class="rep">${celRep(rep)}</span>
+        <span class="status"><span class="selo-tag selo-pago">Pago</span>${rep ? `<span class="rep-movel">${rep}</span>` : ""}<span class="banco-movel">${esc(banco)}</span></span>
+        <span class="banco">${banco ? marcaBanco(banco, 20) + `<span>${esc(banco)}</span>` : "—"}</span>
+        <b class="${corSinal(x.valor)}">${brlSinal(x.valor)}</b>
+        <b class="saldo${x.saldo < 0 ? " down" : ""}">${brl(Math.abs(x.saldo))}</b>
+      </div>`;
+    };
+    // Resultado: receitas, despesas e a diferença; Receitas ou Despesas: o maior lançamento, a média por mês e o total
+    const maior = itens.reduce((m, x) => Math.max(m, Math.abs(x.valor)), 0), media = (ent + sai) / Math.max(1, meses.length);
+    const resumo = comEntradas && comDespesas
+      ? [["Receitas", "Rec.", ent, "+", "up fluxo"], ["Despesas", "Desp.", sai, "−", "down fluxo"], ["Resultado", "Res.", ent - sai]]
+      : comEntradas ? [["Maior", "Maior", maior, "+", "up"], ["Média/mês", "Média", media, "+", "up"], ["Total", "Tot.", ent, "+", "up"]]
+        : [["Maior", "Maior", maior, "−", "down"], ["Média/mês", "Média", media, "−", "down"], ["Total", "Tot.", sai, "−", "down"]];
+    const cel = ([rot, curto, v, sinal, cls]) => celResumo(rot, curto, Math.abs(Math.round(v * 100) / 100), sinal !== undefined ? sinal : (v > 0.004 ? "+" : v < -0.004 ? "−" : ""), cls || corSinal(v));
+    const vazio = `<div class="extrato-linha"><span></span><span class="desc dim">Nenhum lançamento pago no período</span><span></span><span></span><span></span><span></span><span></span></div>`;
+    const html = `
+      <div class="extrato-titulo"><span>Histórico · ${esc(mesesRelA ? `${mesesRelA} ${mesesRelA === 1 ? "mês" : "meses"} de ${anoRelA}` : "Todo histórico")}</span><span class="dim">${plural(itens.length, "lançamento")}</span></div>
+      <div class="extrato-tabela extrato-classe extrato-com-banco">
+        <div class="extrato-cab"><span>Data</span><span>Descrição</span><span class="rep">Recorrência</span><span class="status">Status</span><span class="banco">Banco</span><span>Valor</span><span>Saldo</span></div>
+        <div class="explica-lista extrato-banco">${itens.length ? itens.map(linha).join("") : vazio}</div>
+        <div class="extrato-resumo">${resumo.map(cel).join("")}</div>
+      </div>`;
+    const titulo = { "rel-receitas": "Receitas", "rel-despesas": "Despesas", "rel-resultado": "Resultado" }[chave];
+    const total = chave === "rel-receitas" ? ent : chave === "rel-despesas" ? -sai : ent - sai;
+    abrirHistoricoRelatorio(titulo, brlSinal(total), corSinal(total), html, chave === "rel-despesas" ? "despesas" : "entradas", chave);
   }
-
+  function abrirHistoricoRelatorio(titulo, valor, cor, html, secao, chave) {
+    painelReabrir = () => explicarRelatorio(chave);   // redesenha depois de editar um lançamento
+    abrirModal(`
+      <h3 class="extrato-cab-banco"><span>${esc(titulo)}</span><b class="${cor}">${valor}</b></h3>
+      ${html}
+      <div class="modal-acoes">
+        <button class="btn primario salvar" id="btnIrPainel">Abrir</button>
+        <button class="btn" id="btnFecharPainel">Fechar</button>
+      </div>`);
+    document.getElementById("modal").classList.add("modal-extrato", secao === "acoes" ? "modal-classe" : "modal-bancos");
+    document.getElementById("btnIrPainel").onclick = () => { fecharModal(); navegarPara(secao); };
+    document.getElementById("btnFecharPainel").onclick = fecharModal;
+    const ext = document.querySelector("#modal .extrato-banco");
+    if (ext) ext.scrollTop = ext.scrollHeight;   // abre no fim, onde está o total do período
+    ajustarLarguraHistorico();
+  }
 
   function explicarMes(ponto) {
     if (!ponto || !ponto.mes) return;
@@ -6374,6 +6480,15 @@
     return Object.keys(mapa).map((c) => ({ categoria: c, valor: mapa[c] })).sort((a, b) => b.valor - a.valor);
   }
 
+  // meses do quadro A (Receitas x despesas); "Tudo" começa no mês do lançamento mais antigo
+  function mesesDoPeriodoRel(d, fx) {
+    const primeiraData = [...d.entradas.map((e) => e.data), ...d.despesas.map((x) => x.data), ...(d.contasPagar || []).map((c) => c.vencimento)]
+      .filter(Boolean).map(String).sort()[0] || fx.fim;
+    const meses = [];
+    for (let m = (fx.ini > primeiraData ? fx.ini : primeiraData).slice(0, 7); m <= fx.fim.slice(0, 7) && meses.length < 1200; m = proximoMes(m)) meses.push(m);
+    return meses;
+  }
+
   function renderRelatorios(d) {
     if (!anoRelA) anoRelA = String(new Date().getFullYear());
     if (!anoRelB) anoRelB = String(new Date().getFullYear());
@@ -6382,10 +6497,7 @@
     // receitas e despesas do período seguem o status: só o que está Pago
     // (inclui contas pagas e repetições marcadas como pagas), mês a mês
     // "Tudo" começa no mês do lançamento mais antigo
-    const primeiraData = [...d.entradas.map((e) => e.data), ...d.despesas.map((x) => x.data), ...(d.contasPagar || []).map((c) => c.vencimento)]
-      .filter(Boolean).map(String).sort()[0] || fxA.fim;
-    const mesesDoPeriodo = [];
-    for (let m = (fxA.ini > primeiraData ? fxA.ini : primeiraData).slice(0, 7); m <= fxA.fim.slice(0, 7) && mesesDoPeriodo.length < 1200; m = proximoMes(m)) mesesDoPeriodo.push(m);
+    const mesesDoPeriodo = mesesDoPeriodoRel(d, fxA);
     const entradasP = mesesDoPeriodo.reduce((t, m) => t + totalEntradasEfetivas(d, m), 0);
     const despesasP = mesesDoPeriodo.reduce((t, m) => t + totalDespesasPagasMes(d, m), 0);
     const historicoP = histPatrimonio(d).filter((h) => h.data >= fxB.ini && h.data <= fxB.fim);
