@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.153";
+  const VERSAO_APP = "3.6.154";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1576,7 +1576,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.153" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.154" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -3154,7 +3154,7 @@
       </div>
 
       <div class="grid">
-        <div class="c12">${cardEvolucaoPatrimonial(d, { canvas: "graf-evolucao", idAno: "anoEvo", acao: "periodo-evo", meses: mesesEvo, ano: anoEvo })}</div>
+        <div class="c12">${cardEvolucaoPatrimonial(d, { canvas: "graf-evolucao", acao: "periodo-evo", meses: mesesEvo, ano: anoEvo })}</div>
       </div>
 
       ${stripKpis([
@@ -6239,12 +6239,13 @@
     const fx = intervaloAnoMeses(ano, meses);
     return h.filter((x) => x.data >= fx.ini && x.data <= fx.fim);
   }
+  // sem cfg.idAno (Dashboard) o quadro não tem seletor de ano: usa sempre o ano atual
   function cardEvolucaoPatrimonial(d, cfg) {
     const hist = histEvolucao(d, cfg.meses, cfg.ano);
     const varPer = hist.length >= 2 ? hist[hist.length - 1].valor - hist[0].valor : 0;
     return card("", "Evolução patrimonial", `patrimônio líquido · ${cfg.meses ? cfg.meses + " meses de " + cfg.ano : "todo histórico"}`,
       (hist.length >= 2 ? `<span class="pill-periodo ${corSinal(varPer)}">PERÍODO ${brlSinal(varPer)}</span>` : "") +
-      `<div class="filtro-mes">${seletorAnoDash(cfg.idAno, cfg.ano, anosDashboard(d))}${abasMeses(cfg.acao, cfg.meses, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }, { meses: 0, rotulo: "Tudo" }])}</div>`,
+      `<div class="filtro-mes">${cfg.idAno ? seletorAnoDash(cfg.idAno, cfg.ano, anosDashboard(d)) : ""}${abasMeses(cfg.acao, cfg.meses, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }, { meses: 0, rotulo: "Tudo" }])}</div>`,
       hist.length >= 2
         ? `<div${cfg.classe ? ` class="${cfg.classe}"` : ""} style="padding:8px 14px 12px;height:280px"><canvas id="${cfg.canvas}"></canvas></div>`
         : `<div class="empty">Sem registros de patrimônio em ${cfg.meses ? `${cfg.meses} ${cfg.meses === 1 ? "mês" : "meses"} de ${cfg.ano}` : "todo histórico"}.</div>`);
@@ -6978,7 +6979,6 @@
       if (id === "anoRelA") { anoRelA = e.target.value; renderRota(); return; }
       if (id === "anoRelB") { anoRelB = e.target.value; renderRota(); return; }
       if (id === "anoBancos") { anoBancos = e.target.value; renderRota(); return; }
-      if (id === "anoEvo") { anoEvo = e.target.value; renderRota(); return; }
       if (id === "anoEntradas") { mesEntradas = e.target.value + mesEntradas.slice(4); filtroEntradas = null; renderRota(); return; }
       if (id === "anoDespesas") { mesDespesas = e.target.value + mesDespesas.slice(4); filtroDespesas = null; renderRota(); return; }
       if (id === "filtroPeriodo") { filtrosHistorico.periodo = e.target.value; renderRota(); }
