@@ -411,7 +411,7 @@ table.terminal .campo-preco { width: 88px; text-align: right; background: var(--
 .ticker-tape::before, .ticker-tape::after { content: ""; position: absolute; top: 0; bottom: 0; width: 40px; z-index: 2; pointer-events: none; }
 .ticker-tape::before { left: 0; background: linear-gradient(90deg, #070B16, transparent); }
 .ticker-tape::after { right: 0; background: linear-gradient(-90deg, #070B16, transparent); }
-.ticker-track { display: inline-flex; gap: 34px; animation: rolar-ticker 45s linear infinite; will-change: transform; }
+.ticker-track { display: inline-flex; gap: 34px; animation: rolar-ticker 60s linear infinite; will-change: transform; }
 .ticker-tape:hover .ticker-track { animation-play-state: paused; }
 @keyframes rolar-ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 .ticker-item { display: inline-flex; align-items: baseline; gap: 8px; font-family: var(--mono); font-size: 12.5px; font-weight: 600; white-space: nowrap; }
