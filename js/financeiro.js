@@ -111,7 +111,7 @@
     movimentosDoBanco(d, bancoId).forEach(function (m) {
       var v = Number(m.valor || 0);
       itens.push({ data: m.data || "", descricao: m.descricao || (v >= 0 ? "Entrada" : "Despesa"), valor: v,
-        tipo: m.transferencia ? "transferencia" : v >= 0 ? "entrada" : "despesa", emoji: m.emoji || (m.transferencia ? "🔁" : ""), categoria: m.categoria, ref: m.ref || null });
+        tipo: m.transferencia ? "transferencia" : v >= 0 ? "entrada" : "despesa", emoji: m.emoji || (m.transferencia ? "🔁" : ""), categoria: m.categoria, ref: m.ref || null, auto: m.auto || null });
     });
     // mesmo dia: entradas antes das saídas, para o saldo não oscilar à toa;
     // entre as entradas, o pagamento antes da bonificação
