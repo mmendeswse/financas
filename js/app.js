@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.143";
+  const VERSAO_APP = "3.6.144";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1493,7 +1493,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.143" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.144" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -3275,19 +3275,18 @@
           <div class="cartao-item" style="border-left-color:${esc(b.cor || "#3FC1E0")}" data-acao="explicar-banco" data-id="${b.id}" title="Ver o histórico de transações">
             <div class="linha1"><div class="nome-com-marca">${marcaBanco(b.nome, 26)}<div><div class="nome">${esc(b.nome)}</div><div class="tipo">${esc(b.tipo || "—")}</div>${b.agencia || b.conta ? `<div class="tipo">${b.agencia ? `<span class="sem-quebra">Ag ${esc(b.agencia)}</span>` : ""}${b.agencia && b.conta ? " · " : ""}${b.conta ? `<span class="sem-quebra">Cc ${esc(b.conta)}</span>` : ""}</div>` : ""}</div></div></div>
             <div class="saldo saldo-branco">${brlSinal(b.valor)}</div>
-            <div class="rodape"><span>${mesesBancos ? `Saldo Atual ${brl(b.saldoAtual)}` : ""}</span>
-            </div>
+            ${mesesBancos ? `<div class="rodape"><span>Saldo Atual ${brl(b.saldoAtual)}</span></div>` : ""}
           </div>`).join("") + `</div>`;
     }
     return `
       ${faixaDemo(d)}
       <div class="grid g-top">
-        <div class="c12">${card("c12", "Meus bancos", `${bancos.length} ${bancos.length === 1 ? "Conta Cadastrada" : "Contas Cadastradas"}`, `${d.bancos.length > 1 ? `<button class="btn" data-acao="nova-transferencia" title="Passar dinheiro de um banco para outro">⇄ TRANSFERIR</button>` : ""}<button class="btn primario" data-acao="nova-banco"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`, listaHtml, `<span class="dim">Total</span><b style="font-size:14px;font-weight:800;color:#FFFFFF">${brlSinal(total)}</b>`)}</div>
+        <div class="c12">${card("c12", "Meus bancos", `${bancos.length} ${bancos.length === 1 ? "Conta Cadastrada" : "Contas Cadastradas"}`, `${bancos.length ? `<span class="pill-periodo ${corSinal(total)}" title="Soma de todas as contas">TOTAL ${brlSinal(total)}</span>` : ""}${d.bancos.length > 1 ? `<button class="btn" data-acao="nova-transferencia" title="Passar dinheiro de um banco para outro">⇄ TRANSFERIR</button>` : ""}<button class="btn primario" data-acao="nova-banco"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`, listaHtml)}</div>
       </div>
       <div class="grid">
         <div class="c12">${card("", "Saldo bancos", mesesBancos ? `Movimentação · ${mesesBancos} ${mesesBancos === 1 ? "mês" : "meses"} de ${anoBancos}` : "comparação entre contas",
           `<div class="filtro-mes">${seletorAnoDash("anoBancos", anoBancos, anosDashboard(d))}${abasMeses("periodo-bancos", mesesBancos, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }, { meses: 0, rotulo: "Tudo" }])}</div>`,
-          `<div style="padding:12px 18px 16px;height:${Math.max(190, bancos.length * 52)}px"><canvas id="graf-saldo-bancos"></canvas></div>`)}</div>
+          `<div style="padding:8px 18px 10px;height:${Math.max(150, bancos.length * 40)}px"><canvas id="graf-saldo-bancos"></canvas></div>`)}</div>
       </div>
     `;
   }
@@ -6552,8 +6551,9 @@
       case "bancos": {
         if (!d.bancos.length) break;
         // tablet e computador: o gráfico ocupa a altura que sobra até o rodapé
-        // (a página termina junto com a tela, sem faixa vazia); nunca fica
-        // menor que o tamanho original
+        // (a página termina junto com a tela, sem faixa vazia) e encolhe quando
+        // a página passaria da tela, para tudo caber sem rolar — até um mínimo
+        // em que as barras ainda ficam legíveis
         const caixaGraf = document.getElementById("graf-saldo-bancos") && document.getElementById("graf-saldo-bancos").parentElement;
         if (caixaGraf && window.innerWidth > 760) {
           // espaço vazio entre o fim do conteúdo e o rodapé (o rodapé fica preso embaixo)
@@ -6562,6 +6562,11 @@
           const folga = (cont ? parseFloat(getComputedStyle(cont).paddingBottom) || 0 : 0) + (rod ? parseFloat(getComputedStyle(rod).marginTop) || 0 : 0);
           const sobra = rod && ultimo ? rod.getBoundingClientRect().top - ultimo.getBoundingClientRect().bottom - folga : 0;
           if (sobra > 1) caixaGraf.style.height = Math.floor(caixaGraf.clientHeight + sobra) + "px";
+          else {
+            const excesso = document.documentElement.scrollHeight - window.innerHeight;
+            const minimo = Math.max(120, d.bancos.length * 24 + 50);
+            if (excesso > 0) caixaGraf.style.height = Math.max(minimo, Math.floor(caixaGraf.clientHeight - excesso)) + "px";
+          }
         }
         G.renderSaldoBancos("graf-saldo-bancos", bancosNaOrdem(bancosDoPeriodo(d)).map((b) => Object.assign({}, b, { saldoAtual: b.valor })),
           { aoClicar: (b) => explicarBanco(b.id) });

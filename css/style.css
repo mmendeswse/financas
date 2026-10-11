@@ -1961,3 +1961,10 @@ button.pill-periodo:hover { filter: brightness(1.25); }
    couber, o fim do subtítulo vira reticências */
 .extrato-linha .desc:has(> .desc-sub.sem-quebra) { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .extrato-linha .desc-sub.sem-quebra { display: inline; margin: 0 0 0 8px; white-space: nowrap; }
+
+/* guia Bancos: cartões dos bancos mais baixos, para os dois quadros caberem na tela sem rolar */
+.grade-bancos { gap: 12px; padding: 10px 16px 12px; }
+.grade-bancos .cartao-item { padding: 10px 14px; }
+.grade-bancos .cartao-item .linha1 { margin-bottom: 6px; }
+.grade-bancos .cartao-item .saldo { font-size: 18px; margin-bottom: 0; }
+.grade-bancos .cartao-item .rodape:last-child { padding-top: 4px; }
