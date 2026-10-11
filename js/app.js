@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.144";
+  const VERSAO_APP = "3.6.145";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1493,7 +1493,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.144" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.145" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -6147,7 +6147,7 @@
       (hist.length >= 2 ? `<span class="pill-periodo ${corSinal(varPer)}">PERÍODO ${brlSinal(varPer)}</span>` : "") +
       `<div class="filtro-mes">${seletorAnoDash(cfg.idAno, cfg.ano, anosDashboard(d))}${abasMeses(cfg.acao, cfg.meses, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }, { meses: 0, rotulo: "Tudo" }])}</div>`,
       hist.length >= 2
-        ? `<div style="padding:8px 14px 12px;height:280px"><canvas id="${cfg.canvas}"></canvas></div>`
+        ? `<div${cfg.classe ? ` class="${cfg.classe}"` : ""} style="padding:8px 14px 12px;height:280px"><canvas id="${cfg.canvas}"></canvas></div>`
         : `<div class="empty">Sem registros de patrimônio em ${cfg.meses ? `${cfg.meses} ${cfg.meses === 1 ? "mês" : "meses"} de ${cfg.ano}` : "todo histórico"}.</div>`);
   }
 
@@ -6393,19 +6393,22 @@
     const OPC = [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }, { meses: 0, rotulo: "Tudo" }];
     const rotulo = (m, ano) => (m ? `${m} ${m === 1 ? "mês" : "meses"} de ${ano}` : "Todo histórico");
     const rotuloPeriodo = rotulo(mesesRelA, anoRelA);
+    // totais do período escolhido, ao lado do ano, no estilo dos resumos das guias Entradas/Despesas
+    const pillTotal = (cls, ic, nome, valor) => `<span class="resumo-pill rp-${cls}" title="${nome} · ${rotuloPeriodo}"><span class="rp-ic"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${ic}</svg></span><span class="rp-txt"><small>${nome}</small><b>${valor}</b></span></span>`;
+    const totaisRelA = `<span class="rel-totais">${pillTotal("receita", '<path d="M12 19V5M5 12l7-7 7 7"/>', "Receitas", "+" + brl(entradasP))}${pillTotal("despesa", '<path d="M12 5v14M5 12l7 7 7-7"/>', "Despesas", "−" + brl(despesasP))}</span>`;
 
     return `
       <div class="grid g-top rel-kpis">
+        <div class="c3">${metricCard("Rentabilidade", pct(I.rentabilidadeCarteiraAcoes(d)), ICONES_STRIP.melhorativo, "var(--vi)", "", "Acumulada · Preço Médio", null, "0 0 24 24", "rel-rentabilidade")}</div>
         <div class="c3">${metricCard("Receitas", "+" + brl(entradasP), ICONES_STRIP.poupanca, "var(--up)", "", rotuloPeriodo, null, "0 0 24 24", "rel-receitas")}</div>
         <div class="c3">${metricCard("Despesas", "−" + brl(despesasP), ICONES_STRIP.maiorgasto, "var(--down)", "", rotuloPeriodo, null, "0 0 24 24", "rel-despesas")}</div>
         <div class="c3">${metricCard("Resultado", brlSinal(entradasP - despesasP), ICONES_STRIP.projecao, corSinal(entradasP - despesasP) !== "down" ? "var(--up)" : "var(--down)", "", rotuloPeriodo, null, "0 0 24 24", "rel-resultado")}</div>
-        <div class="c3">${metricCard("Rentabilidade", pct(I.rentabilidadeCarteiraAcoes(d)), ICONES_STRIP.melhorativo, "var(--vi)", "", "Acumulada · Preço Médio", null, "0 0 24 24", "rel-rentabilidade")}</div>
       </div>
       <div class="grid">
-        <div class="c12">${card("", "Receitas x despesas", `${rotulo(mesesRelA, anoRelA)}`, `<div class="filtro-mes">${seletorAnoDash("anoRelA", anoRelA, anosDashboard(d))}${abasMeses("periodo-rel-a", mesesRelA, OPC)}</div>`, `<div class="rel-grafico" style="padding:10px 16px;height:220px"><canvas id="graf-rel-mensal"></canvas></div>`)}</div>
+        <div class="c12">${card("", "Receitas x despesas", `${rotulo(mesesRelA, anoRelA)}`, `<div class="filtro-mes">${totaisRelA}${seletorAnoDash("anoRelA", anoRelA, anosDashboard(d))}${abasMeses("periodo-rel-a", mesesRelA, OPC)}</div>`, `<div class="rel-grafico rel-alto" style="padding:10px 16px;height:220px"><canvas id="graf-rel-mensal"></canvas></div>`)}</div>
       </div>
       <div class="grid">
-        <div class="c12">${cardEvolucaoPatrimonial(d, { canvas: "graf-rel-evolucao", idAno: "anoRelB", acao: "periodo-rel-b", meses: mesesRelB, ano: anoRelB })}</div>
+        <div class="c12">${cardEvolucaoPatrimonial(d, { canvas: "graf-rel-evolucao", classe: "rel-alto", idAno: "anoRelB", acao: "periodo-rel-b", meses: mesesRelB, ano: anoRelB })}</div>
       </div>
     `;
   }
@@ -6633,9 +6636,23 @@
         if (comp.length) G.renderDoughnutGenerico("graf-carteira-acoes", comp, { semLegenda: true });
         break;
       }
-      case "relatorios":
+      case "relatorios": {
+        // como na guia Bancos: no tablet e no computador os dois gráficos
+        // dividem a altura que sobra até o rodapé, crescendo ou encolhendo
+        // para a página caber na tela sem rolar (com um mínimo legível)
+        const caixas = [...document.querySelectorAll("#conteudo .rel-alto")];
+        if (caixas.length && window.innerWidth >= 700) {
+          const rod = document.querySelector(".rodape-app"), cont = document.getElementById("conteudo");
+          const ultimo = cont && cont.lastElementChild;
+          const folga = (cont ? parseFloat(getComputedStyle(cont).paddingBottom) || 0 : 0) + (rod ? parseFloat(getComputedStyle(rod).marginTop) || 0 : 0);
+          const sobra = rod && ultimo ? rod.getBoundingClientRect().top - ultimo.getBoundingClientRect().bottom - folga : 0;
+          const ajuste = sobra > 1 ? sobra : -(document.documentElement.scrollHeight - window.innerHeight);
+          const porCaixa = ajuste / caixas.length;
+          if (Math.abs(porCaixa) >= 1) caixas.forEach((c) => { c.style.height = Math.max(110, Math.floor(c.clientHeight + porCaixa)) + "px"; });
+        }
         montarGraficosRelatorio(d);
         break;
+      }
     }
   }
 
