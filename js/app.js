@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.177";
+  const VERSAO_APP = "3.6.178";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1383,8 +1383,25 @@
       texto: `Seu salário foi pago (${fmtData(pagamento)}):<span class="notif-lista">${partes.map((x) => `<span class="notif-item">${x}</span>`).join("")}</span>` };
   }
 
+  // metas devendo depósitos de meses anteriores: avisa sempre (não só depois
+  // do salário), com o valor para cada uma ficar em dia
+  function alertaMetasAtrasadas(d) {
+    const atrasadas = metasPorStatus(d.metas).map((m) => ({ m, st: situacaoMeta(m) })).filter((x) => x.st.atrasado);
+    if (!atrasadas.length) return null;
+    if (atrasadas.length === 1) {
+      const { m, st } = atrasadas[0];
+      return { tipo: "perigo", rota: "metas", texto: `A meta ${emojiMeta(m)} ${esc(m.nome)} está atrasada (${brl(atrasoMeta(m))}): deposite ${brl(st.deposito)} para ficar em dia.` };
+    }
+    const total = atrasadas.reduce((t, x) => t + x.st.deposito, 0);
+    return { tipo: "perigo", rota: "metas",
+      texto: `${atrasadas.length} metas estão atrasadas, ${brl(total)} para ficar em dia:<span class="notif-lista">${atrasadas.map(({ m, st }) =>
+        `<span class="notif-item">${emojiMeta(m)} ${esc(m.nome)} ${brl(st.deposito)}</span>`).join("")}</span>` };
+  }
+
   function gerarAlertas(d) {
     const alertas = [];
+    const avisoAtraso = alertaMetasAtrasadas(d);
+    if (avisoAtraso) alertas.push(avisoAtraso);
     const avisoMetas = alertaMetasPagamento(d);
     if (avisoMetas) alertas.push(avisoMetas);
 
@@ -1600,7 +1617,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.177" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.178" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
