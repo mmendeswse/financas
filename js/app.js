@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.134";
+  const VERSAO_APP = "3.6.135";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1491,7 +1491,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.134" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.135" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -3330,6 +3330,29 @@
       valor: numIn(document.getElementById("f_valor").value) || "", obs: document.getElementById("f_obs").value.trim() });
   }
 
+  // Saldo de hoje do banco de onde sai o dinheiro, embaixo do campo "De", e
+  // como ele fica depois da transferência. Ao editar uma transferência já
+  // feita, o valor dela volta para o saldo (é o que dá para enviar).
+  function ligarSaldoOrigem(devolver, soSaldo) {
+    const de = document.getElementById("f_de"), valor = document.getElementById("f_valor");
+    if (!de || !valor) return;
+    const caixa = document.createElement("div");
+    caixa.className = "ajuda saldo-origem";
+    de.insertAdjacentElement("afterend", caixa);
+    const saldos = F.listaBancosComSaldo(DADOS);
+    const atualizar = () => {
+      const b = saldos.find((x) => x.id === de.value);
+      if (!b) { caixa.innerHTML = ""; return; }
+      const saldo = b.saldoAtual + (devolver && devolver.bancoId === b.id ? devolver.valor : 0);
+      const v = numIn(valor.value), depois = Math.round((saldo - v) * 100) / 100;
+      caixa.innerHTML = `Saldo disponível: <b class="${corSinal(saldo)}">${brlSinal(saldo)}</b>` +
+        (v > 0 && !soSaldo ? ` · depois: <b class="${corSinal(depois)}">${brlSinal(depois)}</b>${depois < 0 ? " (fica negativo)" : ""}` : "");
+    };
+    de.addEventListener("change", atualizar);
+    valor.addEventListener("input", atualizar);
+    atualizar();
+  }
+
   function abrirModalTransferencia(id, inicial) {
     const t = id ? achar(DADOS.transferencias || [], id) : null;
     const v = t || inicial || {};
@@ -3349,6 +3372,7 @@
       <div class="campo"><label for="f_obs">Observação</label><input id="f_obs" value="${esc(v.obs || "")}" placeholder="Opcional"><div class="ajuda">O valor sai do primeiro banco e entra no segundo. Não conta como receita nem despesa.</div></div>
       <div class="modal-acoes">${t ? `<button class="btn perigo" id="btnExcluir">Excluir</button>` : ""}<button class="btn primario salvar" id="btnSalvar">${t ? "Salvar" : "Transferir"}</button></div>`);
     if (!t) ligarTipoTransf((dados) => abrirModalTransfAuto(null, dados));
+    ligarSaldoOrigem(t ? { bancoId: t.deBancoId, valor: Number(t.valor || 0) } : null);
     document.getElementById("btnSalvar").onclick = () => {
       const de = document.getElementById("f_de").value, para = document.getElementById("f_para").value;
       const valor = numIn(document.getElementById("f_valor").value);
@@ -3540,6 +3564,7 @@
         + "Quando as entradas forem marcadas como recebidas, o valor sai do primeiro banco e entra no segundo, na mesma data. Dá para mudar o valor de um mês clicando na transferência.";
     };
     selModo.onchange = ajustarModo; ajustarModo();
+    ligarSaldoOrigem(null, true);   // automática: o "depois" só vale no dia em que cair
     if (!r) ligarTipoTransf((dados) => abrirModalTransferencia(null, dados));
     if (!r) document.querySelectorAll("#modal .f_gat").forEach((c) => { c.onchange = () => {
       const gs = lerGatilhos(), e = gs.length ? achar(DADOS.entradas, gs[0].id) : null;

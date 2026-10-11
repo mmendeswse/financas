@@ -1939,3 +1939,9 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 .campo .chk-linha { display: flex; margin-bottom: 8px; color: var(--texto); font-size: 13px; font-weight: 500; cursor: pointer; }
 .campo .chk-linha input { width: 16px; height: 16px; min-width: 16px; padding: 0; flex: none; }
 .campo .chk-linha input:focus { outline-offset: 2px; }
+
+/* janela Transferir: saldo do banco de onde sai o dinheiro */
+.campo .saldo-origem { font-size: 12px; margin-top: 6px; }
+.campo .saldo-origem b { font-family: var(--mono); font-weight: 700; color: var(--texto); }
+.campo .saldo-origem b.up { color: var(--up); }
+.campo .saldo-origem b.down { color: var(--down); }
