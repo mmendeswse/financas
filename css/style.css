@@ -1759,7 +1759,7 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 .extrato-titulo { gap: 10px; }
 /* histórico do banco com a coluna Recorrência antes do Status */
 .modal.modal-extrato { width: 860px; }
-.extrato-com-rep .extrato-cab, .extrato-com-rep .extrato-linha { grid-template-columns: 78px minmax(0, 1fr) 112px 72px 112px 104px; }
+.extrato-com-rep .extrato-cab, .extrato-com-rep .extrato-linha { grid-template-columns: 78px minmax(0, 1fr) 132px 72px 112px 104px; }
 .extrato-com-rep .extrato-cab .rep, .extrato-com-rep .extrato-cab .status, .extrato-com-rep .extrato-linha .rep { text-align: center; }
 .extrato-com-rep .extrato-linha .rep .selo-tag { font-size: 9.5px; padding: 1px 6px; }
 .extrato-linha .rep-movel { display: none; }
@@ -1834,7 +1834,7 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 }
 /* Patrimônio → Bancos: também com Recorrência; quadro mais largo para caber tudo */
 .modal.modal-extrato.modal-bancos { width: 980px; }
-.extrato-com-banco .extrato-cab, .extrato-com-banco .extrato-linha { grid-template-columns: 78px minmax(0, 1fr) 112px 72px 140px 112px 104px; }
+.extrato-com-banco .extrato-cab, .extrato-com-banco .extrato-linha { grid-template-columns: 78px minmax(0, 1fr) 132px 72px 140px 112px 104px; }
 .extrato-com-banco .extrato-cab .rep, .extrato-com-banco .extrato-linha .rep { text-align: left; }
 .extrato-com-banco .extrato-linha .rep .selo-tag { font-size: 9.5px; padding: 1px 6px; }
 @media (max-width: 560px) {
