@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.138";
+  const VERSAO_APP = "3.6.140";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1491,7 +1491,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.138" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.140" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2474,8 +2474,10 @@
     };
     // o emoji do lançamento (o escolhido ou o da categoria) na frente da descrição
     // embaixo da descrição, "Categoria · Tipo" como nas guias Entradas e Despesas
-    const subItem = (i) => i.ref && i.tipo !== "transferencia" ? `<span class="desc-sub">${subDe({ id: i.ref.id, categoria: i.categoria })}</span>` : "";
-    const doItem = (i) => linha(fmtDataCurta(i.data), descEmoji(i) + (i.tipo === "transferencia" ? ` <span class="dim">⇄</span>` : "") + subItem(i), i.valor, i.saldo, "", i.ref, i.tipo, i.previsto, i.auto);
+    // transferência: "Para · Banco" (ou "De · Banco") embaixo, como o "Categoria · Tipo" dos lançamentos
+    const subItem = (i) => i.tipo === "transferencia" ? (i.sub ? `<span class="desc-sub sem-quebra">${esc(i.sub)}</span>` : "")
+      : i.ref ? `<span class="desc-sub">${subDe({ id: i.ref.id, categoria: i.categoria })}</span>` : "";
+    const doItem = (i) => linha(fmtDataCurta(i.data), descEmoji(i) + subItem(i), i.valor, i.saldo, "", i.ref, i.tipo, i.previsto, i.auto);
     let corpo;
     {
       const pagos = ext.itens.filter((i) => String(i.data) >= fx.ini && String(i.data) <= fx.fim);
@@ -2587,8 +2589,8 @@
         const todosReg = [...d.entradas, ...d.despesas, ...(d.contasPagar || [])];
         const repDe = (ref) => { const o = ref && ref.id ? todosReg.find((r) => r.id === ref.id) : null; return o ? seloFreq({ ...o, data: ref.data || dataReg(o) }, true).trim() : ""; };
         ext.itens.forEach((i) => itens.push({ data: i.data, valor: i.valor, ref: i.ref, rep: i.tipo === "transferencia" ? "" : repDe(i.ref),
-          desc: descEmoji(i) + (i.tipo === "transferencia" ? ` <span class="dim">⇄</span>` : "") +
-            (i.ref && i.tipo !== "transferencia" ? `<span class="desc-sub">${subDe({ id: i.ref.id, categoria: i.categoria })}</span>` : ""), banco: b.nome,
+          desc: descEmoji(i) + (i.tipo === "transferencia" ? (i.sub ? `<span class="desc-sub sem-quebra">${esc(i.sub)}</span>` : "")
+            : i.ref ? `<span class="desc-sub">${subDe({ id: i.ref.id, categoria: i.categoria })}</span>` : ""), banco: b.nome,
           status: i.tipo === "transferencia" ? selo("Transf.") : selo("Pago", "selo-pago") }));
       });
       const ent = soma(itens.filter((i) => i.valor > 0), (i) => i.valor), sai = soma(itens.filter((i) => i.valor < 0), (i) => -i.valor);
@@ -3269,7 +3271,7 @@
     } else {
       listaHtml = `<div class="grade-bancos">` + bancos.map((b) => `
           <div class="cartao-item" style="border-left-color:${esc(b.cor || "#3FC1E0")}" data-acao="explicar-banco" data-id="${b.id}" title="Ver o histórico de transações">
-            <div class="linha1"><div class="nome-com-marca">${marcaBanco(b.nome, 26)}<div><div class="nome">${esc(b.nome)}</div><div class="tipo">${esc(b.tipo || "—")}</div>${b.agencia || b.conta ? `<div class="tipo">${b.agencia ? "Ag " + esc(b.agencia) : ""}${b.agencia && b.conta ? " · " : ""}${b.conta ? "Cc " + esc(b.conta) : ""}</div>` : ""}</div></div></div>
+            <div class="linha1"><div class="nome-com-marca">${marcaBanco(b.nome, 26)}<div><div class="nome">${esc(b.nome)}</div><div class="tipo">${esc(b.tipo || "—")}</div>${b.agencia || b.conta ? `<div class="tipo">${b.agencia ? `<span class="sem-quebra">Ag ${esc(b.agencia)}</span>` : ""}${b.agencia && b.conta ? " · " : ""}${b.conta ? `<span class="sem-quebra">Cc ${esc(b.conta)}</span>` : ""}</div>` : ""}</div></div></div>
             <div class="saldo saldo-branco">${brlSinal(b.valor)}</div>
             <div class="rodape"><span>${mesesBancos ? `Saldo Atual ${brl(b.saldoAtual)}` : ""}</span>
             </div>
@@ -3515,8 +3517,8 @@
     const saida = [];
     ocorrenciasTransfAuto(d).filter((o) => o.recebida === recebidas && o.valor > 0).forEach((o) => {
       const auto = { id: o.regra.id, mes: o.mes }, obs = o.regra.obs ? " · " + o.regra.obs : "";
-      saida.push({ bancoId: o.regra.deBancoId, valor: -o.valor, data: o.data, transferencia: true, auto, descricao: "Transferência automática para " + F.nomeBanco(d, o.regra.paraBancoId) + obs });
-      saida.push({ bancoId: o.regra.paraBancoId, valor: o.valor, data: o.data, transferencia: true, auto, descricao: "Transferência automática de " + F.nomeBanco(d, o.regra.deBancoId) + obs });
+      saida.push({ bancoId: o.regra.deBancoId, valor: -o.valor, data: o.data, transferencia: true, auto, descricao: "Transferência Automática", sub: "Para · " + F.nomeBanco(d, o.regra.paraBancoId) + obs });
+      saida.push({ bancoId: o.regra.paraBancoId, valor: o.valor, data: o.data, transferencia: true, auto, descricao: "Transferência Automática", sub: "De · " + F.nomeBanco(d, o.regra.deBancoId) + obs });
     });
     return saida;
   }
