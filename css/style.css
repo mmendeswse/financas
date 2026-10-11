@@ -1247,6 +1247,19 @@ table.tab-acoes th.col-atualiz, table.tab-acoes td.col-atualiz { display: none; 
 .rp-prevista { color: #FFD633; border-color: rgba(255,214,51,.32); background: rgba(255,214,51,.07); }
 .rp-prevista .rp-ic { background: rgba(255,214,51,.16); }
 .rp-atrasado { color: var(--down); border-color: rgba(255,77,122,.35); background: rgba(255,77,122,.07); }
+.rp-receita { color: var(--up); border-color: rgba(46,229,157,.32); background: rgba(46,229,157,.07); }
+.rp-receita .rp-ic { background: rgba(46,229,157,.16); }
+.rp-despesa { color: var(--down); border-color: rgba(255,92,106,.35); background: rgba(255,92,106,.07); }
+.rp-despesa .rp-ic { background: rgba(255,92,106,.16); }
+/* Relatórios · quadro A: totais de receitas e despesas ao lado do ano */
+.rel-totais { display: inline-flex; gap: 8px; flex-wrap: wrap; }
+.rel-totais .resumo-pill { cursor: default; }
+@media (max-width: 760px) {
+  .filtro-mes:has(.rel-totais) { flex-wrap: wrap; }
+  .rel-totais { flex: 1 1 100%; }
+  .rel-totais .resumo-pill { flex: 1 1 0; min-width: 0; }
+  .rel-totais .resumo-pill b { font-size: 13px; }
+}
 .rp-atrasado .rp-ic { background: rgba(255,77,122,.16); }
 /* "Total · N Lançamentos" no mesmo estilo dos títulos das colunas */
 .kv.kv-total > span { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); font-weight: 700; }
@@ -1857,8 +1870,8 @@ button.pill-periodo:hover { filter: brightness(1.25); }
   .extrato-so-banco .extrato-cab span:nth-child(5) { display: block; }
   .extrato-so-banco .extrato-cab span:nth-child(6) { display: none; }
 }
-/* Relatórios no iPad: os 4 indicadores numa linha só e compactos, e os gráficos
-   ajustam a altura à tela para todos os quadros caberem sem arrastar a página */
+/* Relatórios no iPad: os 4 indicadores numa linha só e compactos (a altura dos
+   gráficos é calculada no app, para todos os quadros caberem sem arrastar a página) */
 @media (min-width: 700px) {
   .rel-kpis > .c3 { grid-column: span 3 !important; }
   .rel-kpis .metric { padding: 10px 14px; }
@@ -1867,16 +1880,12 @@ button.pill-periodo:hover { filter: brightness(1.25); }
   .rel-kpis .metric .selo svg { width: 13px; height: 13px; }
   .rel-kpis .metric .valor { font-size: 17px; margin-bottom: 2px; }
   .rel-kpis .metric .legenda, .rel-kpis .metric > :last-child { font-size: 10.5px; }
-  div:has(> #graf-rel-mensal) { height: clamp(140px, calc((100vh - 420px) * 0.45), 220px) !important; }
-  div:has(> #graf-rel-evolucao) { height: clamp(150px, calc((100vh - 420px) * 0.55), 280px) !important; }
 }
 @media (min-width: 700px) {
   .rel-kpis .metric { padding: 9px 14px 8px; min-height: 0; }
   .rel-kpis .metric .topo { margin-bottom: 2px; }
   .rel-kpis .metric .valor { line-height: 1.25; margin-bottom: 0; }
   .rel-kpis .metric .legenda { margin-top: 1px; line-height: 1.2; }
-  div:has(> #graf-rel-mensal) { height: clamp(130px, calc((100vh - 400px) * 0.45), 220px) !important; }
-  div:has(> #graf-rel-evolucao) { height: clamp(140px, calc((100vh - 400px) * 0.55), 280px) !important; }
 }
 /* rodapé de totais (Entradas · Despesas · Saldo) dentro da lista de um quadro */
 .explica-lista > .extrato-tabela.rodape-painel { border: none; border-radius: 0; background: none; }
@@ -1969,3 +1978,4 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 .grade-bancos .cartao-item .linha1 { margin-bottom: 6px; }
 .grade-bancos .cartao-item .saldo { font-size: 18px; margin-bottom: 0; }
 .grade-bancos .cartao-item .rodape:last-child { padding-top: 4px; }
+
