@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.149";
+  const VERSAO_APP = "3.6.150";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -184,13 +184,18 @@
           if (!r.meses[mes] || r.meses[mes].valor === undefined) r.meses[mes] = Object.assign({}, r.meses[mes], { valor: valorTransfAuto(d, r, mes, g) });
         }
       });
-      // o salário: a mesma condição de outra transferência "quando cair a entrada",
-      // ou a entrada mensal de Salário que cai num banco diferente do Inter
+      // o salário é a soma das entradas mensais de categoria Salário do mesmo
+      // banco (Pagamento + Bonificação): a transferência acontece quando elas
+      // caem. Se já houver uma transferência "quando cair a entrada", usa a mesma condição.
       const regraSalario = (d.transfAuto || []).find((r) => condDe(r) === "entrada" && gatilhosDe(r).length && r.deBancoId !== paraBancoId);
-      const salario = entradasGatilho(d).filter((e) => e.bancoId && e.bancoId !== paraBancoId && /sal[aá]rio/i.test(String(e.categoria || "") + " " + String(e.descricao || "")))
-        .sort((a, b) => String(dataReg(b)).localeCompare(String(dataReg(a))))[0];
+      const ehSalario = (e) => /sal[aá]rio/i.test(String(e.categoria || ""));
+      const porBanco = {};
+      entradasGatilho(d).filter((e) => ehSalario(e) && e.bancoId && e.bancoId !== paraBancoId && !(e.ateMes && e.ateMes < desde))
+        .forEach((e) => { (porBanco[e.bancoId] = porBanco[e.bancoId] || []).push(e); });
+      const somaSal = (lista) => lista.reduce((t, e) => t + valorDoMes(e, desde), 0);
+      const bancoSal = Object.keys(porBanco).sort((a, b) => somaSal(porBanco[b]) - somaSal(porBanco[a]))[0];
       const condSalario = regraSalario ? { cond: "entrada", gatilhos: gatilhosDe(regraSalario).map((g) => ({ id: g.id, desc: g.desc })), deBancoId: regraSalario.deBancoId }
-        : salario ? { cond: "entrada", gatilhos: [{ id: salario.id, desc: salario.descricao }], deBancoId: salario.bancoId } : null;
+        : bancoSal ? { cond: "entrada", gatilhos: porBanco[bancoSal].map((e) => ({ id: e.id, desc: e.descricao })), deBancoId: bancoSal } : null;
       // reaproveita a transferência que já levava este valor para o Inter
       let regra = dependentes.find((r) => r.paraBancoId === paraBancoId && usaValor(r) && !usaGatilho(r));
       if (regra) Object.assign(regra, { modo: "fixo", valor, lanc: undefined, obs: regra.obs || reg.descricao });
@@ -1569,7 +1574,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.149" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.150" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
