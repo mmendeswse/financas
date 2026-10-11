@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.155";
+  const VERSAO_APP = "3.6.156";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1576,7 +1576,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.155" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.156" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -6524,42 +6524,53 @@
   // CONFIGURAÇÕES — backup, importação de Excel, privacidade
   // =========================================================================
   function renderConfiguracoes(d) {
-    const temDadosReais = d.bancos.length || d.entradas.length || d.despesas.length || d.acoes.length || d.investimentos.length;
+    // quadros compactos (como Bancos e Relatórios): Backup, Senha e Zona Risco
+    // na primeira linha, Sincronização e Cotações na segunda — tudo cabe na
+    // tela, com o rodapé, sem arrastar a página
     return `
-      <div class="grid g-top">
-        <div class="c6">${card("", "Backup Dados", A.ehDesktop ? "banco de dados em arquivo dentro do programa, com cópia automática (dados.bak.json)" : "tudo fica salvo só neste navegador — guarde uma cópia de vez em quando", "", `
+      <div class="grid g-top cfg-grid">
+        <div class="c4">${card("", "Backup Dados", A.ehDesktop ? "arquivo do programa, com cópia automática (dados.bak.json)" : "tudo fica salvo só neste navegador", "", `
           ${A.ehDesktop ? `<p class="campo ajuda" style="padding:8px 16px 0" id="caminhoBanco">Local do banco: carregando…</p><div style="padding:0 16px 6px"><button class="btn pequeno" data-acao="abrir-pasta-banco">Abrir pasta do banco de dados</button></div>` : ""}
-          <div class="body pad" style="display:flex;gap:10px;flex-wrap:wrap">
-            <button class="btn primario" data-acao="exportar-backup">Exportar Backup</button>
-            <button class="btn primario" data-acao="importar-backup">Importar Backup</button>
-            <button class="btn btn-pdf" data-acao="importar-pdf">Importar PDF</button>
+          <div class="body pad">
+            <div class="cfg-botoes">
+              <button class="btn primario" data-acao="exportar-backup" title="Exportar backup">Exportar</button>
+              <button class="btn primario" data-acao="importar-backup" title="Importar backup">Importar</button>
+              <button class="btn btn-pdf" data-acao="importar-pdf" title="Importar PDF (extrato ou fatura)">PDF</button>
+            </div>
+            <p class="campo ajuda">Guarde uma cópia de vez em quando. Importar um backup substitui todos os dados atuais — o sistema pede confirmação antes de aplicar.</p>
           </div>
-          <p class="campo ajuda" style="padding:0 16px 14px">Importar um backup substitui todos os dados atuais — o sistema pede confirmação antes de aplicar.</p>
         `)}</div>
-        <div class="c6">${card("", "Senha Acesso", "protege o sistema neste aparelho", "", `
+        <div class="c4">${card("", "Senha Acesso", "protege o sistema neste aparelho", "", `
           <div class="body pad">
             ${window.Bloqueio && Bloqueio.ativo() ? `
-              <div id="areaBiometria" style="margin:12px 0"></div>
-              <div style="display:flex;gap:10px;flex-wrap:wrap">
+              <div id="areaBiometria" style="margin:0 0 10px"></div>
+              <div class="cfg-botoes">
                 <button class="btn" data-acao="trocar-senha">Trocar senha</button>
                 <button class="btn perigo" data-acao="remover-senha">Remover senha</button>
               </div>
             ` : `
-              <button class="btn primario" data-acao="criar-senha">Criar</button>
+              <div class="cfg-botoes"><button class="btn primario" data-acao="criar-senha">Criar</button></div>
             `}
-            <p class="campo ajuda" style="margin-top:26px">Válido exclusivamente neste dispositivo. Em caso de esquecimento da senha, será necessário apagar os dados e restaurar um backup.</p>
+            <p class="campo ajuda">Válido exclusivamente neste dispositivo. Em caso de esquecimento da senha, será necessário apagar os dados e restaurar um backup.</p>
           </div>`)}</div>
-        <div class="c12">${(() => {
+        <div class="c4"><div class="card" style="border-color:rgba(255,84,104,.3)">
+          <header><div><h2 class="down">Zona Risco</h2><div class="sub">esta ação não pode ser desfeita</div></div></header>
+          <div class="body pad">
+            <div class="cfg-botoes"><button class="btn perigo" data-acao="apagar-tudo">Apagar</button></div>
+            <p class="campo ajuda">Não há como desfazer. Exporte um backup antes, se houver algo que você queira guardar.</p>
+          </div>
+        </div></div>
+        <div class="c6">${(() => {
           const sc = cfgSync();
           const ultima = sc.ultima ? new Date(sc.ultima).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
           const corpo = sc.ligada ? `
           <div class="body pad">
             <div class="sync-estado"><span class="sync-ponto ligado"></span><b>Ligado</b>
               <span class="dim" id="statusSync">${esc(statusSync || descreverAlteracao(DADOS) || "última sincronização: " + ultima)}</span></div>
-            <div class="campo" style="margin-top:14px"><label>Código do cofre</label>
+            <div class="campo" style="margin-top:10px"><label>Código do cofre</label>
               <div class="sync-codigo"><code>${esc(sc.cofre || "sendo criado…")}</code></div>
               <div class="ajuda">Para ligar outro aparelho seu, use o mesmo token.</div></div>
-            <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <div class="cfg-botoes">
               <button class="btn primario" data-acao="sincronizar-agora">Sincronizar</button>
               <button class="btn perigo" data-acao="desligar-sync">Desligar</button>
             </div>
@@ -6568,29 +6579,23 @@
             <div class="sync-estado"><span class="sync-ponto"></span><b>Desligado</b>
               <span class="dim" id="statusSync">${esc(statusSync)}</span></div>
             <div class="campo"><label for="cfgSyncToken">Token do GitHub</label>
-              <input id="cfgSyncToken" type="password" autocomplete="off" spellcheck="false" placeholder="ghp_…">
+              <div class="cfg-linha"><input id="cfgSyncToken" type="password" autocomplete="off" spellcheck="false" placeholder="ghp_…">
+              <button class="btn primario" data-acao="conectar-sync">Ligar</button></div>
               <div class="ajuda">Crie em GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic), marcando só a permissão <b>gist</b>.</div></div>
-            <button class="btn primario" data-acao="conectar-sync">Ligar</button>
-            <p class="campo ajuda" style="margin-top:14px">Ligue primeiro no aparelho com os dados mais completos. Nos seus outros aparelhos, use o mesmo token: eles baixam os dados e passam a se atualizar sozinhos. O token fica salvo só neste aparelho.</p>
-            <p class="campo ajuda" style="margin-top:8px;color:var(--acc)"><b>Se outras pessoas também vão usar o sistema:</b> cada uma precisa da <b>própria conta</b> do GitHub e do próprio token — gratuito e leva menos de 2 minutos para criar. Usar o mesmo token que o seu faz os dados de vocês se misturarem no mesmo cofre, podendo apagar uns aos outros.</p>
+            <p class="campo ajuda">Ligue primeiro no aparelho com os dados mais completos; nos outros, use o mesmo token. O token fica salvo só neste aparelho.</p>
+            <p class="campo ajuda" style="color:var(--acc)"><b>Outras pessoas vão usar o sistema?</b> Cada uma precisa da <b>própria conta</b> do GitHub e do próprio token (grátis, 2 minutos) — com o mesmo token, os dados se misturam no mesmo cofre.</p>
           </div>`;
           return card("", "Sincronização", "entre aparelhos · web, iPad e Windows", "", corpo);
         })()}</div>
         <div class="c6">${card("", "Cotações automáticas", "dólar via AwesomeAPI (sem chave) · ações via brapi.dev", "", `
           <div class="body pad">
             <label class="chk-linha"><input type="checkbox" id="cfgCotacoesAuto" ${configCotacoes().auto ? "checked" : ""}> Buscar cotações automaticamente ao abrir o sistema e a cada 5 minutos</label>
-            <div class="campo"><label for="cfgBrapiToken">Token da brapi.dev</label><input id="cfgBrapiToken" value="${esc(configCotacoes().token)}" placeholder="cole aqui outro token, se quiser">
-              <div class="ajuda">Já vem com um token configurado — não precisa mexer. Se um dia quiser usar outro, basta colar aqui. Se a internet cair, o sistema mantém os últimos preços e continua funcionando.</div></div>
-            <button class="btn primario" data-acao="salvar-cotacoes">Salvar</button>
-            ${dolar ? `<span class="dim" style="margin-left:12px;font-size:12px">Dólar agora: <b class="acc-laranja">R$ ${dolar.valor.toFixed(2).replace(".", ",")}</b></span>` : ""}
+            <div class="campo"><label for="cfgBrapiToken">Token da brapi.dev</label>
+              <div class="cfg-linha"><input id="cfgBrapiToken" value="${esc(configCotacoes().token)}" placeholder="cole aqui outro token, se quiser">
+              <button class="btn primario" data-acao="salvar-cotacoes">Salvar</button></div>
+              <div class="ajuda">Já vem com um token configurado — não precisa mexer. Se a internet cair, o sistema mantém os últimos preços e continua funcionando.</div></div>
+            ${dolar ? `<p class="campo ajuda">Dólar agora: <b class="acc-laranja">R$ ${dolar.valor.toFixed(2).replace(".", ",")}</b></p>` : ""}
           </div>`)}</div>
-        <div class="c6"><div class="card" style="border-color:rgba(255,84,104,.3)">
-          <header><div><h2 class="down">Zona Risco</h2><div class="sub">esta ação não pode ser desfeita</div></div></header>
-          <div class="body pad">
-            <button class="btn perigo" data-acao="apagar-tudo">Apagar</button>
-            <p class="campo ajuda" style="margin-top:26px">Não há como desfazer. Exporte um backup antes, se houver algo que você queira guardar.</p>
-          </div>
-        </div></div>
       </div>
     `;
   }
