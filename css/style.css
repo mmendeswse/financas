@@ -1186,7 +1186,12 @@ table.tab-acoes th.col-atualiz, table.tab-acoes td.col-atualiz { display: none; 
 .kv.kv-cab b .col-banco { padding-left: 6px; }
 
 /* resumo do mês ao lado do título das guias Entradas e Despesas */
-.card header h2 .resumo-pills { display: inline-flex; flex-wrap: wrap; gap: 8px; margin-left: 14px; vertical-align: middle; text-transform: none; letter-spacing: 0; font-weight: 400; }
+.card header h2 .resumo-pills { display: inline-flex; flex-wrap: nowrap; max-width: 100%; overflow-x: auto; scrollbar-width: none; gap: 8px; margin-left: 14px; vertical-align: middle; text-transform: none; letter-spacing: 0; font-weight: 400; }
+.card header h2 .resumo-pills::-webkit-scrollbar { display: none; }
+.resumo-pill { flex: none; }
+/* o título com as caixas não encolhe: Pagas, Previstas e Atrasadas ficam sempre na mesma linha
+   (se faltar espaço, é o seletor de ano/meses que desce para a linha de baixo) */
+.card > header > div:first-child:has(.resumo-pills) { flex: 0 1 auto; min-width: min(100%, max-content); }
 .resumo-pill { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px 5px 6px; border-radius: 10px; border: 1px solid; }
 .resumo-pill .rp-ic { display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 8px; }
 .resumo-pill .rp-txt { display: flex; flex-direction: column; line-height: 1.15; }
