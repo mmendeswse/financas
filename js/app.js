@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.150";
+  const VERSAO_APP = "3.6.151";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1574,7 +1574,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.150" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.151" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -6514,7 +6514,7 @@
         <div class="c3">${metricCard("Resultado", brlSinal(entradasP - despesasP), ICONES_STRIP.projecao, corSinal(entradasP - despesasP) !== "down" ? "var(--up)" : "var(--down)", "", rotuloPeriodo, null, "0 0 24 24", "rel-resultado")}</div>
       </div>
       <div class="grid">
-        <div class="c12">${card("", "Receitas x despesas", `${rotulo(mesesRelA, anoRelA)}`, `<div class="filtro-mes">${seletorAnoDash("anoRelA", anoRelA, anosDashboard(d))}${abasMeses("periodo-rel-a", mesesRelA, OPC)}</div>`, `<div class="rel-grafico rel-alto" style="padding:10px 16px;height:220px"><canvas id="graf-rel-mensal"></canvas></div>`)}</div>
+        <div class="c12">${card("", "Receitas x despesas", `${rotulo(mesesRelA, anoRelA)}`, `<div class="filtro-mes"><span class="leg-graf"><span><i class="leg-receitas"></i>Receitas</span><span><i class="leg-despesas"></i>Despesas</span></span>${seletorAnoDash("anoRelA", anoRelA, anosDashboard(d))}${abasMeses("periodo-rel-a", mesesRelA, OPC)}</div>`, `<div class="rel-grafico rel-alto" style="padding:10px 16px;height:220px"><canvas id="graf-rel-mensal"></canvas></div>`)}</div>
       </div>
       <div class="grid">
         <div class="c12">${cardEvolucaoPatrimonial(d, { canvas: "graf-rel-evolucao", classe: "rel-alto", idAno: "anoRelB", acao: "periodo-rel-b", meses: mesesRelB, ano: anoRelB })}</div>
@@ -6609,7 +6609,7 @@
     const historicoP = histEvolucao(d, mesesRelB, anoRelB);
     if (historicoP.length >= 2) G.renderEvolucaoPatrimonio("graf-rel-evolucao", historicoP, { aoClicar: explicarPatrimonio });
     const primeiro = histPatrimonio(d).length ? histPatrimonio(d)[0].data : fxA.ini;
-    G.renderReceitasDespesas("graf-rel-mensal", serieMensalPeriodo(d, mesesRelA ? fxA.ini : primeiro, fxA.fim), { aoClicar: explicarMes });
+    G.renderReceitasDespesas("graf-rel-mensal", serieMensalPeriodo(d, mesesRelA ? fxA.ini : primeiro, fxA.fim), { aoClicar: explicarMes, semLegenda: window.innerWidth > 600 });   // a legenda fica no cabeçalho, ao lado do ano (no celular, no gráfico)
   }
 
 
