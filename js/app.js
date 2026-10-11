@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.165";
+  const VERSAO_APP = "3.6.166";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1583,7 +1583,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.165" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.166" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -4565,10 +4565,17 @@
 
   // Lista de emojis do formulário: o escolhido fica marcado; sem escolha,
   // acompanha a categoria selecionada
+  // Em cima, os sugeridos (a lista do formulário); embaixo, todos os emojis do
+  // Unicode por grupo (js/emojis.js), numa caixa com barra de rolagem. As abas
+  // levam direto a cada grupo.
   function campoEmoji(lista, atual) {
-    const opcoesEmoji = atual && lista.indexOf(atual) === -1 ? [atual, ...lista] : lista;
-    return `<div class="campo"><label>Emoji</label><div class="seletor-emoji" id="f_emoji">${opcoesEmoji.map((em) =>
-      `<button type="button" class="opcao-emoji" data-emoji="${em}">${em}</button>`).join("")}</div></div>`;
+    const sugeridos = atual && lista.indexOf(atual) === -1 ? [atual, ...lista] : lista;
+    const grupos = [{ nome: "Sugeridos", icone: "⭐", lista: sugeridos }, ...(window.EMOJIS_TODOS || [])];
+    const botoes = (l) => l.map((em) => `<button type="button" class="opcao-emoji" data-emoji="${em}">${em}</button>`).join("");
+    return `<div class="campo"><label>Emoji</label>
+      <div class="emoji-abas">${grupos.map((g, i) => `<button type="button" class="emoji-aba" data-emoji-grupo="${i}" title="${esc(g.nome)}">${g.icone}</button>`).join("")}</div>
+      <div class="seletor-emoji" id="f_emoji">${grupos.map((g, i) =>
+        `<div class="emoji-grupo" data-emoji-grupo="${i}"><div class="emoji-titulo">${esc(g.nome)}</div><div class="emoji-grade">${botoes(g.lista)}</div></div>`).join("")}</div></div>`;
   }
   // padrao: emoji sugerido quando nada foi escolhido; campoPadrao: campo que muda a sugestão
   function ligarEmoji(atual, padrao, campoPadrao) {
@@ -4588,6 +4595,13 @@
     });
     selCat.addEventListener("change", marcar);
     selCat.addEventListener("input", marcar);
+    // abas dos grupos: rolam a caixa até o grupo
+    const abas = caixa.parentElement.querySelector(".emoji-abas");
+    if (abas) abas.addEventListener("click", (ev) => {
+      const a = ev.target.closest(".emoji-aba");
+      const g = a && caixa.querySelector(`.emoji-grupo[data-emoji-grupo="${a.dataset.emojiGrupo}"]`);
+      if (g) caixa.scrollTo({ top: g.offsetTop, behavior: "smooth" });   // a caixa é a referência (position: relative)
+    });
     marcar();
     return () => escolhido || undefined;
   }

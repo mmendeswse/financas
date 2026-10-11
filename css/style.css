@@ -1319,8 +1319,15 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 .grafico-tela-cheia { min-height: 260px; }   /* a altura exata é calculada no app (até a linha do rodapé) */
 /* emoji na frente da descrição e lista de emojis do formulário */
 .emoji-desc { display: inline-block; margin-right: 6px; font-size: 15px; line-height: 1; vertical-align: -1px; }
-.seletor-emoji { display: grid; grid-template-columns: repeat(auto-fill, minmax(36px, 1fr)); gap: 4px;   /* todas as opções à vista, sem rolar */
-  padding: 6px; border: 1px solid var(--linha-2); border-radius: 10px; background: var(--painel-2); }
+/* todos os emojis do Unicode, por grupo, numa caixa com barra de rolagem */
+.emoji-abas { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; margin-bottom: 6px; }
+.emoji-abas::-webkit-scrollbar { display: none; }
+.emoji-aba { flex: none; width: 34px; height: 30px; border: 1px solid transparent; border-radius: 8px; background: transparent; font-size: 17px; line-height: 1; cursor: pointer; padding: 0; }
+.emoji-aba:hover { background: var(--painel-3); border-color: var(--linha-2); }
+.seletor-emoji { position: relative; max-height: 236px; overflow-y: auto; overscroll-behavior: contain;
+  padding: 0 6px 6px; border: 1px solid var(--linha-2); border-radius: 10px; background: var(--painel-2); }
+.emoji-titulo { position: sticky; top: 0; z-index: 1; padding: 8px 2px 4px; background: var(--painel-2); font-size: 10.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--dim); }
+.emoji-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(36px, 1fr)); gap: 4px; }
 .opcao-emoji { height: 36px; border: 1px solid transparent; border-radius: 8px; background: transparent; font-size: 19px; line-height: 1; cursor: pointer; padding: 0; }
 .opcao-emoji:hover { background: var(--painel-3); }
 .opcao-emoji.ativo { border-color: var(--cy); background: var(--painel-3); }
