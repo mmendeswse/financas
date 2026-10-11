@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.167";
+  const VERSAO_APP = "3.6.168";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1583,7 +1583,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.167" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.168" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -4565,17 +4565,23 @@
 
   // Lista de emojis do formulário: o escolhido fica marcado; sem escolha,
   // acompanha a categoria selecionada
-  // Em cima, os sugeridos (a lista do formulário); embaixo, todos os emojis do
-  // Unicode por grupo (js/emojis.js), numa caixa com barra de rolagem. As abas
-  // levam direto a cada grupo.
-  function campoEmoji(lista, atual) {
+  // Campo compacto: um botão com o emoji escolhido (ao lado de outro campo,
+  // aoLado) que abre, logo embaixo, a lista — os sugeridos (a lista do
+  // formulário) e todos os emojis do Unicode por grupo (js/emojis.js), numa
+  // caixa com barra de rolagem e abas que levam a cada grupo.
+  function campoEmoji(lista, atual, aoLado) {
     const sugeridos = atual && lista.indexOf(atual) === -1 ? [atual, ...lista] : lista;
     const grupos = [{ nome: "Sugeridos", icone: "⭐", lista: sugeridos }, ...(window.EMOJIS_TODOS || [])];
     const botoes = (l) => l.map((em) => `<button type="button" class="opcao-emoji" data-emoji="${em}">${em}</button>`).join("");
-    return `<div class="campo"><label>Emoji</label>
-      <div class="emoji-abas">${grupos.map((g, i) => `<button type="button" class="emoji-aba" data-emoji-grupo="${i}" title="${esc(g.nome)}">${g.icone}</button>`).join("")}</div>
-      <div class="seletor-emoji" id="f_emoji">${grupos.map((g, i) =>
-        `<div class="emoji-grupo" data-emoji-grupo="${i}"><div class="emoji-titulo">${esc(g.nome)}</div><div class="emoji-grade">${botoes(g.lista)}</div></div>`).join("")}</div></div>`;
+    return `<div class="par par-emoji">
+        <div class="campo campo-emoji"><label>Emoji</label><button type="button" class="emoji-atual" id="f_emoji_btn" title="Escolher emoji" aria-expanded="false"><span class="emoji-atual-ic">${atual || "🙂"}</span><svg viewBox="0 0 20 20" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 8 5 5 5-5"/></svg></button></div>
+        ${aoLado || ""}
+      </div>
+      <div class="emoji-painel" id="f_emoji_painel" hidden>
+        <div class="emoji-abas">${grupos.map((g, i) => `<button type="button" class="emoji-aba" data-emoji-grupo="${i}" title="${esc(g.nome)}">${g.icone}</button>`).join("")}</div>
+        <div class="seletor-emoji" id="f_emoji">${grupos.map((g, i) =>
+          `<div class="emoji-grupo" data-emoji-grupo="${i}"><div class="emoji-titulo">${esc(g.nome)}</div><div class="emoji-grade">${botoes(g.lista)}</div></div>`).join("")}</div>
+      </div>`;
   }
   // padrao: emoji sugerido quando nada foi escolhido; campoPadrao: campo que muda a sugestão
   function ligarEmoji(atual, padrao, campoPadrao) {
@@ -4583,20 +4589,25 @@
     const selCat = campoPadrao || document.getElementById("f_cat");
     const sugerido = padrao || (() => EMOJI_CATEGORIA[selCat.value]);
     let escolhido = atual || "";
+    const painel = document.getElementById("f_emoji_painel"), botao = document.getElementById("f_emoji_btn");
+    const abrir = (sim) => { painel.hidden = !sim; botao.setAttribute("aria-expanded", sim ? "true" : "false"); botao.classList.toggle("aberto", sim); };
     const marcar = () => {
       const ativo = escolhido || sugerido() || "";
       caixa.querySelectorAll(".opcao-emoji").forEach((b) => b.classList.toggle("ativo", b.dataset.emoji === ativo));
+      botao.querySelector(".emoji-atual-ic").textContent = ativo || "🙂";
     };
+    botao.addEventListener("click", () => abrir(painel.hidden));
     caixa.addEventListener("click", (ev) => {
       const b = ev.target.closest(".opcao-emoji");
       if (!b) return;
       escolhido = escolhido === b.dataset.emoji ? "" : b.dataset.emoji;   // clicar de novo volta ao da categoria
       marcar();
+      abrir(false);   // escolheu: a lista fecha
     });
     selCat.addEventListener("change", marcar);
     selCat.addEventListener("input", marcar);
     // abas dos grupos: rolam a caixa até o grupo
-    const abas = caixa.parentElement.querySelector(".emoji-abas");
+    const abas = painel.querySelector(".emoji-abas");
     if (abas) abas.addEventListener("click", (ev) => {
       const a = ev.target.closest(".emoji-aba");
       const g = a && caixa.querySelector(`.emoji-grupo[data-emoji-grupo="${a.dataset.emojiGrupo}"]`);
@@ -4712,32 +4723,23 @@
     }
     abrirModal(`
       <h3>${e ? "Editar entrada" : "Nova entrada"}</h3>
-      <div class="form-lanc">
-        <div class="fl-topo">
-          <div class="par">
-            <div class="campo"><label for="f_data">Data</label><input id="f_data" type="date" value="${previsao ? previsao.data : (e ? e.data : hojeISO())}"></div>
-            <div class="campo"><label for="f_valor">Valor</label>${campoMoeda("f_valor", e ? (previsao ? valorDoMes(e, previsao.data.slice(0, 7)) : e.valor) : "")}</div>
-          </div>
-        </div>
-        <div class="fl-emoji">
-          ${campoEmoji(EMOJIS_ENTRADA, e && e.emoji)}
-        </div>
-        <div class="fl-resto">
-          <div class="campo"><label for="f_desc">Descrição</label><input id="f_desc" value="${e ? esc(e.descricao) : ""}" placeholder="Salário"></div>
-          <div class="par">
-            <div class="campo"><label for="f_cat">Categoria</label><select id="f_cat">${opcoes(CATS_ENTRADA, e ? e.categoria : CATS_ENTRADA[0])}</select></div>
-            <div class="campo"><label for="f_banco">Banco</label><select id="f_banco">${opcoesBancos(DADOS.bancos, e ? e.bancoId : (bancoIdPadrao || ""), true)}</select></div>
-          </div>
-          <div class="par">
-            <div class="campo"><label for="f_tipo">Tipo</label><select id="f_tipo">${opcoes(["Fixa", "Variável"], e ? e.tipo : "Fixa")}</select></div>
-            <div class="campo"><label for="f_status">Status</label><select id="f_status">${opcoes(["Pago", "Prevista"], statusEntradaInicial(e, previsao))}</select></div>
-          </div>
-          <div class="campo"><label for="f_rec">Repetição</label><select id="f_rec">${opcoes(FREQUENCIAS_REP, freqDe(e))}</select>
-            <div class="ajuda" id="ajudaRec">Serve para identificar entradas que se repetem; o lançamento seguinte continua sendo feito por você.</div></div>
-          ${htmlPersonalizar(e && e.regraRep)}
-          <div class="campo"><label for="f_obs">Observação</label><textarea id="f_obs" placeholder="Opcional">${e ? esc(e.obs || "") : ""}</textarea></div>
-        </div>
+      <div class="par">
+        <div class="campo"><label for="f_data">Data</label><input id="f_data" type="date" value="${previsao ? previsao.data : (e ? e.data : hojeISO())}"></div>
+        <div class="campo"><label for="f_valor">Valor</label>${campoMoeda("f_valor", e ? (previsao ? valorDoMes(e, previsao.data.slice(0, 7)) : e.valor) : "")}</div>
       </div>
+      ${campoEmoji(EMOJIS_ENTRADA, e && e.emoji, `<div class="campo"><label for="f_desc">Descrição</label><input id="f_desc" value="${e ? esc(e.descricao) : ""}" placeholder="Salário"></div>`)}
+      <div class="par">
+        <div class="campo"><label for="f_cat">Categoria</label><select id="f_cat">${opcoes(CATS_ENTRADA, e ? e.categoria : CATS_ENTRADA[0])}</select></div>
+        <div class="campo"><label for="f_banco">Banco</label><select id="f_banco">${opcoesBancos(DADOS.bancos, e ? e.bancoId : (bancoIdPadrao || ""), true)}</select></div>
+      </div>
+      <div class="par">
+        <div class="campo"><label for="f_tipo">Tipo</label><select id="f_tipo">${opcoes(["Fixa", "Variável"], e ? e.tipo : "Fixa")}</select></div>
+        <div class="campo"><label for="f_status">Status</label><select id="f_status">${opcoes(["Pago", "Prevista"], statusEntradaInicial(e, previsao))}</select></div>
+      </div>
+      <div class="campo"><label for="f_rec">Repetição</label><select id="f_rec">${opcoes(FREQUENCIAS_REP, freqDe(e))}</select>
+        <div class="ajuda" id="ajudaRec">Serve para identificar entradas que se repetem; o lançamento seguinte continua sendo feito por você.</div></div>
+      ${htmlPersonalizar(e && e.regraRep)}
+      <div class="campo"><label for="f_obs">Observação</label><textarea id="f_obs" placeholder="Opcional">${e ? esc(e.obs || "") : ""}</textarea></div>
       <div class="modal-acoes">
         <button class="btn primario salvar" id="btnSalvar">Salvar</button>
         ${e ? `<button class="btn perigo" id="btnExcluir">Excluir</button>` : ""}
@@ -4745,7 +4747,7 @@
 
     // "Personalizar": a data vira calculada (somente leitura) para o mês escolhido
     const mesDoForm = e ? String(e.data).slice(0, 7) : (mesEntradas || (document.getElementById("f_data").value || hojeISO()).slice(0, 7));   // mês aberto na guia
-    document.getElementById("modal").classList.add("modal-lanc");   // computador/iPad: campos à esquerda, emojis à direita
+    document.getElementById("modal").classList.add("modal-lanc");   // computador/iPad: janela mais larga, com os campos lado a lado
     const lerEmoji = ligarEmoji(e && e.emoji);
     const regraDoForm = ligarPersonalizar(mesDoForm, "O lançamento de cada mês é criado sozinho, com status Prevista, para você marcar como Pago depois.");
     if (!e) statusSegueData("f_data", "f_status");   // lançamento novo: data futura começa como Prevista
@@ -4925,35 +4927,26 @@
 
     abrirModal(`
       <h3>${x ? "Editar lançamento" : "Nova despesa"}</h3>
-      <div class="form-lanc">
-        <div class="fl-topo">
-          <div class="par">
-            <div class="campo"><label for="f_data"><span id="rotuloData">${statusAtual === "Pago" ? "Data" : "Data de vencimento"}</span></label><input id="f_data" type="date" value="${dataAtual}"></div>
-            <div class="campo"><label for="f_valor">Valor</label>${campoMoeda("f_valor", x ? (previsao ? valorDoMes(x, previsao.data.slice(0, 7)) : x.valor) : "")}</div>
-          </div>
-        </div>
-        <div class="fl-emoji">
-          ${campoEmoji(EMOJIS_DESPESA, x && x.emoji)}
-        </div>
-        <div class="fl-resto">
-          <div class="campo"><label for="f_desc">Descrição</label><input id="f_desc" value="${x ? esc(x.descricao) : ""}" placeholder="Supermercado"></div>
-          <div class="par">
-            <div class="campo"><label for="f_cat">Categoria</label><select id="f_cat">${opcoes(CATS_DESPESA, x ? x.categoria : CATS_DESPESA[0])}</select></div>
-            <div class="campo"><label for="f_tipo">Tipo</label><select id="f_tipo">${opcoes(["Fixa", "Variável"], x && x.tipo ? x.tipo : "Variável")}</select></div>
-          </div>
-          <div class="campo"><label for="f_status">Status</label><select id="f_status">${opcoes(["Pago", "Prevista"], statusAtual)}</select></div>
-          <div id="camposPagamento">
-            <div class="par">
-              <div class="campo"><label for="f_pagarcom">Banco</label><select id="f_pagarcom">${opcoesPagarCom(DADOS, x ? x.bancoId : "", x && !ehConta ? x.cartaoId : "")}</select></div>
-              <div class="campo"><label for="f_forma">Forma</label><select id="f_forma">${opcoes(FORMAS_PAGAMENTO, x ? x.formaPagamento : FORMAS_PAGAMENTO[0])}</select></div>
-            </div>
-            <div class="campo"><label for="f_rec">Repetição</label><select id="f_rec">${opcoes(FREQUENCIAS_REP, freqDe(x))}</select>
-              <div class="ajuda" id="ajudaRec"></div></div>
-          ${htmlPersonalizar(x && x.regraRep)}
-          </div>
-          <div class="campo"><label for="f_obs">Observação</label><textarea id="f_obs" placeholder="Opcional">${x ? esc(x.obs || "") : ""}</textarea></div>
-        </div>
+      <div class="par">
+        <div class="campo"><label for="f_data"><span id="rotuloData">${statusAtual === "Pago" ? "Data" : "Data de vencimento"}</span></label><input id="f_data" type="date" value="${dataAtual}"></div>
+        <div class="campo"><label for="f_valor">Valor</label>${campoMoeda("f_valor", x ? (previsao ? valorDoMes(x, previsao.data.slice(0, 7)) : x.valor) : "")}</div>
       </div>
+      ${campoEmoji(EMOJIS_DESPESA, x && x.emoji, `<div class="campo"><label for="f_desc">Descrição</label><input id="f_desc" value="${x ? esc(x.descricao) : ""}" placeholder="Supermercado"></div>`)}
+      <div class="par par-3">
+        <div class="campo"><label for="f_cat">Categoria</label><select id="f_cat">${opcoes(CATS_DESPESA, x ? x.categoria : CATS_DESPESA[0])}</select></div>
+        <div class="campo"><label for="f_tipo">Tipo</label><select id="f_tipo">${opcoes(["Fixa", "Variável"], x && x.tipo ? x.tipo : "Variável")}</select></div>
+        <div class="campo"><label for="f_status">Status</label><select id="f_status">${opcoes(["Pago", "Prevista"], statusAtual)}</select></div>
+      </div>
+      <div id="camposPagamento">
+        <div class="par">
+          <div class="campo"><label for="f_pagarcom">Banco</label><select id="f_pagarcom">${opcoesPagarCom(DADOS, x ? x.bancoId : "", x && !ehConta ? x.cartaoId : "")}</select></div>
+          <div class="campo"><label for="f_forma">Forma</label><select id="f_forma">${opcoes(FORMAS_PAGAMENTO, x ? x.formaPagamento : FORMAS_PAGAMENTO[0])}</select></div>
+        </div>
+        <div class="campo"><label for="f_rec">Repetição</label><select id="f_rec">${opcoes(FREQUENCIAS_REP, freqDe(x))}</select>
+          <div class="ajuda" id="ajudaRec"></div></div>
+      ${htmlPersonalizar(x && x.regraRep)}
+      </div>
+      <div class="campo"><label for="f_obs">Observação</label><textarea id="f_obs" placeholder="Opcional">${x ? esc(x.obs || "") : ""}</textarea></div>
       <div class="modal-acoes">
         <button class="btn primario salvar" id="btnSalvar">Salvar</button>
         ${x && !previsao ? `<button class="btn perigo" id="btnExcluir">Excluir</button>` : ""}
@@ -4968,7 +4961,7 @@
     });
 
     const mesDoFormD = x ? String(ehConta ? x.vencimento : x.data).slice(0, 7) : (mesDespesas || hojeISO().slice(0, 7));   // mês aberto na guia
-    document.getElementById("modal").classList.add("modal-lanc");   // computador/iPad: campos à esquerda, emojis à direita
+    document.getElementById("modal").classList.add("modal-lanc");   // computador/iPad: janela mais larga, com os campos lado a lado
     const lerEmojiD = ligarEmoji(x && x.emoji);
     const regraDoFormD = ligarPersonalizar(mesDoFormD, "O lançamento de cada mês é criado sozinho, com status Prevista, para você marcar como Pago depois.");
 
@@ -6442,8 +6435,7 @@
     const m = id ? achar(DADOS.metas, id) : null;
     abrirModal(`
       <h3>${m ? "Editar meta" : "Nova meta"}</h3>
-      ${campoEmoji(EMOJIS_META, m && m.emoji)}
-      <div class="campo"><label for="f_nome">Nome</label><input id="f_nome" value="${m ? esc(m.nome) : ""}" placeholder="Reserva de emergência"></div>
+      ${campoEmoji(EMOJIS_META, m && m.emoji, `<div class="campo"><label for="f_nome">Nome</label><input id="f_nome" value="${m ? esc(m.nome) : ""}" placeholder="Reserva de emergência"></div>`)}
       <div class="par">
         <div class="campo"><label for="f_obj">Objetivo</label>${campoMoeda("f_obj", m ? m.objetivo : "", "R$ 30.000,00")}</div>
         <div class="campo"><label for="f_atual">Valor Atual</label>${campoMoeda("f_atual", m ? m.atual : 0)}</div>
