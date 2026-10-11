@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.130";
+  const VERSAO_APP = "3.6.131";
   const CATS_ENTRADA = ["Salário", "Freelance", "Venda", "Dividendos", "Juros", "Cashback", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Compras", "Assinaturas", "Impostos", "Investimentos", "Outros"];
   // emoji mostrado na frente da descrição: o escolhido no lançamento ou,
@@ -1487,7 +1487,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.130" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.131" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1873,7 +1873,14 @@
     }).join("");
     track.innerHTML = itens + itens;
     tape.style.display = "";
+    // velocidade constante: a dos dados de teste (dólar, BTC, ETH e 6 ações,
+    // ~140 em de largura em 45 s ≈ 3,1 em/s). A duração acompanha a largura
+    // da faixa, para que mais ou menos ativos não acelerem nem freiem a rolagem.
+    const fonte = parseFloat(getComputedStyle(track.firstElementChild || track).fontSize) || 12.5;
+    const dur = Math.max(10, track.scrollWidth / 2 / (fonte * VEL_TICKER_EM));
+    if (Math.abs((parseFloat(track.style.animationDuration) || 0) - dur) > 0.5) track.style.animationDuration = dur.toFixed(1) + "s";
   }
+  const VEL_TICKER_EM = 3.1;
 
   // =========================================================================
   // COTAÇÕES AUTOMÁTICAS (dólar + ações) — opcional, cai no manual se falhar
