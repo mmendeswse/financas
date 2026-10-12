@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.209";
+  const VERSAO_APP = "3.6.210";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1667,7 +1667,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.209" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.210" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2977,10 +2977,21 @@
     if (chave === "poupanca") {
       const sobra = entradas - despesas;
       const taxa = entradas > 0 ? (sobra / entradas) * 100 : 0;
+      // Entradas, Despesas e Saldo abrem a lista dos lançamentos do mês
+      const linhaLista = (r, v, c, alvo) => `<div class="kv kv-editavel" data-lista-poup="${alvo}" title="Ver os lançamentos do mês"><span class="dim">${rotuloPainel(r)}</span><b class="${c || ""}">${v}</b></div>`;
       painelSimples("Taxa Poupança", taxa, "das receitas do mês sobraram", "(receitas − despesas) ÷ receitas",
         linha("Saudável", "20% ou mais") +
-        linha("+ Entradas", brlSinal(entradas), corSinal(entradas)) + linha("− Despesas", brlSinal(-despesas), corSinal(-despesas)) +
-        linha("Saldo", brlSinal(sobra), corSinal(sobra)), "entradas");
+        linhaLista("+ Entradas", brlSinal(entradas), corSinal(entradas), "entradas") + linhaLista("− Despesas", brlSinal(-despesas), corSinal(-despesas), "despesas") +
+        linhaLista("Saldo", brlSinal(sobra), corSinal(sobra), "saldo"), "entradas");
+      document.querySelectorAll("#modal [data-lista-poup]").forEach((el) => {
+        el.onclick = (e) => {
+          e.stopPropagation();
+          const alvo = el.dataset.listaPoup;
+          if (alvo === "entradas") explicarKPI("receitas");
+          else if (alvo === "despesas") explicarKPI("despesas");
+          else explicarMes({ mes });
+        };
+      });
       return;
     }
     if (chave === "projecao") {
