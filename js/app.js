@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.215";
+  const VERSAO_APP = "3.6.216";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1385,6 +1385,66 @@
     document.addEventListener("click", (e) => {
       if (!dropNotif.contains(e.target) && e.target !== btnNotif) dropNotif.classList.remove("on");
     });
+
+    // data e hora: um toque abre o quadro com a data completa, outro toque esconde
+    const caixaData = document.getElementById("statusVivo"), popData = document.getElementById("popData");
+    if (caixaData && popData) {
+      caixaData.addEventListener("click", (e) => {
+        e.stopPropagation();
+        popData.classList.toggle("on");
+        if (popData.classList.contains("on")) { dropNotif.classList.remove("on"); preencherPopData(new Date()); }
+      });
+      document.addEventListener("click", (e) => {
+        if (!popData.contains(e.target) && !caixaData.contains(e.target)) popData.classList.remove("on");
+      });
+    }
+  }
+
+  // quadro da data completa (aberto pelo relógio do topo)
+  const NOMES_FERIADOS = { "01-01": "Confraternização Universal", "04-21": "Tiradentes", "05-01": "Dia do Trabalho", "09-07": "Independência do Brasil",
+    "10-12": "Nossa Senhora Aparecida", "11-02": "Finados", "11-15": "Proclamação da República", "11-20": "Dia da Consciência Negra", "12-25": "Natal" };
+  // "Brasília · UTC−3" (o nome da cidade vem do fuso do aparelho)
+  function fusoHorario(agora) {
+    const tz = (Intl.DateTimeFormat().resolvedOptions().timeZone || "").split("/").pop().replace(/_/g, " ");
+    const off = -agora.getTimezoneOffset(), h = Math.floor(Math.abs(off) / 60), m = Math.abs(off) % 60;
+    const utc = "UTC" + (off ? (off > 0 ? "+" : "−") + h + (m ? ":" + String(m).padStart(2, "0") : "") : "");
+    const cidade = tz === "Sao Paulo" ? "Brasília" : tz;
+    return cidade && cidade !== "UTC" ? `${cidade} · ${utc}` : utc;
+  }
+  function preencherPopData(agora) {
+    const el = document.getElementById("popData");
+    if (!el || !el.classList.contains("on")) return;
+    const iso = (dt) => `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+    const feriado = (dt) => F.feriadosNacionais(dt.getFullYear())[iso(dt)] ? (NOMES_FERIADOS[iso(dt).slice(5)] || "Sexta-feira Santa") : "";
+    const util = (dt) => dt.getDay() >= 1 && dt.getDay() <= 5 && !feriado(dt);
+    const ano = agora.getFullYear();
+    const inicio = new Date(ano, 0, 1), hojeZero = new Date(ano, agora.getMonth(), agora.getDate());
+    const diaAno = Math.round((hojeZero - inicio) / 864e5) + 1;
+    const diasAno = (ano % 4 === 0 && ano % 100 !== 0) || ano % 400 === 0 ? 366 : 365;
+    // semana ISO (a que contém a quinta-feira)
+    const qui = new Date(hojeZero); qui.setDate(qui.getDate() + 3 - ((qui.getDay() + 6) % 7));
+    const semana = 1 + Math.round(((qui - new Date(qui.getFullYear(), 0, 4)) / 864e5 - 3 + ((new Date(qui.getFullYear(), 0, 4).getDay() + 6) % 7)) / 7);
+    const fer = feriado(agora);
+    const tipoDia = fer ? `Feriado nacional · ${fer}` : util(agora) ? "Dia útil" : "Fim de semana";
+    const prox = new Date(hojeZero); do { prox.setDate(prox.getDate() + 1); } while (!util(prox));
+    const min = agora.getHours() * 60 + agora.getMinutes();
+    const aberto = util(agora) && min >= 9 * 60 && min < 18 * 60;
+    const proxTxt = prox.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "2-digit" });
+    const ultimoMes = new Date(ano, agora.getMonth() + 1, 0).getDate();
+    const linha = (r, v) => `<div class="pd-linha"><span>${r}</span><b>${v}</b></div>`;
+    el.innerHTML = `
+      <div class="pd-topo">
+        <div class="pd-semana">${agora.toLocaleDateString("pt-BR", { weekday: "long" })}</div>
+        <div class="pd-data">${agora.toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric" })}</div>
+        <div class="pd-hora">${agora.toLocaleTimeString("pt-BR")}</div>
+      </div>
+      ${linha("Hoje", tipoDia)}
+      ${linha("Mercado", aberto ? '<span class="up">● Aberto</span> até 18h' : '<span class="down">● Fechado</span> · abre nos dias úteis às 9h')}
+      ${linha("Próximo dia útil", proxTxt.charAt(0).toUpperCase() + proxTxt.slice(1))}
+      ${linha("Semana do ano", `${semana}ª`)}
+      ${linha("Dia do ano", `${diaAno} de ${diasAno} · faltam ${diasAno - diaAno}`)}
+      ${linha("Mês", `dia ${agora.getDate()} de ${ultimoMes} · ${Math.floor(agora.getMonth() / 3) + 1}º trimestre`)}
+      ${linha("Fuso horário", fusoHorario(agora))}`;
   }
 
   function ligarSidebar() {
@@ -1672,7 +1732,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.215" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.216" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2330,6 +2390,7 @@
       const termRel = document.getElementById("termRelogio");
       if (termRel) termRel.textContent = agora.toLocaleTimeString("pt-BR");
       renderStatusMercado(agora);
+      preencherPopData(agora);
       if (dataEl) dataEl.textContent = agora.toLocaleDateString("pt-BR", { weekday: "short", day: "numeric", month: "short", year: "numeric" }).replace(/\./g, "");
     };
     tick();
