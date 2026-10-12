@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.235";
+  const VERSAO_APP = "3.6.236";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1736,7 +1736,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.235" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.236" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -7495,8 +7495,7 @@
               const itens = [["Bancos", n(d.bancos)], ["Lançamentos", n(d.entradas) + n(d.despesas) + n(d.contasPagar)], ["Investimentos", n(d.investimentos)],
                 ["Ações", n(d.acoes)], ["Metas", n(d.metas)], ["Cartões", n(d.cartoes)]];
               return `<div class="zona-resumo">
-                <div class="zona-icone"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M24 5l19 34H5z"/><path d="M24 19v10"/><circle cx="24" cy="34" r="1.2" fill="currentColor"/></svg>
-                  <span>Seria apagado agora</span></div>
+                <div class="zona-icone"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M24 5l19 34H5z"/><path d="M24 19v10"/><circle cx="24" cy="34" r="1.2" fill="currentColor"/></svg></div>
                 <div class="zona-contagem">${itens.map(([r, v]) => `<div><b>${v}</b><span>${r}</span></div>`).join("")}</div>
                 <div class="zona-backup">Último backup: <b>${ultimoBackup || "nenhum ainda"}</b></div>
               </div>`;
@@ -7560,7 +7559,7 @@
     if (resto > 1) grade.style.minHeight = Math.floor(grade.offsetHeight + resto) + "px";
     ajustarZonaResumo();
   }
-  // Zona Risco: o quadro "Seria apagado agora" só ocupa o espaço que sobra no
+  // Zona Risco: o resumo do que seria apagado só ocupa o espaço que sobra no
   // quadro (não aumenta a linha); se sobrar pouco, mostra só o ícone, e sem
   // espaço nem para isso, some
   function ajustarZonaResumo() {

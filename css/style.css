@@ -2285,3 +2285,4 @@ table.terminal.tab-mercado td.papel small { display: block; margin-left: 0; colo
 .zona-resumo.zona-compacta .zona-contagem, .zona-resumo.zona-compacta .zona-backup { display: none; }
 .zona-resumo.zona-compacta { align-items: center; }
 .zona-resumo.zona-oculta { display: none; }
+.zona-icone { justify-content: center; }
