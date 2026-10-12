@@ -2153,13 +2153,14 @@ table.terminal.tab-mercado td.papel small { display: block; margin-left: 0; colo
 
 /* quadro da data completa (toque no relógio do topo) */
 .status-vivo { cursor: pointer; -webkit-tap-highlight-color: transparent; }
-.dropdown.pop-data { width: 320px; max-width: calc(100vw - 24px); padding: 0; overflow: hidden; text-transform: none; letter-spacing: 0; }
+.dropdown.pop-data { width: 360px; max-width: calc(100vw - 24px); padding: 0; overflow: hidden; text-transform: none; letter-spacing: 0; }
 .pd-topo { padding: 16px 16px 12px; border-bottom: 1px solid var(--linha-2); background: linear-gradient(180deg, rgba(0,229,255,.08), transparent); }
 .pd-semana { font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--cy); }
 .pd-data { font-size: 19px; font-weight: 800; color: #FFFFFF; margin-top: 3px; }
 .pd-hora { font-family: var(--mono); font-size: 26px; font-weight: 800; color: #FFFFFF; margin-top: 4px; font-variant-numeric: tabular-nums; }
-.pd-linha { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 8px 16px; font-size: 12.5px; border-bottom: 1px solid var(--linha); }
+/* todas as linhas com a mesma altura: uma linha só, o texto longo termina em "…" */
+.pd-linha { display: flex; justify-content: space-between; align-items: center; gap: 12px; height: 36px; padding: 0 16px; font-size: 12.5px; border-bottom: 1px solid var(--linha); }
 .pd-linha:last-child { border-bottom: 0; }
 .pd-linha span { color: var(--dim); white-space: nowrap; }
-.pd-linha b { color: #E4EAF5; font-weight: 700; text-align: right; }
+.pd-linha b { color: #E4EAF5; font-weight: 700; text-align: right; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pd-linha b .up { color: var(--up); } .pd-linha b .down { color: var(--down); }
