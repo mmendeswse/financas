@@ -48,6 +48,7 @@
   // Movimentos que não estão em entradas/despesas, mas mexem no saldo:
   //  - contas a pagar marcadas como "Pago" (saem do banco escolhido);
   //  - transferências entre os próprios bancos;
+  //  - ajustes de saldo (o saldo real informado pelo usuário);
   //  - repetições de lançamentos recorrentes marcadas como pagas no mês
   //    (calculadas pelo app.js, que conhece as regras de repetição).
   // Cada item: { bancoId, valor (positivo entra, negativo sai), data }.
@@ -65,6 +66,13 @@
       var obs = t.obs ? " · " + t.obs : "";
       lista.push({ bancoId: t.deBancoId, valor: -v, data: t.data, transferencia: true, transfId: t.id, descricao: "Transferência", sub: "Para · " + nomeBanco(d, t.paraBancoId) + obs });
       lista.push({ bancoId: t.paraBancoId, valor: v, data: t.data, transferencia: true, transfId: t.id, descricao: "Transferência", sub: "De · " + nomeBanco(d, t.deBancoId) + obs });
+    });
+    // ajuste de saldo: o usuário informou quanto o banco tem de verdade e a
+    // diferença para o calculado entra aqui (não é receita nem despesa)
+    (d.ajustesSaldo || []).forEach(function (a) {
+      var informado = Number(a.saldoInformado || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+      lista.push({ bancoId: a.bancoId, valor: Number(a.valor || 0), data: a.data, transferencia: true, ajusteId: a.id,
+        descricao: "Ajuste de saldo", emoji: "⚖️", sub: "Saldo informado · " + informado });
     });
     return movimentosExtras ? lista.concat(movimentosExtras(d) || []) : lista;
   }
@@ -112,7 +120,7 @@
     movimentosDoBanco(d, bancoId).forEach(function (m) {
       var v = Number(m.valor || 0);
       itens.push({ data: m.data || "", descricao: m.descricao || (v >= 0 ? "Entrada" : "Despesa"), valor: v,
-        tipo: m.transferencia ? "transferencia" : v >= 0 ? "entrada" : "despesa", emoji: m.emoji || (m.transferencia ? "🔁" : ""), categoria: m.categoria, ref: m.ref || null, auto: m.auto || null, transfId: m.transfId || null, sub: m.sub || "" });
+        tipo: m.transferencia ? "transferencia" : v >= 0 ? "entrada" : "despesa", emoji: m.emoji || (m.transferencia ? "🔁" : ""), categoria: m.categoria, ref: m.ref || null, auto: m.auto || null, transfId: m.transfId || null, ajusteId: m.ajusteId || null, sub: m.sub || "" });
     });
     // mesmo dia: entradas antes das saídas, para o saldo não oscilar à toa;
     // entre as entradas, o pagamento antes da bonificação
