@@ -1072,7 +1072,7 @@
   // ---------------------------------------------------------------------
   // Linhas suaves múltiplas: Renda / Despesas / Poupança por mês
   // series = [{ rotulo, valores, cor }]; opcoes.formato(v) troca o R$ do
-  // eixo e da dica (ex.: variação em %)
+  // eixo e da dica (ex.: variação em %); opcoes.aoClicar(índice do ponto)
   // ---------------------------------------------------------------------
   function renderLinhaMultipla(canvasId, rotulos, series, opcoes) {
     destruir(canvasId);
@@ -1092,6 +1092,12 @@
       },
       options: {
         responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
+        onClick: function (evt, elementos) {
+          if (opcoes.aoClicar && elementos && elementos.length) opcoes.aoClicar(elementos[0].index);
+        },
+        onHover: function (evt, elementos) {
+          if (evt && evt.native && evt.native.target) evt.native.target.style.cursor = (opcoes.aoClicar && elementos.length) ? "pointer" : "default";
+        },
         scales: { x: eixoX(), y: opcoes.formato ? eixoY({ ticks: { color: CORES.texto, font: fonte(10.5), callback: function (v) { return opcoes.formato(v); } } }) : eixoY() },
         plugins: {
           legend: { display: !opcoes.semLegenda, position: "top", align: "start", labels: { color: CORES.texto, font: fonte(11), boxWidth: 8, boxHeight: 8, usePointStyle: true, pointStyle: "circle" } },

@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.225";
+  const VERSAO_APP = "3.6.230";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1736,7 +1736,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.225" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.230" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -6497,6 +6497,28 @@
   // símbolo do Yahoo/brapi para um ativo da tabela do relatório (para o minigráfico de 3 meses)
   const SIMBOLO_RELATORIO = { "IBOVESPA": "^BVSP", "NASDAQ": "^IXIC" };
 
+  // com relatório ICL importado, a tabela da B3 mostra as ações do relatório:
+  // onde cada uma aparece, a variação que o relatório traz e a cotação de hoje
+  function tabelaRelatorioB3(r) {
+    const q = mercado.cotacoes, iso = dataFechamentoRelatorio(r);
+    const col = r.colunas.length ? r.colunas[0] : "relatório";
+    const linhas = acoesDoRelatorio(r).map((x) => {
+      const c = q[x.ticker + ".SA"];
+      let desde = null;
+      if (c && iso) { const base = [...c.historico].reverse().find((h) => h.data <= iso); if (base && base.preco > 0) desde = (c.preco / base.preco - 1) * 100; }
+      const chips = x.onde.map((o) => `<span class="term-chip${o === "Maiores altas" ? " c-up" : o === "Maiores quedas" ? " c-down" : o === "Análise" ? " c-acc" : ""}">${{ "Maiores altas": "ALTA", "Maiores quedas": "QUEDA", "Principais": "PRINCIPAL", "Análise": "ANÁLISE" }[o] || o}</span>`).join("");
+      const nome = c && c.nome && c.nome !== x.ticker ? `<small>${esc(c.nome)}</small>` : "";
+      const spark = c && c.historico && c.historico.length > 1 ? sparklineSVG(c.historico.map((h) => h.preco), (c.variacaoPct || 0) >= 0 ? G.CORES.up : G.CORES.down) : "";
+      const vazio = `<td class="r term-dim">${mercado.carregando ? "buscando…" : "—"}</td>`;
+      return `<tr ${c ? linkAtivo(x.ticker + ".SA") : ""}><td class="term-ativo">${x.ticker} ${chips}${nome}</td>
+        ${x.pct == null ? '<td class="r term-dim">—</td>' : celVar(x.pct, 3)}
+        ${c ? `<td class="r t-preco">${brl(c.preco)}</td>` : vazio}${c ? celVar(c.variacaoPct, 2) : vazio}${desde == null ? vazio : celVar(desde, 5)}<td class="term-spark">${spark}</td></tr>`;
+    }).join("");
+    return `<div class="term-painel"><div class="term-cab">B3 · AÇÕES DO RELATÓRIO ICL · FECHAMENTO ${esc(col)}</div><div class="term-rolar"><table class="term-tab">
+      <thead><tr><th>Papel</th><th class="r">${esc(col)}</th><th class="r">Último</th><th class="r">Hoje</th><th class="r">Desde ${esc(col)}</th><th>3M</th></tr></thead>
+      <tbody>${linhas}</tbody></table></div></div>`;
+  }
+
   function painelRelatorio() {
     const r = DADOS.relatorioMercado;
     // sem relatório importado os painéis do relatório não aparecem
@@ -6530,22 +6552,6 @@
     const caixas = r.indicadores.map((i) => `<div class="term-caixa"><span>${esc(i.nome.replace(/\s*\(TAXA ANO\)/i, " (a.a.)"))}</span><b class="${/IPCA/i.test(i.nome) ? (i.valor > 0 ? "t-down" : "t-up") : "t-up"}">${tPct(i.valor).replace("+", "")}</b></div>`).join("");
     const juros = caixas ? `<div class="term-painel tp-juros"><div class="term-cab">CDI · IPCA</div><div class="term-caixas">${caixas}</div></div>` : "";
 
-    // (4) ações citadas: o número do relatório e a cotação de hoje
-    const acoes = acoesDoRelatorio(r);
-    const linhasAcoes = acoes.map((x) => {
-      const c = q[x.ticker + ".SA"];
-      let desde = null;
-      if (c && iso) { const base = [...c.historico].reverse().find((h) => h.data <= iso); if (base && base.preco > 0) desde = (c.preco / base.preco - 1) * 100; }
-      const onde = x.onde.map((o) => `<span class="term-chip${o === "Maiores altas" ? " c-up" : o === "Maiores quedas" ? " c-down" : o === "Análise" ? " c-acc" : ""}">${o}</span>`).join("");
-      return `<tr ${c ? linkAtivo(x.ticker + ".SA") : ""}><td class="term-ativo">${x.ticker}${c && c.nome && c.nome !== x.ticker ? `<small>${esc(c.nome)}</small>` : ""}</td><td>${onde}</td>
-        ${x.pct == null ? '<td class="r term-dim">—</td>' : celVar(x.pct, 3)}
-        <td class="r t-preco">${c ? brl(c.preco) : '<span class="term-dim">' + (mercado.carregando ? "buscando…" : "—") + "</span>"}</td>
-        ${c ? celVar(c.variacaoPct, 3) : '<td class="r term-dim">—</td>'}${desde == null ? '<td class="r term-dim">—</td>' : celVar(desde, 5)}</tr>`;
-    }).join("");
-    const tabAcoes = `<div class="term-painel tp-acoes"><div class="term-cab">AÇÕES DO RELATÓRIO · COTAÇÃO DE HOJE</div>
-      <div class="term-rolar"><table class="term-tab"><thead><tr><th>Papel</th><th>Onde aparece</th><th class="r">No relatório</th><th class="r">Último</th><th class="r">Hoje</th><th class="r">Desde ${esc(col[0])}</th></tr></thead>
-      <tbody>${linhasAcoes}</tbody></table></div></div>`;
-
     // (5) resumo e (6) análises (abre e fecha em cada título)
     const resumo = r.resumo ? `<div class="term-painel tp-resumo"><div class="term-cab">RESUMO DO DIA</div><p class="term-texto">${esc(r.resumo)}</p></div>` : "";
     const analises = r.noticias.length ? `<div class="term-painel tp-analises"><div class="term-cab">ANÁLISES · ${r.noticias.length}</div>${r.noticias.map((n) => `
@@ -6554,7 +6560,7 @@
         return `<em class="term-chip c-acc">${t}${c ? ` <b class="${corMov(c.variacaoPct)}">${tPct(c.variacaoPct)}</b>` : ""}</em>`;
       }).join("")}</summary>${n.paragrafos.map((p) => `<p>${esc(p)}</p>`).join("")}</details>`).join("")}</div>` : "";
 
-    return `${cot}${movers}${juros}${tabAcoes}${resumo}${analises}`;
+    return `${cot}${movers}${juros}${resumo}${analises}`;
   }
 
   // ativo da tabela do relatório pelo nome ("NASDAQ", "SP500"…)
@@ -6655,7 +6661,7 @@
     const agoraMs = Date.now();
     const haQuanto = (iso) => { const m = Math.max(0, Math.round((agoraMs - new Date(iso).getTime()) / 60000)); return m < 60 ? `${m} min` : m < 1440 ? `${Math.floor(m / 60)} h` : `${Math.floor(m / 1440)} d`; };
     const lista = mercado.noticias || [];
-    const noticias = `<div class="term-painel"><div class="term-cab">NOTÍCIAS DO MERCADO · NASDAQ E B3</div>
+    const noticias = `<div class="term-painel tp-noticias"><div class="term-cab">NOTÍCIAS DO MERCADO · NASDAQ E B3</div>
       ${lista.length ? `<div class="term-noticias">${lista.map((n) => `<a class="term-noticia" href="${esc(n.url)}" target="_blank" rel="noopener">
         <span class="tn-hora">${new Date(n.quando).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}<em>${haQuanto(n.quando)}</em></span>
         <span class="tn-titulo">${esc(n.titulo)}</span><span class="tn-fonte">${esc(n.fonte || "")}</span></a>`).join("")}</div>`
@@ -6664,9 +6670,8 @@
       <p class="term-nota">Cotações com atraso de até 15 minutos · Yahoo Finance, Stooq e brapi.dev · notícias do Google Notícias · não é recomendação de investimento.</p></div>`;
 
     return `<section class="term term-nasdaq">${board}
-      <div class="term-grade term-grade-meio">${tabela("NASDAQ · MAIORES EMPRESAS · US$", MERCADO_EUA, "", usd)}${tabela("B3 · MAIORES DO IBOVESPA · R$", MERCADO_BR, ".SA", brl)}</div>
-      <div class="term-grade term-grade-um">${grafico}</div>
-      <div class="term-grade term-grade-um">${noticias}</div>
+      <div class="term-grade term-grade-meio">${tabela("NASDAQ · MAIORES EMPRESAS · US$", MERCADO_EUA, "", usd)}${r ? tabelaRelatorioB3(r) : tabela("B3 · MAIORES DO IBOVESPA · R$", MERCADO_BR, ".SA", brl)}</div>
+      <div class="term-grade term-grade-2">${grafico}${noticias}</div>
       ${r ? `<div class="term-secao">RELATÓRIO ICL · ${esc(r.data)} · FECHAMENTO ${esc(r.fechamento.replace(/^DIA\s+/i, ""))}</div><div class="term-grade">${painelRelatorio()}</div>` : ""}
     </section>`;
   }
@@ -6681,12 +6686,68 @@
     const series = [];
     if (nq) series.push({ rotulo: "Nasdaq", valores: acumulada(nq.historico), cor: G.CORES.cy });
     if (ib) series.push({ rotulo: "Ibovespa", valores: acumulada(ib.historico), cor: G.CORES.laranja });
-    const dol = mercado.dolar;
-    if (nq && dol && dol.length > 1) {
-      const vd = acumulada(dol);
-      series.push({ rotulo: "Nasdaq em reais", valores: series[0].valores.map((v, i) => v == null || vd[i] == null ? null : +(((1 + v / 100) * (1 + vd[i] / 100) - 1) * 100).toFixed(2)), cor: G.CORES.vi, tracejado: true });
-    }
-    G.renderLinhaMultipla("graf-mercado-comp", ref.map((r) => r.data.slice(8, 10) + "/" + r.data.slice(5, 7)), series, { formato: pctMercado });
+    // tocar num dia abre o painel daquele pregão
+    G.renderLinhaMultipla("graf-mercado-comp", ref.map((r) => r.data.slice(8, 10) + "/" + r.data.slice(5, 7)), series,
+      { formato: pctMercado, aoClicar: (i) => explicarDiaMercado(ref[i].data) });
+  }
+
+  // Painel de um dia do gráfico Nasdaq × Ibovespa: fechamento, variação do
+  // dia e acumulada de cada índice e do dólar, as ações que mais subiram e
+  // caíram naquele dia, as notícias do dia e setas para o dia anterior/seguinte
+  function explicarDiaMercado(dia) {
+    const q = mercado.cotacoes, nq = q["^IXIC"], ib = q["^BVSP"];
+    const ref = ((nq || ib) && (nq || ib).historico) || [];
+    const k = ref.findIndex((h) => h.data === dia);
+    if (k < 0) return;
+    // fechamento do dia, variação sobre o pregão anterior e acumulada desde o início do gráfico
+    const doDia = (hist) => {
+      if (!hist || !hist.length) return null;
+      let i = -1; hist.forEach((h, j) => { if (h.data <= dia) i = j; });
+      if (i < 0) return null;
+      const ini = hist.find((h) => h.data >= ref[0].data) || hist[0];
+      return { preco: hist[i].preco, dia: i > 0 ? (hist[i].preco / hist[i - 1].preco - 1) * 100 : null, acum: (hist[i].preco / ini.preco - 1) * 100, mesmoDia: hist[i].data === dia };
+    };
+    const linha = (rot, x, fmt) => x ? `<div class="kv"><span class="dim">${rot}${x.mesmoDia ? "" : " <small>(último pregão)</small>"}</span>
+      <b>${fmt(x.preco)} · <span class="${corSinal(x.dia || 0)}">${x.dia == null ? "—" : pctMercado(x.dia)}</span> · <span class="${corSinal(x.acum)}">${pctMercado(x.acum)} no período</span></b></div>` : "";
+    const n = doDia(nq && nq.historico), b = doDia(ib && ib.historico), dl = doDia(mercado.dolar);
+    // ações que mais subiram e caíram neste dia
+    const movs = (lista, sufixo, fmt) => lista.map(([t, nome]) => {
+      const c = q[t + sufixo], h = c && c.historico; if (!h) return null;
+      let i = -1; h.forEach((p, j) => { if (p.data <= dia) i = j; });   // feriado de um lado só: último pregão
+      return i > 0 ? { t, nome, preco: h[i].preco, v: (h[i].preco / h[i - 1].preco - 1) * 100, fmt, sim: t + sufixo } : null;
+    }).filter(Boolean).sort((x, y) => y.v - x.v);
+    const blocoMov = (titulo, xs) => xs.length ? `<div class="pdm-bloco"><div class="pdm-tit">${titulo}</div>${[...xs.slice(0, 3), ...(xs.length > 3 ? xs.slice(-3) : [])].filter((x, i, arr) => arr.indexOf(x) === i).map((x) =>
+      `<button class="pdm-acao" ${linkAtivo(x.sim)}><b>${x.t}</b><span>${esc(x.nome)}</span><em>${x.fmt(x.preco)}</em><i class="${corSinal(x.v)}">${pctMercado(x.v)}</i></button>`).join("")}</div>` : "";
+    const dt = new Date(dia + "T12:00:00");
+    const titulo = dt.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
+    const ant = k > 0 ? ref[k - 1].data : null, prox = k < ref.length - 1 ? ref[k + 1].data : null;
+    let difTxt = "";
+    if (n && b) { const d = n.acum - b.acum; difTxt = `<div class="kv"><span class="dim">Nasdaq − Ibovespa no período</span><b class="${corSinal(d)}">${d >= 0 ? "+" : "−"}${Math.abs(d).toFixed(2).replace(".", ",")} p.p.</b></div>`; }
+    abrirModal(`
+      <div class="pdm-topo"><button class="btn" id="pdmAnt" ${ant ? "" : "disabled"}>◀</button>
+        <h3>${titulo.charAt(0).toUpperCase() + titulo.slice(1)}</h3>
+        <button class="btn" id="pdmProx" ${prox ? "" : "disabled"}>▶</button></div>
+      <div class="pdm-kvs">
+        ${linha("Nasdaq", n, (v) => fmtPontos(v) + " pts")}
+        ${linha("Ibovespa", b, (v) => fmtPontos(v) + " pts")}
+        ${linha("Dólar", dl, (v) => "R$ " + v.toFixed(2).replace(".", ","))}
+        ${difTxt}
+      </div>
+      ${(() => { const bl = [blocoMov("NASDAQ NO DIA", movs(MERCADO_EUA, "", usd)), blocoMov("B3 NO DIA", movs(MERCADO_BR, ".SA", brl))].filter(Boolean);
+        return bl.length ? `<div class="pdm-movs${bl.length === 1 ? " pdm-um" : ""}">${bl.join("")}</div>` : ""; })()}
+      <div class="pdm-tit">NOTÍCIAS DO DIA</div>
+      <div id="pdmNoticias" class="pdm-noticias"><span class="dim">Buscando notícias…</span></div>`, true);
+    const m = document.getElementById("modal");
+    if (ant) document.getElementById("pdmAnt").onclick = () => explicarDiaMercado(ant);
+    if (prox) document.getElementById("pdmProx").onclick = () => explicarDiaMercado(prox);
+    // tocar numa ação do painel fecha o painel e abre o gráfico dela
+    m.querySelectorAll(".pdm-acao").forEach((el) => el.addEventListener("click", () => { fecharModal(); navegarPara(el.dataset.secao, el.dataset.id); }));
+    C.buscarNoticiasDia({ google: 'Nasdaq OR Ibovespa OR "Wall Street"', gdelt: '(Nasdaq OR Ibovespa OR "Wall Street")' }, dia).then((lista) => {
+      const el = document.getElementById("pdmNoticias");
+      if (!el || !m.classList.contains("on")) return;
+      el.innerHTML = lista && lista.length ? lista.map((x) => `<a href="${esc(x.url)}" target="_blank" rel="noopener"><span>${new Date(x.quando).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>${esc(x.titulo)}<em>${esc(x.fonte || "")}</em></a>`).join("")
+        : '<span class="dim">Nenhuma notícia encontrada para este dia.</span>';
+    }).catch(() => { const el = document.getElementById("pdmNoticias"); if (el) el.innerHTML = '<span class="dim">Não foi possível buscar as notícias agora.</span>'; });
   }
 
   function renderAcoes(d) {
