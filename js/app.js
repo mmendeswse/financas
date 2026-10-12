@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.222";
+  const VERSAO_APP = "3.6.223";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1735,7 +1735,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.222" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.223" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -6357,14 +6357,22 @@
     const doRelatorio = acoesDoRelatorio(DADOS.relatorioMercado).map((x) => x.ticker + ".SA");
     const simbolos = [...new Set([...MERCADO_INDICES.map((x) => x.s), ...MERCADO_EUA.map((x) => x[0]), ...MERCADO_BR.map((x) => x[0] + ".SA"), ...doRelatorio])];
     mercado.carregando = true;
+    const isoDia = (dt) => `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+    const hoje = new Date(), inicio = new Date(); inicio.setDate(inicio.getDate() - 3);
     Promise.all([
       C.buscarMercado(simbolos, configCotacoes().token),
-      C.buscarSerieDolar(90).catch(() => null)
-    ]).then(([r, dolar]) => {
+      C.buscarSerieDolar(90).catch(() => null),
+      // notícias do mercado dos últimos dias (Google Notícias, com o GDELT de reserva)
+      C.buscarNoticiasPeriodo({ google: 'Nasdaq OR Ibovespa OR "Wall Street" OR "bolsa de valores"', gdelt: '(Nasdaq OR Ibovespa OR "Wall Street")' }, isoDia(inicio), isoDia(hoje)).catch(() => null)
+    ]).then(([r, dolar, noticias]) => {
       const achou = Object.keys(r.cotacoes).length;
+      // cotação sem histórico (fonte de reserva) mantém o histórico que já havia
+      Object.keys(r.cotacoes).forEach((k) => { const ant = mercado.cotacoes[k]; if (ant && !r.cotacoes[k].historico.length) r.cotacoes[k].historico = ant.historico || []; });
+      const nts = noticias && noticias.length
+        ? [...new Map(noticias.map((n) => [n.titulo, n])).values()].sort((a, b) => (a.quando < b.quando ? 1 : -1)).slice(0, 20) : mercado.noticias;
       // uma busca que falhou inteira (sem internet) não apaga o último retrato
-      if (achou) mercado = { cotacoes: { ...mercado.cotacoes, ...r.cotacoes }, erros: r.erros, dolar: dolar || mercado.dolar, em: Date.now(), carregando: false };
-      else mercado = { ...mercado, erros: r.erros, carregando: false };
+      if (achou) mercado = { cotacoes: { ...mercado.cotacoes, ...r.cotacoes }, erros: r.erros, dolar: dolar || mercado.dolar, noticias: nts, em: Date.now(), carregando: false };
+      else mercado = { ...mercado, erros: r.erros, noticias: nts, carregando: false };
       try { localStorage.setItem(CHAVE_MERCADO, JSON.stringify({ ...mercado, carregando: false })); } catch (e) { /* sem espaço */ }
       if (forcar && !silencioso) toast(achou ? "Cotações de mercado atualizadas." : "Não foi possível buscar as cotações agora.");
     }).catch(() => { mercado.carregando = false; if (forcar && !silencioso) toast("Não foi possível buscar as cotações agora."); })
@@ -6610,9 +6618,6 @@
 
     // gráfico e análise automática
     const frases = tem ? textoRelatorioMercado() : [];
-    const analise = `<div class="term-painel"><div class="term-cab">ANÁLISE AUTOMÁTICA · ${status.toUpperCase()}</div>
-      ${frases.length ? `<ul class="term-lista">${frases.map((f) => `<li>${f}</li>`).join("")}</ul>` : `<p class="term-texto term-dim">${mercado.carregando ? "Buscando as cotações…" : "Sem cotações agora. Confira a internet e toque em ↻ Atualizar."}</p>`}
-      <p class="term-nota">Cotações com atraso de até 15 minutos · Yahoo Finance e brapi.dev · não é recomendação de investimento.</p></div>`;
     const grafico = `<div class="term-painel"><div class="term-cab">NASDAQ × IBOVESPA · VARIAÇÃO EM 3 MESES</div>
       <div class="term-graf">${tem ? '<canvas id="graf-mercado-comp"></canvas>' : '<p class="term-texto term-dim">O gráfico aparece quando as cotações chegarem.</p>'}</div></div>`;
 
@@ -6629,9 +6634,22 @@
           ${celVar(c.variacaoPct, 2)}${celVar(variacaoSerie(c.historico, 30))}${celVar(variacaoSerie(c.historico, 90), 15)}<td class="term-spark">${spark}</td></tr>`;
       }).join("")}</tbody></table></div></div>`;
 
+    // notícias do mercado (as mais recentes primeiro) e, embaixo, a análise automática
+    const agoraMs = Date.now();
+    const haQuanto = (iso) => { const m = Math.max(0, Math.round((agoraMs - new Date(iso).getTime()) / 60000)); return m < 60 ? `${m} min` : m < 1440 ? `${Math.floor(m / 60)} h` : `${Math.floor(m / 1440)} d`; };
+    const lista = mercado.noticias || [];
+    const noticias = `<div class="term-painel"><div class="term-cab">NOTÍCIAS DO MERCADO · NASDAQ E B3</div>
+      ${lista.length ? `<div class="term-noticias">${lista.map((n) => `<a class="term-noticia" href="${esc(n.url)}" target="_blank" rel="noopener">
+        <span class="tn-hora">${new Date(n.quando).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}<em>${haQuanto(n.quando)}</em></span>
+        <span class="tn-titulo">${esc(n.titulo)}</span><span class="tn-fonte">${esc(n.fonte || "")}</span></a>`).join("")}</div>`
+        : `<p class="term-texto term-dim">${mercado.carregando ? "Buscando notícias…" : "Sem notícias agora. Toque em ↻ Atualizar."}</p>`}
+      ${frases.length ? `<div class="term-cab">ANÁLISE AUTOMÁTICA · ${status.toUpperCase()}</div><ul class="term-lista">${frases.map((f) => `<li>${f}</li>`).join("")}</ul>` : ""}
+      <p class="term-nota">Cotações com atraso de até 15 minutos · Yahoo Finance, Stooq e brapi.dev · notícias do Google Notícias · não é recomendação de investimento.</p></div>`;
+
     return `<section class="term term-nasdaq">${topo}${board}
-      <div class="term-grade term-grade-2">${grafico}${analise}</div>
       <div class="term-grade term-grade-meio">${tabela("NASDAQ · MAIORES EMPRESAS · US$", MERCADO_EUA, "", usd)}${tabela("B3 · MAIORES DO IBOVESPA · R$", MERCADO_BR, ".SA", brl)}</div>
+      <div class="term-grade term-grade-um">${grafico}</div>
+      <div class="term-grade term-grade-um">${noticias}</div>
       ${r ? `<div class="term-secao">RELATÓRIO ICL · ${esc(r.data)} · FECHAMENTO ${esc(r.fechamento.replace(/^DIA\s+/i, ""))}</div><div class="term-grade">${painelRelatorio()}</div>` : ""}
     </section>`;
   }

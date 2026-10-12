@@ -2200,3 +2200,14 @@ table.terminal.tab-mercado td.papel small { display: block; margin-left: 0; colo
 @media (max-width: 1100px) { .term-board { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 900px) { .term-grade-2, .term-grade-meio { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 560px) { .term-board { grid-template-columns: repeat(2, minmax(0, 1fr)); } .tq-preco { font-size: 18px; } }
+.term-grade-um { grid-template-columns: minmax(0, 1fr); border-bottom: 1px solid var(--t-linha); }
+.term-grade-um .term-graf { height: 340px; }
+.term-noticias { max-height: 430px; overflow-y: auto; }
+.term-noticia { display: grid; grid-template-columns: 92px minmax(0, 1fr) auto; gap: 12px; align-items: baseline; padding: 7px 14px; border-bottom: 1px solid #0F1620; color: #E4EAF5; text-decoration: none; font-size: 13px; }
+.term-noticia:nth-child(even) { background: #05080C; }
+.term-noticia:hover { background: #0F2140; }
+.tn-hora { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 11px; font-weight: 700; color: var(--t-zero); white-space: nowrap; }
+.tn-hora em { font-style: normal; display: block; color: #6E8494; font-size: 10px; }
+.tn-titulo { font-weight: 600; line-height: 1.4; }
+.tn-fonte { color: var(--t-cy); font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; max-width: 160px; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 600px) { .term-noticia { grid-template-columns: 64px minmax(0, 1fr); } .tn-fonte { grid-column: 2; } }

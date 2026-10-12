@@ -304,18 +304,21 @@
   var caminhoYahoo = 0;
   function lerYahoo(simbolo) {
     var url = "https://query1.finance.yahoo.com/v8/finance/chart/" + encodeURIComponent(simbolo) + "?range=3mo&interval=1d";
+    var url2 = url.replace("query1", "query2");
     var caminhos = [
       function () { return url; },
+      function () { return url2; },
+      function () { return "https://corsproxy.io/?url=" + encodeURIComponent(url); },
       function () { return "https://api.allorigins.win/raw?url=" + encodeURIComponent(url); },
-      function () { return "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(url); }
+      function () { return "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(url2); }
     ];
-    var ordem = [caminhoYahoo].concat([0, 1, 2].filter(function (x) { return x !== caminhoYahoo; }));
+    var ordem = [caminhoYahoo].concat([0, 1, 2, 3, 4].filter(function (x) { return x !== caminhoYahoo; }));
     var tentar = function (k) {
       if (k >= ordem.length) return Promise.reject(new Error("Yahoo Finance indisponível"));
       return comTimeout(fetch(caminhos[ordem[k]](), { cache: "no-store" }).then(function (r) {
         if (!r.ok) throw new Error("HTTP " + r.status);
         return r.json();
-      }), 9000).then(function (j) {
+      }), 7000).then(function (j) {
         var res = j && j.chart && j.chart.result && j.chart.result[0];
         if (!res || !res.meta || !(Number(res.meta.regularMarketPrice) > 0)) throw new Error("sem preço na resposta");
         caminhoYahoo = ordem[k];
@@ -337,6 +340,30 @@
     };
     return tentar(0);
   }
+  // Reserva para os EUA: cotação do dia na Stooq (sem histórico), direto ou
+  // pelos repassadores. "^IXIC" → "^ndq", "AAPL" → "aapl.us".
+  var STOOQ = { "^IXIC": "^ndq", "^NDX": "^ndx", "^GSPC": "^spx" };
+  function lerStooq(simbolo) {
+    var s = STOOQ[simbolo] || (simbolo.toLowerCase() + ".us");
+    var url = "https://stooq.com/q/l/?s=" + encodeURIComponent(s) + "&f=sd2t2ohlcp&h&e=csv";
+    var caminhos = [url, "https://corsproxy.io/?url=" + encodeURIComponent(url), "https://api.allorigins.win/raw?url=" + encodeURIComponent(url), "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(url)];
+    var tentar = function (k) {
+      if (k >= caminhos.length) return Promise.reject(new Error("Stooq indisponível"));
+      return comTimeout(fetch(caminhos[k], { cache: "no-store" }).then(function (r) {
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.text();
+      }), 7000).then(function (csv) {
+        // Symbol,Date,Time,Open,High,Low,Close,Prev
+        var linhas = csv.trim().split(/\r?\n/), c = (linhas[1] || "").split(",");
+        var fch = Number(c[6]), abr = Number(c[3]), ant = Number(c[7]);
+        if (!(fch > 0)) throw new Error("sem preço na resposta");
+        var base = ant > 0 ? ant : abr;
+        return { preco: fch, variacaoPct: base > 0 ? (fch / base - 1) * 100 : 0, nome: "", moeda: "USD", historico: [] };
+      }).catch(function () { return tentar(k + 1); });
+    };
+    return tentar(0);
+  }
+
   function buscarMercado(simbolos, token) {
     var cotacoes = {}, erros = {};
     var umSimbolo = function (s) {
@@ -346,7 +373,7 @@
             return { preco: r.preco, variacaoPct: r.variacaoPct, nome: r.nome, moeda: "BRL", historico: r.historico.map(function (h) { return { data: h.data, preco: h.preco }; }) };
           }).then(function (r) { if (r.historico.length < 2) throw new Error("sem histórico"); return r; })
             .catch(function () { return lerYahoo(s); })
-        : lerYahoo(s);
+        : lerYahoo(s).catch(function () { return lerStooq(s); });
       return p.then(function (r) { cotacoes[s] = r; }, function (e) { erros[s] = e.message || "falhou"; });
     };
     // três de cada vez: os serviços gratuitos limitam pedidos por segundo
