@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.253";
+  const VERSAO_APP = "3.6.254";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1740,7 +1740,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.253" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.254" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -6665,14 +6665,24 @@
     const num = (v, taxa) => v == null ? "—" : taxa ? f2(v) + "%" : Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
     // (1) cotações de fechamento, agrupadas como no relatório
-    const linhasCot = r.grupos.filter((g) => GRUPO_DO_MEIO.test(g.nome) === doMeio).map((g) => `<tr class="tr-grupo"><td colspan="7">${esc(g.nome)}</td></tr>` + g.ativos.map((a) => {
+    // Renda Fixa ganha um quadro só dela (no meio da guia, acima do CDI e IPCA)
+    const ehRendaFixa = (g) => /renda fixa/i.test(g.nome);
+    const rf = doMeio ? r.grupos.filter(ehRendaFixa) : [];
+    const rendaFixa = rf.length ? card("", "Renda fixa", sub, "", rf.map((g) => g.ativos.map((a) => `
+      <div class="rf-item">
+        <div class="rf-nome">${esc(a.nome)}</div>
+        <div class="rf-taxas"><b>${num(a.atual, a.taxa)}</b><span>${esc(col[1] || "anterior")}: ${num(a.anterior, a.taxa)}</span></div>
+        <div class="rf-vars"><div><i>Dia</i>${fp(a.dia)}</div><div><i>Mês</i>${fp(a.mes)}</div><div><i>Ano</i>${fp(a.ano)}</div></div>
+      </div>`).join("")).join("")
+      + (rf.some((g) => g.ativos.some((a) => /\*/.test(a.nome))) ? '<p class="rel-nota">* Variações em pontos percentuais: a diferença nominal da taxa nos períodos.</p>' : "")) : "";
+    const linhasCot = r.grupos.filter((g) => GRUPO_DO_MEIO.test(g.nome) === doMeio && !ehRendaFixa(g)).map((g) => `<tr class="tr-grupo"><td colspan="7">${esc(g.nome)}</td></tr>` + g.ativos.map((a) => {
       const sim = a.acao ? a.nome + ".SA" : SIMBOLO_RELATORIO[a.nome];
       const hist = sim && q[sim] && q[sim].historico;
       const spark = hist && hist.length > 1 ? sparklineSVG(hist.map((h) => h.preco), a.ano >= 0 ? G.CORES.up : G.CORES.down) : "";
       return `<tr ${sim && q[sim] ? linkAtivo(sim) : ""}><td class="papel">${esc(a.nome)}</td><td class="r creme">${num(a.atual, a.taxa)}</td><td class="r dim">${num(a.anterior, a.taxa)}</td>
         <td class="r">${fp(a.dia, 1)}</td><td class="r">${fp(a.mes)}</td><td class="r">${fp(a.ano)}</td><td class="tab-rel-spark">${spark}</td></tr>`;
     }).join("")).join("");
-    const cot = !linhasCot ? "" : card("", doMeio ? "Renda fixa, futuros e ações" : "Índices, moedas e ouro", sub, "", `<div class="terminal-scroll"><table class="terminal tab-rel">
+    const cot = !linhasCot ? "" : card("", doMeio ? "Futuros e principais ações" : "Índices, moedas e ouro", sub, "", `<div class="terminal-scroll"><table class="terminal tab-rel">
       <thead><tr><th>Ativo</th><th class="r">${esc(col[0])}</th><th class="r">${esc(col[1] || "")}</th><th class="r">Dia</th><th class="r">Mês</th><th class="r">Ano</th><th>3 meses</th></tr></thead>
       <tbody>${linhasCot}</tbody></table></div>`);
 
@@ -6690,11 +6700,15 @@
         return `<em class="selo-tag selo-acao">${t}${c ? `&nbsp; ${fp(c.variacaoPct)}` : ""}</em>`;
       }).join("")}</summary>${n.paragrafos.map((p) => `<p>${esc(p)}</p>`).join("")}</details>`).join("")) : "";
 
-    if (doMeio) return cot || juros ? `
+    if (doMeio) {
+      const lado = [rendaFixa, juros].filter(Boolean);
+      if (!cot && !lado.length) return "";
+      return `
       <div class="grid grid-relatorio-meio">
-        ${cot ? `<div class="${juros ? "c8" : "c12"}">${cot}</div>` : ""}
-        ${juros ? `<div class="${cot ? "c4" : "c12"}">${juros}</div>` : ""}
-      </div>` : "";
+        ${cot ? `<div class="${lado.length ? "c8" : "c12"}">${cot}</div>` : ""}
+        ${lado.length ? `<div class="${cot ? "c4" : "c12"}"><div class="rel-pilha">${lado.join("")}</div></div>` : ""}
+      </div>`;
+    }
     return `
       <div class="grid g-top grid-relatorio">
         ${cot ? `<div class="${resumo ? "c6" : "c12"}">${cot}</div>` : ""}
