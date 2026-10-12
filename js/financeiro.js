@@ -69,10 +69,17 @@
     });
     // ajuste de saldo: o usuário informou quanto o banco tem de verdade e a
     // diferença para o calculado entra aqui (não é receita nem despesa)
+    // "Ajuste" e "Saldo" por padrão. Vinculado a um lançamento (o VR gasto no
+    // Inter, por ex.), aparece como ele: descrição, ícone, "De · banco" e o selo
+    // de recorrência. Descrição e detalhe editados na janela valem por cima.
+    var todosLanc = d.despesas.concat(d.contasPagar || [], d.entradas);
     (d.ajustesSaldo || []).forEach(function (a) {
-      // "Ajuste" e "Saldo" por padrão; podem ser editados na janela do ajuste
+      var reg = a.lancId ? todosLanc.filter(function (r) { return r.id === a.lancId; })[0] : null;
+      var secao = reg && d.entradas.indexOf(reg) > -1 ? "entradas" : "despesas";
       lista.push({ bancoId: a.bancoId, valor: Number(a.valor || 0), data: a.data, transferencia: true, ajusteId: a.id,
-        descricao: a.descricao || "Ajuste", emoji: "⚖️", sub: a.detalhe || "Saldo" });
+        descricao: a.descricao || (reg ? reg.descricao : "Ajuste"), emoji: reg ? reg.emoji : "⚖️",
+        sub: a.detalhe || (reg ? "De · " + nomeBanco(d, reg.bancoId) : "Saldo"),
+        ref: reg ? { secao: secao, id: reg.id, data: a.data } : null });
     });
     return movimentosExtras ? lista.concat(movimentosExtras(d) || []) : lista;
   }
