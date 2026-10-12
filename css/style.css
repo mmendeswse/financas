@@ -2345,3 +2345,7 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
 .term-grade-meio .term-rolar { max-height: 620px; overflow: auto; }
 .term-grade-meio .term-tab thead th { position: sticky; top: 0; z-index: 1; background: #0B1018; }
 .tq-aa { font-size: 11px; color: #8FA3B3; font-weight: 700; }
+/* etiqueta "AO VIVO" / "ICL dd/mm" sempre numa linha só; o nome do ativo encolhe com "…" se faltar espaço */
+.tq-nome { align-items: baseline; min-width: 0; }
+.tq-nome em { flex: none; white-space: nowrap; }
+.tq-nome { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
