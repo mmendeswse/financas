@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.226";
+  const VERSAO_APP = "3.6.228";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1736,7 +1736,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.226" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.228" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -6661,7 +6661,7 @@
     const agoraMs = Date.now();
     const haQuanto = (iso) => { const m = Math.max(0, Math.round((agoraMs - new Date(iso).getTime()) / 60000)); return m < 60 ? `${m} min` : m < 1440 ? `${Math.floor(m / 60)} h` : `${Math.floor(m / 1440)} d`; };
     const lista = mercado.noticias || [];
-    const noticias = `<div class="term-painel"><div class="term-cab">NOTÍCIAS DO MERCADO · NASDAQ E B3</div>
+    const noticias = `<div class="term-painel tp-noticias"><div class="term-cab">NOTÍCIAS DO MERCADO · NASDAQ E B3</div>
       ${lista.length ? `<div class="term-noticias">${lista.map((n) => `<a class="term-noticia" href="${esc(n.url)}" target="_blank" rel="noopener">
         <span class="tn-hora">${new Date(n.quando).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}<em>${haQuanto(n.quando)}</em></span>
         <span class="tn-titulo">${esc(n.titulo)}</span><span class="tn-fonte">${esc(n.fonte || "")}</span></a>`).join("")}</div>`
@@ -6671,8 +6671,7 @@
 
     return `<section class="term term-nasdaq">${board}
       <div class="term-grade term-grade-meio">${tabela("NASDAQ · MAIORES EMPRESAS · US$", MERCADO_EUA, "", usd)}${r ? tabelaRelatorioB3(r) : tabela("B3 · MAIORES DO IBOVESPA · R$", MERCADO_BR, ".SA", brl)}</div>
-      <div class="term-grade term-grade-um">${grafico}</div>
-      <div class="term-grade term-grade-um">${noticias}</div>
+      <div class="term-grade term-grade-2">${grafico}${noticias}</div>
       ${r ? `<div class="term-secao">RELATÓRIO ICL · ${esc(r.data)} · FECHAMENTO ${esc(r.fechamento.replace(/^DIA\s+/i, ""))}</div><div class="term-grade">${painelRelatorio()}</div>` : ""}
     </section>`;
   }

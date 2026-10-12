@@ -2213,3 +2213,11 @@ table.terminal.tab-mercado td.papel small { display: block; margin-left: 0; colo
 @media (max-width: 600px) { .term-noticia { grid-template-columns: 64px minmax(0, 1fr); } .tn-fonte { grid-column: 2; } }
 .term [data-acao="ir"] { cursor: pointer; }
 .term-quote.clicavel:hover, .term-barra[data-acao]:hover { background: #0F2140; }
+/* gráfico e notícias lado a lado: o gráfico estica até a altura do quadro de notícias */
+.term-grade-2 .term-graf { height: 440px; }
+.term-grade-2 .tp-noticias { height: 470px; overflow-y: auto; }
+.term-grade-2 .tp-noticias .term-cab { position: sticky; top: 0; z-index: 1; }
+.term-grade-2 .term-noticias { max-height: none; overflow: visible; }
+.term-grade-2 .term-noticia { display: flex; flex-direction: column; gap: 2px; }
+.term-grade-2 .tn-hora em { display: inline; margin-left: 8px; }
+@media (max-width: 900px) { .term-grade-2 .term-graf { height: 320px; } .term-grade-2 .tp-noticias { height: auto; max-height: 520px; } }
