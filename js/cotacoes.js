@@ -325,7 +325,8 @@
         var m = res.meta, q = (res.indicators && res.indicators.quote && res.indicators.quote[0]) || {};
         var historico = (res.timestamp || []).map(function (t, i) {
           var dt = new Date((Number(t) + Number(m.gmtoffset || 0)) * 1000);
-          return { data: dt.toISOString().slice(0, 10), preco: Number((q.close || [])[i]) };
+          return { data: dt.toISOString().slice(0, 10), preco: Number((q.close || [])[i]),
+                   abertura: Number((q.open || [])[i]) || 0, maxima: Number((q.high || [])[i]) || 0, minima: Number((q.low || [])[i]) || 0 };
         }).filter(function (h) { return h.preco > 0; });
         var preco = Number(m.regularMarketPrice);
         // o fechamento anterior de verdade é o penúltimo ponto da série
@@ -370,7 +371,7 @@
       var br = /\.SA$/.test(s) || s === "^BVSP";
       var p = br
         ? buscarUm(s.replace(/\.SA$/, ""), token).then(function (r) {
-            return { preco: r.preco, variacaoPct: r.variacaoPct, nome: r.nome, moeda: "BRL", historico: r.historico.map(function (h) { return { data: h.data, preco: h.preco }; }) };
+            return { preco: r.preco, variacaoPct: r.variacaoPct, nome: r.nome, moeda: "BRL", historico: r.historico };
           }).then(function (r) { if (r.historico.length < 2) throw new Error("sem histórico"); return r; })
             .catch(function () { return lerYahoo(s); })
         : lerYahoo(s).catch(function () { return lerStooq(s); });

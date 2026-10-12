@@ -2211,3 +2211,5 @@ table.terminal.tab-mercado td.papel small { display: block; margin-left: 0; colo
 .tn-titulo { font-weight: 600; line-height: 1.4; }
 .tn-fonte { color: var(--t-cy); font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; max-width: 160px; overflow: hidden; text-overflow: ellipsis; }
 @media (max-width: 600px) { .term-noticia { grid-template-columns: 64px minmax(0, 1fr); } .tn-fonte { grid-column: 2; } }
+.term [data-acao="ir"] { cursor: pointer; }
+.term-quote.clicavel:hover, .term-barra[data-acao]:hover { background: #0F2140; }
