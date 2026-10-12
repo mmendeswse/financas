@@ -1993,8 +1993,9 @@ button.pill-periodo:hover { filter: brightness(1.25); }
    botões em tamanho normal, alinhados na mesma altura; o app estica os
    quadros até a linha do rodapé (ajustarAlturaConfig) */
 .cfg-grid > div { grid-column: span 12; }   /* celular: um embaixo do outro */
-@media (min-width: 700px) {   /* tablet e computador: Backup e Senha do mesmo tamanho; Sincronização, Cotações e Zona Risco do mesmo tamanho */
-  .cfg-grid > .cfg-backup, .cfg-grid > .cfg-senha { grid-column: span 6; }
+@media (min-width: 700px) {   /* tablet e computador: Senha do tamanho da Zona Risco, logo acima dela; Backup ocupa o resto da linha; Sincronização, Cotações e Zona Risco do mesmo tamanho */
+  .cfg-grid > .cfg-backup { grid-column: span 8; }
+  .cfg-grid > .cfg-senha { grid-column: span 4; }
   .cfg-grid > .cfg-sync, .cfg-grid > .cfg-cotacoes, .cfg-grid > .cfg-zona { grid-column: span 4; }
 }
 .cfg-grid .card > .body { flex: 1 1 auto; display: flex; flex-direction: column; }
