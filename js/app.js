@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.190";
+  const VERSAO_APP = "3.6.192";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1638,7 +1638,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.190" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.192" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -4697,12 +4697,11 @@
       </div>`;
   }
   // liga os campos: mostra o bloco, calcula a data (somente leitura) e a prévia das próximas datas
-  function ligarPersonalizar(mesDoForm, ajudaRepetição) {
+  function ligarPersonalizar(mesDoForm) {
     const campoRec = document.getElementById("f_rec"), campoData = document.getElementById("f_data");
     const bloco = document.getElementById("blocoPers");
     const ajudaRec = document.getElementById("ajudaRec");
     const textoPadrao = ajudaRec ? ajudaRec.textContent : "";
-    let ajudaData = null;
     const ler = () => ({
       tipo: document.getElementById("p_tipo").value,
       n: Math.max(1, Math.min(31, Number(document.getElementById("p_n").value) || 1)),
@@ -4719,15 +4718,14 @@
       bloco.style.display = ativo ? "" : "none";
       campoData.readOnly = ativo;
       campoData.classList.toggle("somente-leitura", ativo);
-      if (!ajudaData) { ajudaData = document.createElement("div"); ajudaData.className = "ajuda"; campoData.parentNode.appendChild(ajudaData); }
-      if (ajudaRec) ajudaRec.textContent = ativo ? ajudaRepetição : textoPadrao;
-      if (!ativo) { ajudaData.textContent = ""; return; }
+      // na repetição Personalizada, sem textos de ajuda: a prévia das datas já explica
+      if (ajudaRec) { ajudaRec.textContent = ativo ? "" : textoPadrao; ajudaRec.style.display = ajudaRec.textContent ? "" : "none"; }
+      if (!ativo) return;
       const r = ler();
       document.getElementById("p_campoN").style.display = r.tipo === "ultimoDiaUtil" ? "none" : "";
       document.getElementById("p_rotuloN").textContent = r.tipo === "diaFixo" ? "Dia do mês" : "Qual dia útil";
       document.getElementById("p_campoAjuste").style.display = r.tipo === "diaFixo" ? "" : "none";
       campoData.value = dataDoMesRegra(r, mesDoForm);
-      ajudaData.textContent = `A data é calculada todo mês pela regra: ${rotuloRegra(r)}.`;
       const prox = []; let mes = mesDoForm;
       for (let i = 0; i < 4; i++) { const [a, m] = mes.split("-").map(Number); const c = F.calcularDataRegra(a, m, r); prox.push(fmtData(c.data) + (c.alertaSabado ? " ⚠️" : "")); for (let k = 0; k < r.intervalo; k++) mes = proximoMes(mes); }
       let previa = "Próximas datas: " + prox.join(" · ");
@@ -4933,7 +4931,7 @@
     const mesDoForm = e ? String(e.data).slice(0, 7) : (mesEntradas || (document.getElementById("f_data").value || hojeISO()).slice(0, 7));   // mês aberto na guia
     document.getElementById("modal").classList.add("modal-lanc");   // computador/iPad: janela mais larga, com os campos lado a lado
     const lerEmoji = ligarEmoji(e && e.emoji);
-    const regraDoForm = ligarPersonalizar(mesDoForm, "O lançamento de cada mês é criado sozinho, com status Prevista, para você marcar como Pago depois.");
+    const regraDoForm = ligarPersonalizar(mesDoForm);
     if (!e) statusSegueData("f_data", "f_status");   // lançamento novo: data futura começa como Prevista
 
     document.getElementById("btnSalvar").onclick = () => {
@@ -5112,7 +5110,7 @@
     abrirModal(`
       <h3>${x ? "Editar lançamento" : "Nova despesa"}</h3>
       <div class="par">
-        <div class="campo"><label for="f_data"><span id="rotuloData">${statusAtual === "Pago" ? "Data" : "Data de vencimento"}</span></label><input id="f_data" type="date" value="${dataAtual}"></div>
+        <div class="campo"><label for="f_data"><span id="rotuloData">Data</span></label><input id="f_data" type="date" value="${dataAtual}"></div>
         <div class="campo"><label for="f_valor">Valor</label>${campoMoeda("f_valor", x ? (previsao ? valorDoMes(x, previsao.data.slice(0, 7)) : x.valor) : "")}</div>
       </div>
       ${campoEmoji(EMOJIS_DESPESA, x && x.emoji, `<div class="campo"><label for="f_desc">Descrição</label><input id="f_desc" value="${x ? esc(x.descricao) : ""}" placeholder="Supermercado"></div>`)}
@@ -5139,18 +5137,13 @@
         ${x && !previsao ? `<button class="btn perigo" id="btnExcluir">Excluir</button>` : ""}
       </div>`);
 
-    // mostra ou esconde os campos de pagamento conforme o status
     const selStatus = document.getElementById("f_status");
     if (!x) setTimeout(() => statusSegueData("f_data", "f_status"), 0);   // nova: data futura começa como Prevista
-    selStatus.addEventListener("change", () => {
-      const pago = selStatus.value === "Pago";
-      document.getElementById("rotuloData").textContent = pago ? "Data" : "Data de vencimento";
-    });
 
     const mesDoFormD = x ? String(ehConta ? x.vencimento : x.data).slice(0, 7) : (mesDespesas || hojeISO().slice(0, 7));   // mês aberto na guia
     document.getElementById("modal").classList.add("modal-lanc");   // computador/iPad: janela mais larga, com os campos lado a lado
     const lerEmojiD = ligarEmoji(x && x.emoji);
-    const regraDoFormD = ligarPersonalizar(mesDoFormD, "O lançamento de cada mês é criado sozinho, com status Prevista, para você marcar como Pago depois.");
+    const regraDoFormD = ligarPersonalizar(mesDoFormD);
 
     document.getElementById("btnSalvar").onclick = () => {
       const status = selStatus.value;
