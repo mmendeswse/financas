@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.214";
+  const VERSAO_APP = "3.6.215";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1672,7 +1672,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.214" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.215" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -6425,11 +6425,11 @@
 
   function painelRelatorio() {
     const r = DADOS.relatorioMercado;
-    const btnImp = `<button class="term-btn" data-acao="importar-relatorio" title="Escolher o PDF do relatório diário">⇪ ${r ? "Novo relatório" : "Importar relatório (PDF)"}</button>`;
+    const btnImp = `<button class="term-btn" data-acao="importar-relatorio" title="Escolher o PDF do relatório ICL">⇪ Importar ICL</button>`;
     const relogio = `<span class="term-relogio" id="termRelogio">${new Date().toLocaleTimeString("pt-BR")}</span>`;
     if (!r) {
       return `<section class="term"><div class="term-topo"><span class="term-marca">RELATÓRIO DIÁRIO</span><span class="term-dim">nenhum relatório importado</span><span class="term-esp"></span>${relogio}${btnImp}</div>
-        <div class="term-vazio">Importe o PDF do relatório diário (fechamento do dia anterior) para ver aqui as cotações, as maiores altas e quedas, juros, inflação, o resumo do dia e as análises de empresas — com a cotação de hoje de cada ação citada.<br>O arquivo é lido no próprio aparelho.</div></section>`;
+        <div class="term-vazio">Toque em Importar ICL e escolha o PDF do relatório do Instituto Conhecimento Liberta para ver aqui as cotações, as maiores altas e quedas, juros, inflação, o resumo do dia e as análises de empresas — com a cotação de hoje de cada ação citada.<br>O arquivo é lido no próprio aparelho.</div></section>`;
     }
     const q = mercado.cotacoes, iso = dataFechamentoRelatorio(r);
     const col = r.colunas.length ? r.colunas : ["Últ.", "Ant."];
@@ -7110,13 +7110,15 @@
             ${lista([
               ["<b>Exportar Backup</b> baixa um arquivo <b>.json</b> com todos os dados.", 6],
               ["<b>Importar Backup</b> substitui todos os dados atuais pelos do arquivo — o sistema pede confirmação antes.", 1],
-              ["<b>Importar PDF</b> lê o Extrato de Custódia do Nubank e traz os investimentos e as ações (nada é enviado para a internet).", 5]
+              ["<b>Importar NBK</b> lê o Extrato de Custódia do Nubank e traz os investimentos e as ações (nada é enviado para a internet).", 5],
+              ["<b>Importar ICL</b> lê o relatório do Instituto Conhecimento Liberta (PDF) e atualiza toda a guia Nasdaq: cotações, altas e quedas, CDI, IPCA, resumo e análises.", 3]
             ])}
             <p class="cfg-info"${opc(2)}>Último backup exportado: <b>${ultimoBackup || "nenhum ainda"}</b></p>
             ${acoes(`${A.ehDesktop ? `<button class="btn" data-acao="abrir-pasta-banco">Abrir pasta</button>` : ""}
               <button class="btn primario" data-acao="exportar-backup">Exportar Backup</button>
               <button class="btn primario" data-acao="importar-backup">Importar Backup</button>
-              <button class="btn btn-pdf" data-acao="importar-pdf">Importar PDF</button>`)}
+              <button class="btn btn-pdf" data-acao="importar-pdf">Importar NBK</button>
+              <button class="btn btn-icl" data-acao="importar-relatorio">Importar ICL</button>`)}
           </div>`)}</div>
         <div class="cfg-senha">${card("", "Senha Acesso", "protege o sistema neste aparelho", "", `
           <div class="body pad">

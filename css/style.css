@@ -2147,3 +2147,5 @@ table.terminal.tab-mercado td.papel small { display: block; margin-left: 0; colo
   .tp-cot { grid-row: auto; }
   .term-relogio { font-size: 14px; }
 }
+.btn.btn-icl { background: linear-gradient(135deg, #E07A00, #FFA726); color: #000; border-color: transparent; font-weight: 800; }
+.btn.btn-icl:hover { filter: brightness(1.1); }
