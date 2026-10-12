@@ -4,6 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#070D14">
+<script>
+  // Android (tablet/celular): sem "viewport-fit=cover" o Chrome não desenha a
+  // página por baixo da barra de aplicativos/navegação do sistema — o app
+  // termina acima dela. No iPad/iPhone o "cover" continua (área segura).
+  if (/Android/i.test(navigator.userAgent)) {
+    var vp = document.querySelector('meta[name="viewport"]');
+    if (vp) vp.setAttribute("content", vp.getAttribute("content").replace(/,\s*viewport-fit=cover/, ""));
+  }
+</script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -17,7 +26,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="assets/icons/icon-192.png?v=5">
 <meta name="color-scheme" content="dark">
 <title>Muller Mendes — Gerenciamento de Finanças Pessoais</title>
-<link rel="stylesheet" href="css/style.css?v=3.6.210">
+<link rel="stylesheet" href="css/style.css?v=3.6.211">
 </head>
 <body>
 
@@ -80,16 +89,16 @@
 <script src="js/vendor/chart.umd.min.js"></script>
 
 <!-- módulos do sistema — ordem importa: cada um usa o anterior -->
-<script src="js/bloqueio.js?v=3.6.210"></script>
-<script src="js/armazenamento.js?v=3.6.210"></script>
-<script src="js/financeiro.js?v=3.6.210"></script>
-<script src="js/investimentos.js?v=3.6.210"></script>
-<script src="js/graficos.js?v=3.6.210"></script>
-<script src="js/extrato.js?v=3.6.210"></script>
-<script src="js/cotacoes.js?v=3.6.210"></script>
-<script src="js/sincronizacao.js?v=3.6.210"></script>
-<script src="js/emojis.js?v=3.6.210"></script>
-<script src="js/app.js?v=3.6.210"></script>
+<script src="js/bloqueio.js?v=3.6.211"></script>
+<script src="js/armazenamento.js?v=3.6.211"></script>
+<script src="js/financeiro.js?v=3.6.211"></script>
+<script src="js/investimentos.js?v=3.6.211"></script>
+<script src="js/graficos.js?v=3.6.211"></script>
+<script src="js/extrato.js?v=3.6.211"></script>
+<script src="js/cotacoes.js?v=3.6.211"></script>
+<script src="js/sincronizacao.js?v=3.6.211"></script>
+<script src="js/emojis.js?v=3.6.211"></script>
+<script src="js/app.js?v=3.6.211"></script>
 <script>
   // registra o service worker (só funciona via http/https — no iPad, depois de publicado)
   if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
