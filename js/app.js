@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.219";
+  const VERSAO_APP = "3.6.221";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1732,7 +1732,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.219" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.221" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -6332,6 +6332,7 @@
   const MERCADO_INDICES = [
     { s: "^IXIC", nome: "Nasdaq Composite", curto: "Nasdaq" },
     { s: "^NDX", nome: "Nasdaq-100", curto: "Nasdaq-100" },
+    { s: "^GSPC", nome: "S&P 500", curto: "S&P 500" },
     { s: "^BVSP", nome: "Ibovespa", curto: "Ibovespa" }
   ];
   const MERCADO_EUA = [
@@ -6486,9 +6487,7 @@
 
   function painelRelatorio() {
     const r = DADOS.relatorioMercado;
-    const btnImp = `<button class="term-btn" data-acao="importar-relatorio" title="Escolher o PDF do relatório ICL">⇪ Importar ICL</button>`;
-    const relogio = `<span class="term-relogio" id="termRelogio">${new Date().toLocaleTimeString("pt-BR")}</span>`;
-    // sem relatório importado o painel não aparece (importa-se em Configurações → Importar ICL)
+    // sem relatório importado os painéis do relatório não aparecem
     if (!r) return "";
     const q = mercado.cotacoes, iso = dataFechamentoRelatorio(r);
     const col = r.colunas.length ? r.colunas : ["Últ.", "Ant."];
@@ -6543,43 +6542,95 @@
         return `<em class="term-chip c-acc">${t}${c ? ` <b class="${corMov(c.variacaoPct)}">${tPct(c.variacaoPct)}</b>` : ""}</em>`;
       }).join("")}</summary>${n.paragrafos.map((p) => `<p>${esc(p)}</p>`).join("")}</details>`).join("")}</div>` : "";
 
-    return `<section class="term">
-      <div class="term-topo"><span class="term-marca">RELATÓRIO DIÁRIO</span><span>${esc(r.data)}</span><span class="term-dim">FECHAMENTO ${esc(r.fechamento.replace(/^DIA\s+/i, ""))}</span><span class="term-esp"></span>${relogio}${btnImp}</div>
-      <div class="term-grade">${cot}${movers}${juros}${tabAcoes}${resumo}${analises}</div>
-    </section>`;
+    return `${cot}${movers}${juros}${tabAcoes}${resumo}${analises}`;
   }
 
+  // "QUINTA-FEIRA, 08 DE OUTUBRO DE 2026" → { dia: "08/10/2026", semana: "Quinta-feira" }
+  function dataCoberturaRelatorio(r) {
+    const m = /^([A-ZÇÁÉÍÓÚÃÕÂÊÔ-]+)[,\s]+(\d{1,2})\s+DE\s+([A-ZÇ]+)\s+DE\s+(\d{4})/i.exec((r && r.data) || "");
+    if (!m) return { dia: (r && r.data) || "—", semana: "" };
+    const mes = MESES_RELATORIO.indexOf(m[3].toUpperCase()) + 1;
+    const sem = m[1].toLowerCase();
+    return { dia: `${m[2].padStart(2, "0")}/${String(mes).padStart(2, "0")}/${m[4]}`, semana: sem.charAt(0).toUpperCase() + sem.slice(1) };
+  }
+  // ativo da tabela do relatório pelo nome ("NASDAQ", "SP500"…)
+  const ativoRelatorio = (nome) => { const r = DADOS.relatorioMercado; if (!r) return null; for (const g of r.grupos) for (const a of g.ativos) if (a.nome === nome) return a; return null; };
+
   function renderNasdaq() {
-    const q = mercado.cotacoes, tem = Object.keys(q).length;
+    const q = mercado.cotacoes, tem = Object.keys(q).length, r = DADOS.relatorioMercado;
     const quando = mercado.em ? new Date(mercado.em).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "";
-    const status = mercado.carregando ? "buscando cotações…" : quando ? `atualizado em ${quando} · Yahoo Finance e brapi.dev` : "";
-    const btn = `<button class="btn" data-acao="atualizar-mercado" title="Buscar as cotações agora">↻ Atualizar</button>`;
-    if (!tem) {
-      const msg = mercado.carregando ? "Buscando as cotações da Nasdaq e da bolsa brasileira…" : "Não foi possível buscar as cotações. Confira a internet e toque em ↻ Atualizar.";
-      return painelRelatorio() + `<div class="grid g-top"><div class="c12">${card("", "Relatório de mercado", status, btn, `<div class="empty">${msg}</div>`)}</div></div>`;
-    }
-    const icone = '<path d="M3 13l4.5-4.5L11 12l6-6"/><path d="M13 6h4v4"/>';
-    const tiles = MERCADO_INDICES.map((ix) => {
-      const c = q[ix.s];
-      if (!c) return `<div class="c4">${metricCard(ix.nome, '<span class="dim">—</span>', icone, G.CORES.dim, "", "sem cotação")}</div>`;
-      const v3 = variacaoSerie(c.historico, 90);
-      return `<div class="c4">${metricCard(ix.nome, fmtPontos(c.preco) + ' <span class="dim" style="font-size:12px">pts</span>', icone, c.variacaoPct >= 0 ? G.CORES.up : G.CORES.down,
-        variacaoPill(c.variacaoPct, "no dia"), `3 meses: ${pctMercado(v3)}`, c.historico.map((h) => h.preco))}</div>`;
-    }).join("");
-    const frases = textoRelatorioMercado();
-    const relatorio = `<ul class="relatorio-mercado">${frases.map((f) => `<li>${f}</li>`).join("")}</ul>
-      <p class="dim nota-mercado">Cotações com atraso de até 15 minutos. Variações calculadas pelos fechamentos diários; não é recomendação de investimento.</p>`;
-    return painelRelatorio() + `
-      <div class="grid g-top">${tiles}</div>
-      <div class="grid">
-        <div class="c7">${card("", "Nasdaq × Ibovespa", "variação acumulada em 3 meses", "",
-          `<div style="padding:8px 14px 12px;height:300px"><canvas id="graf-mercado-comp"></canvas></div>`)}</div>
-        <div class="c5">${card("", "Relatório de mercado", status, btn, relatorio)}</div>
-      </div>
-      <div class="grid">
-        <div class="c6">${card("", "Ações da Nasdaq", "as maiores empresas · em dólar", "", tabelaMercado(MERCADO_EUA, "", usd))}</div>
-        <div class="c6">${card("", "Bolsa brasileira", "as maiores do Ibovespa · em reais", "", tabelaMercado(MERCADO_BR, ".SA", brl))}</div>
-      </div>`;
+    const status = mercado.carregando ? "buscando cotações…" : quando ? `cotações ${quando}` : "sem cotações";
+
+    // barra do topo: última cobertura do relatório ICL importado, cotações, relógio e botões
+    const cob = r ? dataCoberturaRelatorio(r) : null;
+    const importado = r && r.importadoEm ? new Date(r.importadoEm).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "";
+    const campoCob = `<div class="term-cobertura" title="${r ? esc(r.arquivo || "") : "Importe o relatório em Importar ICL"}">
+      <span>ÚLTIMA COBERTURA ICL</span>
+      <b>${cob ? `${cob.dia}${cob.semana ? ` <i>${cob.semana}</i>` : ""}` : "nenhum relatório"}</b>
+      ${r ? `<small>fechamento ${esc(r.colunas[0] || r.fechamento.replace(/^DIA\s+/i, ""))}${importado ? ` · importado ${importado}` : ""}</small>` : ""}
+    </div>`;
+    const topo = `<div class="term-topo"><span class="term-marca">NASDAQ · B3</span>${campoCob}
+      <span class="term-status${mercado.carregando ? " pisca" : ""}">● ${status}</span><span class="term-esp"></span>
+      <span class="term-relogio" id="termRelogio">${new Date().toLocaleTimeString("pt-BR")}</span>
+      <button class="term-btn" data-acao="atualizar-mercado" title="Buscar as cotações agora">↻ Atualizar</button>
+      <button class="term-btn term-btn-acc" data-acao="importar-relatorio" title="Escolher o PDF do relatório ICL">⇪ Importar ICL</button></div>`;
+
+    // quadro de cotações grandes (como o "58.50 +0,43%" do terminal):
+    // cotação ao vivo; sem ela, o fechamento do relatório ICL
+    const rotRel = r ? `ICL ${esc(r.colunas[0] || "")}` : "";
+    const caixa = (nome, live, rel, fmt) => {
+      let preco, varDia, sub = "", spark = "", fonte;
+      if (live) {
+        preco = live.preco; varDia = live.variacaoPct; fonte = "AO VIVO";
+        sub = `1M ${tPct(variacaoSerie(live.historico, 30))} · 3M ${tPct(variacaoSerie(live.historico, 90))}`;
+        if (live.historico && live.historico.length > 1) spark = sparklineSVG(live.historico.map((h) => h.preco), varDia >= 0 ? G.CORES.up : G.CORES.down);
+      } else if (rel) {
+        preco = rel.atual; varDia = rel.dia; fonte = rotRel;
+        sub = `MÊS ${tPct(rel.mes)} · ANO ${tPct(rel.ano)}`;
+      } else return `<div class="term-quote"><span class="tq-nome">${nome}</span><b class="tq-preco term-dim">—</b><span class="tq-sub term-dim">sem cotação</span></div>`;
+      return `<div class="term-quote"><span class="tq-nome">${nome}<em>${fonte}</em></span>
+        <b class="tq-preco ${corMov(varDia)}">${fmt(preco)}</b>
+        <span class="tq-var ${corMov(varDia)}">${tPct(varDia)} ${setaMov(varDia)}</span>
+        <span class="tq-sub">${sub}</span>${spark ? `<span class="tq-spark">${spark}</span>` : ""}</div>`;
+    };
+    const pts = (v) => fmtPontos(v);
+    const moeda2 = (v) => Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const dolarVivo = dolar && dolar.valor ? { preco: dolar.valor, variacaoPct: dolar.variacaoPct || 0, historico: mercado.dolar || [] } : null;
+    const board = `<div class="term-board">
+      ${caixa("NASDAQ COMPOSITE", q["^IXIC"], ativoRelatorio("NASDAQ"), pts)}
+      ${caixa("NASDAQ-100", q["^NDX"], null, pts)}
+      ${caixa("S&amp;P 500", q["^GSPC"], ativoRelatorio("SP500"), pts)}
+      ${caixa("IBOVESPA", q["^BVSP"], ativoRelatorio("IBOVESPA"), pts)}
+      ${caixa("DÓLAR / REAL", dolarVivo, ativoRelatorio("DÓLAR / REAL"), (v) => "R$ " + moeda2(v))}
+      ${caixa("PETRÓLEO BRENT", null, ativoRelatorio("PETRÓLEO BRENT"), (v) => "US$ " + moeda2(v))}
+    </div>`;
+
+    // gráfico e análise automática
+    const frases = tem ? textoRelatorioMercado() : [];
+    const analise = `<div class="term-painel"><div class="term-cab">ANÁLISE AUTOMÁTICA · ${status.toUpperCase()}</div>
+      ${frases.length ? `<ul class="term-lista">${frases.map((f) => `<li>${f}</li>`).join("")}</ul>` : `<p class="term-texto term-dim">${mercado.carregando ? "Buscando as cotações…" : "Sem cotações agora. Confira a internet e toque em ↻ Atualizar."}</p>`}
+      <p class="term-nota">Cotações com atraso de até 15 minutos · Yahoo Finance e brapi.dev · não é recomendação de investimento.</p></div>`;
+    const grafico = `<div class="term-painel"><div class="term-cab">NASDAQ × IBOVESPA · VARIAÇÃO EM 3 MESES</div>
+      <div class="term-graf">${tem ? '<canvas id="graf-mercado-comp"></canvas>' : '<p class="term-texto term-dim">O gráfico aparece quando as cotações chegarem.</p>'}</div></div>`;
+
+    // tabelas das bolsas (ações citadas no relatório ganham o selo ICL)
+    const citadas = new Set(acoesDoRelatorio(r).map((x) => x.ticker));
+    const tabela = (titulo, lista, sufixo, fmt) => `<div class="term-painel"><div class="term-cab">${titulo}</div><div class="term-rolar"><table class="term-tab">
+      <thead><tr><th>Papel</th><th class="r">Último</th><th class="r">Dia</th><th class="r">1 mês</th><th class="r">3 meses</th><th>3M</th></tr></thead><tbody>
+      ${lista.map(([t, nome]) => {
+        const c = q[t + sufixo];
+        const selo = citadas.has(t) ? ' <span class="term-chip c-acc">ICL</span>' : "";
+        if (!c) return `<tr><td class="term-ativo">${t}${selo}<small>${esc(nome)}</small></td><td class="r term-dim" colspan="5">${mercado.carregando ? "buscando…" : "sem cotação"}</td></tr>`;
+        const spark = c.historico && c.historico.length > 1 ? sparklineSVG(c.historico.map((h) => h.preco), c.variacaoPct >= 0 ? G.CORES.up : G.CORES.down) : "";
+        return `<tr><td class="term-ativo">${t}${selo}<small>${esc(nome)}</small></td><td class="r t-preco">${fmt(c.preco)}</td>
+          ${celVar(c.variacaoPct, 2)}${celVar(variacaoSerie(c.historico, 30))}${celVar(variacaoSerie(c.historico, 90), 15)}<td class="term-spark">${spark}</td></tr>`;
+      }).join("")}</tbody></table></div></div>`;
+
+    return `<section class="term term-nasdaq">${topo}${board}
+      <div class="term-grade term-grade-2">${grafico}${analise}</div>
+      <div class="term-grade term-grade-meio">${tabela("NASDAQ · MAIORES EMPRESAS · US$", MERCADO_EUA, "", usd)}${tabela("B3 · MAIORES DO IBOVESPA · R$", MERCADO_BR, ".SA", brl)}</div>
+      ${r ? `<div class="term-secao">RELATÓRIO ICL · ${esc(r.data)} · FECHAMENTO ${esc(r.fechamento.replace(/^DIA\s+/i, ""))}</div><div class="term-grade">${painelRelatorio()}</div>` : ""}
+    </section>`;
   }
   // gráfico: variação acumulada desde o início dos 3 meses, nos dias da
   // Nasdaq; o Ibovespa e o dólar usam o último fechamento até cada dia
@@ -7169,14 +7220,14 @@
             ${lista([
               ["<b>Exportar Backup</b> baixa um arquivo <b>.json</b> com todos os dados.", 6],
               ["<b>Importar Backup</b> substitui todos os dados atuais pelos do arquivo — o sistema pede confirmação antes.", 1],
-              ["<b>Importar NBK</b> lê o Extrato de Custódia do Nubank e traz os investimentos e as ações (nada é enviado para a internet).", 5],
+              ["<b>Importar Nubank</b> lê o Extrato de Custódia do Nubank e traz os investimentos e as ações (nada é enviado para a internet).", 5],
               ["<b>Importar ICL</b> lê o relatório do Instituto Conhecimento Liberta (PDF) e atualiza toda a guia Nasdaq: cotações, altas e quedas, CDI, IPCA, resumo e análises.", 3]
             ])}
             <p class="cfg-info"${opc(2)}>Último backup exportado: <b>${ultimoBackup || "nenhum ainda"}</b></p>
             ${acoes(`${A.ehDesktop ? `<button class="btn" data-acao="abrir-pasta-banco">Abrir pasta</button>` : ""}
               <button class="btn primario" data-acao="exportar-backup">Exportar Backup</button>
               <button class="btn primario" data-acao="importar-backup">Importar Backup</button>
-              <button class="btn btn-pdf" data-acao="importar-pdf">Importar NBK</button>
+              <button class="btn btn-pdf" data-acao="importar-pdf">Importar Nubank</button>
               <button class="btn btn-icl" data-acao="importar-relatorio">Importar ICL</button>`)}
           </div>`)}</div>
         <div class="cfg-senha">${card("", "Senha Acesso", "protege o sistema neste aparelho", "", `
