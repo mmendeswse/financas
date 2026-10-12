@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.195";
+  const VERSAO_APP = "3.6.196";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1667,7 +1667,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.195" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.196" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1726,6 +1726,7 @@
     importar: svgIc('<path d="M12 3.5V15M7.5 10.5L12 15l4.5-4.5"/><path d="M4 14.5V19a1.5 1.5 0 0 0 1.5 1.5h13A1.5 1.5 0 0 0 20 19v-4.5"/>'),
     pdf: svgIc('<path d="M14 3.5H6.5A1.5 1.5 0 0 0 5 5v14a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 19V8.5z"/><path d="M14 3.5v5h5"/><path d="M8.5 13h7M8.5 16.5h5"/>'),
     pago: svgIc('<circle cx="12" cy="12" r="8.5"/><path d="M8 12.5l2.7 2.7L16 9.5"/>'),
+    saldo: svgIc('<path d="M12 4v16M8 20h8M4.5 7h15"/><path d="M4.5 7L2 13a2.5 2.5 0 0 0 5 0z"/><path d="M19.5 7L17 13a2.5 2.5 0 0 0 5 0z"/>'),
     pagar: svgIc('<rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.6"/><path d="M6 9.5v5M18 9.5v5"/>'),
     substituir: svgIc('<path d="M17 3.5l3 3-3 3"/><path d="M4 11V9.5a3 3 0 0 1 3-3h13"/><path d="M7 20.5l-3-3 3-3"/><path d="M20 13v1.5a3 3 0 0 1-3 3H4"/>'),
     senha: svgIc('<rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.5"/>'),
@@ -1754,6 +1755,7 @@
     [(b, t) => /pdf/.test(t), "pdf"],
     [(b, t) => /^importar/.test(t), "importar"],
     [(b, t) => /^pagar\b/.test(t), "pagar"],
+    [(b, t) => /^alterar saldo\b/.test(t), "saldo"],
     [(b, t) => /pago/.test(t), "pago"],
     [(b, t) => /^substituir/.test(t), "substituir"],
     [(b, t) => /este e os próximos|somente este mês/.test(t), "calendario"],
@@ -2732,7 +2734,7 @@
       ${extratoBancoHtml(d, b)}
       <div class="modal-acoes">
         <button class="btn primario salvar" id="btnIrPainel">Depositar</button>
-        <button class="btn" id="btnSaldoReal" title="Informar quanto o banco tem hoje">Informar saldo</button>
+        <button class="btn" id="btnSaldoReal" title="Informar quanto o banco tem hoje">Alterar Saldo</button>
         <button class="btn btn-com-icone" id="btnEditarBanco" title="Editar os dados do banco">${ICONE_EDITAR}Editar</button>
         <button class="btn" id="btnFecharPainel">Fechar</button>
       </div>`);
@@ -3892,7 +3894,7 @@
   // AJUSTE DE SALDO: o usuário informa quanto o banco tem de verdade (o
   // saldo do Inter depois de receber o VR/VT, por ex.) e a diferença para o
   // saldo calculado vira um lançamento "Ajuste de saldo" — não conta como
-  // receita nem despesa. Fica no botão "Informar saldo" do quadro do banco.
+  // receita nem despesa. Fica no botão "Alterar Saldo" do quadro do banco.
   // DADOS.ajustesSaldo: [{ id, bancoId, data, valor, saldoInformado }]
   // ---------------------------------------------------------------------
   // opts.depois: chamado ao terminar (salvando ou não)
