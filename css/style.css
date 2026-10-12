@@ -2265,3 +2265,7 @@ table.terminal.tab-mercado td.papel small { display: block; margin-left: 0; colo
 .sug-preco i { font-style: normal; font-size: 11px; margin-left: 6px; }
 .sug-card ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 2px; font-size: 11px; font-weight: 600; line-height: 1.35; }
 .sug-sub { color: var(--t-down); font-size: 10px; font-weight: 900; letter-spacing: .1em; padding: 8px 12px 6px; background: #0F1621; border-bottom: 1px solid var(--t-linha); }
+/* Sincronização e Cotações: a linha de cima (estado / caixa de seleção) com a
+   mesma altura e sem quebrar, para os campos dos códigos ficarem alinhados */
+.cfg-grid .sync-estado, .cfg-grid .chk-linha { height: 24px; flex-wrap: nowrap; white-space: nowrap; overflow: hidden; }
+.cfg-grid .sync-estado #statusSync { min-width: 0; overflow: hidden; text-overflow: ellipsis; }

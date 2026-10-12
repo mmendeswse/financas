@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.231";
+  const VERSAO_APP = "3.6.232";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1736,7 +1736,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.231" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.232" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -7468,9 +7468,9 @@
             <p class="cfg-info cfg-alerta"><b>Outras pessoas vão usar o sistema?</b> Cada uma precisa da própria conta do GitHub e do próprio token — com o mesmo token, os dados se misturam no mesmo cofre.</p>
             ${acoes(`<button class="btn primario" data-acao="conectar-sync">Ligar</button>`)}
           </div>`)}</div>
-        <div class="cfg-cotacoes">${card("", "Cotações automáticas", "dólar via AwesomeAPI · ações via brapi.dev", "", `
+        <div class="cfg-cotacoes">${card("", "Cotações automáticas", "dólar e ações · AwesomeAPI e brapi", "", `
           <div class="body pad">
-            <label class="chk-linha"><input type="checkbox" id="cfgCotacoesAuto" ${configCotacoes().auto ? "checked" : ""}> Buscar cotações ao abrir o sistema e a cada 5 minutos</label>
+            <label class="chk-linha"><input type="checkbox" id="cfgCotacoesAuto" ${configCotacoes().auto ? "checked" : ""}> Atualizar cotações a cada 5 min</label>
             <div class="campo"><label for="cfgBrapiToken">Token da brapi.dev</label>
               <input id="cfgBrapiToken" value="${esc(configCotacoes().token)}" placeholder="cole aqui outro token, se quiser"></div>
             ${lista([
