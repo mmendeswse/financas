@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.225";
+  const VERSAO_APP = "3.6.226";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1736,7 +1736,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.225" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.226" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -6497,6 +6497,28 @@
   // símbolo do Yahoo/brapi para um ativo da tabela do relatório (para o minigráfico de 3 meses)
   const SIMBOLO_RELATORIO = { "IBOVESPA": "^BVSP", "NASDAQ": "^IXIC" };
 
+  // com relatório ICL importado, a tabela da B3 mostra as ações do relatório:
+  // onde cada uma aparece, a variação que o relatório traz e a cotação de hoje
+  function tabelaRelatorioB3(r) {
+    const q = mercado.cotacoes, iso = dataFechamentoRelatorio(r);
+    const col = r.colunas.length ? r.colunas[0] : "relatório";
+    const linhas = acoesDoRelatorio(r).map((x) => {
+      const c = q[x.ticker + ".SA"];
+      let desde = null;
+      if (c && iso) { const base = [...c.historico].reverse().find((h) => h.data <= iso); if (base && base.preco > 0) desde = (c.preco / base.preco - 1) * 100; }
+      const chips = x.onde.map((o) => `<span class="term-chip${o === "Maiores altas" ? " c-up" : o === "Maiores quedas" ? " c-down" : o === "Análise" ? " c-acc" : ""}">${{ "Maiores altas": "ALTA", "Maiores quedas": "QUEDA", "Principais": "PRINCIPAL", "Análise": "ANÁLISE" }[o] || o}</span>`).join("");
+      const nome = c && c.nome && c.nome !== x.ticker ? `<small>${esc(c.nome)}</small>` : "";
+      const spark = c && c.historico && c.historico.length > 1 ? sparklineSVG(c.historico.map((h) => h.preco), (c.variacaoPct || 0) >= 0 ? G.CORES.up : G.CORES.down) : "";
+      const vazio = `<td class="r term-dim">${mercado.carregando ? "buscando…" : "—"}</td>`;
+      return `<tr ${c ? linkAtivo(x.ticker + ".SA") : ""}><td class="term-ativo">${x.ticker} ${chips}${nome}</td>
+        ${x.pct == null ? '<td class="r term-dim">—</td>' : celVar(x.pct, 3)}
+        ${c ? `<td class="r t-preco">${brl(c.preco)}</td>` : vazio}${c ? celVar(c.variacaoPct, 2) : vazio}${desde == null ? vazio : celVar(desde, 5)}<td class="term-spark">${spark}</td></tr>`;
+    }).join("");
+    return `<div class="term-painel"><div class="term-cab">B3 · AÇÕES DO RELATÓRIO ICL · FECHAMENTO ${esc(col)}</div><div class="term-rolar"><table class="term-tab">
+      <thead><tr><th>Papel</th><th class="r">${esc(col)}</th><th class="r">Último</th><th class="r">Hoje</th><th class="r">Desde ${esc(col)}</th><th>3M</th></tr></thead>
+      <tbody>${linhas}</tbody></table></div></div>`;
+  }
+
   function painelRelatorio() {
     const r = DADOS.relatorioMercado;
     // sem relatório importado os painéis do relatório não aparecem
@@ -6530,22 +6552,6 @@
     const caixas = r.indicadores.map((i) => `<div class="term-caixa"><span>${esc(i.nome.replace(/\s*\(TAXA ANO\)/i, " (a.a.)"))}</span><b class="${/IPCA/i.test(i.nome) ? (i.valor > 0 ? "t-down" : "t-up") : "t-up"}">${tPct(i.valor).replace("+", "")}</b></div>`).join("");
     const juros = caixas ? `<div class="term-painel tp-juros"><div class="term-cab">CDI · IPCA</div><div class="term-caixas">${caixas}</div></div>` : "";
 
-    // (4) ações citadas: o número do relatório e a cotação de hoje
-    const acoes = acoesDoRelatorio(r);
-    const linhasAcoes = acoes.map((x) => {
-      const c = q[x.ticker + ".SA"];
-      let desde = null;
-      if (c && iso) { const base = [...c.historico].reverse().find((h) => h.data <= iso); if (base && base.preco > 0) desde = (c.preco / base.preco - 1) * 100; }
-      const onde = x.onde.map((o) => `<span class="term-chip${o === "Maiores altas" ? " c-up" : o === "Maiores quedas" ? " c-down" : o === "Análise" ? " c-acc" : ""}">${o}</span>`).join("");
-      return `<tr ${c ? linkAtivo(x.ticker + ".SA") : ""}><td class="term-ativo">${x.ticker}${c && c.nome && c.nome !== x.ticker ? `<small>${esc(c.nome)}</small>` : ""}</td><td>${onde}</td>
-        ${x.pct == null ? '<td class="r term-dim">—</td>' : celVar(x.pct, 3)}
-        <td class="r t-preco">${c ? brl(c.preco) : '<span class="term-dim">' + (mercado.carregando ? "buscando…" : "—") + "</span>"}</td>
-        ${c ? celVar(c.variacaoPct, 3) : '<td class="r term-dim">—</td>'}${desde == null ? '<td class="r term-dim">—</td>' : celVar(desde, 5)}</tr>`;
-    }).join("");
-    const tabAcoes = `<div class="term-painel tp-acoes"><div class="term-cab">AÇÕES DO RELATÓRIO · COTAÇÃO DE HOJE</div>
-      <div class="term-rolar"><table class="term-tab"><thead><tr><th>Papel</th><th>Onde aparece</th><th class="r">No relatório</th><th class="r">Último</th><th class="r">Hoje</th><th class="r">Desde ${esc(col[0])}</th></tr></thead>
-      <tbody>${linhasAcoes}</tbody></table></div></div>`;
-
     // (5) resumo e (6) análises (abre e fecha em cada título)
     const resumo = r.resumo ? `<div class="term-painel tp-resumo"><div class="term-cab">RESUMO DO DIA</div><p class="term-texto">${esc(r.resumo)}</p></div>` : "";
     const analises = r.noticias.length ? `<div class="term-painel tp-analises"><div class="term-cab">ANÁLISES · ${r.noticias.length}</div>${r.noticias.map((n) => `
@@ -6554,7 +6560,7 @@
         return `<em class="term-chip c-acc">${t}${c ? ` <b class="${corMov(c.variacaoPct)}">${tPct(c.variacaoPct)}</b>` : ""}</em>`;
       }).join("")}</summary>${n.paragrafos.map((p) => `<p>${esc(p)}</p>`).join("")}</details>`).join("")}</div>` : "";
 
-    return `${cot}${movers}${juros}${tabAcoes}${resumo}${analises}`;
+    return `${cot}${movers}${juros}${resumo}${analises}`;
   }
 
   // ativo da tabela do relatório pelo nome ("NASDAQ", "SP500"…)
@@ -6664,7 +6670,7 @@
       <p class="term-nota">Cotações com atraso de até 15 minutos · Yahoo Finance, Stooq e brapi.dev · notícias do Google Notícias · não é recomendação de investimento.</p></div>`;
 
     return `<section class="term term-nasdaq">${board}
-      <div class="term-grade term-grade-meio">${tabela("NASDAQ · MAIORES EMPRESAS · US$", MERCADO_EUA, "", usd)}${tabela("B3 · MAIORES DO IBOVESPA · R$", MERCADO_BR, ".SA", brl)}</div>
+      <div class="term-grade term-grade-meio">${tabela("NASDAQ · MAIORES EMPRESAS · US$", MERCADO_EUA, "", usd)}${r ? tabelaRelatorioB3(r) : tabela("B3 · MAIORES DO IBOVESPA · R$", MERCADO_BR, ".SA", brl)}</div>
       <div class="term-grade term-grade-um">${grafico}</div>
       <div class="term-grade term-grade-um">${noticias}</div>
       ${r ? `<div class="term-secao">RELATÓRIO ICL · ${esc(r.data)} · FECHAMENTO ${esc(r.fechamento.replace(/^DIA\s+/i, ""))}</div><div class="term-grade">${painelRelatorio()}</div>` : ""}
