@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.191";
+  const VERSAO_APP = "3.6.192";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1638,7 +1638,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.191" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.192" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -5110,7 +5110,7 @@
     abrirModal(`
       <h3>${x ? "Editar lançamento" : "Nova despesa"}</h3>
       <div class="par">
-        <div class="campo"><label for="f_data"><span id="rotuloData">${statusAtual === "Pago" ? "Data" : "Data de vencimento"}</span></label><input id="f_data" type="date" value="${dataAtual}"></div>
+        <div class="campo"><label for="f_data"><span id="rotuloData">Data</span></label><input id="f_data" type="date" value="${dataAtual}"></div>
         <div class="campo"><label for="f_valor">Valor</label>${campoMoeda("f_valor", x ? (previsao ? valorDoMes(x, previsao.data.slice(0, 7)) : x.valor) : "")}</div>
       </div>
       ${campoEmoji(EMOJIS_DESPESA, x && x.emoji, `<div class="campo"><label for="f_desc">Descrição</label><input id="f_desc" value="${x ? esc(x.descricao) : ""}" placeholder="Supermercado"></div>`)}
@@ -5137,13 +5137,8 @@
         ${x && !previsao ? `<button class="btn perigo" id="btnExcluir">Excluir</button>` : ""}
       </div>`);
 
-    // mostra ou esconde os campos de pagamento conforme o status
     const selStatus = document.getElementById("f_status");
     if (!x) setTimeout(() => statusSegueData("f_data", "f_status"), 0);   // nova: data futura começa como Prevista
-    selStatus.addEventListener("change", () => {
-      const pago = selStatus.value === "Pago";
-      document.getElementById("rotuloData").textContent = pago ? "Data" : "Data de vencimento";
-    });
 
     const mesDoFormD = x ? String(ehConta ? x.vencimento : x.data).slice(0, 7) : (mesDespesas || hojeISO().slice(0, 7));   // mês aberto na guia
     document.getElementById("modal").classList.add("modal-lanc");   // computador/iPad: janela mais larga, com os campos lado a lado
