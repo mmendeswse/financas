@@ -9,6 +9,7 @@
  *   buscarDolar()                 -> { valor, variacaoPct, atualizadoEm }
  *   buscarCripto()                -> { BTC: { valor, variacaoPct }, ETH: { valor, variacaoPct } }
  *   buscarCotacoes(tickers, token) -> { cotacoes: { PETR4: { preco, variacaoPct, nome } }, erros: { XPTO3: 'motivo' } }
+ *   buscarMercado(simbolos, token) -> índices e ações (EUA e Brasil) com 3 meses de histórico
  *
  * Dólar: AwesomeAPI (economia.awesomeapi.com.br) — gratuita, sem chave.
  * Ações: brapi.dev — gratuita; alguns limites exigem token (criado de
@@ -292,5 +293,67 @@
     });
   }
 
-  global.Cotacoes = { buscarDolar: buscarDolar, buscarCripto: buscarCripto, buscarSerieDolar: buscarSerieDolar, buscarSerieMoeda: buscarSerieMoeda, buscarCotacoes: buscarCotacoes, buscarSerieBCB: buscarSerieBCB, buscarNoticiasDia: buscarNoticiasDia, buscarNoticiasPeriodo: buscarNoticiasPeriodo };
+  // Visão de mercado (guia Nasdaq): índices e ações dos EUA e do Brasil.
+  // Yahoo Finance (gráfico diário de 3 meses, sem chave). O Yahoo nem sempre
+  // aceita chamada direta do navegador (CORS): se falhar, tenta pelos mesmos
+  // repassadores das notícias, começando pelo que funcionou da última vez.
+  //   buscarMercado(["^IXIC", "AAPL", "PETR4.SA"], token)
+  //     -> { cotacoes: { AAPL: { preco, variacaoPct, nome, moeda, historico: [{ data, preco }] } }, erros: { XPTO: 'motivo' } }
+  // Os papéis brasileiros (".SA" e o Ibovespa) vão primeiro à brapi, que o
+  // app já usa nas ações; o Yahoo fica de reserva.
+  var caminhoYahoo = 0;
+  function lerYahoo(simbolo) {
+    var url = "https://query1.finance.yahoo.com/v8/finance/chart/" + encodeURIComponent(simbolo) + "?range=3mo&interval=1d";
+    var caminhos = [
+      function () { return url; },
+      function () { return "https://api.allorigins.win/raw?url=" + encodeURIComponent(url); },
+      function () { return "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(url); }
+    ];
+    var ordem = [caminhoYahoo].concat([0, 1, 2].filter(function (x) { return x !== caminhoYahoo; }));
+    var tentar = function (k) {
+      if (k >= ordem.length) return Promise.reject(new Error("Yahoo Finance indisponível"));
+      return comTimeout(fetch(caminhos[ordem[k]](), { cache: "no-store" }).then(function (r) {
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.json();
+      }), 9000).then(function (j) {
+        var res = j && j.chart && j.chart.result && j.chart.result[0];
+        if (!res || !res.meta || !(Number(res.meta.regularMarketPrice) > 0)) throw new Error("sem preço na resposta");
+        caminhoYahoo = ordem[k];
+        var m = res.meta, q = (res.indicators && res.indicators.quote && res.indicators.quote[0]) || {};
+        var historico = (res.timestamp || []).map(function (t, i) {
+          var dt = new Date((Number(t) + Number(m.gmtoffset || 0)) * 1000);
+          return { data: dt.toISOString().slice(0, 10), preco: Number((q.close || [])[i]) };
+        }).filter(function (h) { return h.preco > 0; });
+        var preco = Number(m.regularMarketPrice);
+        // o fechamento anterior de verdade é o penúltimo ponto da série
+        // (chartPreviousClose é o fechamento de antes do início do gráfico)
+        var ult = historico.length && historico[historico.length - 1];
+        var hoje = new Date((Number(m.regularMarketTime || 0) + Number(m.gmtoffset || 0)) * 1000).toISOString().slice(0, 10);
+        if (ult && ult.data === hoje) ult.preco = preco;
+        else if (Number(m.regularMarketTime) > 0) historico.push({ data: hoje, preco: preco });
+        var ant = historico.length > 1 ? historico[historico.length - 2].preco : Number(m.previousClose || m.chartPreviousClose);
+        return { preco: preco, variacaoPct: ant > 0 ? (preco / ant - 1) * 100 : 0, nome: m.longName || m.shortName || "", moeda: m.currency || "", historico: historico };
+      }).catch(function () { return tentar(k + 1); });
+    };
+    return tentar(0);
+  }
+  function buscarMercado(simbolos, token) {
+    var cotacoes = {}, erros = {};
+    var umSimbolo = function (s) {
+      var br = /\.SA$/.test(s) || s === "^BVSP";
+      var p = br
+        ? buscarUm(s.replace(/\.SA$/, ""), token).then(function (r) {
+            return { preco: r.preco, variacaoPct: r.variacaoPct, nome: r.nome, moeda: "BRL", historico: r.historico.map(function (h) { return { data: h.data, preco: h.preco }; }) };
+          }).then(function (r) { if (r.historico.length < 2) throw new Error("sem histórico"); return r; })
+            .catch(function () { return lerYahoo(s); })
+        : lerYahoo(s);
+      return p.then(function (r) { cotacoes[s] = r; }, function (e) { erros[s] = e.message || "falhou"; });
+    };
+    // três de cada vez: os serviços gratuitos limitam pedidos por segundo
+    var fila = simbolos.slice();
+    var trabalhador = function () { var s = fila.shift(); return s ? umSimbolo(s).then(trabalhador) : Promise.resolve(); };
+    return Promise.all([trabalhador(), trabalhador(), trabalhador()]).then(function () { return { cotacoes: cotacoes, erros: erros }; });
+  }
+
+  global.Cotacoes = { buscarDolar: buscarDolar, buscarCripto: buscarCripto, buscarSerieDolar: buscarSerieDolar, buscarSerieMoeda: buscarSerieMoeda, buscarCotacoes: buscarCotacoes, buscarSerieBCB: buscarSerieBCB, buscarNoticiasDia: buscarNoticiasDia, buscarNoticiasPeriodo: buscarNoticiasPeriodo, buscarMercado: buscarMercado };
 })(window);

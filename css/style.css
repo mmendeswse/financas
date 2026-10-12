@@ -2070,3 +2070,11 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 .rodape-app { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
 .toast { bottom: calc(26px + env(safe-area-inset-bottom, 0px)); }
 .modal { max-height: calc(88vh - env(safe-area-inset-bottom, 0px)); }
+
+/* guia Nasdaq — relatório de mercado */
+table.terminal.tab-mercado { min-width: 0; }
+table.terminal.tab-mercado tbody tr { cursor: default; }
+table.terminal.tab-mercado td.papel small { display: block; margin-left: 0; color: var(--dim); font-weight: 600; font-size: 10.5px; }
+.relatorio-mercado { margin: 0; padding: 12px 16px 4px 32px; display: flex; flex-direction: column; gap: 9px; font-size: 13px; line-height: 1.5; color: #D7DEEA; }
+.relatorio-mercado b { color: #FFFFFF; }
+.nota-mercado { margin: 6px 16px 14px; font-size: 11px; }
