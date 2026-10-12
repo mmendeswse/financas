@@ -2050,3 +2050,12 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 .pg-valores { display: inline-flex; align-items: baseline; gap: 6px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .pg-valores .pg-antes { font-weight: 500; text-align: right; }
 .pg-valores .pg-depois { text-align: right; }
+
+/* campos de número inteiro com setas para cima e para baixo (como as das listas) */
+.campo-setas { position: relative; }
+.campo-setas input { padding-right: 34px; -moz-appearance: textfield; appearance: textfield; }
+.campo-setas input::-webkit-outer-spin-button, .campo-setas input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.setas-num { position: absolute; top: 3px; bottom: 3px; right: 3px; width: 26px; display: flex; flex-direction: column; }
+.setas-num button { flex: 1; display: flex; align-items: center; justify-content: center; padding: 0; border: 0; border-radius: 5px; background: transparent; color: var(--dim); cursor: pointer; }
+.setas-num button:hover, .setas-num button:active { color: var(--cy); background: rgba(63,193,224,.1); }
+.setas-num svg { width: 13px; height: 13px; }

@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.193";
+  const VERSAO_APP = "3.6.195";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1222,12 +1222,41 @@
     m.className = "modal on" + (largo ? " largo" : "");
     m.style.width = "";   // a largura ajustada de um histórico não passa para o próximo quadro
     m.innerHTML = html;
+    ligarSetasNumero(m);
     document.getElementById("scrim").classList.add("on");
     const primeiro = m.querySelector("input, select, textarea");
     if (primeiro) setTimeout(() => primeiro.focus(), 30);
     ajustarComoCalcula(m);
     ajustarDescricoesPainel(m);
     alinharValoresPainel(m);
+  }
+  // Campos de número inteiro (dia do mês, dia útil, parcelas…): setas para
+  // cima e para baixo dentro do campo, como as das listas — a de cima soma 1,
+  // a de baixo tira 1, sem passar do mínimo/máximo. Num campo que aceita
+  // vazio (Parcelas: min 0), descer até 0 volta a deixar vazio.
+  const SETA_CIMA = '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 7.5L6 4.5l3 3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const SETA_BAIXO = '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5L6 7.5l3-3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  function ligarSetasNumero(raiz) {
+    raiz.querySelectorAll('input[type="number"][min][max]:not([step])').forEach((inp) => {
+      if (inp.parentNode.classList.contains("campo-setas")) return;
+      const caixa = document.createElement("div");
+      caixa.className = "campo-setas";
+      inp.parentNode.insertBefore(caixa, inp);
+      caixa.appendChild(inp);
+      caixa.insertAdjacentHTML("beforeend", `<span class="setas-num"><button type="button" tabindex="-1" data-passo="1" aria-label="Aumentar">${SETA_CIMA}</button><button type="button" tabindex="-1" data-passo="-1" aria-label="Diminuir">${SETA_BAIXO}</button></span>`);
+      caixa.querySelectorAll("[data-passo]").forEach((bt) => {
+        bt.onmousedown = (e) => e.preventDefault();   // não tira o foco nem abre o teclado
+        bt.onclick = (e) => {
+          e.preventDefault(); e.stopPropagation();
+          const min = Number(inp.min), max = Number(inp.max), passo = Number(bt.dataset.passo);
+          const atual = inp.value === "" ? (passo > 0 ? Math.max(min, 0) : min) : Math.round(Number(inp.value) || 0);
+          const novo = Math.min(max, Math.max(min, atual + passo));
+          inp.value = min <= 0 && novo <= 0 ? "" : String(novo);
+          inp.dispatchEvent(new Event("input", { bubbles: true }));
+          inp.dispatchEvent(new Event("change", { bubbles: true }));
+        };
+      });
+    });
   }
   // nome do lançamento e "Categoria · Tipo" na mesma linha: o quadro fica mais
   // largo o quanto for preciso (até o limite da tela); se não couber, quebra linha
@@ -1638,7 +1667,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.193" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.195" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -4691,7 +4720,7 @@
         </div>
         <div class="par">
           <div class="campo"><label for="p_intervalo">Repetir</label><select id="p_intervalo">${op([[1, "Todo mês"], [2, "A cada 2 meses"], [3, "A cada 3 meses"], [6, "A cada 6 meses"], [12, "Uma vez por ano"]], r.intervalo)}</select></div>
-          <div class="campo"><label for="p_parcelas">Parcelas</label><input id="p_parcelas" type="number" min="0" max="600" inputmode="numeric" placeholder="Vazio = sem fim" title="Deixe vazio para repetir sem data para acabar" value="${Number(r.parcelas) > 0 ? r.parcelas : ""}" data-primeira="${esc(r.primeiraParcela || "")}"></div>
+          <div class="campo"><label for="p_parcelas">Parcelas</label><input id="p_parcelas" type="number" min="0" max="600" inputmode="numeric" placeholder="Ilimitado" title="Deixe vazio para repetir sem data para acabar" value="${Number(r.parcelas) > 0 ? r.parcelas : ""}" data-primeira="${esc(r.primeiraParcela || "")}"></div>
         </div>
         <div class="ajuda" id="p_previa"></div>
       </div>`;
