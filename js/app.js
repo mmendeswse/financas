@@ -149,8 +149,10 @@
     return n > 0 ? ` <span class="selo-tag selo-cat" title="Parcela ${n} de ${regra.parcelas}">Parcela ${dd(n)}/${dd(regra.parcelas)}</span>` : "";
   }
   // selo extra quando, na regra de dia útil, contando também os sábados, o dia cai num sábado
+  // (só para entradas — em despesas e contas a pagar o aviso não interessa)
   function seloSabado(reg) {
     if (!ehPers(reg) || !dataReg(reg)) return "";
+    if (reg.id && !(DADOS.entradas || []).some((e) => e.id === reg.id)) return "";
     const regra = regraDe(reg);
     if (regra.tipo !== "diaUtil") return "";
     const [a, m] = dataReg(reg).split("-").map(Number);
@@ -5119,7 +5121,7 @@
       corpo = `<div class="hd" style="${gridD}">${thOrdem("ordenar-despesas", "data", "Data", ordemDespesas)}${thOrdem("ordenar-despesas", "descricao", "Descrição", ordemDespesas)}<i>Recorrência</i>${thOrdem("ordenar-despesas", "status", "Status", ordemDespesas)}${thOrdem("ordenar-despesas", "pagoCom", "Banco", ordemDespesas)}${thOrdem("ordenar-despesas", "valor", "Valor", ordemDespesas, "hd-valor")}</div>` +
         listaTabela.map((x) => `
         <div class="rw clicavel${x.prevista ? " linha-prevista" : ""}" style="${gridD}" data-acao="${x.prevista ? (x.origem === "conta" ? "editar-previsao-conta" : "editar-previsao") : (x.origem === "despesa" ? "editar-despesa" : "editar-conta")}" data-id="${x.id}" data-data="${x.data}" title="${x.prevista ? "Abre este mês para edição (o valor muda só aqui)" : "Abrir para editar"}">
-          <div class="dim cel-data" style="font-size:12px">${fmtData(x.data)}${seloSabado({ ...(registrosSerie("despesa").find((y) => y.id === x.id) || {}), data: x.data })}</div>
+          <div class="dim cel-data" style="font-size:12px">${fmtData(x.data)}</div>
           <div><div class="nm">${descEmoji(x)}</div><div class="sub">${esc(x.categoria || "—")} · ${esc(x.tipo || "Variável")}</div></div>
           <div class="cel-rep">${celRep(seloFreq({ ...(registrosSerie("despesa").find((y) => y.id === x.id) || {}), recorrencia: x.recorrencia, data: x.data }, true), true)}</div>
           <div>${x.prevista
