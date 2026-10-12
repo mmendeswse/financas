@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.250";
+  const VERSAO_APP = "3.6.251";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1740,7 +1740,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.250" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.251" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -6445,46 +6445,6 @@
   const fmtPontos = (v) => Number(v || 0).toLocaleString("pt-BR", { maximumFractionDigits: 0 });
   const usd = (v) => "US$ " + Number(v || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-  // o resumo escrito: cada frase sai dos números (fechamento, 1 e 3 meses,
-  // destaques do dia, quantas subiram, efeito do dólar)
-  function textoRelatorioMercado() {
-    const q = mercado.cotacoes, frases = [];
-    const sobeDesce = (v) => v > 0 ? "em alta de" : v < 0 ? "em queda de" : "estável,";
-    MERCADO_INDICES.forEach((ix) => {
-      const c = q[ix.s]; if (!c) return;
-      const v3 = variacaoSerie(c.historico, 90), v1 = variacaoSerie(c.historico, 30);
-      frases.push(`<b>${ix.nome}</b> fechou o último pregão ${sobeDesce(c.variacaoPct)} <b>${pctMercado(Math.abs(c.variacaoPct)).replace("+", "")}</b>, aos ${fmtPontos(c.preco)} pontos; ${pctMercado(v1)} em 1 mês e ${pctMercado(v3)} em 3 meses.`);
-    });
-    const nq = q["^IXIC"], ib = q["^BVSP"];
-    const n3 = nq && variacaoSerie(nq.historico, 90), i3 = ib && variacaoSerie(ib.historico, 90);
-    if (n3 != null && i3 != null) {
-      const melhor = n3 >= i3 ? ["a Nasdaq", "o Ibovespa"] : ["o Ibovespa", "a Nasdaq"];
-      frases.push(`Em 3 meses, ${melhor[0]} foi melhor que ${melhor[1]} (${pctMercado(Math.max(n3, i3))} contra ${pctMercado(Math.min(n3, i3))}).`);
-    }
-    const dol = mercado.dolar;
-    if (n3 != null && dol && dol.length > 1) {
-      const d3 = (dol[dol.length - 1].preco / dol[0].preco - 1) * 100;
-      const emReais = ((1 + n3 / 100) * (1 + d3 / 100) - 1) * 100;
-      frases.push(`O dólar variou ${pctMercado(d3)} no mesmo período: para quem investe a partir do Brasil, a Nasdaq em reais acumula <b>${pctMercado(emReais)}</b>.`);
-    }
-    const destaques = (lista, sufixo, rotulo) => {
-      const xs = lista.map(([t, nome]) => ({ t, nome, c: q[t + sufixo] })).filter((x) => x.c);
-      if (!xs.length) return;
-      const porDia = [...xs].sort((a, b) => b.c.variacaoPct - a.c.variacaoPct);
-      const subiram = xs.filter((x) => x.c.variacaoPct > 0).length;
-      const com3 = xs.map((x) => ({ ...x, v3: variacaoSerie(x.c.historico, 90) })).filter((x) => x.v3 != null).sort((a, b) => b.v3 - a.v3);
-      // "maior alta" só se alguma subiu, "maior queda" só se alguma caiu
-      const topo = porDia[0], fundo = porDia[porDia.length - 1];
-      const rotTopo = topo.c.variacaoPct > 0 ? "maior alta" : "menor queda", rotFundo = fundo.c.variacaoPct < 0 ? "maior queda" : "menor alta";
-      let f = `<b>${rotulo}:</b> ${subiram} de ${xs.length} ações subiram no dia. ${rotTopo[0].toUpperCase() + rotTopo.slice(1)}: ${topo.nome} (${pctMercado(topo.c.variacaoPct)}); ${rotFundo}: ${fundo.nome} (${pctMercado(fundo.c.variacaoPct)}).`;
-      if (com3.length > 1) f += ` Em 3 meses, a melhor é ${com3[0].nome} (${pctMercado(com3[0].v3)}) e a pior, ${com3[com3.length - 1].nome} (${pctMercado(com3[com3.length - 1].v3)}).`;
-      frases.push(f);
-    };
-    destaques(MERCADO_EUA, "", "Nasdaq");
-    destaques(MERCADO_BR, ".SA", "Bolsa brasileira");
-    return frases;
-  }
-
   function tabelaMercado(lista, sufixo, moeda) {
     const q = mercado.cotacoes;
     const linhas = lista.map(([t, nome]) => {
@@ -6864,7 +6824,6 @@
     </div>`;
 
     // gráfico e análise automática
-    const frases = tem ? textoRelatorioMercado() : [];
     const grafico = `<div class="term-painel"><div class="term-cab">NASDAQ × IBOVESPA · VARIAÇÃO EM 3 MESES</div>
       <div class="term-graf">${tem ? '<canvas id="graf-mercado-comp"></canvas>' : '<p class="term-texto term-dim">O gráfico aparece quando as cotações chegarem.</p>'}</div></div>`;
 
@@ -6885,8 +6844,7 @@
     const agoraMs = Date.now();
     const haQuanto = (iso) => { const m = Math.max(0, Math.round((agoraMs - new Date(iso).getTime()) / 60000)); return m < 60 ? `${m} min` : m < 1440 ? `${Math.floor(m / 60)} h` : `${Math.floor(m / 1440)} d`; };
     const lista = mercado.noticias || [];
-    // quadro dividido ao meio: metade de cima para as notícias e metade de baixo
-    // para a análise automática, cada uma com a sua rolagem
+    // quadro de notícias ao lado do gráfico (com rolagem própria)
     const noticias = `<div class="term-painel tp-noticias">
       <div class="tp-metade"><div class="term-cab">NOTÍCIAS DO MERCADO · NASDAQ E B3</div><div class="tp-rolar">
       ${lista.length ? `<div class="term-noticias">${lista.map((n) => `<a class="term-noticia" href="${esc(n.url)}" target="_blank" rel="noopener">
@@ -6894,10 +6852,7 @@
         <span class="tn-titulo">${esc(n.titulo)}</span><span class="tn-fonte">${esc(n.fonte || "")}</span></a>`).join("")}</div>`
         : `<p class="term-texto term-dim">${mercado.carregando || noticiasMercado.buscando ? "Buscando notícias…" : "Nenhuma notícia por enquanto — o app tenta de novo sozinho em instantes."}</p>`}
       </div></div>
-      <div class="tp-metade"><div class="term-cab">ANÁLISE AUTOMÁTICA · ${status.toUpperCase()}</div><div class="tp-rolar">
-      ${frases.length ? `<ul class="term-lista">${frases.map((f) => `<li>${f}</li>`).join("")}</ul>` : `<p class="term-texto term-dim">A análise aparece quando as cotações chegarem.</p>`}
-      <p class="term-nota">Cotações com atraso de até 15 minutos · Yahoo Finance, Stooq e brapi.dev · notícias do Google Notícias · não é recomendação de investimento.</p>
-      </div></div></div>`;
+      </div>`;
 
     // os quadros do relatório ICL (Índices, Moedas e Ouro, Renda Fixa…) vêm no início da guia
     return `${painelRelatorio("inicio")}<section class="term term-nasdaq">${board}
