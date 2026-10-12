@@ -2341,3 +2341,6 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
 .tp-metade .term-cab { position: static; flex: none; }
 .tp-rolar { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
 @media (max-width: 900px) { .term-grade-2 .tp-noticias { height: 640px; max-height: none; } }
+/* tabelas das bolsas com muitas ações: altura máxima, rolagem própria e cabeçalho fixo */
+.term-grade-meio .term-rolar { max-height: 620px; overflow: auto; }
+.term-grade-meio .term-tab thead th { position: sticky; top: 0; z-index: 1; background: #0B1018; }

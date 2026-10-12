@@ -365,22 +365,34 @@
     return tentar(0);
   }
 
-  function buscarMercado(simbolos, token) {
-    var cotacoes = {}, erros = {};
+  // aoChegar(simbolo, cotação) é chamado a cada ativo que chega, para a tela
+  // ir se preenchendo sem esperar a lista inteira. Uma fonte que falha três
+  // vezes seguidas é pulada no resto da rodada (não trava a busca).
+  function buscarMercado(simbolos, token, aoChegar) {
+    var cotacoes = {}, erros = {}, falhasYahoo = 0, falhasStooq = 0;
+    var yahoo = function (s) {
+      if (falhasYahoo >= 3) return Promise.reject(new Error("Yahoo indisponível"));
+      return lerYahoo(s).then(function (r) { falhasYahoo = 0; return r; }, function (e) { falhasYahoo++; throw e; });
+    };
+    var stooq = function (s) {
+      if (falhasStooq >= 3) return Promise.reject(new Error("Stooq indisponível"));
+      return lerStooq(s).then(function (r) { falhasStooq = 0; return r; }, function (e) { falhasStooq++; throw e; });
+    };
     var umSimbolo = function (s) {
       var br = /\.SA$/.test(s) || s === "^BVSP";
       var p = br
         ? buscarUm(s.replace(/\.SA$/, ""), token).then(function (r) {
             return { preco: r.preco, variacaoPct: r.variacaoPct, nome: r.nome, moeda: "BRL", historico: r.historico };
           }).then(function (r) { if (r.historico.length < 2) throw new Error("sem histórico"); return r; })
-            .catch(function () { return lerYahoo(s); })
-        : lerYahoo(s).catch(function () { return lerStooq(s); });
-      return p.then(function (r) { cotacoes[s] = r; }, function (e) { erros[s] = e.message || "falhou"; });
+            .catch(function () { return yahoo(s); })
+        : yahoo(s).catch(function () { return stooq(s); });
+      return p.then(function (r) { cotacoes[s] = r; if (aoChegar) { try { aoChegar(s, r); } catch (e) { /* tela */ } } },
+        function (e) { erros[s] = e.message || "falhou"; });
     };
-    // três de cada vez: os serviços gratuitos limitam pedidos por segundo
+    // quatro de cada vez: os serviços gratuitos limitam pedidos por segundo
     var fila = simbolos.slice();
     var trabalhador = function () { var s = fila.shift(); return s ? umSimbolo(s).then(trabalhador) : Promise.resolve(); };
-    return Promise.all([trabalhador(), trabalhador(), trabalhador()]).then(function () { return { cotacoes: cotacoes, erros: erros }; });
+    return Promise.all([trabalhador(), trabalhador(), trabalhador(), trabalhador()]).then(function () { return { cotacoes: cotacoes, erros: erros }; });
   }
 
   global.Cotacoes = { buscarDolar: buscarDolar, buscarCripto: buscarCripto, buscarSerieDolar: buscarSerieDolar, buscarSerieMoeda: buscarSerieMoeda, buscarCotacoes: buscarCotacoes, buscarSerieBCB: buscarSerieBCB, buscarNoticiasDia: buscarNoticiasDia, buscarNoticiasPeriodo: buscarNoticiasPeriodo, buscarMercado: buscarMercado };
