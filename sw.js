@@ -1,12 +1,12 @@
 /* Service worker — deixa o app abrir sem internet no iPad/iPhone.
    Arquivos do app: cache primeiro. Cotações (APIs): sempre rede. */
-const CACHE = "muller-mendes-v458";
+const CACHE = "muller-mendes-v459";
 const ARQUIVOS = [
-  "./", "./index.html", "./css/style.css?v=3.6.239", "./manifest.json", "./manifest.webmanifest",
+  "./", "./index.html", "./css/style.css?v=3.6.240", "./manifest.json", "./manifest.webmanifest",
   "./js/vendor/chart.umd.min.js",
-  "./js/bloqueio.js?v=3.6.239", "./js/armazenamento.js?v=3.6.239", "./js/financeiro.js?v=3.6.239", "./js/investimentos.js?v=3.6.239",
-  "./js/graficos.js?v=3.6.239", "./js/extrato.js?v=3.6.239", "./js/relatorio.js?v=3.6.239", "./js/vendor/pdf.min.js", "./js/vendor/pdf.worker.min.js", "./js/cotacoes.js?v=3.6.239", "./js/sincronizacao.js?v=3.6.239", "./js/emojis.js?v=3.6.239", "./js/app.js?v=3.6.239",
-  "./assets/icons/bancos/nubank.svg?v=3.6.239", "./assets/icons/bancos/itau.svg?v=3.6.239", "./assets/icons/bancos/inter.svg?v=3.6.239", "./assets/icons/bancos/banco-do-brasil.svg?v=3.6.239", "./assets/icons/bancos/caixa.svg?v=3.6.239", "./assets/icons/bancos/mercado-pago.svg?v=3.6.239",
+  "./js/bloqueio.js?v=3.6.240", "./js/armazenamento.js?v=3.6.240", "./js/financeiro.js?v=3.6.240", "./js/investimentos.js?v=3.6.240",
+  "./js/graficos.js?v=3.6.240", "./js/extrato.js?v=3.6.240", "./js/relatorio.js?v=3.6.240", "./js/vendor/pdf.min.js", "./js/vendor/pdf.worker.min.js", "./js/cotacoes.js?v=3.6.240", "./js/sincronizacao.js?v=3.6.240", "./js/emojis.js?v=3.6.240", "./js/app.js?v=3.6.240",
+  "./assets/icons/bancos/nubank.svg?v=3.6.240", "./assets/icons/bancos/itau.svg?v=3.6.240", "./assets/icons/bancos/inter.svg?v=3.6.240", "./assets/icons/bancos/banco-do-brasil.svg?v=3.6.240", "./assets/icons/bancos/caixa.svg?v=3.6.240", "./assets/icons/bancos/mercado-pago.svg?v=3.6.240",
   "./assets/icons/icon-192.png", "./assets/icons/icon-512.png",
   "./apple-touch-icon.png", "./apple-touch-icon-180.png", "./apple-touch-icon-167.png", "./apple-touch-icon-152.png", "./apple-touch-icon-precomposed.png"
 ];
@@ -18,8 +18,8 @@ self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
   if (url.origin !== location.origin) return; // APIs de cotação: rede normal
   const ehPagina = e.request.mode === "navigate" || (e.request.destination === "document");
-  if (ehPagina) { // página: rede primeiro (cai no cache se estiver offline)
-    e.respondWith(fetch(e.request).then((resp) => { const cp = resp.clone(); caches.open(CACHE).then((c) => c.put(e.request, cp)); return resp; }).catch(() => caches.match(e.request).then((r) => r || caches.match("./index.html"))));
+  if (ehPagina) { // página: rede primeiro, sem o cache HTTP (cai no cache do app se estiver offline)
+    e.respondWith(fetch(e.request.url, { cache: "no-store", credentials: "same-origin" }).then((resp) => { const cp = resp.clone(); caches.open(CACHE).then((c) => c.put(e.request, cp)); return resp; }).catch(() => caches.match(e.request).then((r) => r || caches.match("./index.html"))));
     return;
   }
   e.respondWith(caches.match(e.request).then((r) => r || fetch(e.request).then((resp) => { const cp = resp.clone(); caches.open(CACHE).then((c) => c.put(e.request, cp)); return resp; })));
