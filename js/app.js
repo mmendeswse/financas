@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.216";
+  const VERSAO_APP = "3.6.219";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1425,13 +1425,13 @@
     const qui = new Date(hojeZero); qui.setDate(qui.getDate() + 3 - ((qui.getDay() + 6) % 7));
     const semana = 1 + Math.round(((qui - new Date(qui.getFullYear(), 0, 4)) / 864e5 - 3 + ((new Date(qui.getFullYear(), 0, 4).getDay() + 6) % 7)) / 7);
     const fer = feriado(agora);
-    const tipoDia = fer ? `Feriado nacional · ${fer}` : util(agora) ? "Dia útil" : "Fim de semana";
+    const tipoDia = fer ? `Feriado · ${fer}` : util(agora) ? "Dia útil" : "Fim de semana";
     const prox = new Date(hojeZero); do { prox.setDate(prox.getDate() + 1); } while (!util(prox));
     const min = agora.getHours() * 60 + agora.getMinutes();
     const aberto = util(agora) && min >= 9 * 60 && min < 18 * 60;
     const proxTxt = prox.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "2-digit" });
     const ultimoMes = new Date(ano, agora.getMonth() + 1, 0).getDate();
-    const linha = (r, v) => `<div class="pd-linha"><span>${r}</span><b>${v}</b></div>`;
+    const linha = (r, v) => `<div class="pd-linha"><span>${r}</span><b title="${esc(v.replace(/<[^>]+>/g, ""))}">${v}</b></div>`;
     el.innerHTML = `
       <div class="pd-topo">
         <div class="pd-semana">${agora.toLocaleDateString("pt-BR", { weekday: "long" })}</div>
@@ -1439,7 +1439,7 @@
         <div class="pd-hora">${agora.toLocaleTimeString("pt-BR")}</div>
       </div>
       ${linha("Hoje", tipoDia)}
-      ${linha("Mercado", aberto ? '<span class="up">● Aberto</span> até 18h' : '<span class="down">● Fechado</span> · abre nos dias úteis às 9h')}
+      ${linha("Mercado", aberto ? '<span class="up">● Aberto</span> · até 18h' : '<span class="down">● Fechado</span> · abre às 9h')}
       ${linha("Próximo dia útil", proxTxt.charAt(0).toUpperCase() + proxTxt.slice(1))}
       ${linha("Semana do ano", `${semana}ª`)}
       ${linha("Dia do ano", `${diaAno} de ${diasAno} · faltam ${diasAno - diaAno}`)}
@@ -1732,7 +1732,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.216" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.219" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -6488,10 +6488,8 @@
     const r = DADOS.relatorioMercado;
     const btnImp = `<button class="term-btn" data-acao="importar-relatorio" title="Escolher o PDF do relatório ICL">⇪ Importar ICL</button>`;
     const relogio = `<span class="term-relogio" id="termRelogio">${new Date().toLocaleTimeString("pt-BR")}</span>`;
-    if (!r) {
-      return `<section class="term"><div class="term-topo"><span class="term-marca">RELATÓRIO DIÁRIO</span><span class="term-dim">nenhum relatório importado</span><span class="term-esp"></span>${relogio}${btnImp}</div>
-        <div class="term-vazio">Toque em Importar ICL e escolha o PDF do relatório do Instituto Conhecimento Liberta para ver aqui as cotações, as maiores altas e quedas, juros, inflação, o resumo do dia e as análises de empresas — com a cotação de hoje de cada ação citada.<br>O arquivo é lido no próprio aparelho.</div></section>`;
-    }
+    // sem relatório importado o painel não aparece (importa-se em Configurações → Importar ICL)
+    if (!r) return "";
     const q = mercado.cotacoes, iso = dataFechamentoRelatorio(r);
     const col = r.colunas.length ? r.colunas : ["Últ.", "Ant."];
 
