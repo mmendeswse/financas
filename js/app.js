@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.247";
+  const VERSAO_APP = "3.6.248";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1740,7 +1740,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.247" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.248" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -6836,17 +6836,31 @@
         <span class="tq-var ${corMov(varDia)}">${tPct(varDia)} ${setaMov(varDia)}</span>
         <span class="tq-sub">${sub}</span>${spark ? `<span class="tq-spark">${spark}</span>` : ""}</div>`;
     };
+    // CDI e IPCA do relatório ICL (taxa principal grande e as acumuladas embaixo);
+    // no IPCA, inflação subindo aparece em vermelho
+    const taxaRel = (re) => { const i = r && r.indicadores.find((x) => re.test(x.nome)); return i ? i.valor : null; };
+    const fTaxa = (v) => v == null ? "—" : `${v < 0 ? "−" : ""}${Math.abs(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
+    const caixaTaxa = (nome, rePrincipal, extras, inflacao) => {
+      const v = taxaRel(rePrincipal);
+      if (v == null) return `<div class="term-quote"><span class="tq-nome">${nome}</span><b class="tq-preco term-dim">—</b><span class="tq-sub term-dim">importe o relatório ICL</span></div>`;
+      const cor = (x) => x == null ? "" : inflacao ? (x > 0 ? "t-down" : "t-up") : "t-up";
+      const [e1, e2] = extras.map(([rot, re]) => [rot, taxaRel(re)]);
+      return `<div class="term-quote"><span class="tq-nome">${nome}<em>${rotRel}</em></span>
+        <b class="tq-preco ${cor(v)}">${fTaxa(v)}${inflacao ? "" : ' <small class="tq-aa">a.a.</small>'}</b>
+        <span class="tq-var ${cor(e1[1])}">${e1[0]} ${fTaxa(e1[1])}</span>
+        <span class="tq-sub">${e2[0]} ${fTaxa(e2[1])}</span></div>`;
+    };
     const pts = (v) => fmtPontos(v);
     const moeda2 = (v) => Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const comSimbolo = (sim) => q[sim] ? { ...q[sim], simbolo: sim } : null;
     const dolarVivo = dolar && dolar.valor ? { preco: dolar.valor, variacaoPct: dolar.variacaoPct || 0, historico: mercado.dolar || [], simbolo: "dolar" } : null;
     const board = `<div class="term-board">
       ${caixa("NASDAQ COMPOSITE", comSimbolo("^IXIC"), ativoRelatorio("NASDAQ"), pts)}
-      ${caixa("NASDAQ-100", comSimbolo("^NDX"), null, pts)}
+      ${caixaTaxa("CDI", /CDI EFETIVO/i, [["MÊS", /CDI ACUMULADO M/i], ["ANO", /CDI ACUMULADO ANO/i]], false)}
       ${caixa("S&amp;P 500", comSimbolo("^GSPC"), ativoRelatorio("SP500"), pts)}
       ${caixa("IBOVESPA", comSimbolo("^BVSP"), ativoRelatorio("IBOVESPA"), pts)}
       ${caixa("DÓLAR / REAL", dolarVivo, ativoRelatorio("DÓLAR / REAL"), (v) => "R$ " + moeda2(v))}
-      ${caixa("PETRÓLEO BRENT", null, ativoRelatorio("PETRÓLEO BRENT"), (v) => "US$ " + moeda2(v))}
+      ${caixaTaxa("IPCA 12 MESES", /IPCA ACUMULADO EM 12/i, [["MÊS", /IPCA ACUMULADO M/i], ["ANO", /IPCA ACUMULADO NO ANO/i]], true)}
     </div>`;
 
     // gráfico e análise automática
