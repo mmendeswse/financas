@@ -2035,6 +2035,15 @@ button.pill-periodo:hover { filter: brightness(1.25); }
   .modal.modal-lanc .campo-emoji .emoji-atual { height: 38px; }
   .modal.modal-lanc .bloco-personalizar { padding: 10px 10px 2px; margin: 0 0 10px; }
   .modal.modal-lanc .bloco-personalizar .campo { margin-bottom: 8px; }
+  /* com o campo Enviar ao lado da Observação: um pouco mais justo para caber no iPad */
+  .modal.modal-lanc { padding-top: 12px; padding-bottom: 12px; }
+  .modal.modal-lanc h3 { margin-bottom: 8px; }
+  .modal.modal-lanc .campo { margin-bottom: 8px; }
+  .modal.modal-lanc .campo label { margin-bottom: 3px; }
+  .modal.modal-lanc .campo input, .modal.modal-lanc .campo select { padding-top: 7px; padding-bottom: 7px; }
+  .modal.modal-lanc textarea { min-height: 36px; height: 36px; padding-top: 7px; padding-bottom: 7px; }
+  .modal.modal-lanc .ajuda { margin-top: 2px; }
+  .modal.modal-lanc .modal-acoes { margin-top: 8px; }
 }
 
 /* janela "Pagar com qual banco?": saldo antes → depois alinhado em colunas */
