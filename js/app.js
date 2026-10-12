@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.230";
+  const VERSAO_APP = "3.6.231";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1736,7 +1736,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.230" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.231" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -6497,6 +6497,103 @@
   // símbolo do Yahoo/brapi para um ativo da tabela do relatório (para o minigráfico de 3 meses)
   const SIMBOLO_RELATORIO = { "IBOVESPA": "^BVSP", "NASDAQ": "^IXIC" };
 
+  // ---------------------------------------------------------------------
+  // Triagem automática para sugerir ações (guia Bolsa). Cada ação ganha uma
+  // nota de 0 a 100, somando sinais simples e explicáveis:
+  //   tendência (preço acima das médias de 20 e 50 pregões), momento (1 e 3
+  //   meses), risco (volatilidade e distância da máxima de 3 meses),
+  //   relatório ICL (maiores altas/quedas, citação nas análises) e o tom das
+  //   notícias que citam a empresa (palavras positivas e negativas).
+  // É uma triagem de números, não uma recomendação de investimento.
+  // ---------------------------------------------------------------------
+  const PALAVRAS_POS = ["alta", "sobe", "subiu", "dispara", "avança", "lucro", "recorde", "supera", "eleva", "dividendo", "compra", "otimis", "cresce", "expansão", "aprova", "ganha", "valoriza", "melhora", "positiv"];
+  const PALAVRAS_NEG = ["queda", "cai ", "caiu", "recua", "despenca", "prejuízo", "rebaix", "crise", "dívida", "recuperação judicial", "perde", "multa", "investiga", "processo", "pessimis", "risco", "corta", "negativ", "impasse", "rescind"];
+  function tomTexto(txt) {
+    const t = " " + String(txt || "").toLowerCase() + " ";
+    let p = 0; PALAVRAS_POS.forEach((w) => { if (t.includes(w)) p++; }); PALAVRAS_NEG.forEach((w) => { if (t.includes(w)) p--; });
+    return p;
+  }
+  function triagemAtivos() {
+    const q = mercado.cotacoes, r = DADOS.relatorioMercado, res = new Map();
+    const relAcoes = new Map(acoesDoRelatorio(r).map((x) => [x.ticker, x]));
+    const candidatos = [...MERCADO_EUA.map(([t, n]) => ({ t, nome: n, sim: t, moeda: "USD" })), ...MERCADO_BR.map(([t, n]) => ({ t, nome: n, sim: t + ".SA", moeda: "BRL" }))];
+    relAcoes.forEach((x, t) => { if (!candidatos.some((c) => c.t === t)) candidatos.push({ t, nome: "", sim: t + ".SA", moeda: "BRL" }); });
+    const noticias = mercado.noticias || [];
+    const media = (xs) => xs.reduce((a, b) => a + b, 0) / (xs.length || 1);
+    candidatos.forEach((c) => {
+      const cot = q[c.sim]; if (!cot) return;
+      const nome = c.nome || (cot.nome && cot.nome !== c.t ? cot.nome : c.t);
+      const h = (cot.historico || []).map((x) => x.preco).filter((v) => v > 0);
+      let nota = 50; const motivos = [];
+      const mot = (txt, pts) => { nota += pts; motivos.push({ txt, pos: pts > 0 }); };
+      // tendência
+      if (h.length >= 20) {
+        const m20 = media(h.slice(-20)), m50 = media(h.slice(-Math.min(50, h.length)));
+        if (cot.preco > m20 && m20 > m50) mot("tendência de alta (acima das médias)", 12);
+        else if (cot.preco < m20 && m20 < m50) mot("tendência de baixa (abaixo das médias)", -12);
+      }
+      // momento
+      const v1 = variacaoSerie(cot.historico, 30), v3 = variacaoSerie(cot.historico, 90);
+      if (v3 != null) { const pts = Math.max(-12, Math.min(12, v3 * 0.6)); if (Math.abs(pts) >= 2) mot(`3 meses ${pctMercado(v3)}`, Math.round(pts)); }
+      if (v1 != null) { const pts = Math.max(-8, Math.min(8, v1 * 0.8)); if (Math.abs(pts) >= 2) mot(`1 mês ${pctMercado(v1)}`, Math.round(pts)); }
+      // risco: volatilidade diária e distância da máxima de 3 meses
+      if (h.length >= 20) {
+        const rets = h.slice(1).map((v, i) => v / h[i] - 1), mr = media(rets);
+        const vol = Math.sqrt(media(rets.map((x) => (x - mr) ** 2))) * 100;
+        if (vol > 3) mot(`volatilidade alta (${vol.toFixed(1).replace(".", ",")}% ao dia)`, -8);
+        else if (vol < 1.5) mot("volatilidade baixa", 4);
+        const dd = (cot.preco / Math.max(...h) - 1) * 100;
+        if (dd < -15) mot(`${pctMercado(dd)} abaixo da máxima de 3 meses`, -6);
+        else if (dd > -3) mot("perto da máxima de 3 meses", 3);
+      }
+      // relatório ICL
+      const rel = relAcoes.get(c.t);
+      if (rel) {
+        if (rel.onde.includes("Maiores altas")) mot("entre as maiores altas do relatório ICL", 5);
+        if (rel.onde.includes("Maiores quedas")) mot("entre as maiores quedas do relatório ICL", -5);
+        if (rel.onde.includes("Análise") && r) {
+          const txt = r.noticias.filter((n) => n.tickers.includes(c.t)).map((n) => n.titulo + " " + n.paragrafos.join(" ")).join(" ");
+          const tom = tomTexto(txt);
+          if (tom >= 2) mot("análise do relatório com tom positivo", 6);
+          else if (tom <= -2) mot("análise do relatório com tom negativo", -6);
+        }
+      }
+      // notícias do mercado que citam a ação ou a empresa
+      const chave = nome.split(/\s+/)[0].toLowerCase();
+      const citam = noticias.filter((n) => { const t = n.titulo.toLowerCase(); return t.includes(c.t.toLowerCase()) || (chave.length >= 4 && t.includes(chave)); });
+      if (citam.length) {
+        const tom = citam.reduce((a, n) => a + Math.sign(tomTexto(n.titulo)), 0);
+        if (tom > 0) mot(`${citam.length} notícia${citam.length > 1 ? "s" : ""} com tom positivo`, Math.min(8, 3 * tom));
+        else if (tom < 0) mot(`${citam.length} notícia${citam.length > 1 ? "s" : ""} com tom negativo`, Math.max(-8, 3 * tom));
+      }
+      nota = Math.max(0, Math.min(100, Math.round(nota)));
+      res.set(c.sim, { ...c, nome, cot, nota, classe: nota >= 65 ? "destaque" : nota < 40 ? "cautela" : "neutra", motivos, v3 });
+    });
+    return res;
+  }
+  let triagem = new Map();
+  // selo da triagem ao lado do papel nas tabelas
+  const seloTriagem = (sim) => {
+    const x = triagem.get(sim); if (!x || x.classe === "neutra") return "";
+    return x.classe === "destaque" ? ` <span class="term-chip c-up" title="Triagem: nota ${x.nota}">★ ${x.nota}</span>` : ` <span class="term-chip c-down" title="Triagem: nota ${x.nota}">! ${x.nota}</span>`;
+  };
+  function painelSugestoes() {
+    const lista = [...triagem.values()].sort((a, b) => b.nota - a.nota);
+    if (!lista.length) return "";
+    const top = lista.filter((x) => x.classe === "destaque").slice(0, 6);
+    const evitar = lista.filter((x) => x.classe === "cautela").slice(-4).reverse();
+    const fmt = (x) => x.moeda === "USD" ? usd(x.cot.preco) : brl(x.cot.preco);
+    const cartao = (x) => `<div class="sug-card ${x.classe}" ${linkAtivo(x.sim)}>
+      <div class="sug-topo"><b>${x.t}</b><span>${esc(x.nome)}</span><em class="sug-nota">${x.nota}</em></div>
+      <div class="sug-barra"><span style="width:${x.nota}%"></span></div>
+      <div class="sug-preco">${fmt(x)} <i class="${corMov(x.cot.variacaoPct)}">${tPct(x.cot.variacaoPct)} hoje</i></div>
+      <ul>${x.motivos.slice().sort((a, b) => (a.pos === b.pos ? 0 : a.pos ? -1 : 1)).slice(0, 4).map((m) => `<li class="${m.pos ? "t-up" : "t-down"}">${m.pos ? "+" : "−"} ${esc(m.txt)}</li>`).join("")}</ul></div>`;
+    return `<div class="term-painel tp-sug"><div class="term-cab">SUGESTÕES PARA INVESTIR · TRIAGEM AUTOMÁTICA (${lista.length} AÇÕES ANALISADAS)</div>
+      ${top.length ? `<div class="sug-grade">${top.map(cartao).join("")}</div>` : '<p class="term-texto term-dim">Nenhuma ação passou da nota 65 agora.</p>'}
+      ${evitar.length ? `<div class="sug-sub">CAUTELA · SINAIS FRACOS</div><div class="sug-grade sug-cautela">${evitar.map(cartao).join("")}</div>` : ""}
+      <p class="term-nota">Nota de 0 a 100 feita com tendência (médias de 20 e 50 pregões), momento de 1 e 3 meses, volatilidade, distância da máxima, relatório ICL e o tom das notícias que citam a empresa. ★ nas tabelas = nota 65 ou mais; ! = abaixo de 40. É uma triagem automática de números passados, não uma recomendação de investimento: confira os fundamentos e o seu perfil antes de investir.</p></div>`;
+  }
+
   // com relatório ICL importado, a tabela da B3 mostra as ações do relatório:
   // onde cada uma aparece, a variação que o relatório traz e a cotação de hoje
   function tabelaRelatorioB3(r) {
@@ -6510,7 +6607,7 @@
       const nome = c && c.nome && c.nome !== x.ticker ? `<small>${esc(c.nome)}</small>` : "";
       const spark = c && c.historico && c.historico.length > 1 ? sparklineSVG(c.historico.map((h) => h.preco), (c.variacaoPct || 0) >= 0 ? G.CORES.up : G.CORES.down) : "";
       const vazio = `<td class="r term-dim">${mercado.carregando ? "buscando…" : "—"}</td>`;
-      return `<tr ${c ? linkAtivo(x.ticker + ".SA") : ""}><td class="term-ativo">${x.ticker} ${chips}${nome}</td>
+      return `<tr ${c ? linkAtivo(x.ticker + ".SA") : ""}><td class="term-ativo">${x.ticker} ${chips}${seloTriagem(x.ticker + ".SA")}${nome}</td>
         ${x.pct == null ? '<td class="r term-dim">—</td>' : celVar(x.pct, 3)}
         ${c ? `<td class="r t-preco">${brl(c.preco)}</td>` : vazio}${c ? celVar(c.variacaoPct, 2) : vazio}${desde == null ? vazio : celVar(desde, 5)}<td class="term-spark">${spark}</td></tr>`;
     }).join("");
@@ -6603,6 +6700,7 @@
 
   function renderNasdaq() {
     const q = mercado.cotacoes, tem = Object.keys(q).length, r = DADOS.relatorioMercado;
+    triagem = tem ? triagemAtivos() : new Map();
     const quando = mercado.em ? new Date(mercado.em).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "";
     const status = mercado.carregando ? "buscando cotações…" : quando ? `cotações ${quando}` : "sem cotações";
 
@@ -6650,7 +6748,7 @@
       <thead><tr><th>Papel</th><th class="r">Último</th><th class="r">Dia</th><th class="r">1 mês</th><th class="r">3 meses</th><th>3M</th></tr></thead><tbody>
       ${lista.map(([t, nome]) => {
         const c = q[t + sufixo];
-        const selo = citadas.has(t) ? ' <span class="term-chip c-acc">ICL</span>' : "";
+        const selo = (citadas.has(t) ? ' <span class="term-chip c-acc">ICL</span>' : "") + seloTriagem(t + sufixo);
         if (!c) return `<tr><td class="term-ativo">${t}${selo}<small>${esc(nome)}</small></td><td class="r term-dim" colspan="5">${mercado.carregando ? "buscando…" : "sem cotação"}</td></tr>`;
         const spark = c.historico && c.historico.length > 1 ? sparklineSVG(c.historico.map((h) => h.preco), c.variacaoPct >= 0 ? G.CORES.up : G.CORES.down) : "";
         return `<tr ${linkAtivo(t + sufixo)} title="Abrir o gráfico de ${t}"><td class="term-ativo">${t}${selo}<small>${esc(nome)}</small></td><td class="r t-preco">${fmt(c.preco)}</td>
@@ -6671,6 +6769,7 @@
 
     return `<section class="term term-nasdaq">${board}
       <div class="term-grade term-grade-meio">${tabela("NASDAQ · MAIORES EMPRESAS · US$", MERCADO_EUA, "", usd)}${r ? tabelaRelatorioB3(r) : tabela("B3 · MAIORES DO IBOVESPA · R$", MERCADO_BR, ".SA", brl)}</div>
+      ${(() => { const sug = tem ? painelSugestoes() : ""; return sug ? `<div class="term-grade term-grade-um">${sug}</div>` : ""; })()}
       <div class="term-grade term-grade-2">${grafico}${noticias}</div>
       ${r ? `<div class="term-secao">RELATÓRIO ICL · ${esc(r.data)} · FECHAMENTO ${esc(r.fechamento.replace(/^DIA\s+/i, ""))}</div><div class="term-grade">${painelRelatorio()}</div>` : ""}
     </section>`;
