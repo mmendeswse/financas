@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.252";
+  const VERSAO_APP = "3.6.253";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1740,7 +1740,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.252" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.253" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -6706,11 +6706,23 @@
   // Maiores altas e maiores quedas do Ibovespa (relatório ICL), no fim da guia
   // Bolsa: um quadro para cada, com a cotação de hoje e o número de ações em
   // alta / em queda no rodapé, como no PDF
+  // Sem relatório importado, os dois quadros aparecem com o pregão de hoje:
+  // as 5 que mais subiram e as 5 que mais caíram entre as ações do Ibovespa
+  // da guia, e quantas subiram e caíram
   function painelAltasQuedasRelatorio() {
-    const r = DADOS.relatorioMercado;
-    if (!r || (!r.altas.length && !r.quedas.length)) return "";
-    const q = mercado.cotacoes, col = r.colunas.length ? r.colunas[0] : "Relatório";
-    const sub = `relatório ICL · ${esc(r.data.toLowerCase())}`;
+    const q = mercado.cotacoes;
+    let r = DADOS.relatorioMercado, col, sub, aoVivo = false;
+    if (!r || (!r.altas.length && !r.quedas.length)) {
+      const hoje = MERCADO_BR.map(([t]) => ({ ticker: t, c: q[t + ".SA"] })).filter((x) => x.c && x.c.variacaoPct != null)
+        .map((x) => ({ ticker: x.ticker, pct: x.c.variacaoPct })).sort((a, b) => b.pct - a.pct);
+      if (hoje.length < 2) return "";
+      const sobe = hoje.filter((x) => x.pct > 0), cai = hoje.filter((x) => x.pct < 0);
+      r = { altas: sobe.slice(0, 5), quedas: cai.slice(-5).reverse(), numAltas: sobe.length, numQuedas: cai.length };
+      aoVivo = true; col = "Hoje"; sub = `pregão de hoje · entre ${hoje.length} ações do Ibovespa`;
+    } else {
+      col = r.colunas.length ? r.colunas[0] : "Relatório";
+      sub = `relatório ICL · ${esc(r.data.toLowerCase())}`;
+    }
     const f2 = (v) => Math.abs(Number(v || 0)).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const fp = (v, forte) => {
       if (v == null) return '<span class="dim">—</span>';
@@ -6719,11 +6731,11 @@
       return `<span class="${v > 0 ? "up" : v < 0 ? "down" : "dim"}">${txt}</span>`;
     };
     const linha = (a) => { const c = q[a.ticker + ".SA"];
-      return `<tr ${c ? linkAtivo(a.ticker + ".SA") : ""}><td class="papel">${esc(a.ticker)}${c && c.nome && c.nome !== a.ticker ? `<small>${esc(c.nome)}</small>` : ""}</td><td class="r">${fp(a.pct, 3)}</td>
-        <td class="r creme">${c ? brl(c.preco) : '<span class="dim">—</span>'}</td><td class="r">${c ? fp(c.variacaoPct) : '<span class="dim">—</span>'}</td></tr>`; };
+      return `<tr ${c ? linkAtivo(a.ticker + ".SA") : ""}><td class="papel">${esc(a.ticker)}${c && c.nome && c.nome !== a.ticker ? `<small>${esc(c.nome)}</small>` : ""}</td>${aoVivo ? "" : `<td class="r">${fp(a.pct, 3)}</td>`}
+        <td class="r creme">${c ? brl(c.preco) : '<span class="dim">—</span>'}</td><td class="r">${c ? fp(c.variacaoPct, aoVivo ? 3 : 0) : '<span class="dim">—</span>'}</td></tr>`; };
     const tabela = (lista) => `<div class="terminal-scroll"><table class="terminal tab-rel">
-      <thead><tr><th>Papel</th><th class="r">${esc(col)}</th><th class="r">Última</th><th class="r">Hoje</th></tr></thead>
-      <tbody>${lista.map(linha).join("")}</tbody></table></div>`;
+      <thead><tr><th>Papel</th>${aoVivo ? "" : `<th class="r">${esc(col)}</th>`}<th class="r">Última</th><th class="r">Hoje</th></tr></thead>
+      <tbody>${lista.length ? lista.map(linha).join("") : `<tr><td class="dim" colspan="4">nenhuma ação ${aoVivo ? "nesta direção hoje" : ""}</td></tr>`}</tbody></table></div>`;
     const rodape = (rot, n, cls) => n == null ? "" : `<span class="dim">${rot}</span><b class="${cls}">${n}</b>`;
     return `
       <div class="grid grid-relatorio-fim">
