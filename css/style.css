@@ -1125,8 +1125,9 @@ table.tab-acoes th.col-atualiz, table.tab-acoes td.col-atualiz { display: none; 
 .sync-grade { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 @media (max-width: 760px) { .sync-grade { grid-template-columns: 1fr; } }
 .sync-codigo { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.sync-codigo code { background: var(--painel-2); border: 1px solid var(--linha-2); border-radius: 7px; padding: 7px 10px;
-  font-family: var(--mono); font-size: 12.5px; word-break: break-all; }
+/* o código do cofre com o mesmo tamanho de um campo de texto (como o token da brapi ao lado) */
+.sync-codigo code { display: block; width: 100%; box-sizing: border-box; background: var(--painel-2); border: 1px solid var(--linha-2); border-radius: 8px; padding: 10px 11px;
+  color: var(--texto); font-family: var(--ui); font-size: 16px; line-height: normal; word-break: break-all; }
 
 /* puxar para atualizar (iPad/iPhone) — ícone centralizado no topo */
 .shell { transition: transform .32s cubic-bezier(.22, 1, .36, 1); }
