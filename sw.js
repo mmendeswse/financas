@@ -1,12 +1,12 @@
 /* Service worker — deixa o app abrir sem internet no iPad/iPhone.
    Arquivos do app: cache primeiro. Cotações (APIs): sempre rede. */
-const CACHE = "muller-mendes-v460";
+const CACHE = "muller-mendes-v461";
 const ARQUIVOS = [
-  "./", "./index.html", "./css/style.css?v=3.6.241", "./manifest.json", "./manifest.webmanifest",
+  "./", "./index.html", "./css/style.css?v=3.6.242", "./manifest.json", "./manifest.webmanifest",
   "./js/vendor/chart.umd.min.js",
-  "./js/bloqueio.js?v=3.6.241", "./js/armazenamento.js?v=3.6.241", "./js/financeiro.js?v=3.6.241", "./js/investimentos.js?v=3.6.241",
-  "./js/graficos.js?v=3.6.241", "./js/extrato.js?v=3.6.241", "./js/relatorio.js?v=3.6.241", "./js/vendor/pdf.min.js", "./js/vendor/pdf.worker.min.js", "./js/cotacoes.js?v=3.6.241", "./js/sincronizacao.js?v=3.6.241", "./js/emojis.js?v=3.6.241", "./js/app.js?v=3.6.241",
-  "./assets/icons/bancos/nubank.svg?v=3.6.241", "./assets/icons/bancos/itau.svg?v=3.6.241", "./assets/icons/bancos/inter.svg?v=3.6.241", "./assets/icons/bancos/banco-do-brasil.svg?v=3.6.241", "./assets/icons/bancos/caixa.svg?v=3.6.241", "./assets/icons/bancos/mercado-pago.svg?v=3.6.241",
+  "./js/bloqueio.js?v=3.6.242", "./js/armazenamento.js?v=3.6.242", "./js/financeiro.js?v=3.6.242", "./js/investimentos.js?v=3.6.242",
+  "./js/graficos.js?v=3.6.242", "./js/extrato.js?v=3.6.242", "./js/relatorio.js?v=3.6.242", "./js/vendor/pdf.min.js", "./js/vendor/pdf.worker.min.js", "./js/cotacoes.js?v=3.6.242", "./js/sincronizacao.js?v=3.6.242", "./js/emojis.js?v=3.6.242", "./js/app.js?v=3.6.242",
+  "./assets/icons/bancos/nubank.svg?v=3.6.242", "./assets/icons/bancos/itau.svg?v=3.6.242", "./assets/icons/bancos/inter.svg?v=3.6.242", "./assets/icons/bancos/banco-do-brasil.svg?v=3.6.242", "./assets/icons/bancos/caixa.svg?v=3.6.242", "./assets/icons/bancos/mercado-pago.svg?v=3.6.242",
   "./assets/icons/icon-192.png", "./assets/icons/icon-512.png",
   "./apple-touch-icon.png", "./apple-touch-icon-180.png", "./apple-touch-icon-167.png", "./apple-touch-icon-152.png", "./apple-touch-icon-precomposed.png"
 ];

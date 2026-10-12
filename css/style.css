@@ -2298,7 +2298,7 @@ table.terminal.tab-mercado td.papel small { display: block; margin-left: 0; colo
 }
 
 /* relatório ICL na guia Bolsa: quadros no padrão da guia Ações */
-.grid-relatorio { margin-top: 18px; }
+.grid-relatorio { margin-bottom: 18px; }
 table.terminal.tab-rel { min-width: 0; }
 table.terminal.tab-rel tbody tr:not([data-acao]) { cursor: default; }
 table.terminal.tab-rel tr.tr-grupo td { background: #0E1526 !important; color: var(--cy); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; padding-top: 7px; }
