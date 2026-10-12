@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.242";
+  const VERSAO_APP = "3.6.243";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1736,7 +1736,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.242" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.243" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -6658,17 +6658,6 @@
       <thead><tr><th>Ativo</th><th class="r">${esc(col[0])}</th><th class="r">${esc(col[1] || "")}</th><th class="r">Dia</th><th class="r">Mês</th><th class="r">Ano</th><th>3 meses</th></tr></thead>
       <tbody>${linhasCot}</tbody></table></div>`);
 
-    // (2) maiores altas e quedas do Ibovespa, com a cotação de hoje
-    const linhaMov = (a) => { const c = q[a.ticker + ".SA"];
-      return `<tr ${c ? linkAtivo(a.ticker + ".SA") : ""}><td class="papel">${esc(a.ticker)}${c && c.nome && c.nome !== a.ticker ? `<small>${esc(c.nome)}</small>` : ""}</td><td class="r">${fp(a.pct, 3)}</td>
-        <td class="r creme">${c ? brl(c.preco) : '<span class="dim">—</span>'}</td><td class="r">${c ? fp(c.variacaoPct) : '<span class="dim">—</span>'}</td></tr>`; };
-    const nA = r.numAltas, nQ = r.numQuedas;
-    const movers = card("", "Maiores altas e quedas", "ibovespa · no relatório e hoje", "", `<div class="terminal-scroll"><table class="terminal tab-rel">
-      <thead><tr><th>Papel</th><th class="r">${esc(col[0])}</th><th class="r">Última</th><th class="r">Hoje</th></tr></thead>
-      <tbody><tr class="tr-grupo"><td colspan="4">Maiores altas</td></tr>${r.altas.map(linhaMov).join("")}
-      <tr class="tr-grupo"><td colspan="4">Maiores quedas</td></tr>${r.quedas.map(linhaMov).join("")}</tbody></table></div>`,
-      nA != null || nQ != null ? `<span class="dim">Ações do Ibovespa</span><b><span class="up">▲ ${nA ?? "—"} em alta</span> · <span class="down">${nQ ?? "—"} em queda ▼</span></b>` : "");
-
     // (3) CDI e IPCA
     const juros = r.indicadores.length ? card("", "CDI e IPCA", sub, "", `<div class="terminal-scroll"><table class="terminal tab-rel">
       <thead><tr><th>Indicador</th><th class="r">Taxa</th></tr></thead><tbody>
@@ -6685,11 +6674,39 @@
 
     return `
       <div class="grid g-top grid-relatorio">
-        <div class="c8">${cot}</div>
-        <div class="c4">${movers}</div>
+        <div class="${juros ? "c8" : "c12"}">${cot}</div>
         ${juros ? `<div class="c4">${juros}</div>` : ""}
-        ${resumo ? `<div class="${juros ? "c8" : "c12"}">${resumo}</div>` : ""}
+        ${resumo ? `<div class="c12">${resumo}</div>` : ""}
         ${analises ? `<div class="c12">${analises}</div>` : ""}
+      </div>`;
+  }
+
+  // Maiores altas e maiores quedas do Ibovespa (relatório ICL), no fim da guia
+  // Bolsa: um quadro para cada, com a cotação de hoje e o número de ações em
+  // alta / em queda no rodapé, como no PDF
+  function painelAltasQuedasRelatorio() {
+    const r = DADOS.relatorioMercado;
+    if (!r || (!r.altas.length && !r.quedas.length)) return "";
+    const q = mercado.cotacoes, col = r.colunas.length ? r.colunas[0] : "Relatório";
+    const sub = `relatório ICL · ${esc(r.data.toLowerCase())}`;
+    const f2 = (v) => Math.abs(Number(v || 0)).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const fp = (v, forte) => {
+      if (v == null) return '<span class="dim">—</span>';
+      const txt = `${v > 0 ? "+" : v < 0 ? "−" : ""}${f2(v)}%`;
+      if (forte && Math.abs(v) >= forte) return `<span class="${v >= 0 ? "cel-up" : "cel-down"}">${txt}</span>`;
+      return `<span class="${v > 0 ? "up" : v < 0 ? "down" : "dim"}">${txt}</span>`;
+    };
+    const linha = (a) => { const c = q[a.ticker + ".SA"];
+      return `<tr ${c ? linkAtivo(a.ticker + ".SA") : ""}><td class="papel">${esc(a.ticker)}${c && c.nome && c.nome !== a.ticker ? `<small>${esc(c.nome)}</small>` : ""}</td><td class="r">${fp(a.pct, 3)}</td>
+        <td class="r creme">${c ? brl(c.preco) : '<span class="dim">—</span>'}</td><td class="r">${c ? fp(c.variacaoPct) : '<span class="dim">—</span>'}</td></tr>`; };
+    const tabela = (lista) => `<div class="terminal-scroll"><table class="terminal tab-rel">
+      <thead><tr><th>Papel</th><th class="r">${esc(col)}</th><th class="r">Última</th><th class="r">Hoje</th></tr></thead>
+      <tbody>${lista.map(linha).join("")}</tbody></table></div>`;
+    const rodape = (rot, n, cls) => n == null ? "" : `<span class="dim">${rot}</span><b class="${cls}">${n}</b>`;
+    return `
+      <div class="grid grid-relatorio-fim">
+        <div class="c6">${card("", "Maiores altas Ibovespa", sub, "", tabela(r.altas), rodape("Número de ações em alta", r.numAltas, "up"))}</div>
+        <div class="c6">${card("", "Maiores quedas Ibovespa", sub, "", tabela(r.quedas), rodape("Número de ações em queda", r.numQuedas, "down"))}</div>
       </div>`;
   }
 
@@ -6805,7 +6822,7 @@
       <div class="term-grade term-grade-meio">${tabela("NASDAQ · MAIORES EMPRESAS · US$", MERCADO_EUA, "", usd)}${r ? tabelaRelatorioB3(r) : tabela("B3 · MAIORES DO IBOVESPA · R$", MERCADO_BR, ".SA", brl)}</div>
       ${(() => { const sug = tem ? painelSugestoes() : ""; return sug ? `<div class="term-grade term-grade-um">${sug}</div>` : ""; })()}
       <div class="term-grade term-grade-2">${grafico}${noticias}</div>
-    </section>`;
+    </section>${painelAltasQuedasRelatorio()}`;
   }
   // gráfico: variação acumulada desde o início dos 3 meses, nos dias da
   // Nasdaq; o Ibovespa e o dólar usam o último fechamento até cada dia
