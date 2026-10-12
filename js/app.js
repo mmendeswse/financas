@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.196";
+  const VERSAO_APP = "3.6.197";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1667,7 +1667,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.196" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.197" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -3897,21 +3897,50 @@
   // receita nem despesa. Fica no botão "Alterar Saldo" do quadro do banco.
   // DADOS.ajustesSaldo: [{ id, bancoId, data, valor, saldoInformado }]
   // ---------------------------------------------------------------------
+  // A diferença entre o saldo informado e o do app pode virar uma despesa ou
+  // uma entrada de verdade (o formulário completo, já com o valor, o banco e
+  // a data de hoje), ou um simples "Ajuste de saldo".
   // opts.depois: chamado ao terminar (salvando ou não)
   function informarSaldoBanco(bancoId, opts) {
     opts = opts || {};
     const b = F.listaBancosComSaldo(DADOS).find((x) => x.id === bancoId);
     if (!b) return;
     abrirModal(`
-      <h3>Saldo atual no ${esc(b.nome)}</h3>
+      <h3>Alterar saldo · ${esc(b.nome)}</h3>
       <p class="campo ajuda" style="margin:0 0 14px">Pelo app, o ${esc(b.nome)} tem <b>${brlSinal(b.saldoAtual)}</b>. Quanto tem nele agora?</p>
-      <div class="campo"><label for="f_saldoReal">Saldo atual</label>${campoMoeda("f_saldoReal", b.saldoAtual)}<div class="ajuda">Se for diferente, a diferença entra no extrato como "Ajuste de saldo", sem contar como receita ou despesa.</div></div>
-      <div class="modal-acoes"><button class="btn" id="btnPularSaldo">Cancelar</button><button class="btn primario salvar" id="btnSalvarSaldo">Salvar saldo</button></div>`);
+      <div class="campo"><label for="f_saldoReal">Saldo atual</label>${campoMoeda("f_saldoReal", b.saldoAtual)}<div class="ajuda" id="ajudaSaldoReal"></div></div>
+      <div class="modal-acoes" style="flex-wrap:wrap">
+        <button class="btn primario" id="btnLancarDif" style="display:none"></button>
+        <button class="btn" id="btnSalvarSaldo">Salvar como ajuste</button>
+        <button class="btn" id="btnPularSaldo">Cancelar</button>
+      </div>`);
+    const campo = document.getElementById("f_saldoReal");
+    const btLancar = document.getElementById("btnLancarDif"), btAjuste = document.getElementById("btnSalvarSaldo");
+    const diferenca = () => Math.round((Math.round(numIn(campo.value) * 100) / 100 - b.saldoAtual) * 100) / 100;
+    const mostrar = () => {
+      const diff = diferenca();
+      document.getElementById("ajudaSaldoReal").innerHTML = diff
+        ? `Diferença: <b class="${diff < 0 ? "down" : "up"}">${brlSinal(diff)}</b>. Lance como ${diff < 0 ? "despesa" : "entrada"} com todos os detalhes, ou salve como "Ajuste de saldo" (não conta como receita nem despesa).`
+        : "O saldo é igual ao do app.";
+      btLancar.style.display = diff ? "" : "none";
+      btLancar.textContent = diff < 0 ? "Lançar como despesa" : "Lançar como entrada";
+      btAjuste.textContent = diff ? "Salvar como ajuste" : "Salvar";
+    };
+    // depois da máscara de R$ formatar o campo, senão a diferença fica um dígito atrasada
+    campo.addEventListener("input", () => setTimeout(mostrar, 0)); mostrar();
     const terminar = () => { fecharModal(); if (opts.depois) opts.depois(); };
     document.getElementById("btnPularSaldo").onclick = terminar;
-    document.getElementById("btnSalvarSaldo").onclick = () => {
-      const real = Math.round(numIn(document.getElementById("f_saldoReal").value) * 100) / 100;
-      const diff = Math.round((real - b.saldoAtual) * 100) / 100;
+    btLancar.onclick = () => {
+      const diff = diferenca();
+      if (!diff) return;
+      fecharModal();
+      const inicial = { valor: Math.abs(diff), bancoId, data: hojeISO(), depois: opts.depois };
+      if (diff < 0) abrirModalDespesa(null, "despesa", null, inicial);
+      else abrirModalEntrada(null, bancoId, null, inicial);
+    };
+    btAjuste.onclick = () => {
+      const real = Math.round(numIn(campo.value) * 100) / 100;
+      const diff = diferenca();
       if (diff) {
         DADOS.ajustesSaldo = DADOS.ajustesSaldo || [];
         DADOS.ajustesSaldo.push({ id: A.novoId(), bancoId, data: hojeISO(), valor: diff, saldoInformado: real });
@@ -3929,8 +3958,21 @@
       <div class="kv"><span class="dim">Data</span><b>${fmtDataCurta(a.data)}</b></div>
       <div class="kv"><span class="dim">Saldo informado</span><b>${brlSinal(Number(a.saldoInformado || 0))}</b></div>
       <div class="kv"><span class="dim">Diferença</span><b class="${corSinal(a.valor)}">${brlSinal(Number(a.valor || 0))}</b></div>
-      <div class="modal-acoes"><button class="btn perigo" id="btnExcluir">Excluir</button><button class="btn" id="btnFecharAj">Fechar</button></div>`);
+      <p class="campo ajuda" style="margin:12px 0 0">Lance como ${a.valor < 0 ? "despesa" : "entrada"} com todos os detalhes: ao salvar, ela entra no lugar deste ajuste.</p>
+      <div class="modal-acoes" style="flex-wrap:wrap"><button class="btn primario" id="btnLancarAj">${a.valor < 0 ? "Lançar como despesa" : "Lançar como entrada"}</button><button class="btn perigo" id="btnExcluir">Excluir</button><button class="btn" id="btnFecharAj">Fechar</button></div>`);
     document.getElementById("btnFecharAj").onclick = () => { fecharModal(); explicarBanco(a.bancoId); };
+    // vira uma despesa/entrada de verdade: o formulário vem com o valor, o banco e a
+    // data do ajuste, e o ajuste só sai quando o lançamento é salvo
+    document.getElementById("btnLancarAj").onclick = () => {
+      fecharModal();
+      const inicial = { valor: Math.abs(Number(a.valor || 0)), bancoId: a.bancoId, data: a.data, depois: () => {
+        DADOS.ajustesSaldo = (DADOS.ajustesSaldo || []).filter((x) => x.id !== a.id);
+        salvarEAtualizar(a.valor < 0 ? "Despesa lançada no lugar do ajuste de saldo." : "Entrada lançada no lugar do ajuste de saldo.");
+        explicarBanco(a.bancoId);
+      } };
+      if (a.valor < 0) abrirModalDespesa(null, "despesa", null, inicial);
+      else abrirModalEntrada(null, a.bancoId, null, inicial);
+    };
     document.getElementById("btnExcluir").onclick = () => {
       fecharModal();
       confirmarExclusao("Excluir este ajuste? O saldo do banco volta ao calculado pelo app.", () => {
@@ -4925,7 +4967,8 @@
     ajustar();
   }
 
-  function abrirModalEntrada(id, bancoIdPadrao, previsao) {
+  // inicial (lançamento novo vindo do Alterar Saldo): { valor, data, depois }
+  function abrirModalEntrada(id, bancoIdPadrao, previsao, inicial) {
     let e = id ? achar(DADOS.entradas, id) : null;
     // repetição "4º dia útil" vista de outro lugar (ex.: painel): cria o mês e abre o lançamento real
     if (e && previsao && ehPers(e)) {
@@ -4937,8 +4980,8 @@
     abrirModal(`
       <h3>${e ? "Editar entrada" : "Nova entrada"}</h3>
       <div class="par">
-        <div class="campo"><label for="f_data">Data</label><input id="f_data" type="date" value="${previsao ? previsao.data : (e ? e.data : hojeISO())}"></div>
-        <div class="campo"><label for="f_valor">Valor</label>${campoMoeda("f_valor", e ? (previsao ? valorDoMes(e, previsao.data.slice(0, 7)) : e.valor) : "")}</div>
+        <div class="campo"><label for="f_data">Data</label><input id="f_data" type="date" value="${previsao ? previsao.data : (e ? e.data : (inicial && inicial.data) || hojeISO())}"></div>
+        <div class="campo"><label for="f_valor">Valor</label>${campoMoeda("f_valor", e ? (previsao ? valorDoMes(e, previsao.data.slice(0, 7)) : e.valor) : (inicial && inicial.valor) || "")}</div>
       </div>
       ${campoEmoji(EMOJIS_ENTRADA, e && e.emoji, `<div class="campo"><label for="f_desc">Descrição</label><input id="f_desc" value="${e ? esc(e.descricao) : ""}" placeholder="Salário"></div>`)}
       <div class="par">
@@ -5000,6 +5043,7 @@
       else DADOS.entradas.push(registro);
       fecharModal();
       salvarEAtualizar(e ? "Entrada atualizada." : "Entrada cadastrada.");
+      if (inicial && inicial.depois) inicial.depois();
     };
     if (e) document.getElementById("btnExcluir").onclick = () => {
       fecharModal();
@@ -5124,7 +5168,8 @@
   // Formulário único de despesa: o campo Status decide onde o registro
   // fica guardado — "Pago" vira uma despesa lançada, "Pendente" vira uma
   // conta a pagar com a data informada como vencimento.
-  function abrirModalDespesa(id, origem, previsao) {
+  // inicial (lançamento novo vindo do Alterar Saldo): { valor, bancoId, data, depois }
+  function abrirModalDespesa(id, origem, previsao, inicial) {
     origem = origem || "despesa";
     let x = id ? achar(origem === "conta" ? DADOS.contasPagar : DADOS.despesas, id) : null;
     // mês de uma série "Personalizar" visto de outro lugar: cria o mês e abre o lançamento real
@@ -5136,13 +5181,13 @@
     }
     const ehConta = origem === "conta";
     const statusAtual = x ? (ehConta ? (F.statusReal(x) === "Pago" ? "Pago" : "Prevista") : "Pago") : "Pago";
-    const dataAtual = previsao ? previsao.data : (x ? (ehConta ? x.vencimento : x.data) : hojeISO());
+    const dataAtual = previsao ? previsao.data : (x ? (ehConta ? x.vencimento : x.data) : (inicial && inicial.data) || hojeISO());
 
     abrirModal(`
       <h3>${x ? "Editar lançamento" : "Nova despesa"}</h3>
       <div class="par">
         <div class="campo"><label for="f_data"><span id="rotuloData">Data</span></label><input id="f_data" type="date" value="${dataAtual}"></div>
-        <div class="campo"><label for="f_valor">Valor</label>${campoMoeda("f_valor", x ? (previsao ? valorDoMes(x, previsao.data.slice(0, 7)) : x.valor) : "")}</div>
+        <div class="campo"><label for="f_valor">Valor</label>${campoMoeda("f_valor", x ? (previsao ? valorDoMes(x, previsao.data.slice(0, 7)) : x.valor) : (inicial && inicial.valor) || "")}</div>
       </div>
       ${campoEmoji(EMOJIS_DESPESA, x && x.emoji, `<div class="campo"><label for="f_desc">Descrição</label><input id="f_desc" value="${x ? esc(x.descricao) : ""}" placeholder="Supermercado"></div>`)}
       <div class="par par-3">
@@ -5152,7 +5197,7 @@
       </div>
       <div id="camposPagamento">
         <div class="par par-3">
-          <div class="campo"><label for="f_pagarcom">Banco</label><select id="f_pagarcom">${opcoesPagarCom(DADOS, x ? x.bancoId : "", x && !ehConta ? x.cartaoId : "")}</select></div>
+          <div class="campo"><label for="f_pagarcom">Banco</label><select id="f_pagarcom">${opcoesPagarCom(DADOS, x ? x.bancoId : (inicial && inicial.bancoId) || "", x && !ehConta ? x.cartaoId : "")}</select></div>
           <div class="campo"><label for="f_forma">Forma</label><select id="f_forma">${opcoes(FORMAS_PAGAMENTO, x ? x.formaPagamento : FORMAS_PAGAMENTO[0])}</select></div>
           <div class="campo"><label for="f_rec">Repetição</label><select id="f_rec">${opcoes(FREQUENCIAS_REP, freqDe(x))}</select></div>
         </div>
@@ -5245,6 +5290,7 @@
       }
       fecharModal();
       salvarEAtualizar(x ? "Lançamento atualizado." : (status === "Pago" ? "Despesa cadastrada." : "Conta prevista cadastrada."));
+      if (inicial && inicial.depois) inicial.depois();
     };
 
     if (x && !previsao) document.getElementById("btnExcluir").onclick = () => {
