@@ -125,7 +125,8 @@
     // mesmo dia: entradas antes das saídas, para o saldo não oscilar à toa;
     // entre as entradas, o pagamento antes da bonificação
     itens.sort(function (a, b) {
-      return String(a.data).localeCompare(String(b.data)) ||
+      // ajuste de saldo antes dos outros do mesmo dia: o saldo informado é o de antes deles
+      return String(a.data).localeCompare(String(b.data)) || (b.ajusteId ? 1 : 0) - (a.ajusteId ? 1 : 0) ||
         ((a.valor >= 0 && b.valor >= 0) ? ordemNoDia(a) - ordemNoDia(b) : 0) || (b.valor - a.valor);
     });
     var saldo = Number(banco.saldoInicial || 0);
