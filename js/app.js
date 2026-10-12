@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.179";
+  const VERSAO_APP = "3.6.180";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1638,7 +1638,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.179" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.180" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2708,7 +2708,7 @@
     document.getElementById("modal").classList.add("modal-extrato");
     document.getElementById("btnIrPainel").onclick = () => { fecharModal(); abrirModalValorBanco(b.id); };
     document.getElementById("btnEditarBanco").onclick = () => { fecharModal(); abrirModalBanco(b.id); };
-    document.getElementById("btnSaldoReal").onclick = () => { fecharModal(); informarSaldoBanco(b.id, null, () => explicarBanco(b.id)); };
+    document.getElementById("btnSaldoReal").onclick = () => { fecharModal(); informarSaldoBanco(b.id, { depois: () => explicarBanco(b.id) }); };
     document.getElementById("btnFecharPainel").onclick = fecharModal;
     ligarPeriodoExtrato(b);
     const ext = document.querySelector("#modal .extrato-banco");
@@ -3861,31 +3861,30 @@
   // AJUSTE DE SALDO: o usuário informa quanto o banco tem de verdade (o
   // saldo do Inter depois de receber o VR/VT, por ex.) e a diferença para o
   // saldo calculado vira um lançamento "Ajuste de saldo" — não conta como
-  // receita nem despesa. Data: hoje, ou a do pagamento se ela for depois,
-  // para o saldo do extrato terminar no valor informado.
+  // receita nem despesa. Fica no botão "Informar saldo" do quadro do banco.
   // DADOS.ajustesSaldo: [{ id, bancoId, data, valor, saldoInformado }]
   // ---------------------------------------------------------------------
-  function informarSaldoBanco(bancoId, data, voltar) {
+  // opts.depois: chamado ao terminar (salvando ou não)
+  function informarSaldoBanco(bancoId, opts) {
+    opts = opts || {};
     const b = F.listaBancosComSaldo(DADOS).find((x) => x.id === bancoId);
     if (!b) return;
-    const dataAjuste = data && data > hojeISO() ? data : hojeISO();
     abrirModal(`
       <h3>Saldo atual no ${esc(b.nome)}</h3>
       <p class="campo ajuda" style="margin:0 0 14px">Pelo app, o ${esc(b.nome)} tem <b>${brlSinal(b.saldoAtual)}</b>. Quanto tem nele agora?</p>
       <div class="campo"><label for="f_saldoReal">Saldo atual</label>${campoMoeda("f_saldoReal", b.saldoAtual)}<div class="ajuda">Se for diferente, a diferença entra no extrato como "Ajuste de saldo", sem contar como receita ou despesa.</div></div>
-      <div class="modal-acoes"><button class="btn" id="btnPularSaldo">Agora não</button><button class="btn primario salvar" id="btnSalvarSaldo">Salvar saldo</button></div>`);
-    const terminar = () => { fecharModal(); if (voltar) { painelReabrir = voltar; voltar(); } };
+      <div class="modal-acoes"><button class="btn" id="btnPularSaldo">Cancelar</button><button class="btn primario salvar" id="btnSalvarSaldo">Salvar saldo</button></div>`);
+    const terminar = () => { fecharModal(); if (opts.depois) opts.depois(); };
     document.getElementById("btnPularSaldo").onclick = terminar;
     document.getElementById("btnSalvarSaldo").onclick = () => {
       const real = Math.round(numIn(document.getElementById("f_saldoReal").value) * 100) / 100;
       const diff = Math.round((real - b.saldoAtual) * 100) / 100;
       if (diff) {
         DADOS.ajustesSaldo = DADOS.ajustesSaldo || [];
-        DADOS.ajustesSaldo.push({ id: A.novoId(), bancoId, data: dataAjuste, valor: diff, saldoInformado: real });
+        DADOS.ajustesSaldo.push({ id: A.novoId(), bancoId, data: hojeISO(), valor: diff, saldoInformado: real });
       }
-      fecharModal();
       salvarEAtualizar(diff ? `Saldo do ${b.nome} ajustado para ${brlSinal(real)}.` : `O saldo do ${b.nome} já estava certo.`);
-      if (voltar) { painelReabrir = voltar; voltar(); }
+      terminar();
     };
   }
   function abrirModalAjusteSaldo(id) {
@@ -4177,10 +4176,6 @@
         return true;
       }
     }
-    // o dinheiro da despesa paga vai para outro banco (VR/VT para o Inter):
-    // depois de marcar, pergunta o saldo real daquele banco
-    const voltar = painelReabrir;
-    const conferirDestino = (pagou, data) => { if (pagou && destino) setTimeout(() => informarSaldoBanco(destino, data, voltar), 0); };
     if (acao === "quitar-mes" || acao === "quitar-mes-conta") {
       const reg = achar(acao === "quitar-mes" ? DADOS.despesas : DADOS.contasPagar, id);
       if (reg) {
@@ -4188,7 +4183,6 @@
         gravarAjuste(reg, mes, { pago: pagar, bancoId: bancoEscolhido || ajusteDoMes(reg, mes).bancoId, ...(pagar ? { destinoBancoId: destino || undefined } : {}) });
         if (pagar && bancoEscolhido) reg.destinoBancoId = destino || undefined;   // fica sugerido para os próximos meses
         salvarEAtualizar(pagar ? "Marcada como paga neste mês." + (destino ? ` O valor foi para o ${F.nomeBanco(DADOS, destino)}.` : "") : "Marcada como prevista.");
-        conferirDestino(pagar, ocorrenciasNoMes(reg, mes)[0] || mes + "-01");
       }
     } else if (acao === "quitar-mes-entrada") {
       const regE = achar(DADOS.entradas, id);
@@ -4211,7 +4205,6 @@
         c.status = c.status === "Pago" ? "Pendente" : "Pago";
         if (bancoEscolhido) { c.bancoId = bancoEscolhido; c.destinoBancoId = destino || undefined; }
         salvarEAtualizar(c.status === "Pago" ? "Marcada como paga." + (c.destinoBancoId ? ` O valor foi para o ${F.nomeBanco(DADOS, c.destinoBancoId)}.` : "") : "Marcada como prevista.");
-        conferirDestino(c.status === "Pago", c.vencimento);
       }
     }
   }
@@ -4237,7 +4230,7 @@
       ${bancos.length > 1 ? `<div class="campo" style="margin-top:12px"><label for="f_destinoPg">Enviar o dinheiro para</label><select id="f_destinoPg">
         <option value="">Nenhum banco (só sai do banco escolhido)</option>
         ${bancos.map((b) => `<option value="${b.id}"${b.id === destinoAtual ? " selected" : ""}>${esc(b.nome)}</option>`).join("")}
-      </select><div class="ajuda">O valor sai do banco escolhido e entra neste (VR e VT para o Inter, por ex.). Depois você informa o saldo atual dele.</div></div>` : ""}
+      </select><div class="ajuda">O valor sai do banco escolhido e entra neste (VR e VT para o Inter, por ex.).</div></div>` : ""}
       <div class="modal-acoes"><button class="btn" id="btnCancelarPg">Cancelar</button><button class="btn primario salvar" id="btnConfirmarPg">Marcar como pago</button></div>`);
     // o foco automático no "Enviar o dinheiro para" abriria a lista no iPad
     if (document.getElementById("f_destinoPg")) setTimeout(() => document.getElementById("f_destinoPg").blur(), 40);
