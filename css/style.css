@@ -2296,3 +2296,22 @@ table.terminal.tab-mercado td.papel small { display: block; margin-left: 0; colo
 @container (max-width: 700px) {
   .cfg-grid .cfg-backup .cfg-acoes { grid-auto-flow: row; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* relatório ICL na guia Bolsa: quadros no padrão da guia Ações */
+.grid-relatorio { margin-top: 18px; }
+table.terminal.tab-rel { min-width: 0; }
+table.terminal.tab-rel tbody tr:not([data-acao]) { cursor: default; }
+table.terminal.tab-rel tr.tr-grupo td { background: #0E1526 !important; color: var(--cy); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; padding-top: 7px; }
+table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
+.tab-rel-spark { width: 100px; }
+.tab-rel-spark svg { width: 100%; height: 20px; display: block; }
+.rel-texto { margin: 0; padding: 14px 18px; font-size: 13px; line-height: 1.65; color: var(--texto); }
+.rel-analise { border-top: 1px solid var(--linha); }
+.rel-analise:first-child { border-top: 0; }
+.rel-analise summary { cursor: pointer; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; padding: 11px 18px; font-size: 13.5px; font-weight: 700; list-style: none; }
+.rel-analise summary::-webkit-details-marker { display: none; }
+.rel-analise summary::before { content: "▸"; color: var(--cy); }
+.rel-analise[open] summary::before { content: "▾"; }
+.rel-analise summary span { margin-right: 6px; }
+.rel-analise summary em { font-style: normal; }
+.rel-analise p { margin: 0 18px 10px; font-size: 13px; line-height: 1.6; color: var(--texto); }

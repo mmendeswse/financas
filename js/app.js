@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.237";
+  const VERSAO_APP = "3.6.238";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1736,7 +1736,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.237" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.238" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -6616,48 +6616,70 @@
       <tbody>${linhas}</tbody></table></div></div>`;
   }
 
+  // Relatório ICL em quadros no padrão da guia Ações (cartões com título e a
+  // tabela "terminal" da guia Ações): cotações de fechamento, maiores altas e
+  // quedas, CDI e IPCA, resumo do dia e análises
   function painelRelatorio() {
     const r = DADOS.relatorioMercado;
-    // sem relatório importado os painéis do relatório não aparecem
     if (!r) return "";
-    const q = mercado.cotacoes, iso = dataFechamentoRelatorio(r);
+    const q = mercado.cotacoes;
     const col = r.colunas.length ? r.colunas : ["Últ.", "Ant."];
+    const sub = `relatório ICL · ${esc(r.data.toLowerCase())}`;
+    const f2 = (v) => Math.abs(Number(v || 0)).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    // como na guia Ações: variação colorida, e movimento forte com fundo
+    const fp = (v, forte) => {
+      if (v == null) return '<span class="dim">—</span>';
+      const txt = `${v > 0 ? "+" : v < 0 ? "−" : ""}${f2(v)}%`;
+      if (forte && Math.abs(v) >= forte) return `<span class="${v >= 0 ? "cel-up" : "cel-down"}">${txt}</span>`;
+      return `<span class="${v > 0 ? "up" : v < 0 ? "down" : "dim"}">${txt}</span>`;
+    };
+    const num = (v, taxa) => v == null ? "—" : taxa ? f2(v) + "%" : Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
     // (1) cotações de fechamento, agrupadas como no relatório
-    const linhasCot = r.grupos.map((g) => `<tr class="term-grupo"><td colspan="7">${esc(g.nome)}</td></tr>` + g.ativos.map((a) => {
+    const linhasCot = r.grupos.map((g) => `<tr class="tr-grupo"><td colspan="7">${esc(g.nome)}</td></tr>` + g.ativos.map((a) => {
       const sim = a.acao ? a.nome + ".SA" : SIMBOLO_RELATORIO[a.nome];
       const hist = sim && q[sim] && q[sim].historico;
       const spark = hist && hist.length > 1 ? sparklineSVG(hist.map((h) => h.preco), a.ano >= 0 ? G.CORES.up : G.CORES.down) : "";
-      return `<tr><td class="term-ativo">${esc(a.nome)}</td><td class="r t-preco">${tNum(a.atual, a.taxa)}</td><td class="r t-ant">${tNum(a.anterior, a.taxa)}</td>
-        ${celVar(a.dia, 1)}${celVar(a.mes)}${celVar(a.ano)}<td class="term-spark">${spark}</td></tr>`;
+      return `<tr ${sim && q[sim] ? linkAtivo(sim) : ""}><td class="papel">${esc(a.nome)}</td><td class="r creme">${num(a.atual, a.taxa)}</td><td class="r dim">${num(a.anterior, a.taxa)}</td>
+        <td class="r">${fp(a.dia, 1)}</td><td class="r">${fp(a.mes)}</td><td class="r">${fp(a.ano)}</td><td class="tab-rel-spark">${spark}</td></tr>`;
     }).join("")).join("");
-    const cot = `<div class="term-painel tp-cot"><div class="term-cab">COTAÇÕES · FECHAMENTO ${esc(col[0])}</div>
-      <div class="term-rolar"><table class="term-tab"><thead><tr><th>Ativo</th><th class="r">${esc(col[0])}</th><th class="r">${esc(col[1] || "")}</th><th class="r">Dia</th><th class="r">Mês</th><th class="r">Ano</th><th>3 meses</th></tr></thead>
-      <tbody>${linhasCot}</tbody></table></div></div>`;
+    const cot = card("", "Cotações de fechamento", sub, "", `<div class="terminal-scroll"><table class="terminal tab-rel">
+      <thead><tr><th>Ativo</th><th class="r">${esc(col[0])}</th><th class="r">${esc(col[1] || "")}</th><th class="r">Dia</th><th class="r">Mês</th><th class="r">Ano</th><th>3 meses</th></tr></thead>
+      <tbody>${linhasCot}</tbody></table></div>`);
 
-    // (2) maiores altas e quedas, com barras do tamanho do movimento
-    const maxMov = Math.max(1, ...r.altas.map((a) => Math.abs(a.pct)), ...r.quedas.map((a) => Math.abs(a.pct)));
-    const barras = (lista, cls) => lista.map((a) => `<div class="term-barra ${cls}" ${q[a.ticker + ".SA"] ? linkAtivo(a.ticker + ".SA") : ""}><b>${esc(a.ticker)}</b><span class="term-trilho"><span style="width:${Math.max(4, Math.abs(a.pct) / maxMov * 100).toFixed(1)}%"></span></span><em class="${corMov(a.pct)}">${tPct(a.pct)}</em></div>`).join("");
-    const nA = r.numAltas, nQ = r.numQuedas, tot = (nA || 0) + (nQ || 0);
-    const amplitude = tot ? `<div class="term-amp"><div class="term-amp-bar"><span class="t-bg-up" style="width:${(nA / tot * 100).toFixed(1)}%">${nA}</span><span class="t-bg-down">${nQ}</span></div>
-      <div class="term-amp-leg"><span class="t-up">▲ ${nA} em alta</span><span class="t-down">${nQ} em queda ▼</span></div></div>` : "";
-    const movers = `<div class="term-painel tp-mov"><div class="term-cab">MAIORES ALTAS · IBOVESPA</div>${barras(r.altas, "b-up")}
-      <div class="term-cab">MAIORES QUEDAS · IBOVESPA</div>${barras(r.quedas, "b-down")}
-      ${amplitude ? `<div class="term-cab">AMPLITUDE DO IBOVESPA</div>${amplitude}` : ""}</div>`;
+    // (2) maiores altas e quedas do Ibovespa, com a cotação de hoje
+    const linhaMov = (a) => { const c = q[a.ticker + ".SA"];
+      return `<tr ${c ? linkAtivo(a.ticker + ".SA") : ""}><td class="papel">${esc(a.ticker)}${c && c.nome && c.nome !== a.ticker ? `<small>${esc(c.nome)}</small>` : ""}</td><td class="r">${fp(a.pct, 3)}</td>
+        <td class="r creme">${c ? brl(c.preco) : '<span class="dim">—</span>'}</td><td class="r">${c ? fp(c.variacaoPct) : '<span class="dim">—</span>'}</td></tr>`; };
+    const nA = r.numAltas, nQ = r.numQuedas;
+    const movers = card("", "Maiores altas e quedas", "ibovespa · no relatório e hoje", "", `<div class="terminal-scroll"><table class="terminal tab-rel">
+      <thead><tr><th>Papel</th><th class="r">${esc(col[0])}</th><th class="r">Última</th><th class="r">Hoje</th></tr></thead>
+      <tbody><tr class="tr-grupo"><td colspan="4">Maiores altas</td></tr>${r.altas.map(linhaMov).join("")}
+      <tr class="tr-grupo"><td colspan="4">Maiores quedas</td></tr>${r.quedas.map(linhaMov).join("")}</tbody></table></div>`,
+      nA != null || nQ != null ? `<span class="dim">Ações do Ibovespa</span><b><span class="up">▲ ${nA ?? "—"} em alta</span> · <span class="down">${nQ ?? "—"} em queda ▼</span></b>` : "");
 
-    // (3) CDI e IPCA em caixinhas, como os quadros de máxima/mínima do terminal
-    const caixas = r.indicadores.map((i) => `<div class="term-caixa"><span>${esc(i.nome.replace(/\s*\(TAXA ANO\)/i, " (a.a.)"))}</span><b class="${/IPCA/i.test(i.nome) ? (i.valor > 0 ? "t-down" : "t-up") : "t-up"}">${tPct(i.valor).replace("+", "")}</b></div>`).join("");
-    const juros = caixas ? `<div class="term-painel tp-juros"><div class="term-cab">CDI · IPCA</div><div class="term-caixas">${caixas}</div></div>` : "";
+    // (3) CDI e IPCA
+    const juros = r.indicadores.length ? card("", "CDI e IPCA", sub, "", `<div class="terminal-scroll"><table class="terminal tab-rel">
+      <thead><tr><th>Indicador</th><th class="r">Taxa</th></tr></thead><tbody>
+      ${r.indicadores.map((i) => `<tr><td class="papel">${esc(i.nome.replace(/\s*\(TAXA ANO\)/i, " (ao ano)"))}</td><td class="r"><span class="${/IPCA/i.test(i.nome) ? (i.valor > 0 ? "down" : "up") : "up"}">${i.valor < 0 ? "−" : ""}${f2(i.valor)}%</span></td></tr>`).join("")}
+      </tbody></table></div>`) : "";
 
-    // (5) resumo e (6) análises (abre e fecha em cada título)
-    const resumo = r.resumo ? `<div class="term-painel tp-resumo"><div class="term-cab">RESUMO DO DIA</div><p class="term-texto">${esc(r.resumo)}</p></div>` : "";
-    const analises = r.noticias.length ? `<div class="term-painel tp-analises"><div class="term-cab">ANÁLISES · ${r.noticias.length}</div>${r.noticias.map((n) => `
-      <details class="term-analise"><summary><span>${esc(n.titulo)}</span>${n.tickers.map((t) => {
+    // (4) resumo e (5) análises (abre e fecha em cada título)
+    const resumo = r.resumo ? card("", "Resumo do dia", sub, "", `<p class="rel-texto">${esc(r.resumo)}</p>`) : "";
+    const analises = r.noticias.length ? card("", "Análises do relatório", `${r.noticias.length} ${r.noticias.length > 1 ? "análises" : "análise"} · toque no título para abrir`, "", r.noticias.map((n) => `
+      <details class="rel-analise"><summary><span>${esc(n.titulo)}</span>${n.tickers.map((t) => {
         const c = q[t + ".SA"];
-        return `<em class="term-chip c-acc">${t}${c ? ` <b class="${corMov(c.variacaoPct)}">${tPct(c.variacaoPct)}</b>` : ""}</em>`;
-      }).join("")}</summary>${n.paragrafos.map((p) => `<p>${esc(p)}</p>`).join("")}</details>`).join("")}</div>` : "";
+        return `<em class="selo-tag selo-acao">${t}${c ? `&nbsp; ${fp(c.variacaoPct)}` : ""}</em>`;
+      }).join("")}</summary>${n.paragrafos.map((p) => `<p>${esc(p)}</p>`).join("")}</details>`).join("")) : "";
 
-    return `${cot}${movers}${juros}${resumo}${analises}`;
+    return `
+      <div class="grid g-top grid-relatorio">
+        <div class="c8">${cot}</div>
+        <div class="c4">${movers}</div>
+        ${juros ? `<div class="c4">${juros}</div>` : ""}
+        ${resumo ? `<div class="${juros ? "c8" : "c12"}">${resumo}</div>` : ""}
+        ${analises ? `<div class="c12">${analises}</div>` : ""}
+      </div>`;
   }
 
   // ativo da tabela do relatório pelo nome ("NASDAQ", "SP500"…)
@@ -6771,8 +6793,7 @@
       <div class="term-grade term-grade-meio">${tabela("NASDAQ · MAIORES EMPRESAS · US$", MERCADO_EUA, "", usd)}${r ? tabelaRelatorioB3(r) : tabela("B3 · MAIORES DO IBOVESPA · R$", MERCADO_BR, ".SA", brl)}</div>
       ${(() => { const sug = tem ? painelSugestoes() : ""; return sug ? `<div class="term-grade term-grade-um">${sug}</div>` : ""; })()}
       <div class="term-grade term-grade-2">${grafico}${noticias}</div>
-      ${r ? `<div class="term-secao">RELATÓRIO ICL · ${esc(r.data)} · FECHAMENTO ${esc(r.fechamento.replace(/^DIA\s+/i, ""))}</div><div class="term-grade">${painelRelatorio()}</div>` : ""}
-    </section>`;
+    </section>${painelRelatorio()}`;
   }
   // gráfico: variação acumulada desde o início dos 3 meses, nos dias da
   // Nasdaq; o Ibovespa e o dólar usam o último fechamento até cada dia
