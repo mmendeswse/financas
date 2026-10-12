@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.208";
+  const VERSAO_APP = "3.6.210";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1667,7 +1667,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.208" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.210" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2920,7 +2920,7 @@
       secao = "acoes";
     } else {
       detalhe = d.investimentos.filter((i) => rotuloCategoriaComp(i.categoria || "Outros") === rotulo)
-        .map((i) => linha(esc(i.nome), brlSinal(I.valorLiquidoInvestimento(i)))).join("");
+        .map((i) => linha(esc(nomeCurtoInvestimento(i.nome)), brlSinal(I.valorLiquidoInvestimento(i)))).join("");
       if (rotulo === "Criptomoedas") {
         detalhe += I.listaCripto(d).map((c) => linha(`${c.moeda} · ${fmtQtdCripto(c.quantidade)}`, brlSinal(c.valor))).join("");
         if (!d.investimentos.some((i) => rotuloCategoriaComp(i.categoria || "Outros") === rotulo)) secao = "acoes";
@@ -2977,10 +2977,21 @@
     if (chave === "poupanca") {
       const sobra = entradas - despesas;
       const taxa = entradas > 0 ? (sobra / entradas) * 100 : 0;
+      // Entradas, Despesas e Saldo abrem a lista dos lançamentos do mês
+      const linhaLista = (r, v, c, alvo) => `<div class="kv kv-editavel" data-lista-poup="${alvo}" title="Ver os lançamentos do mês"><span class="dim">${rotuloPainel(r)}</span><b class="${c || ""}">${v}</b></div>`;
       painelSimples("Taxa Poupança", taxa, "das receitas do mês sobraram", "(receitas − despesas) ÷ receitas",
         linha("Saudável", "20% ou mais") +
-        linha("+ Entradas", brlSinal(entradas), corSinal(entradas)) + linha("− Despesas", brlSinal(-despesas), corSinal(-despesas)) +
-        linha("Saldo", brlSinal(sobra), corSinal(sobra)), "entradas");
+        linhaLista("+ Entradas", brlSinal(entradas), corSinal(entradas), "entradas") + linhaLista("− Despesas", brlSinal(-despesas), corSinal(-despesas), "despesas") +
+        linhaLista("Saldo", brlSinal(sobra), corSinal(sobra), "saldo"), "entradas");
+      document.querySelectorAll("#modal [data-lista-poup]").forEach((el) => {
+        el.onclick = (e) => {
+          e.stopPropagation();
+          const alvo = el.dataset.listaPoup;
+          if (alvo === "entradas") explicarKPI("receitas");
+          else if (alvo === "despesas") explicarKPI("despesas");
+          else explicarMes({ mes });
+        };
+      });
       return;
     }
     if (chave === "projecao") {
@@ -5670,7 +5681,7 @@
 
     const aviso = vencendo.length
       ? `<div class="faixa-demo" style="border-color:rgba(255,194,51,.3)">
-          <div><b class="acc">${plural(vencendo.length, "investimento")} vencendo nos próximos 60 dias:</b> ${vencendo.map((v) => esc(v.nome) + " (" + fmtData(v.dataVencimento) + ")").join(" · ")}</div>
+          <div><b class="acc">${plural(vencendo.length, "investimento")} vencendo nos próximos 60 dias:</b> ${vencendo.map((v) => esc(nomeCurtoInvestimento(v.nome)) + " (" + fmtData(v.dataVencimento) + ")").join(" · ")}</div>
           <button class="fechar" data-acao="dispensar-vencimentos" title="Não avisar mais sobre estes vencimentos" aria-label="Dispensar aviso">×</button>
         </div>`
       : "";
@@ -5836,7 +5847,7 @@
     const resultado = ponto.valor - aplicado;
     const varAnt = anterior ? ponto.valor - anterior.valor : 0;
     const linha = (r, v, c) => `<div class="kv"><span class="dim">${rotuloPainel(r)}</span><b class="${c || ""}">${v}</b></div>`;
-    painelSimples(`${esc(inv.nome)} · ${fmtData(ponto.data)}`, aplicado > 0 ? (resultado / aplicado) * 100 : 0,
+    painelSimples(`${esc(nomeCurtoInvestimento(inv.nome))} · ${fmtData(ponto.data)}`, aplicado > 0 ? (resultado / aplicado) * 100 : 0,
       "de rendimento sobre o valor aplicado", "(valor na data ÷ valor aplicado − 1) × 100",
       linha("Valor na data", brlSinal(ponto.valor)) +
       linha("Valor Aplicado", brlSinal(aplicado)) +
@@ -5859,7 +5870,7 @@
     return `
       <button class="voltar" data-acao="ir" data-secao="investimentos"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONES.voltar}</svg>Voltar para Investimentos</button>
       <div class="grid g-top">
-        <div class="c12">${card("", `${esc(inv.nome)} <span class="selo-tag selo-acao">${esc(inv.tipoAtivo || inv.categoria)}</span>`,
+        <div class="c12">${card("", `<span title="${esc(inv.nome)}">${esc(nomeCurtoInvestimento(inv.nome))}</span> <span class="selo-tag selo-acao">${esc(inv.tipoAtivo || inv.categoria)}</span>`,
           `${esc(inv.emissor || "emissor não informado")}${inv.indexador ? " · " + esc(inv.indexador) + (inv.taxaContratada ? " " + f2(inv.taxaContratada) + "%" : "") : ""}`,
           `${abasPeriodo()}<button class="btn" data-acao="editar-investimento" data-id="${inv.id}">Editar</button>`,
           hist.length >= 2
@@ -5873,7 +5884,7 @@
     const inv = achar(DADOS.investimentos, id);
     if (!inv) return;
     abrirModal(`
-      <h3>Lançar novo valor — ${esc(inv.nome)}</h3>
+      <h3>Lançar novo valor — ${esc(nomeCurtoInvestimento(inv.nome))}</h3>
       <div class="par">
         <div class="campo"><label for="f_data">Data</label><input id="f_data" type="date" value="${hojeISO()}"></div>
         <div class="campo"><label for="f_valor">Valor Bruto</label>${campoMoeda("f_valor", inv.valorAtual)}</div>
