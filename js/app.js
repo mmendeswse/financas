@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.201";
+  const VERSAO_APP = "3.6.202";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1667,7 +1667,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.201" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.202" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2671,7 +2671,7 @@
       <div class="extrato-linha ${classe || ""}${previsto ? " linha-prevista" : ""}${ref || auto || transfId || ajusteId ? " clicavel" : ""}"${auto ? ` data-transf-auto="${esc(auto.id)}" data-mes="${auto.mes}" title="Mudar o valor deste mês"` : ""}${transfId ? ` data-transf-id="${esc(String(transfId))}" title="Editar a transferência"` : ""}${ajusteId ? ` data-ajuste-id="${esc(String(ajusteId))}" title="Ver o ajuste de saldo"` : ""}${ref ? ` data-ir-secao="${ref.secao}" data-ir-id="${esc(String(ref.id))}" data-ir-data="${esc(String(ref.data || ""))}" title="Ver na guia ${ref.secao === "entradas" ? "Entradas" : "Despesas"}"` : ""}>
         <span class="dim">${data}</span>
         <span class="desc">${desc}</span>
-        <span class="rep">${auto ? `<span class="selo-tag selo-cat" title="Transferência automática">Automática</span>` : celRep(repDe(ref))}</span>
+        <span class="rep">${auto ? `<span class="selo-tag selo-cat" title="Transferência automática">Automática</span>` : ajusteId ? SELO_UNICA : celRep(repDe(ref))}</span>
         <span class="status">${tipo ? seloStatus(tipo, previsto) : ""}${repDe(ref) ? `<span class="rep-movel">${repDe(ref)}</span>` : ""}</span>
         <b class="${valor === null ? "vazio" : corSinal(valor)}">${valor === null ? "" : brlSinal(valor)}</b>
         <b class="saldo${saldo < 0 ? " down" : ""}">${saldo === null ? '<span class="dim">—</span>' : brl(Math.abs(saldo))}</b>
@@ -2800,7 +2800,7 @@
         // recorrência (mensal, Parcela 05/16…) e "Categoria · Tipo" embaixo da descrição, como nas guias
         const todosReg = [...d.entradas, ...d.despesas, ...(d.contasPagar || [])];
         const repDe = (ref) => { const o = ref && ref.id ? todosReg.find((r) => r.id === ref.id) : null; return o ? seloFreq({ ...o, data: ref.data || dataReg(o) }, true).trim() || SELO_UNICA : ""; };
-        ext.itens.forEach((i) => itens.push({ data: i.data, valor: i.valor, ref: i.ref, rep: i.tipo === "transferencia" ? "" : repDe(i.ref),
+        ext.itens.forEach((i) => itens.push({ data: i.data, valor: i.valor, ref: i.ref, rep: i.ajusteId ? SELO_UNICA : i.tipo === "transferencia" ? "" : repDe(i.ref),
           desc: descEmoji(i) + (i.tipo === "transferencia" ? (i.sub ? `<span class="desc-sub sem-quebra">${esc(i.sub)}</span>` : "")
             : i.ref ? `<span class="desc-sub">${subDe({ id: i.ref.id, categoria: i.categoria })}</span>` : ""), banco: b.nome,
           status: selo("Pago", "selo-pago") }));
@@ -3925,14 +3925,13 @@
     const a = achar(DADOS.ajustesSaldo || [], id);
     if (!a) return;
     const nome = F.nomeBanco(DADOS, a.bancoId);
-    const detalhePadrao = "Saldo informado · " + brl(Number(a.saldoInformado || 0));
     abrirModal(`
       <h3>Ajuste de saldo · ${esc(nome)}</h3>
       <div class="kv"><span class="dim">Data</span><b>${fmtDataCurta(a.data)}</b></div>
       <div class="kv"><span class="dim">Saldo informado</span><b>${brlSinal(Number(a.saldoInformado || 0))}</b></div>
       <div class="kv" style="margin-bottom:12px"><span class="dim">Diferença</span><b class="${corSinal(a.valor)}">${brlSinal(Number(a.valor || 0))}</b></div>
-      <div class="campo"><label for="f_desc">Descrição</label><input id="f_desc" value="${esc(a.descricao || "")}" placeholder="Ajuste de saldo"></div>
-      <div class="campo"><label for="f_detalhe">Detalhe</label><input id="f_detalhe" value="${esc(a.detalhe || "")}" placeholder="${esc(detalhePadrao)}"></div>
+      <div class="campo"><label for="f_desc">Descrição</label><input id="f_desc" value="${esc(a.descricao || "")}" placeholder="Ajuste"></div>
+      <div class="campo"><label for="f_detalhe">Detalhe</label><input id="f_detalhe" value="${esc(a.detalhe || "")}" placeholder="Saldo"></div>
       <div class="modal-acoes"><button class="btn primario salvar" id="btnSalvarAj">Salvar</button><button class="btn perigo" id="btnExcluir">Excluir</button><button class="btn" id="btnFecharAj">Fechar</button></div>`);
     // o foco automático no primeiro campo abriria o teclado no iPad
     if (document.activeElement && document.activeElement.blur) setTimeout(() => document.activeElement.blur(), 40);
