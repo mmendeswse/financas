@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.196";
+  const VERSAO_APP = "3.6.198";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1667,7 +1667,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.196" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.198" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -3920,17 +3920,31 @@
       terminar();
     };
   }
+  // ver um ajuste de saldo: dá para editar a descrição e o texto de baixo
   function abrirModalAjusteSaldo(id) {
     const a = achar(DADOS.ajustesSaldo || [], id);
     if (!a) return;
     const nome = F.nomeBanco(DADOS, a.bancoId);
+    const detalhePadrao = "Saldo informado · " + brl(Number(a.saldoInformado || 0));
     abrirModal(`
       <h3>Ajuste de saldo · ${esc(nome)}</h3>
       <div class="kv"><span class="dim">Data</span><b>${fmtDataCurta(a.data)}</b></div>
       <div class="kv"><span class="dim">Saldo informado</span><b>${brlSinal(Number(a.saldoInformado || 0))}</b></div>
-      <div class="kv"><span class="dim">Diferença</span><b class="${corSinal(a.valor)}">${brlSinal(Number(a.valor || 0))}</b></div>
-      <div class="modal-acoes"><button class="btn perigo" id="btnExcluir">Excluir</button><button class="btn" id="btnFecharAj">Fechar</button></div>`);
+      <div class="kv" style="margin-bottom:12px"><span class="dim">Diferença</span><b class="${corSinal(a.valor)}">${brlSinal(Number(a.valor || 0))}</b></div>
+      <div class="campo"><label for="f_desc">Descrição</label><input id="f_desc" value="${esc(a.descricao || "")}" placeholder="Ajuste de saldo"></div>
+      <div class="campo"><label for="f_detalhe">Detalhe</label><input id="f_detalhe" value="${esc(a.detalhe || "")}" placeholder="${esc(detalhePadrao)}"></div>
+      <div class="modal-acoes"><button class="btn primario salvar" id="btnSalvarAj">Salvar</button><button class="btn perigo" id="btnExcluir">Excluir</button><button class="btn" id="btnFecharAj">Fechar</button></div>`);
+    // o foco automático no primeiro campo abriria o teclado no iPad
+    if (document.activeElement && document.activeElement.blur) setTimeout(() => document.activeElement.blur(), 40);
     document.getElementById("btnFecharAj").onclick = () => { fecharModal(); explicarBanco(a.bancoId); };
+    document.getElementById("btnSalvarAj").onclick = () => {
+      // vazio volta ao texto padrão
+      a.descricao = document.getElementById("f_desc").value.trim() || undefined;
+      a.detalhe = document.getElementById("f_detalhe").value.trim() || undefined;
+      fecharModal();
+      salvarEAtualizar("Ajuste de saldo atualizado.");
+      explicarBanco(a.bancoId);
+    };
     document.getElementById("btnExcluir").onclick = () => {
       fecharModal();
       confirmarExclusao("Excluir este ajuste? O saldo do banco volta ao calculado pelo app.", () => {

@@ -71,8 +71,9 @@
     // diferença para o calculado entra aqui (não é receita nem despesa)
     (d.ajustesSaldo || []).forEach(function (a) {
       var informado = Number(a.saldoInformado || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+      // descrição e texto de baixo podem ser editados na janela do ajuste
       lista.push({ bancoId: a.bancoId, valor: Number(a.valor || 0), data: a.data, transferencia: true, ajusteId: a.id,
-        descricao: "Ajuste de saldo", emoji: "⚖️", sub: "Saldo informado · " + informado });
+        descricao: a.descricao || "Ajuste de saldo", emoji: "⚖️", sub: a.detalhe || ("Saldo informado · " + informado) });
     });
     return movimentosExtras ? lista.concat(movimentosExtras(d) || []) : lista;
   }
