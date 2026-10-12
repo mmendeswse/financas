@@ -2298,7 +2298,7 @@ table.terminal.tab-mercado td.papel small { display: block; margin-left: 0; colo
 }
 
 /* relatório ICL na guia Bolsa: quadros no padrão da guia Ações */
-.grid-relatorio { margin-top: 18px; }
+.grid-relatorio { margin-bottom: 18px; }
 table.terminal.tab-rel { min-width: 0; }
 table.terminal.tab-rel tbody tr:not([data-acao]) { cursor: default; }
 table.terminal.tab-rel tr.tr-grupo td { background: #0E1526 !important; color: var(--cy); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; padding-top: 7px; }
@@ -2324,3 +2324,23 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
 .nota-grau.g-c { background: rgba(255, 213, 79, .1); color: #FFD54F; }
 .nota-grau.g-d { background: rgba(255, 167, 38, .12); color: #FFA726; }
 .nota-grau.g-e { background: rgba(255, 77, 94, .18); color: #FF4D5E; }
+/* só a letra do grau, num quadradinho na frente do papel */
+.term-ativo .nota-grau { width: 20px; height: 20px; padding: 0; justify-content: center; align-items: center; font-size: 12px; font-weight: 900; margin-right: 6px; vertical-align: 1px; }
+.nota-grau.g-x { background: #1D2735; color: #6E8494; }
+.legenda-graus { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; padding: 8px 12px; border-top: 1px solid var(--t-linha); background: #05080C; font-size: 11px; font-weight: 700; color: #9FB0C0; }
+.legenda-graus span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.legenda-graus .nota-grau { width: 18px; height: 18px; padding: 0; justify-content: center; align-items: center; font-style: normal; font-size: 11px; font-weight: 900; cursor: default; }
+.legenda-graus em { margin-left: auto; font-style: normal; font-weight: 600; color: #6E8494; font-size: 10.5px; }
+.grid-relatorio-fim { margin-top: 18px; }
+.grid-relatorio-meio { margin: 0 0 18px; }
+.term-nasdaq + .grid-relatorio-meio { margin-top: 18px; }
+/* notícias e análise automática: o quadro ao lado do gráfico dividido ao meio */
+.term-grade-2 .tp-noticias { display: flex; flex-direction: column; overflow: hidden; }
+.tp-metade { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; }
+.tp-metade + .tp-metade { border-top: 1px solid var(--t-linha); }
+.tp-metade .term-cab { position: static; flex: none; }
+.tp-rolar { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+@media (max-width: 900px) { .term-grade-2 .tp-noticias { height: 640px; max-height: none; } }
+/* tabelas das bolsas com muitas ações: altura máxima, rolagem própria e cabeçalho fixo */
+.term-grade-meio .term-rolar { max-height: 620px; overflow: auto; }
+.term-grade-meio .term-tab thead th { position: sticky; top: 0; z-index: 1; background: #0B1018; }
