@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.244";
+  const VERSAO_APP = "3.6.245";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1134,7 +1134,11 @@
     if (["acoes", "detalhe-acao", "detalhe-dolar", "detalhe-cripto", "detalhe-mercado"].includes(secao)) periodoGrafico = "90d";
     if (["investimentos", "detalhe-investimento"].includes(secao)) periodoGrafico = "tudo";
     // a guia Nasdaq busca as cotações ao abrir (se o retrato tiver mais de 10 min)
-    if (secao === "nasdaq") atualizarMercado(false);
+    if (secao === "nasdaq") {
+      atualizarMercado(false);
+      // sem notícias (ou com mais de 15 min): busca agora, sem esperar o relógio
+      if (!(mercado.noticias && mercado.noticias.length) || Date.now() - (mercado.noticiasEm || 0) > 15 * 60 * 1000) atualizarNoticiasMercado();
+    }
     // o gráfico do dólar e o de cada ação abrem sempre em velas (candles);
     // tocar no gráfico alterna para a linha e de volta
     if (secao === "detalhe-dolar" || secao === "detalhe-cripto") velasDolar = true;
@@ -1736,7 +1740,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.244" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.245" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -6352,6 +6356,38 @@
     try { const m = JSON.parse(localStorage.getItem(CHAVE_MERCADO) || "null"); if (m && m.cotacoes) return { ...m, carregando: false }; } catch (e) { /* sem acesso */ }
     return { cotacoes: {}, erros: {}, dolar: null, em: 0, carregando: false };
   })();
+  // Notícias do mercado em separado das cotações, com reservas: a busca do
+  // período (Google Notícias, GDELT) e, se vier vazia, as de hoje e de ontem
+  const noticiasMercado = { buscando: false, tentativa: 0 };
+  const TERMOS_MERCADO = { google: 'Nasdaq OR Ibovespa OR "Wall Street" OR "bolsa de valores"', gdelt: '(Nasdaq OR Ibovespa OR "Wall Street")' };
+  function atualizarNoticiasMercado() {
+    if (noticiasMercado.buscando) return;
+    noticiasMercado.buscando = true; noticiasMercado.tentativa = Date.now();
+    const isoDia = (dt) => `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+    const hoje = new Date(), ontem = new Date(), inicio = new Date();
+    ontem.setDate(ontem.getDate() - 1); inicio.setDate(inicio.getDate() - 3);
+    C.buscarNoticiasPeriodo(TERMOS_MERCADO, isoDia(inicio), isoDia(hoje)).catch(() => [])
+      .then((lista) => lista && lista.length ? lista
+        : Promise.all([C.buscarNoticiasDia(TERMOS_MERCADO, isoDia(hoje)).catch(() => []), C.buscarNoticiasDia(TERMOS_MERCADO, isoDia(ontem)).catch(() => [])]).then(([a, b]) => [...a, ...b]))
+      .then((lista) => {
+        if (lista && lista.length) {
+          mercado.noticias = [...new Map(lista.map((n) => [n.titulo, n])).values()].sort((a, b) => (a.quando < b.quando ? 1 : -1)).slice(0, 20);
+          mercado.noticiasEm = Date.now();
+          try { localStorage.setItem(CHAVE_MERCADO, JSON.stringify({ ...mercado, carregando: false })); } catch (e) { /* sem espaço */ }
+        }
+      })
+      .then(() => { noticiasMercado.buscando = false; if (ROTA.secao === "nasdaq") renderRota(); });
+  }
+  // Com a guia Bolsa aberta, tudo se atualiza sozinho: cotações a cada 10
+  // minutos e notícias a cada 15 (sem notícias, nova tentativa a cada 2 minutos)
+  setInterval(() => {
+    if (ROTA.secao !== "nasdaq" || document.visibilityState === "hidden" || navigator.onLine === false) return;
+    atualizarMercado(false, true);
+    const semNoticias = !(mercado.noticias && mercado.noticias.length);
+    const desde = Date.now() - (noticiasMercado.tentativa || 0);
+    if (desde > (semNoticias ? 2 : 15) * 60 * 1000) atualizarNoticiasMercado();
+  }, 30 * 1000);
+
   function atualizarMercado(forcar, silencioso) {
     if (mercado.carregando) return;
     if (!forcar && Date.now() - mercado.em < 10 * 60 * 1000 && Object.keys(mercado.cotacoes).length) return;
@@ -6821,7 +6857,7 @@
       ${lista.length ? `<div class="term-noticias">${lista.map((n) => `<a class="term-noticia" href="${esc(n.url)}" target="_blank" rel="noopener">
         <span class="tn-hora">${new Date(n.quando).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}<em>${haQuanto(n.quando)}</em></span>
         <span class="tn-titulo">${esc(n.titulo)}</span><span class="tn-fonte">${esc(n.fonte || "")}</span></a>`).join("")}</div>`
-        : `<p class="term-texto term-dim">${mercado.carregando ? "Buscando notícias…" : "Sem notícias agora. Toque em ↻ Atualizar."}</p>`}
+        : `<p class="term-texto term-dim">${mercado.carregando ? "Buscando notícias…" : noticiasMercado.buscando ? "Buscando notícias…" : "Nenhuma notícia por enquanto — o app tenta de novo sozinho em instantes."}</p>`}
       ${frases.length ? `<div class="term-cab">ANÁLISE AUTOMÁTICA · ${status.toUpperCase()}</div><ul class="term-lista">${frases.map((f) => `<li>${f}</li>`).join("")}</ul>` : ""}
       <p class="term-nota">Cotações com atraso de até 15 minutos · Yahoo Finance, Stooq e brapi.dev · notícias do Google Notícias · não é recomendação de investimento.</p></div>`;
 
