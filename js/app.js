@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.178";
+  const VERSAO_APP = "3.6.179";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -238,6 +238,24 @@
     });
     d.config.migracaoVrVt = true;
     return feitos.length ? `${feitos.join(" e ")} agora ${feitos.length === 1 ? "é transferência automática" : "são transferências automáticas"} do salário para o ${F.nomeBanco(d, (d.transfAuto || []).slice(-1)[0].paraBancoId)}.` : "";
+  }
+
+  // Correção única: as despesas VR e VT (Nubank) já vêm com o Inter marcado em
+  // "Enviar o dinheiro para" — ao marcar como paga, o valor entra no Inter.
+  // Só vale dali em diante: os meses já pagos não mudam.
+  function migrarVrVtDestinoInter() {
+    const d = DADOS;
+    d.config = d.config || {};
+    if (d.config.migracaoVrVtDestino) return "";
+    const inter = d.bancos.find((b) => /\binter\b/i.test(String(b.nome || "")));
+    const feitos = [];
+    if (inter) {
+      seriesRecorrentes([...d.despesas, ...(d.contasPagar || [])])
+        .filter((x) => ["VR", "VT"].some((n) => descIgual(x.descricao, n)) && !(x.ateMes && x.ateMes < F.mesAtual()) && !x.cartaoId && x.bancoId !== inter.id && !x.destinoBancoId)
+        .forEach((x) => { x.destinoBancoId = inter.id; feitos.push(x.descricao); });
+    }
+    d.config.migracaoVrVtDestino = true;
+    return feitos.length ? `Ao marcar ${feitos.join(" e ")} como pag${feitos.length === 1 ? "a" : "as"}, o valor vai para o ${inter.nome}.` : "";
   }
 
   // legenda dos gráficos Receitas x despesas, no cabeçalho do quadro (no celular fica no gráfico)
@@ -1081,7 +1099,8 @@
     sincronizar(true).then(() => {
       if (cfgSync().token && !syncBaixado) return;
       const msg = migrarVrVtParaTransferencia();
-      if (msg) { salvarEAtualizar(msg); renderRota(); }
+      const msgDestino = migrarVrVtDestinoInter();
+      if (msg || msgDestino) { salvarEAtualizar([msg, msgDestino].filter(Boolean).join(" ")); renderRota(); }
     });
     setInterval(() => { if (document.visibilityState !== "hidden") sincronizar(true); }, 30 * 1000);
     document.addEventListener("visibilitychange", () => {
@@ -1283,6 +1302,8 @@
       if (ta) { e.stopPropagation(); abrirModalTransfAutoMes(ta.dataset.transfAuto, ta.dataset.mes); return; }
       const tm = e.target.closest("[data-transf-id]");
       if (tm) { e.stopPropagation(); abrirModalTransferencia(tm.dataset.transfId); return; }
+      const aj = e.target.closest("[data-ajuste-id]");
+      if (aj) { e.stopPropagation(); abrirModalAjusteSaldo(aj.dataset.ajusteId); return; }
       const ir = e.target.closest("[data-ir-secao]");
       if (ir) { e.stopPropagation(); irParaLancamento(ir.dataset.irSecao, ir.dataset.irId, ir.dataset.irData); return; }
       const ln = e.target.closest("[data-acao-editar]");
@@ -1617,7 +1638,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.178" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.179" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2613,8 +2634,8 @@
     // status do lançamento, com o mesmo selo das guias Entradas e Despesas
     // (transferência já feita também conta como Pago)
     const seloStatus = (tipo, previsto) => previsto ? `<span class="selo-tag selo-prevista">Prevista</span>` : `<span class="selo-tag selo-pago">Pago</span>`;
-    const linha = (data, desc, valor, saldo, classe, ref, tipo, previsto, auto, transfId) => `
-      <div class="extrato-linha ${classe || ""}${previsto ? " linha-prevista" : ""}${ref || auto || transfId ? " clicavel" : ""}"${auto ? ` data-transf-auto="${esc(auto.id)}" data-mes="${auto.mes}" title="Mudar o valor deste mês"` : ""}${transfId ? ` data-transf-id="${esc(String(transfId))}" title="Editar a transferência"` : ""}${ref ? ` data-ir-secao="${ref.secao}" data-ir-id="${esc(String(ref.id))}" data-ir-data="${esc(String(ref.data || ""))}" title="Ver na guia ${ref.secao === "entradas" ? "Entradas" : "Despesas"}"` : ""}>
+    const linha = (data, desc, valor, saldo, classe, ref, tipo, previsto, auto, transfId, ajusteId) => `
+      <div class="extrato-linha ${classe || ""}${previsto ? " linha-prevista" : ""}${ref || auto || transfId || ajusteId ? " clicavel" : ""}"${auto ? ` data-transf-auto="${esc(auto.id)}" data-mes="${auto.mes}" title="Mudar o valor deste mês"` : ""}${transfId ? ` data-transf-id="${esc(String(transfId))}" title="Editar a transferência"` : ""}${ajusteId ? ` data-ajuste-id="${esc(String(ajusteId))}" title="Ver o ajuste de saldo"` : ""}${ref ? ` data-ir-secao="${ref.secao}" data-ir-id="${esc(String(ref.id))}" data-ir-data="${esc(String(ref.data || ""))}" title="Ver na guia ${ref.secao === "entradas" ? "Entradas" : "Despesas"}"` : ""}>
         <span class="dim">${data}</span>
         <span class="desc">${desc}</span>
         <span class="rep">${auto ? `<span class="selo-tag selo-cat" title="Transferência automática">Automática</span>` : celRep(repDe(ref))}</span>
@@ -2633,7 +2654,7 @@
     // transferência: "Para · Banco" (ou "De · Banco") embaixo, como o "Categoria · Tipo" dos lançamentos
     const subItem = (i) => i.tipo === "transferencia" ? (i.sub ? `<span class="desc-sub sem-quebra">${esc(i.sub)}</span>` : "")
       : i.ref ? `<span class="desc-sub">${subDe({ id: i.ref.id, categoria: i.categoria })}</span>` : "";
-    const doItem = (i) => linha(fmtDataCurta(i.data), descEmoji(i) + subItem(i), i.valor, i.saldo, "", i.ref, i.tipo, i.previsto, i.auto, i.transfId);
+    const doItem = (i) => linha(fmtDataCurta(i.data), descEmoji(i) + subItem(i), i.valor, i.saldo, "", i.ref, i.tipo, i.previsto, i.auto, i.transfId, i.ajusteId);
     let corpo;
     {
       const pagos = ext.itens.filter((i) => String(i.data) >= fx.ini && String(i.data) <= fx.fim);
@@ -2680,12 +2701,14 @@
       ${extratoBancoHtml(d, b)}
       <div class="modal-acoes">
         <button class="btn primario salvar" id="btnIrPainel">Depositar</button>
+        <button class="btn" id="btnSaldoReal" title="Informar quanto o banco tem hoje">Informar saldo</button>
         <button class="btn btn-com-icone" id="btnEditarBanco" title="Editar os dados do banco">${ICONE_EDITAR}Editar</button>
         <button class="btn" id="btnFecharPainel">Fechar</button>
       </div>`);
     document.getElementById("modal").classList.add("modal-extrato");
     document.getElementById("btnIrPainel").onclick = () => { fecharModal(); abrirModalValorBanco(b.id); };
     document.getElementById("btnEditarBanco").onclick = () => { fecharModal(); abrirModalBanco(b.id); };
+    document.getElementById("btnSaldoReal").onclick = () => { fecharModal(); informarSaldoBanco(b.id, null, () => explicarBanco(b.id)); };
     document.getElementById("btnFecharPainel").onclick = fecharModal;
     ligarPeriodoExtrato(b);
     const ext = document.querySelector("#modal .extrato-banco");
@@ -3834,6 +3857,57 @@
     };
   }
 
+  // ---------------------------------------------------------------------
+  // AJUSTE DE SALDO: o usuário informa quanto o banco tem de verdade (o
+  // saldo do Inter depois de receber o VR/VT, por ex.) e a diferença para o
+  // saldo calculado vira um lançamento "Ajuste de saldo" — não conta como
+  // receita nem despesa. Data: hoje, ou a do pagamento se ela for depois,
+  // para o saldo do extrato terminar no valor informado.
+  // DADOS.ajustesSaldo: [{ id, bancoId, data, valor, saldoInformado }]
+  // ---------------------------------------------------------------------
+  function informarSaldoBanco(bancoId, data, voltar) {
+    const b = F.listaBancosComSaldo(DADOS).find((x) => x.id === bancoId);
+    if (!b) return;
+    const dataAjuste = data && data > hojeISO() ? data : hojeISO();
+    abrirModal(`
+      <h3>Saldo atual no ${esc(b.nome)}</h3>
+      <p class="campo ajuda" style="margin:0 0 14px">Pelo app, o ${esc(b.nome)} tem <b>${brlSinal(b.saldoAtual)}</b>. Quanto tem nele agora?</p>
+      <div class="campo"><label for="f_saldoReal">Saldo atual</label>${campoMoeda("f_saldoReal", b.saldoAtual)}<div class="ajuda">Se for diferente, a diferença entra no extrato como "Ajuste de saldo", sem contar como receita ou despesa.</div></div>
+      <div class="modal-acoes"><button class="btn" id="btnPularSaldo">Agora não</button><button class="btn primario salvar" id="btnSalvarSaldo">Salvar saldo</button></div>`);
+    const terminar = () => { fecharModal(); if (voltar) { painelReabrir = voltar; voltar(); } };
+    document.getElementById("btnPularSaldo").onclick = terminar;
+    document.getElementById("btnSalvarSaldo").onclick = () => {
+      const real = Math.round(numIn(document.getElementById("f_saldoReal").value) * 100) / 100;
+      const diff = Math.round((real - b.saldoAtual) * 100) / 100;
+      if (diff) {
+        DADOS.ajustesSaldo = DADOS.ajustesSaldo || [];
+        DADOS.ajustesSaldo.push({ id: A.novoId(), bancoId, data: dataAjuste, valor: diff, saldoInformado: real });
+      }
+      fecharModal();
+      salvarEAtualizar(diff ? `Saldo do ${b.nome} ajustado para ${brlSinal(real)}.` : `O saldo do ${b.nome} já estava certo.`);
+      if (voltar) { painelReabrir = voltar; voltar(); }
+    };
+  }
+  function abrirModalAjusteSaldo(id) {
+    const a = achar(DADOS.ajustesSaldo || [], id);
+    if (!a) return;
+    const nome = F.nomeBanco(DADOS, a.bancoId);
+    abrirModal(`
+      <h3>Ajuste de saldo · ${esc(nome)}</h3>
+      <div class="kv"><span class="dim">Data</span><b>${fmtDataCurta(a.data)}</b></div>
+      <div class="kv"><span class="dim">Saldo informado</span><b>${brlSinal(Number(a.saldoInformado || 0))}</b></div>
+      <div class="kv"><span class="dim">Diferença</span><b class="${corSinal(a.valor)}">${brlSinal(Number(a.valor || 0))}</b></div>
+      <div class="modal-acoes"><button class="btn perigo" id="btnExcluir">Excluir</button><button class="btn" id="btnFecharAj">Fechar</button></div>`);
+    document.getElementById("btnFecharAj").onclick = () => { fecharModal(); explicarBanco(a.bancoId); };
+    document.getElementById("btnExcluir").onclick = () => {
+      fecharModal();
+      confirmarExclusao("Excluir este ajuste? O saldo do banco volta ao calculado pelo app.", () => {
+        DADOS.ajustesSaldo = DADOS.ajustesSaldo.filter((x) => x.id !== a.id);
+        salvarEAtualizar("Ajuste de saldo excluído.");
+      });
+    };
+  }
+
   // valor de um mês: confirmar, mudar só este mês ou pular o mês
   function abrirModalTransfAutoMes(id, mes) {
     const r = achar(DADOS.transfAuto || [], id);
@@ -4093,22 +4167,29 @@
 
   // Troca o status de um lançamento — a mesma regra usada nas guias
   // Entradas e Despesas e nos painéis "Receitas/Despesas do mês".
-  function alternarStatusLancamento(acao, id, mes, bancoEscolhido) {
+  function alternarStatusLancamento(acao, id, mes, bancoEscolhido, destino) {
     // marcar despesa como paga: pergunta antes de qual banco sai o dinheiro
     if (!bancoEscolhido && DADOS.bancos.length) {
       const regQ = acao === "quitar-mes" ? achar(DADOS.despesas, id) : (acao === "quitar-mes-conta" || acao === "alternar-pago") ? achar(DADOS.contasPagar, id) : null;
       const vaiPagar = regQ && !regQ.cartaoId && (acao === "alternar-pago" ? regQ.status !== "Pago" : !mesQuitado(regQ, mes));
       if (vaiPagar) {
-        escolherBancoPagamento(regQ, mes, (bancoId) => alternarStatusLancamento(acao, id, mes, bancoId));
+        escolherBancoPagamento(regQ, mes, (bancoId, destinoId) => alternarStatusLancamento(acao, id, mes, bancoId, destinoId));
         return true;
       }
     }
-    if (acao === "quitar-mes") {
-      const reg = achar(DADOS.despesas, id);
-      if (reg) { gravarAjuste(reg, mes, { pago: !mesQuitado(reg, mes), bancoId: bancoEscolhido || ajusteDoMes(reg, mes).bancoId }); salvarEAtualizar(mesQuitado(reg, mes) ? "Marcada como paga neste mês." : "Marcada como prevista."); }
-    } else if (acao === "quitar-mes-conta") {
-      const regC = achar(DADOS.contasPagar, id);
-      if (regC) { gravarAjuste(regC, mes, { pago: !mesQuitado(regC, mes), bancoId: bancoEscolhido || ajusteDoMes(regC, mes).bancoId }); salvarEAtualizar(mesQuitado(regC, mes) ? "Marcada como paga neste mês." : "Marcada como prevista."); }
+    // o dinheiro da despesa paga vai para outro banco (VR/VT para o Inter):
+    // depois de marcar, pergunta o saldo real daquele banco
+    const voltar = painelReabrir;
+    const conferirDestino = (pagou, data) => { if (pagou && destino) setTimeout(() => informarSaldoBanco(destino, data, voltar), 0); };
+    if (acao === "quitar-mes" || acao === "quitar-mes-conta") {
+      const reg = achar(acao === "quitar-mes" ? DADOS.despesas : DADOS.contasPagar, id);
+      if (reg) {
+        const pagar = !mesQuitado(reg, mes);
+        gravarAjuste(reg, mes, { pago: pagar, bancoId: bancoEscolhido || ajusteDoMes(reg, mes).bancoId, ...(pagar ? { destinoBancoId: destino || undefined } : {}) });
+        if (pagar && bancoEscolhido) reg.destinoBancoId = destino || undefined;   // fica sugerido para os próximos meses
+        salvarEAtualizar(pagar ? "Marcada como paga neste mês." + (destino ? ` O valor foi para o ${F.nomeBanco(DADOS, destino)}.` : "") : "Marcada como prevista.");
+        conferirDestino(pagar, ocorrenciasNoMes(reg, mes)[0] || mes + "-01");
+      }
     } else if (acao === "quitar-mes-entrada") {
       const regE = achar(DADOS.entradas, id);
       if (regE) { gravarAjuste(regE, mes, { pago: !mesQuitado(regE, mes) }); salvarEAtualizar(mesQuitado(regE, mes) ? "Marcada como paga neste mês." : "Marcada como prevista."); setTimeout(() => conferirTransfAutoNovas(true), 0); }
@@ -4126,7 +4207,12 @@
       }
     } else if (acao === "alternar-pago") {
       const c = achar(DADOS.contasPagar, id);
-      if (c) { c.status = c.status === "Pago" ? "Pendente" : "Pago"; if (bancoEscolhido) c.bancoId = bancoEscolhido; salvarEAtualizar(c.status === "Pago" ? "Marcada como paga." : "Marcada como prevista."); }
+      if (c) {
+        c.status = c.status === "Pago" ? "Pendente" : "Pago";
+        if (bancoEscolhido) { c.bancoId = bancoEscolhido; c.destinoBancoId = destino || undefined; }
+        salvarEAtualizar(c.status === "Pago" ? "Marcada como paga." + (c.destinoBancoId ? ` O valor foi para o ${F.nomeBanco(DADOS, c.destinoBancoId)}.` : "") : "Marcada como prevista.");
+        conferirDestino(c.status === "Pago", c.vencimento);
+      }
     }
   }
 
@@ -4138,6 +4224,7 @@
     const atual = mes ? bancoDoMes(reg, mes) : reg.bancoId;
     const bancos = bancosNaOrdem(F.listaBancosComSaldo(DADOS));
     let escolhido = bancos.some((b) => b.id === atual) ? atual : bancos[0].id;
+    const destinoAtual = (mes && ajusteDoMes(reg, mes).destinoBancoId) || reg.destinoBancoId || "";
     const reabrir = painelReabrir;
     abrirModal(`
       <h3>Pagar com qual banco?</h3>
@@ -4147,7 +4234,13 @@
           <span style="display:flex;align-items:center;gap:8px">${marcaBanco(b.nome, 18)}${esc(b.nome)}</span>
           <b><span class="dim" style="font-weight:500">${brlSinal(b.saldoAtual)} → </span><span class="${b.saldoAtual - valor < 0 ? "down" : "up"}">${brlSinal(b.saldoAtual - valor)}</span></b>
         </button>`).join("")}</div>
+      ${bancos.length > 1 ? `<div class="campo" style="margin-top:12px"><label for="f_destinoPg">Enviar o dinheiro para</label><select id="f_destinoPg">
+        <option value="">Nenhum banco (só sai do banco escolhido)</option>
+        ${bancos.map((b) => `<option value="${b.id}"${b.id === destinoAtual ? " selected" : ""}>${esc(b.nome)}</option>`).join("")}
+      </select><div class="ajuda">O valor sai do banco escolhido e entra neste (VR e VT para o Inter, por ex.). Depois você informa o saldo atual dele.</div></div>` : ""}
       <div class="modal-acoes"><button class="btn" id="btnCancelarPg">Cancelar</button><button class="btn primario salvar" id="btnConfirmarPg">Marcar como pago</button></div>`);
+    // o foco automático no "Enviar o dinheiro para" abriria a lista no iPad
+    if (document.getElementById("f_destinoPg")) setTimeout(() => document.getElementById("f_destinoPg").blur(), 40);
     const marcar = () => document.querySelectorAll(".opcao-banco-pg").forEach((el) => {
       const sel = el.dataset.banco === escolhido;
       el.style.outline = sel ? "2px solid var(--cy)" : "none";
@@ -4156,7 +4249,11 @@
     marcar();
     document.querySelectorAll(".opcao-banco-pg").forEach((el) => { el.onclick = () => { escolhido = el.dataset.banco; marcar(); }; });
     document.getElementById("btnCancelarPg").onclick = () => { fecharModal(); if (reabrir) reabrir(); };
-    document.getElementById("btnConfirmarPg").onclick = () => { fecharModal(); painelReabrir = reabrir; aoEscolher(escolhido); if (reabrir) reabrir(); };
+    document.getElementById("btnConfirmarPg").onclick = () => {
+      const selDest = document.getElementById("f_destinoPg");
+      const destino = selDest && selDest.value !== escolhido ? selDest.value : "";
+      fecharModal(); painelReabrir = reabrir; aoEscolher(escolhido, destino); if (reabrir) reabrir();
+    };
   }
 
   // Troca o banco de um lançamento para o próximo da lista — a mesma regra
@@ -4392,12 +4489,23 @@
     [d.entradas, d.despesas, d.contasPagar || []].forEach((l) => l.forEach((r) =>
       Object.keys(r.meses || {}).forEach((m) => { if (r.meses[m].pago) meses.add(m); })));
     const saida = [];
+    // despesa paga cujo dinheiro foi para outro banco (VR/VT para o Inter):
+    // o valor entra no banco de destino, como uma transferência
+    const paraDestino = (reg, origem, destino, valor, data) => {
+      if (destino && origem && destino !== origem && valor > 0) saida.push({ bancoId: destino, valor, data, transferencia: true, descricao: reg.descricao,
+        emoji: reg.emoji, sub: "De · " + F.nomeBanco(d, origem), ref: { secao: "despesas", id: reg.id, data } });
+    };
     const pagas = (reg, data, sinal) => {
       const m = data.slice(0, 7);
-      if (bancoDoMes(reg, m) && !reg.cartaoId && mesQuitado(reg, m)) saida.push({ bancoId: bancoDoMes(reg, m), valor: sinal * valorDoMes(reg, m), data, descricao: reg.descricao,
-        emoji: reg.emoji, categoria: reg.categoria, ref: { secao: sinal > 0 ? "entradas" : "despesas", id: reg.id, data } });
+      if (bancoDoMes(reg, m) && !reg.cartaoId && mesQuitado(reg, m)) {
+        saida.push({ bancoId: bancoDoMes(reg, m), valor: sinal * valorDoMes(reg, m), data, descricao: reg.descricao,
+          emoji: reg.emoji, categoria: reg.categoria, ref: { secao: sinal > 0 ? "entradas" : "despesas", id: reg.id, data } });
+        if (sinal < 0) paraDestino(reg, bancoDoMes(reg, m), ajusteDoMes(reg, m).destinoBancoId, valorDoMes(reg, m), data);
+      }
       return null;
     };
+    (d.contasPagar || []).filter((c) => c.status === "Pago" && !c.cartaoId)
+      .forEach((c) => paraDestino(c, c.bancoId, c.destinoBancoId, Number(c.valor || 0), c.vencimento));
     meses.forEach((mes) => {
       repeticoesPrevistas(d.entradas, mes, (reg, data) => pagas(reg, data, 1));
       const contasDoMes = (d.contasPagar || []).filter((c) => String(c.vencimento || "").slice(0, 7) === mes)
