@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.240";
+  const VERSAO_APP = "3.6.241";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1736,7 +1736,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.240" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.241" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -6577,13 +6577,17 @@
   const GRAUS = [{ min: 75, letra: "A", rot: "Forte" }, { min: 65, letra: "B", rot: "Boa" }, { min: 50, letra: "C", rot: "Neutra" }, { min: 40, letra: "D", rot: "Fraca" }, { min: 0, letra: "E", rot: "Cautela" }];
   const grauDe = (nota) => GRAUS.find((g) => nota >= g.min);
   const notaDe = (sim) => { const x = triagem.get(sim); return x ? x.nota : -1; };
-  function celNota(sim) {
+  // só a letra do grau, na frente do papel (a nota e os motivos ficam na dica)
+  function letraNota(sim) {
     const x = triagem.get(sim);
-    if (!x) return '<td class="r term-dim">—</td>';
+    if (!x) return '<span class="nota-grau g-x" title="Sem nota (sem cotação)">–</span>';
     const g = grauDe(x.nota);
     const porque = x.motivos.map((m) => (m.pos ? "+ " : "− ") + m.txt).join("\n") || "sem sinais fortes";
-    return `<td class="r"><span class="nota-grau g-${g.letra.toLowerCase()}" title="${esc(`Nota ${x.nota} · grau ${g.letra} (${g.rot})\n${porque}`)}"><b>${x.nota}</b> ${g.letra} · ${g.rot}</span></td>`;
+    return `<span class="nota-grau g-${g.letra.toLowerCase()}" title="${esc(`Nota ${x.nota} · grau ${g.letra} (${g.rot})\n${porque}`)}">${g.letra}</span>`;
   }
+  // legenda dos graus, no fim de cada tabela
+  const LEGENDA_GRAUS = `<div class="legenda-graus">${GRAUS.map((g, i) => `<span><i class="nota-grau g-${g.letra.toLowerCase()}">${g.letra}</i>${g.rot} ${i === 0 ? `(${g.min}+)` : i === GRAUS.length - 1 ? `(abaixo de ${GRAUS[i - 1].min})` : `(${g.min}–${GRAUS[i - 1].min - 1})`}</span>`).join("")}<em>nota da triagem automática · não é recomendação</em></div>`;
+
   function painelSugestoes() {
     const lista = [...triagem.values()].sort((a, b) => b.nota - a.nota);
     if (!lista.length) return "";
@@ -6598,7 +6602,7 @@
     return `<div class="term-painel tp-sug"><div class="term-cab">SUGESTÕES PARA INVESTIR · TRIAGEM AUTOMÁTICA (${lista.length} AÇÕES ANALISADAS)</div>
       ${top.length ? `<div class="sug-grade">${top.map(cartao).join("")}</div>` : '<p class="term-texto term-dim">Nenhuma ação passou da nota 65 agora.</p>'}
       ${evitar.length ? `<div class="sug-sub">CAUTELA · SINAIS FRACOS</div><div class="sug-grade sug-cautela">${evitar.map(cartao).join("")}</div>` : ""}
-      <p class="term-nota">Nota de 0 a 100 feita com tendência (médias de 20 e 50 pregões), momento de 1 e 3 meses, volatilidade, distância da máxima, relatório ICL e o tom das notícias que citam a empresa. Nas tabelas, as ações vêm da maior para a menor nota, com o grau: A · Forte (75+), B · Boa (65–74), C · Neutra (50–64), D · Fraca (40–49) e E · Cautela (abaixo de 40); toque e segure na nota para ver os motivos. É uma triagem automática de números passados, não uma recomendação de investimento: confira os fundamentos e o seu perfil antes de investir.</p></div>`;
+      <p class="term-nota">Nota de 0 a 100 feita com tendência (médias de 20 e 50 pregões), momento de 1 e 3 meses, volatilidade, distância da máxima, relatório ICL e o tom das notícias que citam a empresa. Nas tabelas, as ações vêm da maior para a menor nota, com a letra do grau na frente do papel (legenda no fim de cada tabela). É uma triagem automática de números passados, não uma recomendação de investimento: confira os fundamentos e o seu perfil antes de investir.</p></div>`;
   }
 
   // com relatório ICL importado, a tabela da B3 mostra as ações do relatório:
@@ -6614,13 +6618,13 @@
       const nome = c && c.nome && c.nome !== x.ticker ? `<small>${esc(c.nome)}</small>` : "";
       const spark = c && c.historico && c.historico.length > 1 ? sparklineSVG(c.historico.map((h) => h.preco), (c.variacaoPct || 0) >= 0 ? G.CORES.up : G.CORES.down) : "";
       const vazio = `<td class="r term-dim">${mercado.carregando ? "buscando…" : "—"}</td>`;
-      return `<tr ${c ? linkAtivo(x.ticker + ".SA") : ""}><td class="term-ativo">${x.ticker} ${chips}${nome}</td>${celNota(x.ticker + ".SA")}
+      return `<tr ${c ? linkAtivo(x.ticker + ".SA") : ""}><td class="term-ativo">${letraNota(x.ticker + ".SA")} ${x.ticker} ${chips}${nome}</td>
         ${x.pct == null ? '<td class="r term-dim">—</td>' : celVar(x.pct, 3)}
         ${c ? `<td class="r t-preco">${brl(c.preco)}</td>` : vazio}${c ? celVar(c.variacaoPct, 2) : vazio}${desde == null ? vazio : celVar(desde, 5)}<td class="term-spark">${spark}</td></tr>`;
     }).join("");
     return `<div class="term-painel"><div class="term-cab">B3 · AÇÕES DO RELATÓRIO ICL · FECHAMENTO ${esc(col)}</div><div class="term-rolar"><table class="term-tab">
-      <thead><tr><th>Papel</th><th class="r">Nota</th><th class="r">${esc(col)}</th><th class="r">Último</th><th class="r">Hoje</th><th class="r">Desde ${esc(col)}</th><th>3M</th></tr></thead>
-      <tbody>${linhas}</tbody></table></div></div>`;
+      <thead><tr><th>Papel</th><th class="r">${esc(col)}</th><th class="r">Último</th><th class="r">Hoje</th><th class="r">Desde ${esc(col)}</th><th>3M</th></tr></thead>
+      <tbody>${linhas}</tbody></table></div>${LEGENDA_GRAUS}</div>`;
   }
 
   // Relatório ICL em quadros no padrão da guia Ações (cartões com título e a
@@ -6774,15 +6778,15 @@
     // tabelas das bolsas (ações citadas no relatório ganham o selo ICL)
     const citadas = new Set(acoesDoRelatorio(r).map((x) => x.ticker));
     const tabela = (titulo, lista, sufixo, fmt) => `<div class="term-painel"><div class="term-cab">${titulo}</div><div class="term-rolar"><table class="term-tab">
-      <thead><tr><th>Papel</th><th class="r">Nota</th><th class="r">Último</th><th class="r">Dia</th><th class="r">1 mês</th><th class="r">3 meses</th><th>3M</th></tr></thead><tbody>
+      <thead><tr><th>Papel</th><th class="r">Último</th><th class="r">Dia</th><th class="r">1 mês</th><th class="r">3 meses</th><th>3M</th></tr></thead><tbody>
       ${lista.slice().sort((a, b) => notaDe(b[0] + sufixo) - notaDe(a[0] + sufixo)).map(([t, nome]) => {
         const c = q[t + sufixo];
         const selo = citadas.has(t) ? ' <span class="term-chip c-acc">ICL</span>' : "";
-        if (!c) return `<tr><td class="term-ativo">${t}${selo}<small>${esc(nome)}</small></td><td class="r term-dim" colspan="6">${mercado.carregando ? "buscando…" : "sem cotação"}</td></tr>`;
+        if (!c) return `<tr><td class="term-ativo">${t}${selo}<small>${esc(nome)}</small></td><td class="r term-dim" colspan="5">${mercado.carregando ? "buscando…" : "sem cotação"}</td></tr>`;
         const spark = c.historico && c.historico.length > 1 ? sparklineSVG(c.historico.map((h) => h.preco), c.variacaoPct >= 0 ? G.CORES.up : G.CORES.down) : "";
-        return `<tr ${linkAtivo(t + sufixo)} title="Abrir o gráfico de ${t}"><td class="term-ativo">${t}${selo}<small>${esc(nome)}</small></td>${celNota(t + sufixo)}<td class="r t-preco">${fmt(c.preco)}</td>
+        return `<tr ${linkAtivo(t + sufixo)} title="Abrir o gráfico de ${t}"><td class="term-ativo">${letraNota(t + sufixo)} ${t}${selo}<small>${esc(nome)}</small></td><td class="r t-preco">${fmt(c.preco)}</td>
           ${celVar(c.variacaoPct, 2)}${celVar(variacaoSerie(c.historico, 30))}${celVar(variacaoSerie(c.historico, 90), 15)}<td class="term-spark">${spark}</td></tr>`;
-      }).join("")}</tbody></table></div></div>`;
+      }).join("")}</tbody></table></div>${LEGENDA_GRAUS}</div>`;
 
     // notícias do mercado (as mais recentes primeiro) e, embaixo, a análise automática
     const agoraMs = Date.now();
