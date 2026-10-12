@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.218";
+  const VERSAO_APP = "3.6.219";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1732,7 +1732,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.218" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.219" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -6488,10 +6488,8 @@
     const r = DADOS.relatorioMercado;
     const btnImp = `<button class="term-btn" data-acao="importar-relatorio" title="Escolher o PDF do relatório ICL">⇪ Importar ICL</button>`;
     const relogio = `<span class="term-relogio" id="termRelogio">${new Date().toLocaleTimeString("pt-BR")}</span>`;
-    if (!r) {
-      return `<section class="term"><div class="term-topo"><span class="term-marca">RELATÓRIO DIÁRIO</span><span class="term-dim">nenhum relatório importado</span><span class="term-esp"></span>${relogio}${btnImp}</div>
-        <div class="term-vazio">Toque em Importar ICL e escolha o PDF do relatório do Instituto Conhecimento Liberta para ver aqui as cotações, as maiores altas e quedas, juros, inflação, o resumo do dia e as análises de empresas — com a cotação de hoje de cada ação citada.<br>O arquivo é lido no próprio aparelho.</div></section>`;
-    }
+    // sem relatório importado o painel não aparece (importa-se em Configurações → Importar ICL)
+    if (!r) return "";
     const q = mercado.cotacoes, iso = dataFechamentoRelatorio(r);
     const col = r.colunas.length ? r.colunas : ["Últ.", "Ant."];
 
