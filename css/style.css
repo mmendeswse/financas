@@ -2269,3 +2269,19 @@ table.terminal.tab-mercado td.papel small { display: block; margin-left: 0; colo
    mesma altura e sem quebrar, para os campos dos códigos ficarem alinhados */
 .cfg-grid .sync-estado, .cfg-grid .chk-linha { height: 24px; flex-wrap: nowrap; white-space: nowrap; overflow: hidden; }
 .cfg-grid .sync-estado #statusSync { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+/* Zona Risco: o que seria apagado, ocupando o espaço livre do quadro */
+.zona-resumo { flex: 1 1 0; min-height: 0; overflow: hidden; display: flex; flex-direction: column; justify-content: center; gap: 9px; padding: 10px 12px; border: 1px dashed rgba(255, 84, 104, .35); border-radius: 10px; background: rgba(255, 84, 104, .05); }
+.zona-icone { display: flex; align-items: center; gap: 10px; color: var(--down); font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.zona-icone svg { width: 24px; height: 24px; flex: none; }
+.zona-contagem { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.zona-contagem div { display: flex; flex-direction: column; align-items: center; gap: 0; padding: 5px 4px; border-radius: 8px; background: rgba(0, 0, 0, .25); }
+.zona-contagem b { font-family: var(--mono); font-size: 17px; font-weight: 800; color: #FFFFFF; }
+.zona-contagem span { font-size: 9.5px; color: var(--dim); text-transform: uppercase; letter-spacing: .05em; font-weight: 700; }
+.zona-backup { font-size: 12px; color: var(--dim); text-align: center; }
+.zona-backup b { color: var(--texto); }
+@media (max-width: 699px) { .zona-resumo { flex: none; } }
+.zona-resumo.zona-sem-backup .zona-backup { display: none; }
+.zona-resumo.zona-compacta .zona-contagem, .zona-resumo.zona-compacta .zona-backup { display: none; }
+.zona-resumo.zona-compacta { align-items: center; }
+.zona-resumo.zona-oculta { display: none; }
