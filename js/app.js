@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.221";
+  const VERSAO_APP = "3.6.225";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1124,21 +1124,21 @@
   function navegarPara(secao, param) {
     ROTA = { secao, param: param || null };
     // cada abertura do gráfico do dólar/ação procura notícias novas
-    if (secao === "detalhe-dolar" || secao === "detalhe-acao" || secao === "detalhe-cripto") aberturaGrafico++;
+    if (secao === "detalhe-dolar" || secao === "detalhe-acao" || secao === "detalhe-cripto" || secao === "detalhe-mercado") aberturaGrafico++;
     else chaveNaTela = null;   // saiu do gráfico: a busca dele deixa de ter prioridade
     // ao entrar na guia, o filtro volta sempre para o mês e o ano atuais
     if (secao === "entradas") { mesEntradas = F.mesAtual(); ordemEntradas = { ...ORDEM_ENTRADAS_PADRAO }; filtroEntradas = null; }
     if (secao === "despesas") { mesDespesas = F.mesAtual(); ordemDespesas = { ...ORDEM_DESPESAS_PADRAO }; filtroDespesas = null; }
     // o período dos gráficos abre sempre no padrão, em vez de guardar a
     // escolha anterior: ações e moeda (USD/BRL) em "3 meses"; investimentos em "Tudo"
-    if (["acoes", "detalhe-acao", "detalhe-dolar", "detalhe-cripto"].includes(secao)) periodoGrafico = "90d";
+    if (["acoes", "detalhe-acao", "detalhe-dolar", "detalhe-cripto", "detalhe-mercado"].includes(secao)) periodoGrafico = "90d";
     if (["investimentos", "detalhe-investimento"].includes(secao)) periodoGrafico = "tudo";
     // a guia Nasdaq busca as cotações ao abrir (se o retrato tiver mais de 10 min)
     if (secao === "nasdaq") atualizarMercado(false);
     // o gráfico do dólar e o de cada ação abrem sempre em velas (candles);
     // tocar no gráfico alterna para a linha e de volta
     if (secao === "detalhe-dolar" || secao === "detalhe-cripto") velasDolar = true;
-    if (secao === "detalhe-acao") velasAcao = true;
+    if (secao === "detalhe-acao" || secao === "detalhe-mercado") velasAcao = true;
     // a guia Bancos sempre abre mostrando o saldo atual ("Tudo")
     if (secao === "bancos") { mesesBancos = 0; anoBancos = String(new Date().getFullYear()); }
     // Dashboard e Relatórios abrem sempre no ano atual: receitas x despesas
@@ -1174,7 +1174,8 @@
     historico: ["Histórico financeiro", "Todas as movimentações em um só lugar"],
     investimentos: ["Investimentos", "Renda fixa, tesouro, fundos e criptomoedas"],
     acoes: ["Ações", "Ações, FIIs e ETFs — preços atualizados manualmente"],
-    nasdaq: ["Nasdaq", "Relatório diário e mercado: Nasdaq e bolsa brasileira"],
+    nasdaq: ["Bolsa", "Relatório diário e mercado: Nasdaq e bolsa brasileira"],
+    "detalhe-mercado": ["Detalhe do ativo", "Cotação, histórico e notícias"],
     "detalhe-investimento": ["Detalhe da aplicação", "Histórico, imposto e rentabilidade"],
     "detalhe-dolar": ["Dólar comercial", "USD/BRL — cotação e histórico"],
     "detalhe-cripto": ["Criptomoeda", "Cotação, histórico e a quantidade que você tem"],
@@ -1194,7 +1195,7 @@
       dashboard: renderDashboard, financas: renderFinancas, bancos: renderBancos,
       entradas: renderEntradas, despesas: renderDespesas, cartoes: renderCartoes,
       contas: renderDespesas, historico: renderHistorico, investimentos: renderInvestimentos,
-      acoes: renderAcoes, nasdaq: renderNasdaq, "detalhe-acao": renderDetalheAcao, "detalhe-investimento": renderDetalheInvestimento, "detalhe-dolar": renderDetalheDolar, "detalhe-cripto": renderDetalheCripto, carteira: renderCarteira,
+      acoes: renderAcoes, nasdaq: renderNasdaq, "detalhe-mercado": renderDetalheMercado, "detalhe-acao": renderDetalheAcao, "detalhe-investimento": renderDetalheInvestimento, "detalhe-dolar": renderDetalheDolar, "detalhe-cripto": renderDetalheCripto, carteira: renderCarteira,
       relatorios: renderRelatorios, metas: renderMetas, configuracoes: renderConfiguracoes
     };
     const fn = mapa[ROTA.secao] || renderDashboard;
@@ -1431,20 +1432,23 @@
     const aberto = util(agora) && min >= 9 * 60 && min < 18 * 60;
     const proxTxt = prox.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "2-digit" });
     const ultimoMes = new Date(ano, agora.getMonth() + 1, 0).getDate();
-    const linha = (r, v) => `<div class="pd-linha"><span>${r}</span><b title="${esc(v.replace(/<[^>]+>/g, ""))}">${v}</b></div>`;
+    // tudo consolidado: data e hora no topo, situação do dia numa faixa e os números em 4 quadrinhos
+    const proxCurto = proxTxt.replace(/^(\S+?)(-feira)?,/, (m, d) => d.slice(0, 3) + ",");
+    const caixa = (r, v) => `<div class="pd-caixa"><span>${r}</span><b title="${esc(v)}">${v}</b></div>`;
     el.innerHTML = `
       <div class="pd-topo">
-        <div class="pd-semana">${agora.toLocaleDateString("pt-BR", { weekday: "long" })}</div>
-        <div class="pd-data">${agora.toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric" })}</div>
-        <div class="pd-hora">${agora.toLocaleTimeString("pt-BR")}</div>
+        <div><div class="pd-semana">${agora.toLocaleDateString("pt-BR", { weekday: "long" })}</div>
+          <div class="pd-data">${agora.toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric" })}</div>
+          <div class="pd-dia${fer ? " pd-fer" : ""}">${esc(tipoDia)}</div></div>
+        <div class="pd-direita"><div class="pd-hora">${agora.toLocaleTimeString("pt-BR")}</div><div class="pd-fuso">${fusoHorario(agora)}</div></div>
       </div>
-      ${linha("Hoje", tipoDia)}
-      ${linha("Mercado", aberto ? '<span class="up">● Aberto</span> · até 18h' : '<span class="down">● Fechado</span> · abre às 9h')}
-      ${linha("Próximo dia útil", proxTxt.charAt(0).toUpperCase() + proxTxt.slice(1))}
-      ${linha("Semana do ano", `${semana}ª`)}
-      ${linha("Dia do ano", `${diaAno} de ${diasAno} · faltam ${diasAno - diaAno}`)}
-      ${linha("Mês", `dia ${agora.getDate()} de ${ultimoMes} · ${Math.floor(agora.getMonth() / 3) + 1}º trimestre`)}
-      ${linha("Fuso horário", fusoHorario(agora))}`;
+      <div class="pd-faixa"><span>${aberto ? '<i class="up">●</i> Mercado aberto · até 18h' : '<i class="down">●</i> Mercado fechado · abre às 9h'}</span></div>
+      <div class="pd-caixas">
+        ${caixa("Próximo dia útil", proxCurto.charAt(0).toUpperCase() + proxCurto.slice(1))}
+        ${caixa("Semana do ano", `${semana}ª`)}
+        ${caixa("Dia do ano", `${diaAno}/${diasAno} · faltam ${diasAno - diaAno}`)}
+        ${caixa("Mês", `${agora.getDate()}/${ultimoMes} · ${Math.floor(agora.getMonth() / 3) + 1}º tri`)}
+      </div>`;
   }
 
   function ligarSidebar() {
@@ -1732,7 +1736,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.221" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.225" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -6354,14 +6358,22 @@
     const doRelatorio = acoesDoRelatorio(DADOS.relatorioMercado).map((x) => x.ticker + ".SA");
     const simbolos = [...new Set([...MERCADO_INDICES.map((x) => x.s), ...MERCADO_EUA.map((x) => x[0]), ...MERCADO_BR.map((x) => x[0] + ".SA"), ...doRelatorio])];
     mercado.carregando = true;
+    const isoDia = (dt) => `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+    const hoje = new Date(), inicio = new Date(); inicio.setDate(inicio.getDate() - 3);
     Promise.all([
       C.buscarMercado(simbolos, configCotacoes().token),
-      C.buscarSerieDolar(90).catch(() => null)
-    ]).then(([r, dolar]) => {
+      C.buscarSerieDolar(90).catch(() => null),
+      // notícias do mercado dos últimos dias (Google Notícias, com o GDELT de reserva)
+      C.buscarNoticiasPeriodo({ google: 'Nasdaq OR Ibovespa OR "Wall Street" OR "bolsa de valores"', gdelt: '(Nasdaq OR Ibovespa OR "Wall Street")' }, isoDia(inicio), isoDia(hoje)).catch(() => null)
+    ]).then(([r, dolar, noticias]) => {
       const achou = Object.keys(r.cotacoes).length;
+      // cotação sem histórico (fonte de reserva) mantém o histórico que já havia
+      Object.keys(r.cotacoes).forEach((k) => { const ant = mercado.cotacoes[k]; if (ant && !r.cotacoes[k].historico.length) r.cotacoes[k].historico = ant.historico || []; });
+      const nts = noticias && noticias.length
+        ? [...new Map(noticias.map((n) => [n.titulo, n])).values()].sort((a, b) => (a.quando < b.quando ? 1 : -1)).slice(0, 20) : mercado.noticias;
       // uma busca que falhou inteira (sem internet) não apaga o último retrato
-      if (achou) mercado = { cotacoes: { ...mercado.cotacoes, ...r.cotacoes }, erros: r.erros, dolar: dolar || mercado.dolar, em: Date.now(), carregando: false };
-      else mercado = { ...mercado, erros: r.erros, carregando: false };
+      if (achou) mercado = { cotacoes: { ...mercado.cotacoes, ...r.cotacoes }, erros: r.erros, dolar: dolar || mercado.dolar, noticias: nts, em: Date.now(), carregando: false };
+      else mercado = { ...mercado, erros: r.erros, noticias: nts, carregando: false };
       try { localStorage.setItem(CHAVE_MERCADO, JSON.stringify({ ...mercado, carregando: false })); } catch (e) { /* sem espaço */ }
       if (forcar && !silencioso) toast(achou ? "Cotações de mercado atualizadas." : "Não foi possível buscar as cotações agora.");
     }).catch(() => { mercado.carregando = false; if (forcar && !silencioso) toast("Não foi possível buscar as cotações agora."); })
@@ -6506,7 +6518,7 @@
 
     // (2) maiores altas e quedas, com barras do tamanho do movimento
     const maxMov = Math.max(1, ...r.altas.map((a) => Math.abs(a.pct)), ...r.quedas.map((a) => Math.abs(a.pct)));
-    const barras = (lista, cls) => lista.map((a) => `<div class="term-barra ${cls}"><b>${esc(a.ticker)}</b><span class="term-trilho"><span style="width:${Math.max(4, Math.abs(a.pct) / maxMov * 100).toFixed(1)}%"></span></span><em class="${corMov(a.pct)}">${tPct(a.pct)}</em></div>`).join("");
+    const barras = (lista, cls) => lista.map((a) => `<div class="term-barra ${cls}" ${q[a.ticker + ".SA"] ? linkAtivo(a.ticker + ".SA") : ""}><b>${esc(a.ticker)}</b><span class="term-trilho"><span style="width:${Math.max(4, Math.abs(a.pct) / maxMov * 100).toFixed(1)}%"></span></span><em class="${corMov(a.pct)}">${tPct(a.pct)}</em></div>`).join("");
     const nA = r.numAltas, nQ = r.numQuedas, tot = (nA || 0) + (nQ || 0);
     const amplitude = tot ? `<div class="term-amp"><div class="term-amp-bar"><span class="t-bg-up" style="width:${(nA / tot * 100).toFixed(1)}%">${nA}</span><span class="t-bg-down">${nQ}</span></div>
       <div class="term-amp-leg"><span class="t-up">▲ ${nA} em alta</span><span class="t-down">${nQ} em queda ▼</span></div></div>` : "";
@@ -6525,7 +6537,7 @@
       let desde = null;
       if (c && iso) { const base = [...c.historico].reverse().find((h) => h.data <= iso); if (base && base.preco > 0) desde = (c.preco / base.preco - 1) * 100; }
       const onde = x.onde.map((o) => `<span class="term-chip${o === "Maiores altas" ? " c-up" : o === "Maiores quedas" ? " c-down" : o === "Análise" ? " c-acc" : ""}">${o}</span>`).join("");
-      return `<tr><td class="term-ativo">${x.ticker}${c && c.nome && c.nome !== x.ticker ? `<small>${esc(c.nome)}</small>` : ""}</td><td>${onde}</td>
+      return `<tr ${c ? linkAtivo(x.ticker + ".SA") : ""}><td class="term-ativo">${x.ticker}${c && c.nome && c.nome !== x.ticker ? `<small>${esc(c.nome)}</small>` : ""}</td><td>${onde}</td>
         ${x.pct == null ? '<td class="r term-dim">—</td>' : celVar(x.pct, 3)}
         <td class="r t-preco">${c ? brl(c.preco) : '<span class="term-dim">' + (mercado.carregando ? "buscando…" : "—") + "</span>"}</td>
         ${c ? celVar(c.variacaoPct, 3) : '<td class="r term-dim">—</td>'}${desde == null ? '<td class="r term-dim">—</td>' : celVar(desde, 5)}</tr>`;
@@ -6545,35 +6557,49 @@
     return `${cot}${movers}${juros}${tabAcoes}${resumo}${analises}`;
   }
 
-  // "QUINTA-FEIRA, 08 DE OUTUBRO DE 2026" → { dia: "08/10/2026", semana: "Quinta-feira" }
-  function dataCoberturaRelatorio(r) {
-    const m = /^([A-ZÇÁÉÍÓÚÃÕÂÊÔ-]+)[,\s]+(\d{1,2})\s+DE\s+([A-ZÇ]+)\s+DE\s+(\d{4})/i.exec((r && r.data) || "");
-    if (!m) return { dia: (r && r.data) || "—", semana: "" };
-    const mes = MESES_RELATORIO.indexOf(m[3].toUpperCase()) + 1;
-    const sem = m[1].toLowerCase();
-    return { dia: `${m[2].padStart(2, "0")}/${String(mes).padStart(2, "0")}/${m[4]}`, semana: sem.charAt(0).toUpperCase() + sem.slice(1) };
-  }
   // ativo da tabela do relatório pelo nome ("NASDAQ", "SP500"…)
   const ativoRelatorio = (nome) => { const r = DADOS.relatorioMercado; if (!r) return null; for (const g of r.grupos) for (const a of g.ativos) if (a.nome === nome) return a; return null; };
+
+  // clique numa ação ou índice da guia Bolsa: se a ação está na carteira,
+  // abre a mesma tela da guia Ações; senão, a tela do ativo com o histórico
+  // das cotações (velas, períodos e notícias, como na guia Ações)
+  function linkAtivo(simbolo) {
+    const tk = simbolo.replace(/\.SA$/, "");
+    const minha = (DADOS.acoes || []).find((a) => String(a.ticker).toUpperCase() === tk);
+    return minha ? `data-acao="ir" data-secao="detalhe-acao" data-id="${minha.id}"` : `data-acao="ir" data-secao="detalhe-mercado" data-id="${esc(simbolo)}"`;
+  }
+  const NOMES_INDICES = { "^IXIC": "Nasdaq Composite", "^NDX": "Nasdaq-100", "^GSPC": "S&P 500", "^BVSP": "Ibovespa" };
+  // a ação do mercado no formato de uma ação da carteira (sem quantidade nem preço de compra)
+  function ativoMercado(simbolo) {
+    const c = mercado.cotacoes[simbolo];
+    if (!c) return null;
+    const tk = simbolo.replace(/\.SA$/, "");
+    const lista = [...MERCADO_EUA, ...MERCADO_BR].find((x) => x[0] === tk);
+    return { id: simbolo, ticker: NOMES_INDICES[simbolo] ? tk.replace("^", "") : tk, empresa: c.nome || (lista && lista[1]) || NOMES_INDICES[simbolo] || "",
+      categoria: NOMES_INDICES[simbolo] ? "Índice" : "Ação", moeda: c.moeda, historicoPrecos: c.historico || [], precoAtual: c.preco, precoMedio: 0, quantidade: 0 };
+  }
+  function renderDetalheMercado(d, simbolo) {
+    const a = ativoMercado(simbolo);
+    const voltar = `<button class="voltar" data-acao="ir" data-secao="nasdaq"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONES.voltar}</svg>Voltar para Bolsa</button>`;
+    if (!a) return `${voltar}<div class="empty">Sem cotação deste ativo agora. Volte para a guia Bolsa e toque em ↻ Atualizar.</div>`;
+    const c = mercado.cotacoes[simbolo], v = c.variacaoPct || 0;
+    const preco = NOMES_INDICES[simbolo] ? fmtPontos(a.precoAtual) + " pts" : a.moeda === "USD" ? usd(a.precoAtual) : brl(a.precoAtual);
+    const sub = `${esc(a.empresa)} · <b class="${v >= 0 ? "up" : "down"}">${preco} ${v >= 0 ? "▲" : "▼"} ${pctMercado(v)}</b>`;
+    return `
+      ${voltar}
+      <div class="grid g-top">
+        <div class="c12">${card("", `${esc(NOMES_INDICES[simbolo] || a.ticker)} <span class="selo-tag ${a.categoria === "Índice" ? "selo-cat" : "selo-acao"}">${a.categoria}</span>`, sub,
+          abasPeriodo(),
+          `<div class="grafico-acao-area grafico-tela-cheia"><canvas id="graf-preco-acao"></canvas></div>`)}</div>
+      </div>
+    `;
+  }
 
   function renderNasdaq() {
     const q = mercado.cotacoes, tem = Object.keys(q).length, r = DADOS.relatorioMercado;
     const quando = mercado.em ? new Date(mercado.em).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "";
     const status = mercado.carregando ? "buscando cotações…" : quando ? `cotações ${quando}` : "sem cotações";
 
-    // barra do topo: última cobertura do relatório ICL importado, cotações, relógio e botões
-    const cob = r ? dataCoberturaRelatorio(r) : null;
-    const importado = r && r.importadoEm ? new Date(r.importadoEm).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "";
-    const campoCob = `<div class="term-cobertura" title="${r ? esc(r.arquivo || "") : "Importe o relatório em Importar ICL"}">
-      <span>ÚLTIMA COBERTURA ICL</span>
-      <b>${cob ? `${cob.dia}${cob.semana ? ` <i>${cob.semana}</i>` : ""}` : "nenhum relatório"}</b>
-      ${r ? `<small>fechamento ${esc(r.colunas[0] || r.fechamento.replace(/^DIA\s+/i, ""))}${importado ? ` · importado ${importado}` : ""}</small>` : ""}
-    </div>`;
-    const topo = `<div class="term-topo"><span class="term-marca">NASDAQ · B3</span>${campoCob}
-      <span class="term-status${mercado.carregando ? " pisca" : ""}">● ${status}</span><span class="term-esp"></span>
-      <span class="term-relogio" id="termRelogio">${new Date().toLocaleTimeString("pt-BR")}</span>
-      <button class="term-btn" data-acao="atualizar-mercado" title="Buscar as cotações agora">↻ Atualizar</button>
-      <button class="term-btn term-btn-acc" data-acao="importar-relatorio" title="Escolher o PDF do relatório ICL">⇪ Importar ICL</button></div>`;
 
     // quadro de cotações grandes (como o "58.50 +0,43%" do terminal):
     // cotação ao vivo; sem ela, o fechamento do relatório ICL
@@ -6588,28 +6614,27 @@
         preco = rel.atual; varDia = rel.dia; fonte = rotRel;
         sub = `MÊS ${tPct(rel.mes)} · ANO ${tPct(rel.ano)}`;
       } else return `<div class="term-quote"><span class="tq-nome">${nome}</span><b class="tq-preco term-dim">—</b><span class="tq-sub term-dim">sem cotação</span></div>`;
-      return `<div class="term-quote"><span class="tq-nome">${nome}<em>${fonte}</em></span>
+      const clique = live && live.simbolo ? ` ${live.simbolo === "dolar" ? 'data-acao="ir" data-secao="detalhe-dolar"' : linkAtivo(live.simbolo)}` : "";
+      return `<div class="term-quote${clique ? " clicavel" : ""}"${clique}><span class="tq-nome">${nome}<em>${fonte}</em></span>
         <b class="tq-preco ${corMov(varDia)}">${fmt(preco)}</b>
         <span class="tq-var ${corMov(varDia)}">${tPct(varDia)} ${setaMov(varDia)}</span>
         <span class="tq-sub">${sub}</span>${spark ? `<span class="tq-spark">${spark}</span>` : ""}</div>`;
     };
     const pts = (v) => fmtPontos(v);
     const moeda2 = (v) => Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    const dolarVivo = dolar && dolar.valor ? { preco: dolar.valor, variacaoPct: dolar.variacaoPct || 0, historico: mercado.dolar || [] } : null;
+    const comSimbolo = (sim) => q[sim] ? { ...q[sim], simbolo: sim } : null;
+    const dolarVivo = dolar && dolar.valor ? { preco: dolar.valor, variacaoPct: dolar.variacaoPct || 0, historico: mercado.dolar || [], simbolo: "dolar" } : null;
     const board = `<div class="term-board">
-      ${caixa("NASDAQ COMPOSITE", q["^IXIC"], ativoRelatorio("NASDAQ"), pts)}
-      ${caixa("NASDAQ-100", q["^NDX"], null, pts)}
-      ${caixa("S&amp;P 500", q["^GSPC"], ativoRelatorio("SP500"), pts)}
-      ${caixa("IBOVESPA", q["^BVSP"], ativoRelatorio("IBOVESPA"), pts)}
+      ${caixa("NASDAQ COMPOSITE", comSimbolo("^IXIC"), ativoRelatorio("NASDAQ"), pts)}
+      ${caixa("NASDAQ-100", comSimbolo("^NDX"), null, pts)}
+      ${caixa("S&amp;P 500", comSimbolo("^GSPC"), ativoRelatorio("SP500"), pts)}
+      ${caixa("IBOVESPA", comSimbolo("^BVSP"), ativoRelatorio("IBOVESPA"), pts)}
       ${caixa("DÓLAR / REAL", dolarVivo, ativoRelatorio("DÓLAR / REAL"), (v) => "R$ " + moeda2(v))}
       ${caixa("PETRÓLEO BRENT", null, ativoRelatorio("PETRÓLEO BRENT"), (v) => "US$ " + moeda2(v))}
     </div>`;
 
     // gráfico e análise automática
     const frases = tem ? textoRelatorioMercado() : [];
-    const analise = `<div class="term-painel"><div class="term-cab">ANÁLISE AUTOMÁTICA · ${status.toUpperCase()}</div>
-      ${frases.length ? `<ul class="term-lista">${frases.map((f) => `<li>${f}</li>`).join("")}</ul>` : `<p class="term-texto term-dim">${mercado.carregando ? "Buscando as cotações…" : "Sem cotações agora. Confira a internet e toque em ↻ Atualizar."}</p>`}
-      <p class="term-nota">Cotações com atraso de até 15 minutos · Yahoo Finance e brapi.dev · não é recomendação de investimento.</p></div>`;
     const grafico = `<div class="term-painel"><div class="term-cab">NASDAQ × IBOVESPA · VARIAÇÃO EM 3 MESES</div>
       <div class="term-graf">${tem ? '<canvas id="graf-mercado-comp"></canvas>' : '<p class="term-texto term-dim">O gráfico aparece quando as cotações chegarem.</p>'}</div></div>`;
 
@@ -6622,13 +6647,26 @@
         const selo = citadas.has(t) ? ' <span class="term-chip c-acc">ICL</span>' : "";
         if (!c) return `<tr><td class="term-ativo">${t}${selo}<small>${esc(nome)}</small></td><td class="r term-dim" colspan="5">${mercado.carregando ? "buscando…" : "sem cotação"}</td></tr>`;
         const spark = c.historico && c.historico.length > 1 ? sparklineSVG(c.historico.map((h) => h.preco), c.variacaoPct >= 0 ? G.CORES.up : G.CORES.down) : "";
-        return `<tr><td class="term-ativo">${t}${selo}<small>${esc(nome)}</small></td><td class="r t-preco">${fmt(c.preco)}</td>
+        return `<tr ${linkAtivo(t + sufixo)} title="Abrir o gráfico de ${t}"><td class="term-ativo">${t}${selo}<small>${esc(nome)}</small></td><td class="r t-preco">${fmt(c.preco)}</td>
           ${celVar(c.variacaoPct, 2)}${celVar(variacaoSerie(c.historico, 30))}${celVar(variacaoSerie(c.historico, 90), 15)}<td class="term-spark">${spark}</td></tr>`;
       }).join("")}</tbody></table></div></div>`;
 
-    return `<section class="term term-nasdaq">${topo}${board}
-      <div class="term-grade term-grade-2">${grafico}${analise}</div>
+    // notícias do mercado (as mais recentes primeiro) e, embaixo, a análise automática
+    const agoraMs = Date.now();
+    const haQuanto = (iso) => { const m = Math.max(0, Math.round((agoraMs - new Date(iso).getTime()) / 60000)); return m < 60 ? `${m} min` : m < 1440 ? `${Math.floor(m / 60)} h` : `${Math.floor(m / 1440)} d`; };
+    const lista = mercado.noticias || [];
+    const noticias = `<div class="term-painel"><div class="term-cab">NOTÍCIAS DO MERCADO · NASDAQ E B3</div>
+      ${lista.length ? `<div class="term-noticias">${lista.map((n) => `<a class="term-noticia" href="${esc(n.url)}" target="_blank" rel="noopener">
+        <span class="tn-hora">${new Date(n.quando).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}<em>${haQuanto(n.quando)}</em></span>
+        <span class="tn-titulo">${esc(n.titulo)}</span><span class="tn-fonte">${esc(n.fonte || "")}</span></a>`).join("")}</div>`
+        : `<p class="term-texto term-dim">${mercado.carregando ? "Buscando notícias…" : "Sem notícias agora. Toque em ↻ Atualizar."}</p>`}
+      ${frases.length ? `<div class="term-cab">ANÁLISE AUTOMÁTICA · ${status.toUpperCase()}</div><ul class="term-lista">${frases.map((f) => `<li>${f}</li>`).join("")}</ul>` : ""}
+      <p class="term-nota">Cotações com atraso de até 15 minutos · Yahoo Finance, Stooq e brapi.dev · notícias do Google Notícias · não é recomendação de investimento.</p></div>`;
+
+    return `<section class="term term-nasdaq">${board}
       <div class="term-grade term-grade-meio">${tabela("NASDAQ · MAIORES EMPRESAS · US$", MERCADO_EUA, "", usd)}${tabela("B3 · MAIORES DO IBOVESPA · R$", MERCADO_BR, ".SA", brl)}</div>
+      <div class="term-grade term-grade-um">${grafico}</div>
+      <div class="term-grade term-grade-um">${noticias}</div>
       ${r ? `<div class="term-secao">RELATÓRIO ICL · ${esc(r.data)} · FECHAMENTO ${esc(r.fechamento.replace(/^DIA\s+/i, ""))}</div><div class="term-grade">${painelRelatorio()}</div>` : ""}
     </section>`;
   }
@@ -7467,6 +7505,22 @@
         else if (a && a.historicoPrecos.length) G.renderPrecoAcao("graf-preco-acao", filtrarPeriodo(a.historicoPrecos, periodoGrafico), a.precoMedio, Number(a.precoAtual) || 0, { quantidade: Number(a.quantidade) || 0, aoClicar: alternarAcao });
         // notícias: a busca já começa na visão de linha
         if (a) noticiasDaAcao(a, true);   // gráfico aberto: tem prioridade sobre o segundo plano
+        break;
+      }
+      case "detalhe-mercado": {
+        // igual ao gráfico de uma ação da carteira (velas ⇄ linha, períodos, "N" de notícias)
+        const a = ativoMercado(ROTA.param);
+        if (!a) break;
+        const alternar = () => { velasAcao = !velasAcao; renderRota(); };
+        const va = velasPeriodo(a.historicoPrecos, Number(a.precoAtual) || 0);
+        if (velasAcao && va.velas.length >= 2) G.renderVelas("graf-preco-acao", va.velas, { visiveis: va.visiveis, linhaAtual: Number(a.precoAtual) || 0, linhaCompra: 0, quantidade: 0, casas: 2, aoClicar: alternar, aoMudarJanela: marcarPeriodoDoZoom });
+        else if (a.historicoPrecos.length) G.renderPrecoAcao("graf-preco-acao", filtrarPeriodo(a.historicoPrecos, periodoGrafico), 0, Number(a.precoAtual) || 0, { quantidade: 0, aoClicar: alternar });
+        if (va.velas.length >= 2) {
+          const termos = NOMES_INDICES[ROTA.param] ? { google: `"${NOMES_INDICES[ROTA.param]}"`, gdelt: `"${NOMES_INDICES[ROTA.param]}"` } : termosNoticiasAcao(a);
+          const sim = ROTA.param;
+          carregarNoticiasVelas("acao:" + a.ticker.toUpperCase(), termos, va.velas, va.visiveis, 1, "graf-preco-acao",
+            () => ROTA.secao === "detalhe-mercado" && ROTA.param === sim && velasAcao, true);
+        }
         break;
       }
       case "carteira": {
