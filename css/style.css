@@ -2361,3 +2361,4 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
 .rf-vars div { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 4px; border-radius: 8px; background: var(--painel-2); font-family: var(--mono); font-size: 13px; font-weight: 700; }
 .rf-vars i { font-style: normal; font-family: var(--ui); font-size: 9.5px; color: var(--dim); text-transform: uppercase; letter-spacing: .06em; }
 .term-board-sec .term-board { border-bottom: 0; }
+.term { border-radius: 0; }   /* guia Bolsa: blocos de cotações com bordas quadradas */
