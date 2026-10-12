@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.186";
+  const VERSAO_APP = "3.6.187";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1638,7 +1638,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.186" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.187" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -4227,7 +4227,7 @@
       <div id="listaBancosPg">${bancos.map((b) => `
         <button type="button" class="kv kv-editavel opcao-banco-pg" data-banco="${b.id}" style="align-items:center;width:100%;text-align:left;cursor:pointer;border-radius:8px">
           <span style="display:flex;align-items:center;gap:8px">${marcaBanco(b.nome, 18)}${esc(b.nome)}</span>
-          <b><span class="dim" style="font-weight:500">${brlSinal(b.saldoAtual)} → </span><span class="${b.saldoAtual - valor < 0 ? "down" : "up"}">${brlSinal(b.saldoAtual - valor)}</span></b>
+          <b class="pg-valores"><span class="dim pg-antes">${brlSinal(b.saldoAtual)}</span><span class="dim pg-seta">→</span><span class="pg-depois ${b.saldoAtual - valor < 0 ? "down" : "up"}">${brlSinal(b.saldoAtual - valor)}</span></b>
         </button>`).join("")}</div>
       ${bancos.length > 1 ? `<div class="campo" style="margin-top:12px"><label for="f_destinoPg">Enviar</label><select id="f_destinoPg">
         <option value="">Nenhum</option>
@@ -4236,6 +4236,12 @@
       <div class="modal-acoes"><button class="btn" id="btnCancelarPg">Cancelar</button><button class="btn primario salvar" id="btnConfirmarPg">Pagar</button></div>`);
     // o foco automático no "Enviar" abriria a lista no iPad
     if (document.getElementById("f_destinoPg")) setTimeout(() => document.getElementById("f_destinoPg").blur(), 40);
+    // "antes → depois" em colunas: cada coluna com a largura do maior valor
+    ["pg-antes", "pg-depois"].forEach((cls) => {
+      const els = [...document.querySelectorAll("#modal ." + cls)];
+      const larg = Math.max(0, ...els.map((e) => e.getBoundingClientRect().width));
+      if (larg) els.forEach((e) => { e.style.minWidth = Math.ceil(larg) + "px"; });
+    });
     const marcar = () => document.querySelectorAll(".opcao-banco-pg").forEach((el) => {
       const sel = el.dataset.banco === escolhido;
       el.style.outline = sel ? "2px solid var(--cy)" : "none";

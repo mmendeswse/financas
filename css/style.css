@@ -2036,3 +2036,8 @@ button.pill-periodo:hover { filter: brightness(1.25); }
   .modal.modal-lanc .bloco-personalizar { padding: 10px 10px 2px; margin: 0 0 10px; }
   .modal.modal-lanc .bloco-personalizar .campo { margin-bottom: 8px; }
 }
+
+/* janela "Pagar com qual banco?": saldo antes → depois alinhado em colunas */
+.pg-valores { display: inline-flex; align-items: baseline; gap: 6px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pg-valores .pg-antes { font-weight: 500; text-align: right; }
+.pg-valores .pg-depois { text-align: right; }
