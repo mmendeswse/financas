@@ -26,7 +26,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="assets/icons/icon-192.png?v=5">
 <meta name="color-scheme" content="dark">
 <title>Muller Mendes — Gerenciamento de Finanças Pessoais</title>
-<link rel="stylesheet" href="css/style.css?v=3.6.213">
+<link rel="stylesheet" href="css/style.css?v=3.6.216">
 </head>
 <body>
 
@@ -60,6 +60,7 @@
           <span class="bolinha" id="badgeNotificacoes" style="display:none">0</span>
         </button>
         <div class="dropdown" id="dropdownNotificacoes"></div>
+        <div class="dropdown pop-data" id="popData"></div>
     </div>
 
     <div class="sidebar-meta" id="sidebarMeta"></div>
@@ -84,22 +85,24 @@
 <div class="modal" id="modal" role="dialog" aria-modal="true"></div>
 <div class="toast" id="toast"></div>
 <input type="file" id="inputImportarPdf" accept=".pdf,application/pdf" style="display:none">
+<input type="file" id="inputImportarRelatorio" accept=".pdf,application/pdf" style="display:none">
 <input type="file" id="inputImportarBackup" accept="application/json" style="display:none">
 
 <!-- bibliotecas de terceiros (offline, incluídas no projeto) -->
 <script src="js/vendor/chart.umd.min.js"></script>
 
 <!-- módulos do sistema — ordem importa: cada um usa o anterior -->
-<script src="js/bloqueio.js?v=3.6.213"></script>
-<script src="js/armazenamento.js?v=3.6.213"></script>
-<script src="js/financeiro.js?v=3.6.213"></script>
-<script src="js/investimentos.js?v=3.6.213"></script>
-<script src="js/graficos.js?v=3.6.213"></script>
-<script src="js/extrato.js?v=3.6.213"></script>
-<script src="js/cotacoes.js?v=3.6.213"></script>
-<script src="js/sincronizacao.js?v=3.6.213"></script>
-<script src="js/emojis.js?v=3.6.213"></script>
-<script src="js/app.js?v=3.6.213"></script>
+<script src="js/bloqueio.js?v=3.6.216"></script>
+<script src="js/armazenamento.js?v=3.6.216"></script>
+<script src="js/financeiro.js?v=3.6.216"></script>
+<script src="js/investimentos.js?v=3.6.216"></script>
+<script src="js/graficos.js?v=3.6.216"></script>
+<script src="js/extrato.js?v=3.6.216"></script>
+<script src="js/relatorio.js?v=3.6.216"></script>
+<script src="js/cotacoes.js?v=3.6.216"></script>
+<script src="js/sincronizacao.js?v=3.6.216"></script>
+<script src="js/emojis.js?v=3.6.216"></script>
+<script src="js/app.js?v=3.6.216"></script>
 <script>
   // registra o service worker (só funciona via http/https — no iPad, depois de publicado)
   if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {

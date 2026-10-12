@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.213";
+  const VERSAO_APP = "3.6.216";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1174,7 +1174,7 @@
     historico: ["Histórico financeiro", "Todas as movimentações em um só lugar"],
     investimentos: ["Investimentos", "Renda fixa, tesouro, fundos e criptomoedas"],
     acoes: ["Ações", "Ações, FIIs e ETFs — preços atualizados manualmente"],
-    nasdaq: ["Nasdaq", "Relatório de mercado: Nasdaq e bolsa brasileira"],
+    nasdaq: ["Nasdaq", "Relatório diário e mercado: Nasdaq e bolsa brasileira"],
     "detalhe-investimento": ["Detalhe da aplicação", "Histórico, imposto e rentabilidade"],
     "detalhe-dolar": ["Dólar comercial", "USD/BRL — cotação e histórico"],
     "detalhe-cripto": ["Criptomoeda", "Cotação, histórico e a quantidade que você tem"],
@@ -1385,6 +1385,66 @@
     document.addEventListener("click", (e) => {
       if (!dropNotif.contains(e.target) && e.target !== btnNotif) dropNotif.classList.remove("on");
     });
+
+    // data e hora: um toque abre o quadro com a data completa, outro toque esconde
+    const caixaData = document.getElementById("statusVivo"), popData = document.getElementById("popData");
+    if (caixaData && popData) {
+      caixaData.addEventListener("click", (e) => {
+        e.stopPropagation();
+        popData.classList.toggle("on");
+        if (popData.classList.contains("on")) { dropNotif.classList.remove("on"); preencherPopData(new Date()); }
+      });
+      document.addEventListener("click", (e) => {
+        if (!popData.contains(e.target) && !caixaData.contains(e.target)) popData.classList.remove("on");
+      });
+    }
+  }
+
+  // quadro da data completa (aberto pelo relógio do topo)
+  const NOMES_FERIADOS = { "01-01": "Confraternização Universal", "04-21": "Tiradentes", "05-01": "Dia do Trabalho", "09-07": "Independência do Brasil",
+    "10-12": "Nossa Senhora Aparecida", "11-02": "Finados", "11-15": "Proclamação da República", "11-20": "Dia da Consciência Negra", "12-25": "Natal" };
+  // "Brasília · UTC−3" (o nome da cidade vem do fuso do aparelho)
+  function fusoHorario(agora) {
+    const tz = (Intl.DateTimeFormat().resolvedOptions().timeZone || "").split("/").pop().replace(/_/g, " ");
+    const off = -agora.getTimezoneOffset(), h = Math.floor(Math.abs(off) / 60), m = Math.abs(off) % 60;
+    const utc = "UTC" + (off ? (off > 0 ? "+" : "−") + h + (m ? ":" + String(m).padStart(2, "0") : "") : "");
+    const cidade = tz === "Sao Paulo" ? "Brasília" : tz;
+    return cidade && cidade !== "UTC" ? `${cidade} · ${utc}` : utc;
+  }
+  function preencherPopData(agora) {
+    const el = document.getElementById("popData");
+    if (!el || !el.classList.contains("on")) return;
+    const iso = (dt) => `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+    const feriado = (dt) => F.feriadosNacionais(dt.getFullYear())[iso(dt)] ? (NOMES_FERIADOS[iso(dt).slice(5)] || "Sexta-feira Santa") : "";
+    const util = (dt) => dt.getDay() >= 1 && dt.getDay() <= 5 && !feriado(dt);
+    const ano = agora.getFullYear();
+    const inicio = new Date(ano, 0, 1), hojeZero = new Date(ano, agora.getMonth(), agora.getDate());
+    const diaAno = Math.round((hojeZero - inicio) / 864e5) + 1;
+    const diasAno = (ano % 4 === 0 && ano % 100 !== 0) || ano % 400 === 0 ? 366 : 365;
+    // semana ISO (a que contém a quinta-feira)
+    const qui = new Date(hojeZero); qui.setDate(qui.getDate() + 3 - ((qui.getDay() + 6) % 7));
+    const semana = 1 + Math.round(((qui - new Date(qui.getFullYear(), 0, 4)) / 864e5 - 3 + ((new Date(qui.getFullYear(), 0, 4).getDay() + 6) % 7)) / 7);
+    const fer = feriado(agora);
+    const tipoDia = fer ? `Feriado nacional · ${fer}` : util(agora) ? "Dia útil" : "Fim de semana";
+    const prox = new Date(hojeZero); do { prox.setDate(prox.getDate() + 1); } while (!util(prox));
+    const min = agora.getHours() * 60 + agora.getMinutes();
+    const aberto = util(agora) && min >= 9 * 60 && min < 18 * 60;
+    const proxTxt = prox.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "2-digit" });
+    const ultimoMes = new Date(ano, agora.getMonth() + 1, 0).getDate();
+    const linha = (r, v) => `<div class="pd-linha"><span>${r}</span><b>${v}</b></div>`;
+    el.innerHTML = `
+      <div class="pd-topo">
+        <div class="pd-semana">${agora.toLocaleDateString("pt-BR", { weekday: "long" })}</div>
+        <div class="pd-data">${agora.toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric" })}</div>
+        <div class="pd-hora">${agora.toLocaleTimeString("pt-BR")}</div>
+      </div>
+      ${linha("Hoje", tipoDia)}
+      ${linha("Mercado", aberto ? '<span class="up">● Aberto</span> até 18h' : '<span class="down">● Fechado</span> · abre nos dias úteis às 9h')}
+      ${linha("Próximo dia útil", proxTxt.charAt(0).toUpperCase() + proxTxt.slice(1))}
+      ${linha("Semana do ano", `${semana}ª`)}
+      ${linha("Dia do ano", `${diaAno} de ${diasAno} · faltam ${diasAno - diaAno}`)}
+      ${linha("Mês", `dia ${agora.getDate()} de ${ultimoMes} · ${Math.floor(agora.getMonth() / 3) + 1}º trimestre`)}
+      ${linha("Fuso horário", fusoHorario(agora))}`;
   }
 
   function ligarSidebar() {
@@ -1672,7 +1732,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.213" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.216" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -2327,7 +2387,10 @@
         renderRota();
       }
       if (rel) rel.textContent = agora.toLocaleTimeString("pt-BR");
+      const termRel = document.getElementById("termRelogio");
+      if (termRel) termRel.textContent = agora.toLocaleTimeString("pt-BR");
       renderStatusMercado(agora);
+      preencherPopData(agora);
       if (dataEl) dataEl.textContent = agora.toLocaleDateString("pt-BR", { weekday: "short", day: "numeric", month: "short", year: "numeric" }).replace(/\./g, "");
     };
     tick();
@@ -6284,10 +6347,11 @@
     try { const m = JSON.parse(localStorage.getItem(CHAVE_MERCADO) || "null"); if (m && m.cotacoes) return { ...m, carregando: false }; } catch (e) { /* sem acesso */ }
     return { cotacoes: {}, erros: {}, dolar: null, em: 0, carregando: false };
   })();
-  function atualizarMercado(forcar) {
+  function atualizarMercado(forcar, silencioso) {
     if (mercado.carregando) return;
     if (!forcar && Date.now() - mercado.em < 10 * 60 * 1000 && Object.keys(mercado.cotacoes).length) return;
-    const simbolos = [...MERCADO_INDICES.map((x) => x.s), ...MERCADO_EUA.map((x) => x[0]), ...MERCADO_BR.map((x) => x[0] + ".SA")];
+    const doRelatorio = acoesDoRelatorio(DADOS.relatorioMercado).map((x) => x.ticker + ".SA");
+    const simbolos = [...new Set([...MERCADO_INDICES.map((x) => x.s), ...MERCADO_EUA.map((x) => x[0]), ...MERCADO_BR.map((x) => x[0] + ".SA"), ...doRelatorio])];
     mercado.carregando = true;
     Promise.all([
       C.buscarMercado(simbolos, configCotacoes().token),
@@ -6298,8 +6362,8 @@
       if (achou) mercado = { cotacoes: { ...mercado.cotacoes, ...r.cotacoes }, erros: r.erros, dolar: dolar || mercado.dolar, em: Date.now(), carregando: false };
       else mercado = { ...mercado, erros: r.erros, carregando: false };
       try { localStorage.setItem(CHAVE_MERCADO, JSON.stringify({ ...mercado, carregando: false })); } catch (e) { /* sem espaço */ }
-      if (forcar) toast(achou ? "Cotações de mercado atualizadas." : "Não foi possível buscar as cotações agora.");
-    }).catch(() => { mercado.carregando = false; if (forcar) toast("Não foi possível buscar as cotações agora."); })
+      if (forcar && !silencioso) toast(achou ? "Cotações de mercado atualizadas." : "Não foi possível buscar as cotações agora.");
+    }).catch(() => { mercado.carregando = false; if (forcar && !silencioso) toast("Não foi possível buscar as cotações agora."); })
       .then(() => { if (ROTA.secao === "nasdaq") renderRota(); });
   }
   // variação % da série nos últimos "dias" corridos (ponto de partida: o
@@ -6371,6 +6435,122 @@
       <tbody>${linhas}</tbody></table></div>`;
   }
 
+  // ---------------------------------------------------------------------
+  // Relatório diário em PDF (fechamento do dia anterior): o usuário importa
+  // o arquivo, o leitor (relatorio.js) tira os números e a tela mostra tudo
+  // num painel de pregão — cotações, maiores altas e quedas, juros e
+  // inflação, o resumo e as análises de empresas — com a cotação de hoje de
+  // cada ação citada. Fica em DADOS.relatorioMercado (vai junto no backup).
+  // ---------------------------------------------------------------------
+  const MESES_RELATORIO = ["JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO", "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"];
+  // "DIA 07 OUTUBRO 2026" → "2026-10-07"
+  function dataFechamentoRelatorio(r) {
+    const m = /(\d{1,2})\s+(?:DE\s+)?([A-ZÇ]+)\s+(?:DE\s+)?(\d{4})/i.exec((r && r.fechamento) || "");
+    const mes = m ? MESES_RELATORIO.indexOf(m[2].toUpperCase()) : -1;
+    return mes >= 0 ? `${m[3]}-${String(mes + 1).padStart(2, "0")}-${m[1].padStart(2, "0")}` : "";
+  }
+  // as ações citadas no relatório, com onde cada uma aparece
+  function acoesDoRelatorio(r) {
+    const mapa = new Map();
+    const add = (t, onde, pct) => { if (!mapa.has(t)) mapa.set(t, { ticker: t, onde: [], pct: null }); const x = mapa.get(t); if (!x.onde.includes(onde)) x.onde.push(onde); if (pct != null && x.pct == null) x.pct = pct; };
+    if (!r) return [];
+    r.grupos.forEach((g) => g.ativos.forEach((a) => { if (a.acao) add(a.nome, "Principais", a.dia); }));
+    r.altas.forEach((a) => add(a.ticker, "Maiores altas", a.pct));
+    r.quedas.forEach((a) => add(a.ticker, "Maiores quedas", a.pct));
+    r.noticias.forEach((n) => n.tickers.forEach((t) => add(t, "Análise", null)));
+    return [...mapa.values()];
+  }
+  function importarRelatorio(arquivo) {
+    if (!window.Relatorio) { toast("O leitor do relatório não foi carregado."); return; }
+    toast("Lendo o relatório…");
+    prepararLeitorPdf()
+      .then(() => arquivo.arrayBuffer())
+      .then((buf) => window.Relatorio.lerPdf(buf))
+      .then((r) => {
+        DADOS.relatorioMercado = { ...r, arquivo: arquivo.name, importadoEm: new Date().toISOString() };
+        salvarEAtualizar(`Relatório importado: fechamento ${r.colunas[0] || r.fechamento}.`);
+        atualizarMercado(true, true);   // cotação de hoje das ações citadas
+        if (ROTA.secao === "nasdaq") renderRota(); else navegarPara("nasdaq");
+      })
+      .catch((e) => toast("Não consegui ler o relatório: " + (e && e.message ? e.message : e)));
+  }
+
+  const corMov = (v) => v == null ? "" : v > 0 ? "t-up" : v < 0 ? "t-down" : "t-zero";
+  const setaMov = (v) => v == null ? "" : v > 0 ? "▲" : v < 0 ? "▼" : "►";
+  const tPct = (v, casas) => v == null ? "—" : (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toLocaleString("pt-BR", { minimumFractionDigits: casas == null ? 2 : casas, maximumFractionDigits: casas == null ? 2 : casas }) + "%";
+  const tNum = (v, taxa) => v == null ? "—" : taxa ? tPct(v).replace("+", "") : v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  // célula de variação "acesa" (fundo colorido) quando o movimento é forte
+  const celVar = (v, forte) => `<td class="r ${corMov(v)}${forte && v != null && Math.abs(v) >= forte ? " t-aceso" : ""}">${tPct(v)} <i>${setaMov(v)}</i></td>`;
+  // símbolo do Yahoo/brapi para um ativo da tabela do relatório (para o minigráfico de 3 meses)
+  const SIMBOLO_RELATORIO = { "IBOVESPA": "^BVSP", "NASDAQ": "^IXIC" };
+
+  function painelRelatorio() {
+    const r = DADOS.relatorioMercado;
+    const btnImp = `<button class="term-btn" data-acao="importar-relatorio" title="Escolher o PDF do relatório ICL">⇪ Importar ICL</button>`;
+    const relogio = `<span class="term-relogio" id="termRelogio">${new Date().toLocaleTimeString("pt-BR")}</span>`;
+    if (!r) {
+      return `<section class="term"><div class="term-topo"><span class="term-marca">RELATÓRIO DIÁRIO</span><span class="term-dim">nenhum relatório importado</span><span class="term-esp"></span>${relogio}${btnImp}</div>
+        <div class="term-vazio">Toque em Importar ICL e escolha o PDF do relatório do Instituto Conhecimento Liberta para ver aqui as cotações, as maiores altas e quedas, juros, inflação, o resumo do dia e as análises de empresas — com a cotação de hoje de cada ação citada.<br>O arquivo é lido no próprio aparelho.</div></section>`;
+    }
+    const q = mercado.cotacoes, iso = dataFechamentoRelatorio(r);
+    const col = r.colunas.length ? r.colunas : ["Últ.", "Ant."];
+
+    // (1) cotações de fechamento, agrupadas como no relatório
+    const linhasCot = r.grupos.map((g) => `<tr class="term-grupo"><td colspan="7">${esc(g.nome)}</td></tr>` + g.ativos.map((a) => {
+      const sim = a.acao ? a.nome + ".SA" : SIMBOLO_RELATORIO[a.nome];
+      const hist = sim && q[sim] && q[sim].historico;
+      const spark = hist && hist.length > 1 ? sparklineSVG(hist.map((h) => h.preco), a.ano >= 0 ? G.CORES.up : G.CORES.down) : "";
+      return `<tr><td class="term-ativo">${esc(a.nome)}</td><td class="r t-preco">${tNum(a.atual, a.taxa)}</td><td class="r t-ant">${tNum(a.anterior, a.taxa)}</td>
+        ${celVar(a.dia, 1)}${celVar(a.mes)}${celVar(a.ano)}<td class="term-spark">${spark}</td></tr>`;
+    }).join("")).join("");
+    const cot = `<div class="term-painel tp-cot"><div class="term-cab">COTAÇÕES · FECHAMENTO ${esc(col[0])}</div>
+      <div class="term-rolar"><table class="term-tab"><thead><tr><th>Ativo</th><th class="r">${esc(col[0])}</th><th class="r">${esc(col[1] || "")}</th><th class="r">Dia</th><th class="r">Mês</th><th class="r">Ano</th><th>3 meses</th></tr></thead>
+      <tbody>${linhasCot}</tbody></table></div></div>`;
+
+    // (2) maiores altas e quedas, com barras do tamanho do movimento
+    const maxMov = Math.max(1, ...r.altas.map((a) => Math.abs(a.pct)), ...r.quedas.map((a) => Math.abs(a.pct)));
+    const barras = (lista, cls) => lista.map((a) => `<div class="term-barra ${cls}"><b>${esc(a.ticker)}</b><span class="term-trilho"><span style="width:${Math.max(4, Math.abs(a.pct) / maxMov * 100).toFixed(1)}%"></span></span><em class="${corMov(a.pct)}">${tPct(a.pct)}</em></div>`).join("");
+    const nA = r.numAltas, nQ = r.numQuedas, tot = (nA || 0) + (nQ || 0);
+    const amplitude = tot ? `<div class="term-amp"><div class="term-amp-bar"><span class="t-bg-up" style="width:${(nA / tot * 100).toFixed(1)}%">${nA}</span><span class="t-bg-down">${nQ}</span></div>
+      <div class="term-amp-leg"><span class="t-up">▲ ${nA} em alta</span><span class="t-down">${nQ} em queda ▼</span></div></div>` : "";
+    const movers = `<div class="term-painel tp-mov"><div class="term-cab">MAIORES ALTAS · IBOVESPA</div>${barras(r.altas, "b-up")}
+      <div class="term-cab">MAIORES QUEDAS · IBOVESPA</div>${barras(r.quedas, "b-down")}
+      ${amplitude ? `<div class="term-cab">AMPLITUDE DO IBOVESPA</div>${amplitude}` : ""}</div>`;
+
+    // (3) CDI e IPCA em caixinhas, como os quadros de máxima/mínima do terminal
+    const caixas = r.indicadores.map((i) => `<div class="term-caixa"><span>${esc(i.nome.replace(/\s*\(TAXA ANO\)/i, " (a.a.)"))}</span><b class="${/IPCA/i.test(i.nome) ? (i.valor > 0 ? "t-down" : "t-up") : "t-up"}">${tPct(i.valor).replace("+", "")}</b></div>`).join("");
+    const juros = caixas ? `<div class="term-painel tp-juros"><div class="term-cab">CDI · IPCA</div><div class="term-caixas">${caixas}</div></div>` : "";
+
+    // (4) ações citadas: o número do relatório e a cotação de hoje
+    const acoes = acoesDoRelatorio(r);
+    const linhasAcoes = acoes.map((x) => {
+      const c = q[x.ticker + ".SA"];
+      let desde = null;
+      if (c && iso) { const base = [...c.historico].reverse().find((h) => h.data <= iso); if (base && base.preco > 0) desde = (c.preco / base.preco - 1) * 100; }
+      const onde = x.onde.map((o) => `<span class="term-chip${o === "Maiores altas" ? " c-up" : o === "Maiores quedas" ? " c-down" : o === "Análise" ? " c-acc" : ""}">${o}</span>`).join("");
+      return `<tr><td class="term-ativo">${x.ticker}${c && c.nome && c.nome !== x.ticker ? `<small>${esc(c.nome)}</small>` : ""}</td><td>${onde}</td>
+        ${x.pct == null ? '<td class="r term-dim">—</td>' : celVar(x.pct, 3)}
+        <td class="r t-preco">${c ? brl(c.preco) : '<span class="term-dim">' + (mercado.carregando ? "buscando…" : "—") + "</span>"}</td>
+        ${c ? celVar(c.variacaoPct, 3) : '<td class="r term-dim">—</td>'}${desde == null ? '<td class="r term-dim">—</td>' : celVar(desde, 5)}</tr>`;
+    }).join("");
+    const tabAcoes = `<div class="term-painel tp-acoes"><div class="term-cab">AÇÕES DO RELATÓRIO · COTAÇÃO DE HOJE</div>
+      <div class="term-rolar"><table class="term-tab"><thead><tr><th>Papel</th><th>Onde aparece</th><th class="r">No relatório</th><th class="r">Último</th><th class="r">Hoje</th><th class="r">Desde ${esc(col[0])}</th></tr></thead>
+      <tbody>${linhasAcoes}</tbody></table></div></div>`;
+
+    // (5) resumo e (6) análises (abre e fecha em cada título)
+    const resumo = r.resumo ? `<div class="term-painel tp-resumo"><div class="term-cab">RESUMO DO DIA</div><p class="term-texto">${esc(r.resumo)}</p></div>` : "";
+    const analises = r.noticias.length ? `<div class="term-painel tp-analises"><div class="term-cab">ANÁLISES · ${r.noticias.length}</div>${r.noticias.map((n) => `
+      <details class="term-analise"><summary><span>${esc(n.titulo)}</span>${n.tickers.map((t) => {
+        const c = q[t + ".SA"];
+        return `<em class="term-chip c-acc">${t}${c ? ` <b class="${corMov(c.variacaoPct)}">${tPct(c.variacaoPct)}</b>` : ""}</em>`;
+      }).join("")}</summary>${n.paragrafos.map((p) => `<p>${esc(p)}</p>`).join("")}</details>`).join("")}</div>` : "";
+
+    return `<section class="term">
+      <div class="term-topo"><span class="term-marca">RELATÓRIO DIÁRIO</span><span>${esc(r.data)}</span><span class="term-dim">FECHAMENTO ${esc(r.fechamento.replace(/^DIA\s+/i, ""))}</span><span class="term-esp"></span>${relogio}${btnImp}</div>
+      <div class="term-grade">${cot}${movers}${juros}${tabAcoes}${resumo}${analises}</div>
+    </section>`;
+  }
+
   function renderNasdaq() {
     const q = mercado.cotacoes, tem = Object.keys(q).length;
     const quando = mercado.em ? new Date(mercado.em).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "";
@@ -6378,7 +6558,7 @@
     const btn = `<button class="btn" data-acao="atualizar-mercado" title="Buscar as cotações agora">↻ Atualizar</button>`;
     if (!tem) {
       const msg = mercado.carregando ? "Buscando as cotações da Nasdaq e da bolsa brasileira…" : "Não foi possível buscar as cotações. Confira a internet e toque em ↻ Atualizar.";
-      return `<div class="grid g-top"><div class="c12">${card("", "Relatório de mercado", status, btn, `<div class="empty">${msg}</div>`)}</div></div>`;
+      return painelRelatorio() + `<div class="grid g-top"><div class="c12">${card("", "Relatório de mercado", status, btn, `<div class="empty">${msg}</div>`)}</div></div>`;
     }
     const icone = '<path d="M3 13l4.5-4.5L11 12l6-6"/><path d="M13 6h4v4"/>';
     const tiles = MERCADO_INDICES.map((ix) => {
@@ -6391,7 +6571,7 @@
     const frases = textoRelatorioMercado();
     const relatorio = `<ul class="relatorio-mercado">${frases.map((f) => `<li>${f}</li>`).join("")}</ul>
       <p class="dim nota-mercado">Cotações com atraso de até 15 minutos. Variações calculadas pelos fechamentos diários; não é recomendação de investimento.</p>`;
-    return `
+    return painelRelatorio() + `
       <div class="grid g-top">${tiles}</div>
       <div class="grid">
         <div class="c7">${card("", "Nasdaq × Ibovespa", "variação acumulada em 3 meses", "",
@@ -6991,13 +7171,15 @@
             ${lista([
               ["<b>Exportar Backup</b> baixa um arquivo <b>.json</b> com todos os dados.", 6],
               ["<b>Importar Backup</b> substitui todos os dados atuais pelos do arquivo — o sistema pede confirmação antes.", 1],
-              ["<b>Importar PDF</b> lê o Extrato de Custódia do Nubank e traz os investimentos e as ações (nada é enviado para a internet).", 5]
+              ["<b>Importar NBK</b> lê o Extrato de Custódia do Nubank e traz os investimentos e as ações (nada é enviado para a internet).", 5],
+              ["<b>Importar ICL</b> lê o relatório do Instituto Conhecimento Liberta (PDF) e atualiza toda a guia Nasdaq: cotações, altas e quedas, CDI, IPCA, resumo e análises.", 3]
             ])}
             <p class="cfg-info"${opc(2)}>Último backup exportado: <b>${ultimoBackup || "nenhum ainda"}</b></p>
             ${acoes(`${A.ehDesktop ? `<button class="btn" data-acao="abrir-pasta-banco">Abrir pasta</button>` : ""}
               <button class="btn primario" data-acao="exportar-backup">Exportar Backup</button>
               <button class="btn primario" data-acao="importar-backup">Importar Backup</button>
-              <button class="btn btn-pdf" data-acao="importar-pdf">Importar PDF</button>`)}
+              <button class="btn btn-pdf" data-acao="importar-pdf">Importar NBK</button>
+              <button class="btn btn-icl" data-acao="importar-relatorio">Importar ICL</button>`)}
           </div>`)}</div>
         <div class="cfg-senha">${card("", "Senha Acesso", "protege o sistema neste aparelho", "", `
           <div class="body pad">
@@ -7399,6 +7581,7 @@
           break;
         }
         case "buscar-investimentos": buscarInvestimentos(); break;
+        case "importar-relatorio": document.getElementById("inputImportarRelatorio").click(); break;
         case "atualizar-mercado": toast("Buscando cotações…"); atualizarMercado(true); renderRota(); break;
         case "buscar-cotacoes":
           if (!configCotacoes().auto) { toast("Ative as cotações automáticas em Configurações."); break; }
@@ -7522,6 +7705,13 @@
       const arquivo = e.target.files[0];
       e.target.value = "";
       if (arquivo) importarPdf(arquivo);
+    });
+
+    const inpRel = document.getElementById("inputImportarRelatorio");
+    if (inpRel) inpRel.addEventListener("change", (e) => {
+      const arquivo = e.target.files[0];
+      e.target.value = "";
+      if (arquivo) importarRelatorio(arquivo);
     });
 
     document.getElementById("inputImportarBackup").addEventListener("change", (e) => {
