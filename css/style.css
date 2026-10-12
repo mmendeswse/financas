@@ -2064,3 +2064,9 @@ button.pill-periodo:hover { filter: brightness(1.25); }
 .setas-num button { flex: 1; display: flex; align-items: center; justify-content: center; padding: 0; border: 0; border-radius: 5px; background: transparent; color: var(--dim); cursor: pointer; }
 .setas-num button:hover, .setas-num button:active { color: var(--cy); background: rgba(63,193,224,.1); }
 .setas-num svg { width: 13px; height: 13px; }
+
+/* Android / iPad: a barra de aplicativos ou de gestos do sistema não cobre o
+   fim da página — o rodapé ganha a altura dela, e os avisos sobem acima dela */
+.rodape-app { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+.toast { bottom: calc(26px + env(safe-area-inset-bottom, 0px)); }
+.modal { max-height: calc(88vh - env(safe-area-inset-bottom, 0px)); }
