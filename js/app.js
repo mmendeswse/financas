@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.187";
+  const VERSAO_APP = "3.6.188";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1638,7 +1638,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.187" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.188" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -4183,7 +4183,6 @@
       if (reg) {
         const pagar = !mesQuitado(reg, mes);
         gravarAjuste(reg, mes, { pago: pagar, bancoId: bancoEscolhido || ajusteDoMes(reg, mes).bancoId, ...(pagar ? { destinoBancoId: destino || undefined } : {}) });
-        if (pagar && bancoEscolhido) reg.destinoBancoId = destino || undefined;   // fica sugerido para os próximos meses
         salvarEAtualizar(pagar ? "Marcada como paga neste mês." + (destino ? ` O valor foi para o ${F.nomeBanco(DADOS, destino)}.` : "") : "Marcada como prevista.");
       }
     } else if (acao === "quitar-mes-entrada") {
@@ -4229,7 +4228,7 @@
           <span style="display:flex;align-items:center;gap:8px">${marcaBanco(b.nome, 18)}${esc(b.nome)}</span>
           <b class="pg-valores"><span class="dim pg-antes">${brlSinal(b.saldoAtual)}</span><span class="dim pg-seta">→</span><span class="pg-depois ${b.saldoAtual - valor < 0 ? "down" : "up"}">${brlSinal(b.saldoAtual - valor)}</span></b>
         </button>`).join("")}</div>
-      ${bancos.length > 1 ? `<div class="campo" style="margin-top:12px"><label for="f_destinoPg">Enviar</label><select id="f_destinoPg">
+      ${bancos.length > 1 && destinoAtual ? `<div class="campo" style="margin-top:12px"><label for="f_destinoPg">Enviar</label><select id="f_destinoPg">
         <option value="">Nenhum</option>
         ${bancos.map((b) => `<option value="${b.id}"${b.id === destinoAtual ? " selected" : ""}>${esc(b.nome)}</option>`).join("")}
       </select><div class="ajuda">O valor será debitado do banco selecionado e transferido para o banco escolhido.</div></div>` : ""}
@@ -4507,6 +4506,10 @@
     };
     (d.contasPagar || []).filter((c) => c.status === "Pago" && !c.cartaoId)
       .forEach((c) => paraDestino(c, c.bancoId, c.destinoBancoId, Number(c.valor || 0), c.vencimento));
+    // despesa única lançada já paga (nas séries, o mês de origem não manda: o
+    // destino delas vale a partir dos meses marcados como pagos)
+    d.despesas.filter((x) => !x.cartaoId && freqDe(x) === FREQUENCIAS[0] && !x.origemRecorrente)
+      .forEach((x) => paraDestino(x, x.bancoId, x.destinoBancoId, Number(x.valor || 0), x.data));
     meses.forEach((mes) => {
       repeticoesPrevistas(d.entradas, mes, (reg, data) => pagas(reg, data, 1));
       const contasDoMes = (d.contasPagar || []).filter((c) => String(c.vencimento || "").slice(0, 7) === mes)
@@ -5127,6 +5130,7 @@
         <div class="ajuda ajuda-rec" id="ajudaRec"></div>
       ${htmlPersonalizar(x && x.regraRep)}
       </div>
+      ${DADOS.bancos.length > 1 ? `<div class="campo"><label for="f_destino">Enviar</label><select id="f_destino"><option value="">Nenhum</option>${DADOS.bancos.map((b) => `<option value="${b.id}"${x && (previsao ? ajusteDoMes(x, previsao.data.slice(0, 7)).destinoBancoId || x.destinoBancoId : x.destinoBancoId) === b.id ? " selected" : ""}>${esc(b.nome)}</option>`).join("")}</select><div class="ajuda">Ao pagar, o valor sai do banco da despesa e é transferido para este (VR e VT para o Inter, por ex.).</div></div>` : ""}
       <div class="campo"><label for="f_obs">Observação</label><textarea id="f_obs" placeholder="Opcional">${x ? esc(x.obs || "") : ""}</textarea></div>
       <div class="modal-acoes">
         <button class="btn primario salvar" id="btnSalvar">Salvar</button>
@@ -5150,6 +5154,7 @@
       const status = selStatus.value;
       const desc = document.getElementById("f_desc").value.trim();
       if (!desc) { toast("Descreva o lançamento."); return; }
+      const destinoForm = document.getElementById("f_destino") ? document.getElementById("f_destino").value || undefined : x ? x.destinoBancoId : undefined;
       const regraLida = regraDoFormD();
       const data = regraLida ? dataDoMesRegra(regraLida, mesDoFormD) : (document.getElementById("f_data").value || hojeISO());
       if (x && ehPers(x) && regraLida) {
@@ -5157,7 +5162,7 @@
         const pagarCom = document.getElementById("f_pagarcom") ? document.getElementById("f_pagarcom").value : "";
         const [tipoPg, idPg] = String(pagarCom || ":").split(":");
         const reg = { descricao: desc, emoji: lerEmojiD(), categoria: document.getElementById("f_cat").value, tipo: document.getElementById("f_tipo").value,
-          obs: document.getElementById("f_obs").value.trim(), valor: numIn(document.getElementById("f_valor").value), regraRep: regraLida };
+          obs: document.getElementById("f_obs").value.trim(), valor: numIn(document.getElementById("f_valor").value), regraRep: regraLida, destinoBancoId: destinoForm };
         if (tipoPg === "banco" && idPg) reg.bancoId = idPg;
         escolherAlcance("Salvar alteração", (alcance) => {
           salvarPers("despesa", x, reg, alcance);
@@ -5182,10 +5187,10 @@
           bancoId: tipoPg === "banco" ? idPg : "", cartaoId: tipoPg === "cartao" ? idPg : "",
           valor, formaPagamento: document.getElementById("f_forma").value,
           recorrencia: document.getElementById("f_rec").value,
-          recorrente: document.getElementById("f_rec").value !== FREQUENCIAS[0], regraRep: regraLida || undefined, obs
+          recorrente: document.getElementById("f_rec").value !== FREQUENCIAS[0], regraRep: regraLida || undefined, obs, destinoBancoId: destinoForm
         };
         if (previsao) {
-          gravarAjuste(x, previsao.data.slice(0, 7), { valor: registro.valor, pago: true, bancoId: registro.bancoId || undefined });
+          gravarAjuste(x, previsao.data.slice(0, 7), { valor: registro.valor, pago: true, bancoId: registro.bancoId || undefined, destinoBancoId: destinoForm });
           if (data !== previsao.data) registrarReancoragem(x, previsao.data.slice(0, 7), data);
         } else if (x && !ehConta) Object.assign(x, manterSerie(x, registro));
         else {
@@ -5201,10 +5206,10 @@
           bancoId: tipoP === "banco" ? idP : "",
           formaPagamento: document.getElementById("f_forma").value,
           recorrencia: document.getElementById("f_rec").value,
-          recorrente: document.getElementById("f_rec").value !== FREQUENCIAS[0], regraRep: regraLida || undefined
+          recorrente: document.getElementById("f_rec").value !== FREQUENCIAS[0], regraRep: regraLida || undefined, destinoBancoId: destinoForm
         };
         if (previsao) {
-          gravarAjuste(x, previsao.data.slice(0, 7), { valor: registro.valor, pago: false, bancoId: registro.bancoId || undefined });
+          gravarAjuste(x, previsao.data.slice(0, 7), { valor: registro.valor, pago: false, bancoId: registro.bancoId || undefined, destinoBancoId: destinoForm });
           if (data !== previsao.data) registrarReancoragem(x, previsao.data.slice(0, 7), data);
         } else if (x && ehConta) Object.assign(x, manterSerie(x, registro));
         else {
