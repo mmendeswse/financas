@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.184";
+  const VERSAO_APP = "3.6.189";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1638,7 +1638,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.184" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.189" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1697,6 +1697,7 @@
     importar: svgIc('<path d="M12 3.5V15M7.5 10.5L12 15l4.5-4.5"/><path d="M4 14.5V19a1.5 1.5 0 0 0 1.5 1.5h13A1.5 1.5 0 0 0 20 19v-4.5"/>'),
     pdf: svgIc('<path d="M14 3.5H6.5A1.5 1.5 0 0 0 5 5v14a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 19V8.5z"/><path d="M14 3.5v5h5"/><path d="M8.5 13h7M8.5 16.5h5"/>'),
     pago: svgIc('<circle cx="12" cy="12" r="8.5"/><path d="M8 12.5l2.7 2.7L16 9.5"/>'),
+    pagar: svgIc('<rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.6"/><path d="M6 9.5v5M18 9.5v5"/>'),
     substituir: svgIc('<path d="M17 3.5l3 3-3 3"/><path d="M4 11V9.5a3 3 0 0 1 3-3h13"/><path d="M7 20.5l-3-3 3-3"/><path d="M20 13v1.5a3 3 0 0 1-3 3H4"/>'),
     senha: svgIc('<rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.5"/>'),
     biometria: svgIc('<path d="M7.5 5.5A8 8 0 0 1 20 12v1.5"/><path d="M4 12a8 8 0 0 1 1.2-4.2"/><path d="M8 12a4 4 0 0 1 8 0v2.5a9 9 0 0 1-1 4"/><path d="M12 12v3a7 7 0 0 1-2.2 5"/><path d="M4.5 16.5a11 11 0 0 0 .5-3"/>'),
@@ -1723,6 +1724,7 @@
     [(b, t) => /^exportar/.test(t), "exportar"],
     [(b, t) => /pdf/.test(t), "pdf"],
     [(b, t) => /^importar/.test(t), "importar"],
+    [(b, t) => /^pagar\b/.test(t), "pagar"],
     [(b, t) => /pago/.test(t), "pago"],
     [(b, t) => /^substituir/.test(t), "substituir"],
     [(b, t) => /este e os próximos|somente este mês/.test(t), "calendario"],
@@ -4181,7 +4183,6 @@
       if (reg) {
         const pagar = !mesQuitado(reg, mes);
         gravarAjuste(reg, mes, { pago: pagar, bancoId: bancoEscolhido || ajusteDoMes(reg, mes).bancoId, ...(pagar ? { destinoBancoId: destino || undefined } : {}) });
-        if (pagar && bancoEscolhido) reg.destinoBancoId = destino || undefined;   // fica sugerido para os próximos meses
         salvarEAtualizar(pagar ? "Marcada como paga neste mês." + (destino ? ` O valor foi para o ${F.nomeBanco(DADOS, destino)}.` : "") : "Marcada como prevista.");
       }
     } else if (acao === "quitar-mes-entrada") {
@@ -4225,15 +4226,21 @@
       <div id="listaBancosPg">${bancos.map((b) => `
         <button type="button" class="kv kv-editavel opcao-banco-pg" data-banco="${b.id}" style="align-items:center;width:100%;text-align:left;cursor:pointer;border-radius:8px">
           <span style="display:flex;align-items:center;gap:8px">${marcaBanco(b.nome, 18)}${esc(b.nome)}</span>
-          <b><span class="dim" style="font-weight:500">${brlSinal(b.saldoAtual)} → </span><span class="${b.saldoAtual - valor < 0 ? "down" : "up"}">${brlSinal(b.saldoAtual - valor)}</span></b>
+          <b class="pg-valores"><span class="dim pg-antes">${brlSinal(b.saldoAtual)}</span><span class="dim pg-seta">→</span><span class="pg-depois ${b.saldoAtual - valor < 0 ? "down" : "up"}">${brlSinal(b.saldoAtual - valor)}</span></b>
         </button>`).join("")}</div>
-      ${bancos.length > 1 ? `<div class="campo" style="margin-top:12px"><label for="f_destinoPg">Enviar</label><select id="f_destinoPg">
+      ${bancos.length > 1 && destinoAtual ? `<div class="campo" style="margin-top:12px"><label for="f_destinoPg">Enviar</label><select id="f_destinoPg">
         <option value="">Nenhum</option>
         ${bancos.map((b) => `<option value="${b.id}"${b.id === destinoAtual ? " selected" : ""}>${esc(b.nome)}</option>`).join("")}
-      </select><div class="ajuda">O valor será debitado do banco selecionado e transferido para o banco escolhido acima.</div></div>` : ""}
-      <div class="modal-acoes"><button class="btn" id="btnCancelarPg">Cancelar</button><button class="btn primario salvar" id="btnConfirmarPg">Pagar</button></div>`);
+      </select><div class="ajuda">O valor será debitado do banco selecionado e transferido para o banco escolhido.</div></div>` : ""}
+      <div class="modal-acoes"><button class="btn primario salvar" id="btnConfirmarPg">Pagar</button><button class="btn" id="btnCancelarPg">Cancelar</button></div>`);
     // o foco automático no "Enviar" abriria a lista no iPad
     if (document.getElementById("f_destinoPg")) setTimeout(() => document.getElementById("f_destinoPg").blur(), 40);
+    // "antes → depois" em colunas: cada coluna com a largura do maior valor
+    ["pg-antes", "pg-depois"].forEach((cls) => {
+      const els = [...document.querySelectorAll("#modal ." + cls)];
+      const larg = Math.max(0, ...els.map((e) => e.getBoundingClientRect().width));
+      if (larg) els.forEach((e) => { e.style.minWidth = Math.ceil(larg) + "px"; });
+    });
     const marcar = () => document.querySelectorAll(".opcao-banco-pg").forEach((el) => {
       const sel = el.dataset.banco === escolhido;
       el.style.outline = sel ? "2px solid var(--cy)" : "none";
@@ -4499,6 +4506,10 @@
     };
     (d.contasPagar || []).filter((c) => c.status === "Pago" && !c.cartaoId)
       .forEach((c) => paraDestino(c, c.bancoId, c.destinoBancoId, Number(c.valor || 0), c.vencimento));
+    // despesa única lançada já paga (nas séries, o mês de origem não manda: o
+    // destino delas vale a partir dos meses marcados como pagos)
+    d.despesas.filter((x) => !x.cartaoId && freqDe(x) === FREQUENCIAS[0] && !x.origemRecorrente)
+      .forEach((x) => paraDestino(x, x.bancoId, x.destinoBancoId, Number(x.valor || 0), x.data));
     meses.forEach((mes) => {
       repeticoesPrevistas(d.entradas, mes, (reg, data) => pagas(reg, data, 1));
       const contasDoMes = (d.contasPagar || []).filter((c) => String(c.vencimento || "").slice(0, 7) === mes)
@@ -5119,6 +5130,7 @@
         <div class="ajuda ajuda-rec" id="ajudaRec"></div>
       ${htmlPersonalizar(x && x.regraRep)}
       </div>
+      ${DADOS.bancos.length > 1 ? `<div class="campo"><label for="f_destino">Enviar</label><select id="f_destino"><option value="">Nenhum</option>${DADOS.bancos.map((b) => `<option value="${b.id}"${x && (previsao ? ajusteDoMes(x, previsao.data.slice(0, 7)).destinoBancoId || x.destinoBancoId : x.destinoBancoId) === b.id ? " selected" : ""}>${esc(b.nome)}</option>`).join("")}</select><div class="ajuda">Ao pagar, o valor sai do banco da despesa e é transferido para este (VR e VT para o Inter, por ex.).</div></div>` : ""}
       <div class="campo"><label for="f_obs">Observação</label><textarea id="f_obs" placeholder="Opcional">${x ? esc(x.obs || "") : ""}</textarea></div>
       <div class="modal-acoes">
         <button class="btn primario salvar" id="btnSalvar">Salvar</button>
@@ -5142,6 +5154,7 @@
       const status = selStatus.value;
       const desc = document.getElementById("f_desc").value.trim();
       if (!desc) { toast("Descreva o lançamento."); return; }
+      const destinoForm = document.getElementById("f_destino") ? document.getElementById("f_destino").value || undefined : x ? x.destinoBancoId : undefined;
       const regraLida = regraDoFormD();
       const data = regraLida ? dataDoMesRegra(regraLida, mesDoFormD) : (document.getElementById("f_data").value || hojeISO());
       if (x && ehPers(x) && regraLida) {
@@ -5149,7 +5162,7 @@
         const pagarCom = document.getElementById("f_pagarcom") ? document.getElementById("f_pagarcom").value : "";
         const [tipoPg, idPg] = String(pagarCom || ":").split(":");
         const reg = { descricao: desc, emoji: lerEmojiD(), categoria: document.getElementById("f_cat").value, tipo: document.getElementById("f_tipo").value,
-          obs: document.getElementById("f_obs").value.trim(), valor: numIn(document.getElementById("f_valor").value), regraRep: regraLida };
+          obs: document.getElementById("f_obs").value.trim(), valor: numIn(document.getElementById("f_valor").value), regraRep: regraLida, destinoBancoId: destinoForm };
         if (tipoPg === "banco" && idPg) reg.bancoId = idPg;
         escolherAlcance("Salvar alteração", (alcance) => {
           salvarPers("despesa", x, reg, alcance);
@@ -5174,10 +5187,10 @@
           bancoId: tipoPg === "banco" ? idPg : "", cartaoId: tipoPg === "cartao" ? idPg : "",
           valor, formaPagamento: document.getElementById("f_forma").value,
           recorrencia: document.getElementById("f_rec").value,
-          recorrente: document.getElementById("f_rec").value !== FREQUENCIAS[0], regraRep: regraLida || undefined, obs
+          recorrente: document.getElementById("f_rec").value !== FREQUENCIAS[0], regraRep: regraLida || undefined, obs, destinoBancoId: destinoForm
         };
         if (previsao) {
-          gravarAjuste(x, previsao.data.slice(0, 7), { valor: registro.valor, pago: true, bancoId: registro.bancoId || undefined });
+          gravarAjuste(x, previsao.data.slice(0, 7), { valor: registro.valor, pago: true, bancoId: registro.bancoId || undefined, destinoBancoId: destinoForm });
           if (data !== previsao.data) registrarReancoragem(x, previsao.data.slice(0, 7), data);
         } else if (x && !ehConta) Object.assign(x, manterSerie(x, registro));
         else {
@@ -5193,10 +5206,10 @@
           bancoId: tipoP === "banco" ? idP : "",
           formaPagamento: document.getElementById("f_forma").value,
           recorrencia: document.getElementById("f_rec").value,
-          recorrente: document.getElementById("f_rec").value !== FREQUENCIAS[0], regraRep: regraLida || undefined
+          recorrente: document.getElementById("f_rec").value !== FREQUENCIAS[0], regraRep: regraLida || undefined, destinoBancoId: destinoForm
         };
         if (previsao) {
-          gravarAjuste(x, previsao.data.slice(0, 7), { valor: registro.valor, pago: false, bancoId: registro.bancoId || undefined });
+          gravarAjuste(x, previsao.data.slice(0, 7), { valor: registro.valor, pago: false, bancoId: registro.bancoId || undefined, destinoBancoId: destinoForm });
           if (data !== previsao.data) registrarReancoragem(x, previsao.data.slice(0, 7), data);
         } else if (x && ehConta) Object.assign(x, manterSerie(x, registro));
         else {
