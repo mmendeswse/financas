@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.203";
+  const VERSAO_APP = "3.6.205";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1667,7 +1667,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.203" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.205" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -1755,7 +1755,7 @@
     [(b, t) => /pdf/.test(t), "pdf"],
     [(b, t) => /^importar/.test(t), "importar"],
     [(b, t) => /^pagar\b/.test(t), "pagar"],
-    [(b, t) => /^alterar saldo\b/.test(t), "saldo"],
+    [(b, t) => b.id === "btnSaldoReal", "saldo"],
     [(b, t) => /pago/.test(t), "pago"],
     [(b, t) => /^substituir/.test(t), "substituir"],
     [(b, t) => /este e os próximos|somente este mês/.test(t), "calendario"],
@@ -2734,7 +2734,7 @@
       ${extratoBancoHtml(d, b)}
       <div class="modal-acoes">
         <button class="btn primario salvar" id="btnIrPainel">Depositar</button>
-        <button class="btn" id="btnSaldoReal" title="Informar quanto o banco tem hoje">Alterar Saldo</button>
+        <button class="btn" id="btnSaldoReal" title="Alterar o saldo do banco">Alterar</button>
         <button class="btn btn-com-icone" id="btnEditarBanco" title="Editar os dados do banco">${ICONE_EDITAR}Editar</button>
         <button class="btn" id="btnFecharPainel">Fechar</button>
       </div>`);
@@ -3508,7 +3508,7 @@
     } else {
       listaHtml = `<div class="grade-bancos">` + bancos.map((b) => `
           <div class="cartao-item" style="border-left-color:${esc(b.cor || "#3FC1E0")}" data-acao="explicar-banco" data-id="${b.id}" title="Ver o histórico de transações">
-            <div class="linha1"><div class="nome-com-marca">${marcaBanco(b.nome, 26)}<div><div class="nome">${esc(b.nome)}</div><div class="tipo">${esc(b.tipo || "—")}</div>${b.agencia || b.conta ? `<div class="tipo">${b.agencia ? `<span class="sem-quebra">Ag ${esc(b.agencia)}</span>` : ""}${b.agencia && b.conta ? " · " : ""}${b.conta ? `<span class="sem-quebra">Cc ${esc(b.conta)}</span>` : ""}</div>` : ""}</div></div></div>
+            <div class="linha1"><div class="nome-com-marca">${marcaBanco(b.nome, 26)}<div><div class="nome">${esc(b.nome)}</div><div class="tipo">${esc(b.tipo || "—")}</div>${b.agencia || b.conta ? `<div class="tipo">${b.agencia ? `<span class="sem-quebra">Ag ${esc(b.agencia)}</span>` : ""}${b.agencia && b.conta ? " " : ""}${b.conta ? `<span class="sem-quebra">Cc ${esc(b.conta)}</span>` : ""}</div>` : ""}</div></div></div>
             <div class="saldo saldo-branco">${brlSinal(b.valor)}</div>
             ${mesesBancos ? `<div class="rodape"><span>Saldo Atual ${brl(b.saldoAtual)}</span></div>` : ""}
           </div>`).join("") + `</div>`;
@@ -3894,7 +3894,7 @@
   // AJUSTE DE SALDO: o usuário informa quanto o banco tem de verdade (o
   // saldo do Inter depois de receber o VR/VT, por ex.) e a diferença para o
   // saldo calculado vira um lançamento "Ajuste de saldo" — não conta como
-  // receita nem despesa. Fica no botão "Alterar Saldo" do quadro do banco.
+  // receita nem despesa. Fica no botão "Alterar" do quadro do banco.
   // DADOS.ajustesSaldo: [{ id, bancoId, data, valor, saldoInformado }]
   // ---------------------------------------------------------------------
   // opts.depois: chamado ao terminar (salvando ou não)
