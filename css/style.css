@@ -2375,3 +2375,4 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
 .term-grade-meio > .term-painel { padding-bottom: 0; border-bottom: 1px solid var(--t-linha); }
 /* notícias acompanham exatamente a altura do gráfico ao lado (sem sobrar faixa embaixo) */
 @media (min-width: 901px) { .term-grade-2 .tp-noticias { height: auto; contain: size; padding-bottom: 6px; } }
+.term-board .tq-preco:not(.term-dim) { color: #FFFFFF; }   /* valor principal das caixas sempre branco (a cor fica na variação) */
