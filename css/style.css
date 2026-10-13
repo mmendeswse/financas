@@ -2380,3 +2380,6 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
 .term-board { grid-template-columns: repeat(7, minmax(0, 1fr)); }
 @media (max-width: 1280px) { .term-board { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 @media (max-width: 560px) { .term-board { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* caixas do topo: o vão no fim da última linha fica preto como as caixas (as divisórias são feitas por sombra) */
+.term-board { gap: 0; background: #000; }
+.term-board .term-quote { box-shadow: 1px 0 0 var(--t-linha), 0 1px 0 var(--t-linha); }
