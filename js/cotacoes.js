@@ -152,6 +152,7 @@
       }), tempo);
     };
     return ler(url, 10000)
+      .catch(function () { return ler("https://corsproxy.io/?url=" + encodeURIComponent(url), 12000); })
       .catch(function () { return ler("https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(url), 12000); })
       .catch(function () { return ler("https://api.allorigins.win/raw?url=" + encodeURIComponent(url), 12000); });
   }
@@ -343,7 +344,7 @@
   }
   // Reserva para os EUA: cotação do dia na Stooq (sem histórico), direto ou
   // pelos repassadores. "^IXIC" → "^ndq", "AAPL" → "aapl.us".
-  var STOOQ = { "^IXIC": "^ndq", "^NDX": "^ndx", "^GSPC": "^spx" };
+  var STOOQ = { "^IXIC": "^ndq", "^NDX": "^ndx", "^GSPC": "^spx", "GC=F": "xauusd" };
   function lerStooq(simbolo) {
     var s = STOOQ[simbolo] || (simbolo.toLowerCase() + ".us");
     var url = "https://stooq.com/q/l/?s=" + encodeURIComponent(s) + "&f=sd2t2ohlcp&h&e=csv";

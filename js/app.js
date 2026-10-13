@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.271";
+  const VERSAO_APP = "3.6.274";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1137,6 +1137,8 @@
     if (secao === "nasdaq") {
       atualizarMercado(false);
       atualizarIndicadoresBCB(false);
+      // séries do bitcoin e do ethereum para os minigráficos das caixas
+      ["BTC", "ETH"].forEach((m) => { if (!seriesCripto[m]) carregarSerieCripto(m).then(() => { if (ROTA.secao === "nasdaq") renderRota(); }).catch(() => {}); });
       // sem notícias (ou com mais de 15 min): busca agora, sem esperar o relógio
       if (!(mercado.noticias && mercado.noticias.length) || Date.now() - (mercado.noticiasEm || 0) > 15 * 60 * 1000) atualizarNoticiasMercado();
     }
@@ -1741,7 +1743,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.271" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.274" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -6466,10 +6468,13 @@
   // CDI, Selic e IPCA direto do Banco Central (séries do SGS), para as caixas
   // da guia Bolsa funcionarem sem o relatório: 12 = CDI diário (% a.d.),
   // 432 = Selic meta (% a.a.), 433 = IPCA mensal (% a.m.). Atualiza a cada 6 h.
-  let buscandoBCB = false;
+  let buscandoBCB = false, tentativaBCB = 0;
   function atualizarIndicadoresBCB(forcar) {
-    if (buscandoBCB || (!forcar && mercado.bcb && mercado.bcb.v === 2 && Date.now() - mercado.bcb.em < 6 * 3600 * 1000)) return;
-    buscandoBCB = true;
+    // completo: renova a cada 30 min; faltando CDI, Selic ou IPCA: nova tentativa a cada 2 min
+    const b0 = mercado.bcb, completo = b0 && b0.v === 2 && b0.cdi && b0.selic && b0.ipca;
+    const espera = completo ? 30 * 60 * 1000 : 2 * 60 * 1000;
+    if (buscandoBCB || (!forcar && Date.now() - ((completo ? b0.em : tentativaBCB) || 0) < espera)) return;
+    buscandoBCB = true; tentativaBCB = Date.now();
     const isoDia = (dt) => `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
     const hoje = new Date(), umAno = new Date(), doisAnos = new Date();
     umAno.setDate(umAno.getDate() - 400); doisAnos.setMonth(doisAnos.getMonth() - 26);
@@ -6509,7 +6514,7 @@
     if (mercado.carregando) return;
     if (!forcar && Date.now() - mercado.em < 10 * 60 * 1000 && Object.keys(mercado.cotacoes).length) return;
     const doRelatorio = acoesDoRelatorio(DADOS.relatorioMercado).map((x) => x.ticker + ".SA");
-    const simbolos = [...new Set([...MERCADO_INDICES.map((x) => x.s), ...MERCADO_EUA.map((x) => x[0]), ...MERCADO_BR.map((x) => x[0] + ".SA"), ...doRelatorio])];
+    const simbolos = [...new Set([...MERCADO_INDICES.map((x) => x.s), "GC=F", ...MERCADO_EUA.map((x) => x[0]), ...MERCADO_BR.map((x) => x[0] + ".SA"), ...doRelatorio])];
     mercado.carregando = true;
     const isoDia = (dt) => `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
     const hoje = new Date(), inicio = new Date(); inicio.setDate(inicio.getDate() - 3);
@@ -6826,8 +6831,9 @@
     if (!c) return null;
     const tk = simbolo.replace(/\.SA$/, "");
     const lista = [...MERCADO_EUA, ...MERCADO_BR].find((x) => x[0] === tk);
-    return { id: simbolo, ticker: NOMES_INDICES[simbolo] ? tk.replace("^", "") : tk, empresa: c.nome || (lista && lista[1]) || NOMES_INDICES[simbolo] || "",
-      categoria: NOMES_INDICES[simbolo] ? "Índice" : "Ação", moeda: c.moeda, historicoPrecos: c.historico || [], precoAtual: c.preco, precoMedio: 0, quantidade: 0 };
+    const ouro = simbolo === "GC=F";
+    return { id: simbolo, ticker: ouro ? "OURO" : NOMES_INDICES[simbolo] ? tk.replace("^", "") : tk, empresa: ouro ? "Ouro · contrato futuro (US$ por onça)" : c.nome || (lista && lista[1]) || NOMES_INDICES[simbolo] || "",
+      categoria: ouro ? "Mercadoria" : NOMES_INDICES[simbolo] ? "Índice" : "Ação", moeda: c.moeda, historicoPrecos: c.historico || [], precoAtual: c.preco, precoMedio: 0, quantidade: 0 };
   }
   function renderDetalheMercado(d, simbolo) {
     const a = ativoMercado(simbolo);
@@ -6859,14 +6865,14 @@
     const caixa = (nome, live, rel, fmt) => {
       let preco, varDia, sub = "", spark = "", fonte;
       if (live) {
-        preco = live.preco; varDia = live.variacaoPct; fonte = "AO VIVO";
+        preco = live.preco; varDia = live.variacaoPct; fonte = live.fonte || "AO VIVO";
         sub = `1M ${tPct(variacaoSerie(live.historico, 30))} · 3M ${tPct(variacaoSerie(live.historico, 90))}`;
         if (live.historico && live.historico.length > 1) spark = sparklineSVG(live.historico.map((h) => h.preco), varDia >= 0 ? G.CORES.up : G.CORES.down);
       } else if (rel) {
         preco = rel.atual; varDia = rel.dia; fonte = rotRel;
         sub = `MÊS ${tPct(rel.mes)} · ANO ${tPct(rel.ano)}`;
       } else return `<div class="term-quote"><span class="tq-nome">${nome}</span><b class="tq-preco term-dim">—</b><span class="tq-sub term-dim">sem cotação</span></div>`;
-      const clique = live && live.simbolo ? ` ${live.simbolo === "dolar" ? 'data-acao="ir" data-secao="detalhe-dolar"' : linkAtivo(live.simbolo)}` : "";
+      const clique = live && live.clique ? ` ${live.clique}` : live && live.simbolo ? ` ${live.simbolo === "dolar" ? 'data-acao="ir" data-secao="detalhe-dolar"' : linkAtivo(live.simbolo)}` : "";
       return `<div class="term-quote${clique ? " clicavel" : ""}"${clique}><span class="tq-nome">${nome}<em>${fonte}</em></span>
         <b class="tq-preco ${corMov(varDia)}">${fmt(preco)}</b>
         <span class="tq-var ${corMov(varDia)}">${tPct(varDia)} ${setaMov(varDia)}</span>
@@ -6878,7 +6884,7 @@
     const fTaxa = (v) => v == null ? "—" : `${v < 0 ? "−" : ""}${Math.abs(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
     const caixaTaxa = (nome, rePrincipal, extras, inflacao) => {
       const v = taxaRel(rePrincipal);
-      if (v == null) return `<div class="term-quote"><span class="tq-nome">${nome}</span><b class="tq-preco term-dim">—</b><span class="tq-sub term-dim">importe o relatório ICL</span></div>`;
+      if (v == null) return `<div class="term-quote"><span class="tq-nome">${nome}<em>BCB</em></span><b class="tq-preco term-dim">—</b><span class="tq-sub term-dim">buscando no Banco Central…</span></div>`;
       const cor = (x) => x == null ? "" : inflacao ? (x > 0 ? "t-down" : "t-up") : "t-up";
       const [e1, e2] = extras.map(([rot, re]) => [rot, taxaRel(re)]);
       return `<div class="term-quote"><span class="tq-nome">${nome}<em>${rotRel}</em></span>
@@ -6901,9 +6907,39 @@
       : caixaTaxa("IPCA 12 MESES", /IPCA ACUMULADO EM 12/i, [["MÊS", /IPCA ACUMULADO M/i], ["ANO", /IPCA ACUMULADO NO ANO/i]], true);
     // renda fixa do relatório (a primeira taxa do grupo, ex.: Juros Pré Jan/2027)
     const rendaFixaRel = (() => { const g = r && r.grupos.find((x) => /renda fixa/i.test(x.nome)); return g && g.ativos[0] ? g.ativos[0] : null; })();
+    // CDB: % do CDI dos CDBs cadastrados em Investimentos (média pelo valor) ou
+    // 100% do CDI; taxa ao ano e rendimento de 12 meses pela série do CDI
+    const cdbs = (DADOS.investimentos || []).filter((i) => /CDB/i.test(`${i.tipoAtivo || ""} ${i.nome || ""}`));
+    const pctCDB = (() => {
+      const comPct = cdbs.map((i) => ({ v: Number(i.valorAtual || i.valorInvestido || 0), p: i.indexador === "% do CDI" && Number(i.taxaContratada) > 0 ? Number(i.taxaContratada) : Number((/(\d+(?:[.,]\d+)?)\s*%\s*(?:do\s*)?CDI/i.exec(i.nome || "") || [])[1]?.replace(",", ".")) || 0 })).filter((x) => x.p > 0);
+      const tot = comPct.reduce((a, x) => a + (x.v || 1), 0);
+      return comPct.length ? comPct.reduce((a, x) => a + x.p * (x.v || 1), 0) / tot : 100;
+    })();
+    const boxCDB = (() => {
+      const nome = `CDB · ${pctCDB.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}% DO CDI`;
+      if (!bcb.cdi) return `<div class="term-quote"><span class="tq-nome">${nome}<em>BCB</em></span><b class="tq-preco term-dim">—</b><span class="tq-sub term-dim">buscando no Banco Central…</span></div>`;
+      const diaDe = (aa) => Math.pow(1 + aa / 100, 1 / 252) - 1;
+      const aaCDB = (Math.pow(1 + diaDe(bcb.cdi.aa) * pctCDB / 100, 252) - 1) * 100;
+      const serie = (bcb.cdi.serie || []).slice(-252);
+      const r12 = serie.length ? (serie.reduce((f, p) => f * (1 + diaDe(p[1]) * pctCDB / 100), 1) - 1) * 100 : null;
+      return `<div class="term-quote clicavel" data-acao="abrir-indicador" data-ind="cdi" title="Abrir o histórico do CDI"><span class="tq-nome">${nome}<em>${cdbs.length ? "CARTEIRA" : "BCB"}</em></span>
+        <b class="tq-preco">${fTaxa(aaCDB)} <small class="tq-aa">a.a.</small></b>
+        <span class="tq-var t-up">12 MESES ${fTaxa(r12)}</span>
+        <span class="tq-sub">R$ 10 MIL → +${r12 == null ? "—" : brl(100 * r12)}/ANO</span>
+        ${bcb.cdi.hist && bcb.cdi.hist.length > 1 ? `<span class="tq-spark">${sparklineSVG(bcb.cdi.hist.map((v) => (Math.pow(1 + diaDe(v) * pctCDB / 100, 252) - 1) * 100), G.CORES.up)}</span>` : ""}</div>`;
+    })();
     // renda fixa: Selic meta do BCB; sem ela, a taxa do relatório (Juros Pré)
     const boxRF = bcb.selic ? caixaBCB("RENDA FIXA · SELIC", bcb.selic.aa, true, `30 DIAS ${pp(bcb.selic.var30)}`, `12 MESES ${pp(bcb.selic.var365)}`, bcb.selic.hist, "t-up", "selic")
       : null;
+    // dólar, bitcoin, ethereum e as ações da carteira (guia Ações), ao lado do ouro;
+    // cada uma abre a própria tela ao tocar
+    const dolarVivo = dolar && dolar.valor ? { preco: dolar.valor, variacaoPct: dolar.variacaoPct || 0, historico: serieDolar || mercado.dolar || [], clique: 'data-acao="ir" data-secao="detalhe-dolar"' } : null;
+    const criptoVivo = (m) => { const c = cripto && cripto[m]; return c && c.valor ? { preco: c.valor, variacaoPct: c.variacaoPct || 0, historico: seriesCripto[m] || [], clique: `data-cripto="${m}"` } : null; };
+    const acaoCarteira = (a) => {
+      if (!(Number(a.precoAtual) > 0)) return null;
+      const v = a.fontePreco === "auto" && a.variacaoDiaPct != null ? a.variacaoDiaPct : I.variacaoRecente(a).pct;
+      return { preco: Number(a.precoAtual), variacaoPct: v, historico: (a.historicoPrecos || []).slice().sort((x, y) => (x.data < y.data ? -1 : 1)), fonte: "CARTEIRA", clique: `data-acao="ir" data-secao="detalhe-acao" data-id="${a.id}"` };
+    };
     const pts = (v) => fmtPontos(v);
     const moeda2 = (v) => Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const comSimbolo = (sim) => q[sim] ? { ...q[sim], simbolo: sim } : null;
@@ -6911,8 +6947,13 @@
       ${caixa("IBOVESPA", comSimbolo("^BVSP"), ativoRelatorio("IBOVESPA"), pts)}
       ${caixa("S&amp;P 500", comSimbolo("^GSPC"), ativoRelatorio("SP500"), pts)}
       ${caixa("NASDAQ", comSimbolo("^IXIC"), ativoRelatorio("NASDAQ"), pts)}
+      ${caixa("OURO · ONÇA", comSimbolo("GC=F"), ativoRelatorio("OURO"), (v) => "US$ " + moeda2(v))}
+      ${caixa("DÓLAR", dolarVivo, ativoRelatorio("DÓLAR / REAL"), (v) => "R$ " + moeda2(v))}
+      ${["BTC", "ETH"].map((m) => caixa(m === "BTC" ? "BITCOIN" : "ETHEREUM", criptoVivo(m), null, (v) => "R$ " + Number(v).toLocaleString("pt-BR", { maximumFractionDigits: 0 }))).join("")}
+      ${(DADOS.acoes || []).map((a) => caixa(esc(String(a.ticker).toUpperCase()), acaoCarteira(a), null, brl)).join("")}
       ${boxCDI}
-      ${boxRF || caixa("RENDA FIXA", null, rendaFixaRel, fTaxa)}
+      ${boxRF || (rendaFixaRel ? caixa("RENDA FIXA", null, rendaFixaRel, fTaxa) : `<div class="term-quote"><span class="tq-nome">RENDA FIXA<em>BCB</em></span><b class="tq-preco term-dim">—</b><span class="tq-sub term-dim">buscando no Banco Central…</span></div>`)}
+      ${boxCDB}
       ${boxIPCA}
     </div>`;
 
