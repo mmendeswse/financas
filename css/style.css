@@ -2350,3 +2350,26 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
 .legenda-graus span { gap: 4px; flex: none; }
 .legenda-graus small { font-size: inherit; color: inherit; margin-left: 3px; }
 @media (max-width: 600px) { .legenda-graus small { display: none; } }   /* celular: só letra e nome, para caber numa linha */
+
+/* quadro interativo do CDI, Selic e IPCA (guia Bolsa) */
+.ind-periodos { margin: 0 0 8px; }
+.ind-graf { height: 280px; position: relative; padding: 4px 0; }
+.ind-ponto { margin: 8px 0 4px; padding: 8px 12px; border: 1px dashed var(--linha-2); border-radius: 8px; font-size: 12.5px; color: var(--texto); }
+.ind-numeros { margin-top: 8px; border: 1px solid var(--linha); border-radius: 8px; }
+.ind-simul { margin: 10px 0 0; font-size: 12.5px; line-height: 1.55; color: var(--texto); }
+/* bolinha com a cor do grau da triagem, na frente do papel (sem legenda) */
+.bola-grau { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; vertical-align: 1px; flex: none; cursor: help; }
+.bola-grau.g-a { background: #2EE59D; box-shadow: 0 0 6px rgba(46, 229, 157, .6); }
+.bola-grau.g-b { background: #7FF0C2; }
+.bola-grau.g-c { background: #FFD54F; }
+.bola-grau.g-d { background: #FFA726; }
+.bola-grau.g-e { background: #FF4D5E; box-shadow: 0 0 6px rgba(255, 77, 94, .5); }
+.bola-grau.g-x { background: #2E3A4A; }
+/* guia Bolsa: barras de rolagem finas e escuras (no Windows a barra clara
+   aparecia como uma faixa diferente no fim das tabelas e das notícias) */
+.term .term-rolar, .term .tp-rolar, .term .term-noticias, .term-grade-2 .tp-noticias { scrollbar-width: thin; scrollbar-color: #1A2431 transparent; }
+.term ::-webkit-scrollbar { width: 6px; height: 6px; background: transparent; }
+.term ::-webkit-scrollbar-track { background: transparent; }
+.term ::-webkit-scrollbar-thumb { background: #1A2431; border-radius: 3px; }
+.term ::-webkit-scrollbar-corner { background: transparent; }
+.term-grade-meio > .term-painel { padding-bottom: 0; border-bottom: 1px solid var(--t-linha); }
