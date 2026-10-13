@@ -396,5 +396,18 @@
     return Promise.all([trabalhador(), trabalhador(), trabalhador(), trabalhador()]).then(function () { return { cotacoes: cotacoes, erros: erros }; });
   }
 
-  global.Cotacoes = { buscarDolar: buscarDolar, buscarCripto: buscarCripto, buscarSerieDolar: buscarSerieDolar, buscarSerieMoeda: buscarSerieMoeda, buscarCotacoes: buscarCotacoes, buscarSerieBCB: buscarSerieBCB, buscarNoticiasDia: buscarNoticiasDia, buscarNoticiasPeriodo: buscarNoticiasPeriodo, buscarMercado: buscarMercado };
+  // Ouro em dólar por onça (XAU-USD) na AwesomeAPI — a mesma do dólar, que
+  // responde no aparelho quando as fontes dos EUA (Yahoo, Stooq) não respondem
+  function buscarOuro() {
+    return comTimeout(fetch("https://economia.awesomeapi.com.br/last/XAU-USD", { cache: "no-store" }).then(function (r) {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function (j) {
+      var d = j && j.XAUUSD;
+      if (!d || !(Number(d.bid) > 0)) throw new Error("Resposta inesperada");
+      return { preco: Number(d.bid), variacaoPct: Number(d.pctChange) || 0 };
+    }), 8000);
+  }
+
+  global.Cotacoes = { buscarDolar: buscarDolar, buscarCripto: buscarCripto, buscarSerieDolar: buscarSerieDolar, buscarSerieMoeda: buscarSerieMoeda, buscarCotacoes: buscarCotacoes, buscarSerieBCB: buscarSerieBCB, buscarNoticiasDia: buscarNoticiasDia, buscarNoticiasPeriodo: buscarNoticiasPeriodo, buscarMercado: buscarMercado, buscarOuro: buscarOuro };
 })(window);
