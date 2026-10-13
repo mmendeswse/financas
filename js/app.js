@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.274";
+  const VERSAO_APP = "3.6.275";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1743,7 +1743,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.274" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.275" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -6940,6 +6940,24 @@
       const v = a.fontePreco === "auto" && a.variacaoDiaPct != null ? a.variacaoDiaPct : I.variacaoRecente(a).pct;
       return { preco: Number(a.precoAtual), variacaoPct: v, historico: (a.historicoPrecos || []).slice().sort((x, y) => (x.data < y.data ? -1 : 1)), fonte: "CARTEIRA", clique: `data-acao="ir" data-secao="detalhe-acao" data-id="${a.id}"` };
     };
+    // uma caixa para cada aplicação da guia Investimentos (Tesouro, RDB, CDB,
+    // fundos…): valor atual, resultado desde a aplicação, taxa e o histórico;
+    // aplicações novas entram sozinhas. Tocar abre a tela da aplicação.
+    const caixaInvestimento = (inv) => {
+      const atual = Number(inv.valorAtual || 0), aplicado = Number(inv.valorInvestido || 0);
+      const res = atual - aplicado, rent = aplicado > 0 ? (atual / aplicado - 1) * 100 : null;
+      const taxa = inv.indexador && inv.indexador !== "Não se aplica"
+        ? (inv.indexador === "% do CDI" ? `${(Number(inv.taxaContratada) || 100).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}% DO CDI`
+          : `${inv.indexador.replace(/\s*\+$/, "").toUpperCase()}${Number(inv.taxaContratada) ? (inv.indexador === "Prefixado" ? " " : " + ") + fTaxa(Number(inv.taxaContratada)) : ""}`) : (inv.categoria || "").toUpperCase();
+      const hist = (inv.historicoValores || []).slice().sort((x, y) => (x.data < y.data ? -1 : 1)).map((p) => Number(p.valor)).filter((v) => v > 0);
+      const nome = String(inv.nome || inv.tipoAtivo || "Aplicação").toUpperCase();
+      return `<div class="term-quote clicavel" data-acao="ir" data-secao="detalhe-investimento" data-id="${inv.id}" title="${esc(inv.nome || "")}">
+        <span class="tq-nome"><span class="tq-n">${esc(nome)}</span><em>INVEST.</em></span>
+        <b class="tq-preco">${brl(atual)}</b>
+        <span class="tq-var ${corMov(res)}">${res >= 0 ? "+" : "−"}${brl(Math.abs(res))}${rent == null ? "" : ` · ${tPct(rent)}`}</span>
+        <span class="tq-sub">${esc(taxa)}</span>
+        ${hist.length > 1 ? `<span class="tq-spark">${sparklineSVG(hist, res >= 0 ? G.CORES.up : G.CORES.down)}</span>` : ""}</div>`;
+    };
     const pts = (v) => fmtPontos(v);
     const moeda2 = (v) => Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const comSimbolo = (sim) => q[sim] ? { ...q[sim], simbolo: sim } : null;
@@ -6951,6 +6969,7 @@
       ${caixa("DÓLAR", dolarVivo, ativoRelatorio("DÓLAR / REAL"), (v) => "R$ " + moeda2(v))}
       ${["BTC", "ETH"].map((m) => caixa(m === "BTC" ? "BITCOIN" : "ETHEREUM", criptoVivo(m), null, (v) => "R$ " + Number(v).toLocaleString("pt-BR", { maximumFractionDigits: 0 }))).join("")}
       ${(DADOS.acoes || []).map((a) => caixa(esc(String(a.ticker).toUpperCase()), acaoCarteira(a), null, brl)).join("")}
+      ${(DADOS.investimentos || []).map(caixaInvestimento).join("")}
       ${boxCDI}
       ${boxRF || (rendaFixaRel ? caixa("RENDA FIXA", null, rendaFixaRel, fTaxa) : `<div class="term-quote"><span class="tq-nome">RENDA FIXA<em>BCB</em></span><b class="tq-preco term-dim">—</b><span class="tq-sub term-dim">buscando no Banco Central…</span></div>`)}
       ${boxCDB}
