@@ -2384,3 +2384,4 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
 .term-board { gap: 0; background: #000; }
 .term-board .term-quote { box-shadow: 1px 0 0 var(--t-linha), 0 1px 0 var(--t-linha); }
 .tq-nome .tq-n { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.term-chip.c-cart { background: rgba(56, 214, 255, .16); color: var(--t-cy); }

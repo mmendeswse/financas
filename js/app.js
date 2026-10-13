@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.276";
+  const VERSAO_APP = "3.6.277";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1743,7 +1743,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.276" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.277" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -6718,6 +6718,8 @@
 
 
 
+  // selo "CARTEIRA" nas linhas das tabelas das ações que estão na guia Ações
+  const seloCarteira = (t) => (DADOS.acoes || []).some((a) => String(a.ticker).toUpperCase() === t) ? ' <span class="term-chip c-cart">CARTEIRA</span>' : "";
   // com relatório ICL importado, a tabela da B3 mostra as ações do relatório:
   // onde cada uma aparece, a variação que o relatório traz e a cotação de hoje
   function tabelaRelatorioB3(r) {
@@ -6730,7 +6732,7 @@
       const c = q[x.ticker + ".SA"];
       let desde = null;
       if (c && iso) { const base = [...c.historico].reverse().find((h) => h.data <= iso); if (base && base.preco > 0) desde = (c.preco / base.preco - 1) * 100; }
-      const chips = x.onde.map((o) => `<span class="term-chip${o === "Maiores altas" ? " c-up" : o === "Maiores quedas" ? " c-down" : o === "Análise" ? " c-acc" : ""}">${{ "Maiores altas": "ALTA", "Maiores quedas": "QUEDA", "Principais": "PRINCIPAL", "Análise": "ANÁLISE" }[o] || o}</span>`).join("");
+      const chips = seloCarteira(x.ticker) + x.onde.map((o) => `<span class="term-chip${o === "Maiores altas" ? " c-up" : o === "Maiores quedas" ? " c-down" : o === "Análise" ? " c-acc" : ""}">${{ "Maiores altas": "ALTA", "Maiores quedas": "QUEDA", "Principais": "PRINCIPAL", "Análise": "ANÁLISE" }[o] || o}</span>`).join("");
       const nome = c && c.nome && c.nome !== x.ticker ? `<small>${esc(c.nome)}</small>` : nomes.has(x.ticker) ? `<small>${esc(nomes.get(x.ticker))}</small>` : "";
       const spark = c && c.historico && c.historico.length > 1 ? sparklineSVG(c.historico.map((h) => h.preco), (c.variacaoPct || 0) >= 0 ? G.CORES.up : G.CORES.down) : "";
       const vazio = `<td class="r term-dim">${mercado.carregando ? "buscando…" : "—"}</td>`;
@@ -6947,7 +6949,7 @@
     // dólar, bitcoin, ethereum e as ações da carteira (guia Ações), ao lado do ouro;
     // cada uma abre a própria tela ao tocar
     const dolarVivo = dolar && dolar.valor ? { preco: dolar.valor, variacaoPct: dolar.variacaoPct || 0, historico: serieDolar || mercado.dolar || [], clique: 'data-acao="ir" data-secao="detalhe-dolar"' } : null;
-    const criptoVivo = (m) => { const c = cripto && cripto[m]; return c && c.valor ? { preco: c.valor, variacaoPct: c.variacaoPct || 0, historico: seriesCripto[m] || [], clique: `data-cripto="${m}"` } : null; };
+    const criptoVivo = (m) => { const c = cripto && cripto[m]; return c && c.valor ? { preco: c.valor, variacaoPct: c.variacaoPct || 0, historico: seriesCripto[m] || [], clique: `data-cripto="${m}"`, fonte: qtdCripto(m) > 0 ? "CARTEIRA" : undefined } : null; };
     const acaoCarteira = (a) => {
       if (!(Number(a.precoAtual) > 0)) return null;
       const v = a.fontePreco === "auto" && a.variacaoDiaPct != null ? a.variacaoDiaPct : I.variacaoRecente(a).pct;
@@ -6965,7 +6967,7 @@
       const hist = (inv.historicoValores || []).slice().sort((x, y) => (x.data < y.data ? -1 : 1)).map((p) => Number(p.valor)).filter((v) => v > 0);
       const nome = String(inv.nome || inv.tipoAtivo || "Aplicação").toUpperCase();
       return `<div class="term-quote clicavel" data-acao="ir" data-secao="detalhe-investimento" data-id="${inv.id}" title="${esc(inv.nome || "")}">
-        <span class="tq-nome"><span class="tq-n">${esc(nome)}</span><em>INVEST.</em></span>
+        <span class="tq-nome"><span class="tq-n">${esc(nome)}</span><em>CARTEIRA</em></span>
         <b class="tq-preco">${brl(atual)}</b>
         <span class="tq-var ${corMov(res)}">${res >= 0 ? "+" : "−"}${brl(Math.abs(res))}${rent == null ? "" : ` · ${tPct(rent)}`}</span>
         <span class="tq-sub">${esc(taxa)}</span>
@@ -6999,7 +7001,7 @@
       <thead><tr><th>Papel</th><th class="r">Último</th><th class="r">Dia</th><th class="r">1 mês</th><th class="r">3 meses</th><th>3M</th></tr></thead><tbody>
       ${lista.slice().sort((a, b) => notaDe(b[0] + sufixo) - notaDe(a[0] + sufixo)).map(([t, nome]) => {
         const c = q[t + sufixo];
-        const selo = citadas.has(t) ? ' <span class="term-chip c-acc">ICL</span>' : "";
+        const selo = (citadas.has(t) ? ' <span class="term-chip c-acc">ICL</span>' : "") + seloCarteira(t);
         if (!c) return `<tr><td class="term-ativo">${t}${selo}<small>${esc(nome)}</small></td><td class="r term-dim" colspan="5">${mercado.carregando ? "buscando…" : "sem cotação"}</td></tr>`;
         const spark = c.historico && c.historico.length > 1 ? sparklineSVG(c.historico.map((h) => h.preco), c.variacaoPct >= 0 ? G.CORES.up : G.CORES.down) : "";
         return `<tr ${linkAtivo(t + sufixo)} title="Abrir o gráfico de ${t}"><td class="term-ativo">${letraNota(t + sufixo)} ${t}${selo}<small>${esc(nome)}</small></td><td class="r t-preco">${fmt(c.preco)}</td>
