@@ -2362,3 +2362,9 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
 .rf-vars i { font-style: normal; font-family: var(--ui); font-size: 9.5px; color: var(--dim); text-transform: uppercase; letter-spacing: .06em; }
 .term-board-sec .term-board { border-bottom: 0; }
 .term { border-radius: 0; }   /* guia Bolsa: blocos de cotações com bordas quadradas */
+/* legenda dos graus sempre numa linha só (encolhe a letra e os espaços se faltar largura) */
+.legenda-graus { flex-wrap: nowrap; justify-content: space-between; gap: 8px; overflow-x: auto; scrollbar-width: none; font-size: clamp(9px, 0.85vw, 11px); }
+.legenda-graus::-webkit-scrollbar { display: none; }
+.legenda-graus span { gap: 4px; flex: none; }
+.legenda-graus small { font-size: inherit; color: inherit; margin-left: 3px; }
+@media (max-width: 600px) { .legenda-graus small { display: none; } }   /* celular: só letra e nome, para caber numa linha */
