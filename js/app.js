@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.261";
+  const VERSAO_APP = "3.6.263";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1136,6 +1136,7 @@
     // a guia Nasdaq busca as cotações ao abrir (se o retrato tiver mais de 10 min)
     if (secao === "nasdaq") {
       atualizarMercado(false);
+      atualizarIndicadoresBCB(false);
       // sem notícias (ou com mais de 15 min): busca agora, sem esperar o relógio
       if (!(mercado.noticias && mercado.noticias.length) || Date.now() - (mercado.noticiasEm || 0) > 15 * 60 * 1000) atualizarNoticiasMercado();
     }
@@ -1740,7 +1741,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.261" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.263" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -6391,12 +6392,52 @@
   setInterval(() => {
     if (ROTA.secao !== "nasdaq" || document.visibilityState === "hidden" || navigator.onLine === false) return;
     atualizarMercado(false, true);
+    atualizarIndicadoresBCB(false);
     const semNoticias = !(mercado.noticias && mercado.noticias.length);
     const desde = Date.now() - (noticiasMercado.tentativa || 0);
     if (desde > (semNoticias ? 2 : 15) * 60 * 1000) atualizarNoticiasMercado();
   }, 30 * 1000);
 
   let redesenhoMercado = null;
+  // CDI, Selic e IPCA direto do Banco Central (séries do SGS), para as caixas
+  // da guia Bolsa funcionarem sem o relatório: 12 = CDI diário (% a.d.),
+  // 432 = Selic meta (% a.a.), 433 = IPCA mensal (% a.m.). Atualiza a cada 6 h.
+  let buscandoBCB = false;
+  function atualizarIndicadoresBCB(forcar) {
+    if (buscandoBCB || (!forcar && mercado.bcb && Date.now() - mercado.bcb.em < 6 * 3600 * 1000)) return;
+    buscandoBCB = true;
+    const isoDia = (dt) => `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+    const hoje = new Date(), umAno = new Date(), doisAnos = new Date();
+    umAno.setDate(umAno.getDate() - 400); doisAnos.setMonth(doisAnos.getMonth() - 26);
+    const acum = (xs) => (xs.reduce((a, v) => a * (1 + v / 100), 1) - 1) * 100;
+    Promise.all([
+      C.buscarSerieBCB(12, isoDia(umAno), isoDia(hoje)).catch(() => []),
+      C.buscarSerieBCB(432, isoDia(umAno), isoDia(hoje)).catch(() => []),
+      C.buscarSerieBCB(433, isoDia(doisAnos), isoDia(hoje)).catch(() => [])
+    ]).then(([cdi, selic, ipca]) => {
+      const bcb = { ...(mercado.bcb || {}), em: Date.now() };
+      if (cdi.length > 20) {
+        const ult = cdi[cdi.length - 1], mes = ult.data.slice(0, 7), ano = ult.data.slice(0, 4);
+        const aa = (d) => (Math.pow(1 + d / 100, 252) - 1) * 100;
+        bcb.cdi = { aa: aa(ult.valor), mes: acum(cdi.filter((x) => x.data.startsWith(mes)).map((x) => x.valor)),
+          ano: acum(cdi.filter((x) => x.data.startsWith(ano)).map((x) => x.valor)), data: ult.data, hist: cdi.slice(-90).map((x) => aa(x.valor)) };
+      }
+      if (selic.length > 20) {
+        const ult = selic[selic.length - 1];
+        const antes = (dias) => { const lim = new Date(ult.data + "T00:00:00"); lim.setDate(lim.getDate() - dias); const iso = isoDia(lim); return ([...selic].reverse().find((x) => x.data <= iso) || selic[0]).valor; };
+        bcb.selic = { aa: ult.valor, var30: ult.valor - antes(30), var365: ult.valor - antes(365), data: ult.data, hist: selic.slice(-120).map((x) => x.valor) };
+      }
+      if (ipca.length >= 13) {
+        const ult = ipca[ipca.length - 1], ano = ult.data.slice(0, 4);
+        const d12 = (k) => acum(ipca.slice(k - 11, k + 1).map((x) => x.valor));
+        bcb.ipca = { d12: d12(ipca.length - 1), mes: ult.valor, ano: acum(ipca.filter((x) => x.data.startsWith(ano)).map((x) => x.valor)), data: ult.data,
+          hist: ipca.slice(11).map((x, i) => d12(i + 11)) };
+      }
+      mercado.bcb = bcb;
+      try { localStorage.setItem(CHAVE_MERCADO, JSON.stringify({ ...mercado, carregando: false })); } catch (e) { /* sem espaço */ }
+    }).catch(() => {}).then(() => { buscandoBCB = false; if (ROTA.secao === "nasdaq") renderRota(); });
+  }
+
   function atualizarMercado(forcar, silencioso) {
     if (mercado.carregando) return;
     if (!forcar && Date.now() - mercado.em < 10 * 60 * 1000 && Object.keys(mercado.cotacoes).length) return;
@@ -6780,8 +6821,24 @@
         <span class="tq-var ${cor(e1[1])}">${e1[0]} ${fTaxa(e1[1])}</span>
         <span class="tq-sub">${e2[0]} ${fTaxa(e2[1])}</span></div>`;
     };
+    // CDI, Selic e IPCA ao vivo do Banco Central (como as outras caixas: valor
+    // grande, variação e minigráfico); sem o BCB, ficam os números do relatório
+    const bcb = mercado.bcb || {};
+    const pp = (v) => v == null ? "—" : `${v > 0 ? "+" : v < 0 ? "−" : ""}${Math.abs(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} p.p.`;
+    const mesAno = (iso) => iso ? ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"][Number(iso.slice(5, 7)) - 1] + "/" + iso.slice(2, 4) : "";
+    const caixaBCB = (nome, valor, aa, linha, sub, hist, cls) => `<div class="term-quote"><span class="tq-nome">${nome}<em>BCB</em></span>
+        <b class="tq-preco ${cls}">${fTaxa(valor)}${aa ? ' <small class="tq-aa">a.a.</small>' : ""}</b>
+        <span class="tq-var ${cls}">${linha}</span><span class="tq-sub">${sub}</span>
+        ${hist && hist.length > 1 ? `<span class="tq-spark">${sparklineSVG(hist, cls === "t-down" ? G.CORES.down : G.CORES.up)}</span>` : ""}</div>`;
+    const boxCDI = bcb.cdi ? caixaBCB("CDI", bcb.cdi.aa, true, `MÊS ${fTaxa(bcb.cdi.mes)}`, `ANO ${fTaxa(bcb.cdi.ano)}`, bcb.cdi.hist, "t-up")
+      : caixaTaxa("CDI", /CDI EFETIVO/i, [["MÊS", /CDI ACUMULADO M/i], ["ANO", /CDI ACUMULADO ANO/i]], false);
+    const boxIPCA = bcb.ipca ? caixaBCB("IPCA 12 MESES", bcb.ipca.d12, false, `${mesAno(bcb.ipca.data).toUpperCase()} ${fTaxa(bcb.ipca.mes)}`, `ANO ${fTaxa(bcb.ipca.ano)}`, bcb.ipca.hist, bcb.ipca.mes > 0 ? "t-down" : "t-up")
+      : caixaTaxa("IPCA 12 MESES", /IPCA ACUMULADO EM 12/i, [["MÊS", /IPCA ACUMULADO M/i], ["ANO", /IPCA ACUMULADO NO ANO/i]], true);
     // renda fixa do relatório (a primeira taxa do grupo, ex.: Juros Pré Jan/2027)
     const rendaFixaRel = (() => { const g = r && r.grupos.find((x) => /renda fixa/i.test(x.nome)); return g && g.ativos[0] ? g.ativos[0] : null; })();
+    // renda fixa: Selic meta do BCB; sem ela, a taxa do relatório (Juros Pré)
+    const boxRF = bcb.selic ? caixaBCB("RENDA FIXA · SELIC", bcb.selic.aa, true, `30 DIAS ${pp(bcb.selic.var30)}`, `12 MESES ${pp(bcb.selic.var365)}`, bcb.selic.hist, "t-up")
+      : null;
     const pts = (v) => fmtPontos(v);
     const moeda2 = (v) => Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const comSimbolo = (sim) => q[sim] ? { ...q[sim], simbolo: sim } : null;
@@ -6789,9 +6846,9 @@
       ${caixa("IBOVESPA", comSimbolo("^BVSP"), ativoRelatorio("IBOVESPA"), pts)}
       ${caixa("S&amp;P 500", comSimbolo("^GSPC"), ativoRelatorio("SP500"), pts)}
       ${caixa("NASDAQ", comSimbolo("^IXIC"), ativoRelatorio("NASDAQ"), pts)}
-      ${caixaTaxa("CDI", /CDI EFETIVO/i, [["MÊS", /CDI ACUMULADO M/i], ["ANO", /CDI ACUMULADO ANO/i]], false)}
-      ${caixa("RENDA FIXA", null, rendaFixaRel, fTaxa)}
-      ${caixaTaxa("IPCA 12 MESES", /IPCA ACUMULADO EM 12/i, [["MÊS", /IPCA ACUMULADO M/i], ["ANO", /IPCA ACUMULADO NO ANO/i]], true)}
+      ${boxCDI}
+      ${boxRF || caixa("RENDA FIXA", null, rendaFixaRel, fTaxa)}
+      ${boxIPCA}
     </div>`;
 
     // gráfico e análise automática
