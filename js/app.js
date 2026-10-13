@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.258";
+  const VERSAO_APP = "3.6.261";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1740,7 +1740,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.258" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.261" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -6599,22 +6599,7 @@
   // legenda dos graus, no fim de cada tabela
   const LEGENDA_GRAUS = `<div class="legenda-graus">${GRAUS.map((g, i) => `<span><i class="nota-grau g-${g.letra.toLowerCase()}">${g.letra}</i>${g.rot}<small>${i === 0 ? `(${g.min}+)` : i === GRAUS.length - 1 ? `(&lt; ${GRAUS[i - 1].min})` : `(${g.min}–${GRAUS[i - 1].min - 1})`}</small></span>`).join("")}</div>`;
 
-  function painelSugestoes() {
-    const lista = [...triagem.values()].sort((a, b) => b.nota - a.nota);
-    if (!lista.length) return "";
-    const top = lista.filter((x) => x.classe === "destaque").slice(0, 6);
-    const evitar = lista.filter((x) => x.classe === "cautela").slice(-4).reverse();
-    const fmt = (x) => x.moeda === "USD" ? usd(x.cot.preco) : brl(x.cot.preco);
-    const cartao = (x) => `<div class="sug-card ${x.classe}" ${linkAtivo(x.sim)}>
-      <div class="sug-topo"><b>${x.t}</b><span>${esc(x.nome)}</span><em class="sug-nota">${x.nota}</em></div>
-      <div class="sug-barra"><span style="width:${x.nota}%"></span></div>
-      <div class="sug-preco">${fmt(x)} <i class="${corMov(x.cot.variacaoPct)}">${tPct(x.cot.variacaoPct)} hoje</i></div>
-      <ul>${x.motivos.slice().sort((a, b) => (a.pos === b.pos ? 0 : a.pos ? -1 : 1)).slice(0, 4).map((m) => `<li class="${m.pos ? "t-up" : "t-down"}">${m.pos ? "+" : "−"} ${esc(m.txt)}</li>`).join("")}</ul></div>`;
-    return `<div class="term-painel tp-sug"><div class="term-cab">SUGESTÕES PARA INVESTIR · TRIAGEM AUTOMÁTICA (${lista.length} AÇÕES ANALISADAS)</div>
-      ${top.length ? `<div class="sug-grade">${top.map(cartao).join("")}</div>` : '<p class="term-texto term-dim">Nenhuma ação passou da nota 65 agora.</p>'}
-      ${evitar.length ? `<div class="sug-sub">CAUTELA · SINAIS FRACOS</div><div class="sug-grade sug-cautela">${evitar.map(cartao).join("")}</div>` : ""}
-      <p class="term-nota">Nota de 0 a 100 feita com tendência (médias de 20 e 50 pregões), momento de 1 e 3 meses, volatilidade, distância da máxima, relatório ICL e o tom das notícias que citam a empresa. Nas tabelas, as ações vêm da maior para a menor nota, com a letra do grau na frente do papel (legenda no fim de cada tabela). É uma triagem automática de números passados, não uma recomendação de investimento: confira os fundamentos e o seu perfil antes de investir.</p></div>`;
-  }
+
 
   // com relatório ICL importado, a tabela da B3 mostra as ações do relatório:
   // onde cada uma aparece, a variação que o relatório traz e a cotação de hoje
@@ -6717,47 +6702,6 @@
       </div>`;
   }
 
-  // Maiores altas e maiores quedas do Ibovespa (relatório ICL), no fim da guia
-  // Bolsa: um quadro para cada, com a cotação de hoje e o número de ações em
-  // alta / em queda no rodapé, como no PDF
-  // Sem relatório importado, os dois quadros aparecem com o pregão de hoje:
-  // as 5 que mais subiram e as 5 que mais caíram entre as ações do Ibovespa
-  // da guia, e quantas subiram e caíram
-  function painelAltasQuedasRelatorio() {
-    const q = mercado.cotacoes;
-    let r = DADOS.relatorioMercado, col, sub, aoVivo = false;
-    if (!r || (!r.altas.length && !r.quedas.length)) {
-      const hoje = MERCADO_BR.map(([t]) => ({ ticker: t, c: q[t + ".SA"] })).filter((x) => x.c && x.c.variacaoPct != null)
-        .map((x) => ({ ticker: x.ticker, pct: x.c.variacaoPct })).sort((a, b) => b.pct - a.pct);
-      if (hoje.length < 2) return "";
-      const sobe = hoje.filter((x) => x.pct > 0), cai = hoje.filter((x) => x.pct < 0);
-      r = { altas: sobe.slice(0, 5), quedas: cai.slice(-5).reverse(), numAltas: sobe.length, numQuedas: cai.length };
-      aoVivo = true; col = "Hoje"; sub = `pregão de hoje · entre ${hoje.length} ações do Ibovespa`;
-    } else {
-      col = r.colunas.length ? r.colunas[0] : "Relatório";
-      sub = `relatório ICL · ${esc(r.data.toLowerCase())}`;
-    }
-    const f2 = (v) => Math.abs(Number(v || 0)).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    const fp = (v, forte) => {
-      if (v == null) return '<span class="dim">—</span>';
-      const txt = `${v > 0 ? "+" : v < 0 ? "−" : ""}${f2(v)}%`;
-      if (forte && Math.abs(v) >= forte) return `<span class="${v >= 0 ? "cel-up" : "cel-down"}">${txt}</span>`;
-      return `<span class="${v > 0 ? "up" : v < 0 ? "down" : "dim"}">${txt}</span>`;
-    };
-    const linha = (a) => { const c = q[a.ticker + ".SA"];
-      return `<tr ${c ? linkAtivo(a.ticker + ".SA") : ""}><td class="papel">${esc(a.ticker)}${c && c.nome && c.nome !== a.ticker ? `<small>${esc(c.nome)}</small>` : ""}</td>${aoVivo ? "" : `<td class="r">${fp(a.pct, 3)}</td>`}
-        <td class="r creme">${c ? brl(c.preco) : '<span class="dim">—</span>'}</td><td class="r">${c ? fp(c.variacaoPct, aoVivo ? 3 : 0) : '<span class="dim">—</span>'}</td></tr>`; };
-    const tabela = (lista) => `<div class="terminal-scroll"><table class="terminal tab-rel">
-      <thead><tr><th>Papel</th>${aoVivo ? "" : `<th class="r">${esc(col)}</th>`}<th class="r">Última</th><th class="r">Hoje</th></tr></thead>
-      <tbody>${lista.length ? lista.map(linha).join("") : `<tr><td class="dim" colspan="4">nenhuma ação ${aoVivo ? "nesta direção hoje" : ""}</td></tr>`}</tbody></table></div>`;
-    const rodape = (rot, n, cls) => n == null ? "" : `<span class="dim">${rot}</span><b class="${cls}">${n}</b>`;
-    return `
-      <div class="grid grid-relatorio-fim">
-        <div class="c6">${card("", "Maiores altas Ibovespa", sub, "", tabela(r.altas), rodape("Número de ações em alta", r.numAltas, "up"))}</div>
-        <div class="c6">${card("", "Maiores quedas Ibovespa", sub, "", tabela(r.quedas), rodape("Número de ações em queda", r.numQuedas, "down"))}</div>
-      </div>`;
-  }
-
   // ativo da tabela do relatório pelo nome ("NASDAQ", "SP500"…)
   const ativoRelatorio = (nome) => { const r = DADOS.relatorioMercado; if (!r) return null; for (const g of r.grupos) for (const a of g.ativos) if (a.nome === nome) return a; return null; };
 
@@ -6836,16 +6780,17 @@
         <span class="tq-var ${cor(e1[1])}">${e1[0]} ${fTaxa(e1[1])}</span>
         <span class="tq-sub">${e2[0]} ${fTaxa(e2[1])}</span></div>`;
     };
+    // renda fixa do relatório (a primeira taxa do grupo, ex.: Juros Pré Jan/2027)
+    const rendaFixaRel = (() => { const g = r && r.grupos.find((x) => /renda fixa/i.test(x.nome)); return g && g.ativos[0] ? g.ativos[0] : null; })();
     const pts = (v) => fmtPontos(v);
     const moeda2 = (v) => Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const comSimbolo = (sim) => q[sim] ? { ...q[sim], simbolo: sim } : null;
-    const dolarVivo = dolar && dolar.valor ? { preco: dolar.valor, variacaoPct: dolar.variacaoPct || 0, historico: mercado.dolar || [], simbolo: "dolar" } : null;
     const board = `<div class="term-board">
       ${caixa("IBOVESPA", comSimbolo("^BVSP"), ativoRelatorio("IBOVESPA"), pts)}
       ${caixa("S&amp;P 500", comSimbolo("^GSPC"), ativoRelatorio("SP500"), pts)}
       ${caixa("NASDAQ", comSimbolo("^IXIC"), ativoRelatorio("NASDAQ"), pts)}
       ${caixaTaxa("CDI", /CDI EFETIVO/i, [["MÊS", /CDI ACUMULADO M/i], ["ANO", /CDI ACUMULADO ANO/i]], false)}
-      ${caixa("DÓLAR / REAL", dolarVivo, ativoRelatorio("DÓLAR / REAL"), (v) => "R$ " + moeda2(v))}
+      ${caixa("RENDA FIXA", null, rendaFixaRel, fTaxa)}
       ${caixaTaxa("IPCA 12 MESES", /IPCA ACUMULADO EM 12/i, [["MÊS", /IPCA ACUMULADO M/i], ["ANO", /IPCA ACUMULADO NO ANO/i]], true)}
     </div>`;
 
@@ -6883,10 +6828,9 @@
     // os quadros do relatório ICL (Índices, Moedas e Ouro, Renda Fixa…) vêm no início da guia
     return `${painelRelatorio("inicio")}<section class="term term-nasdaq term-board-sec">${board}</section><section class="term term-nasdaq">
       <div class="term-grade term-grade-meio">${tabela("NASDAQ · MAIORES EMPRESAS · US$", MERCADO_EUA, "", usd)}${r ? tabelaRelatorioB3(r) : tabela("B3 · MAIORES DO IBOVESPA · R$", MERCADO_BR, ".SA", brl)}</div>
-      ${(() => { const sug = tem ? painelSugestoes() : ""; return sug ? `<div class="term-grade term-grade-um">${sug}</div>` : ""; })()}
     </section>${painelRelatorio("meio")}<section class="term term-nasdaq">
       <div class="term-grade term-grade-2">${grafico}${noticias}</div>
-    </section>${painelAltasQuedasRelatorio()}`;
+    </section>`;
   }
   // gráfico: variação acumulada desde o início dos 3 meses, nos dias da
   // Nasdaq; o Ibovespa e o dólar usam o último fechamento até cada dia
