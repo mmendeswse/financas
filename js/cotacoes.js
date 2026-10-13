@@ -152,6 +152,7 @@
       }), tempo);
     };
     return ler(url, 10000)
+      .catch(function () { return ler("https://corsproxy.io/?url=" + encodeURIComponent(url), 12000); })
       .catch(function () { return ler("https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(url), 12000); })
       .catch(function () { return ler("https://api.allorigins.win/raw?url=" + encodeURIComponent(url), 12000); });
   }
