@@ -2373,3 +2373,5 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
 .term ::-webkit-scrollbar-thumb { background: #1A2431; border-radius: 3px; }
 .term ::-webkit-scrollbar-corner { background: transparent; }
 .term-grade-meio > .term-painel { padding-bottom: 0; border-bottom: 1px solid var(--t-linha); }
+/* notícias acompanham exatamente a altura do gráfico ao lado (sem sobrar faixa embaixo) */
+@media (min-width: 901px) { .term-grade-2 .tp-noticias { height: auto; contain: size; padding-bottom: 6px; } }
