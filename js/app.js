@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.271";
+  const VERSAO_APP = "3.6.272";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1741,7 +1741,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.271" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.272" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -6509,7 +6509,7 @@
     if (mercado.carregando) return;
     if (!forcar && Date.now() - mercado.em < 10 * 60 * 1000 && Object.keys(mercado.cotacoes).length) return;
     const doRelatorio = acoesDoRelatorio(DADOS.relatorioMercado).map((x) => x.ticker + ".SA");
-    const simbolos = [...new Set([...MERCADO_INDICES.map((x) => x.s), ...MERCADO_EUA.map((x) => x[0]), ...MERCADO_BR.map((x) => x[0] + ".SA"), ...doRelatorio])];
+    const simbolos = [...new Set([...MERCADO_INDICES.map((x) => x.s), "GC=F", ...MERCADO_EUA.map((x) => x[0]), ...MERCADO_BR.map((x) => x[0] + ".SA"), ...doRelatorio])];
     mercado.carregando = true;
     const isoDia = (dt) => `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
     const hoje = new Date(), inicio = new Date(); inicio.setDate(inicio.getDate() - 3);
@@ -6826,8 +6826,9 @@
     if (!c) return null;
     const tk = simbolo.replace(/\.SA$/, "");
     const lista = [...MERCADO_EUA, ...MERCADO_BR].find((x) => x[0] === tk);
-    return { id: simbolo, ticker: NOMES_INDICES[simbolo] ? tk.replace("^", "") : tk, empresa: c.nome || (lista && lista[1]) || NOMES_INDICES[simbolo] || "",
-      categoria: NOMES_INDICES[simbolo] ? "Índice" : "Ação", moeda: c.moeda, historicoPrecos: c.historico || [], precoAtual: c.preco, precoMedio: 0, quantidade: 0 };
+    const ouro = simbolo === "GC=F";
+    return { id: simbolo, ticker: ouro ? "OURO" : NOMES_INDICES[simbolo] ? tk.replace("^", "") : tk, empresa: ouro ? "Ouro · contrato futuro (US$ por onça)" : c.nome || (lista && lista[1]) || NOMES_INDICES[simbolo] || "",
+      categoria: ouro ? "Mercadoria" : NOMES_INDICES[simbolo] ? "Índice" : "Ação", moeda: c.moeda, historicoPrecos: c.historico || [], precoAtual: c.preco, precoMedio: 0, quantidade: 0 };
   }
   function renderDetalheMercado(d, simbolo) {
     const a = ativoMercado(simbolo);
@@ -6911,6 +6912,7 @@
       ${caixa("IBOVESPA", comSimbolo("^BVSP"), ativoRelatorio("IBOVESPA"), pts)}
       ${caixa("S&amp;P 500", comSimbolo("^GSPC"), ativoRelatorio("SP500"), pts)}
       ${caixa("NASDAQ", comSimbolo("^IXIC"), ativoRelatorio("NASDAQ"), pts)}
+      ${caixa("OURO · ONÇA", comSimbolo("GC=F"), ativoRelatorio("OURO"), (v) => "US$ " + moeda2(v))}
       ${boxCDI}
       ${boxRF || caixa("RENDA FIXA", null, rendaFixaRel, fTaxa)}
       ${boxIPCA}
