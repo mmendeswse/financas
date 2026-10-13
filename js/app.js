@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.275";
+  const VERSAO_APP = "3.6.276";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1743,7 +1743,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.275" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.276" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -6469,6 +6469,8 @@
   // da guia Bolsa funcionarem sem o relatório: 12 = CDI diário (% a.d.),
   // 432 = Selic meta (% a.a.), 433 = IPCA mensal (% a.m.). Atualiza a cada 6 h.
   let buscandoBCB = false, tentativaBCB = 0;
+  // último retrato do BCB guardado à parte (sobrevive a qualquer atualização das cotações)
+  if (!mercado.bcb) { try { const b = JSON.parse(localStorage.getItem("bcb1") || "null"); if (b) mercado.bcb = b; } catch (e) { /* sem acesso */ } }
   function atualizarIndicadoresBCB(forcar) {
     // completo: renova a cada 30 min; faltando CDI, Selic ou IPCA: nova tentativa a cada 2 min
     const b0 = mercado.bcb, completo = b0 && b0.v === 2 && b0.cdi && b0.selic && b0.ipca;
@@ -6505,8 +6507,11 @@
           hist: ipca.slice(11).map((x, i) => d12(i + 11)),
           serie: ipca.slice(11).map((x, i) => [x.data, x.valor, +d12(i + 11).toFixed(2)]) };
       }
+      // uma série que falhou nesta busca mantém o último valor conhecido
+      ["cdi", "selic", "ipca"].forEach((k) => { if (!bcb[k] && mercado.bcb && mercado.bcb[k]) bcb[k] = mercado.bcb[k]; });
       mercado.bcb = bcb;
       try { localStorage.setItem(CHAVE_MERCADO, JSON.stringify({ ...mercado, carregando: false })); } catch (e) { /* sem espaço */ }
+      try { if (bcb.cdi || bcb.selic || bcb.ipca) localStorage.setItem("bcb1", JSON.stringify(bcb)); } catch (e) { /* sem espaço */ }
     }).catch(() => {}).then(() => { buscandoBCB = false; if (ROTA.secao === "nasdaq") renderRota(); });
   }
 
@@ -6536,7 +6541,8 @@
       const nts = noticias && noticias.length
         ? [...new Map(noticias.map((n) => [n.titulo, n])).values()].sort((a, b) => (a.quando < b.quando ? 1 : -1)).slice(0, 20) : mercado.noticias;
       // uma busca que falhou inteira (sem internet) não apaga o último retrato
-      if (achou) mercado = { cotacoes: { ...mercado.cotacoes, ...r.cotacoes }, erros: r.erros, dolar: dolar || mercado.dolar, noticias: nts, em: Date.now(), carregando: false };
+      // ...mercado mantém os números do Banco Central e a hora das notícias (antes eram apagados aqui)
+      if (achou) mercado = { ...mercado, cotacoes: { ...mercado.cotacoes, ...r.cotacoes }, erros: r.erros, dolar: dolar || mercado.dolar, noticias: nts, em: Date.now(), carregando: false };
       else mercado = { ...mercado, erros: r.erros, noticias: nts, carregando: false };
       try { localStorage.setItem(CHAVE_MERCADO, JSON.stringify({ ...mercado, carregando: false })); } catch (e) { /* sem espaço */ }
       if (forcar && !silencioso) toast(achou ? "Cotações de mercado atualizadas." : "Não foi possível buscar as cotações agora.");
@@ -6894,12 +6900,19 @@
     };
     // CDI, Selic e IPCA ao vivo do Banco Central (como as outras caixas: valor
     // grande, variação e minigráfico); sem o BCB, ficam os números do relatório
-    const bcb = mercado.bcb || {};
+    // sem nenhum dado do BCB ainda (nem guardado), usa a última referência
+    // conhecida (marcada "REF.") até a busca chegar — a caixa nunca fica vazia
+    const REF_BCB = { cdi: { aa: 13.65, ref: true }, selic: { aa: 13.75, ref: true }, ipca: { d12: 4.58, ref: true } };
+    const bcbReal = mercado.bcb || {};
+    // ordem: Banco Central → relatório ICL importado → referência
+    const temRel = { cdi: taxaRel(/CDI EFETIVO/i) != null, selic: false, ipca: taxaRel(/IPCA ACUMULADO EM 12/i) != null };
+    const bcb = { ...bcbReal };
+    ["cdi", "selic", "ipca"].forEach((k) => { if (!bcb[k] && !temRel[k]) bcb[k] = REF_BCB[k]; });
     const pp = (v) => v == null ? "—" : `${v > 0 ? "+" : v < 0 ? "−" : ""}${Math.abs(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} p.p.`;
     const mesAno = (iso) => iso ? ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"][Number(iso.slice(5, 7)) - 1] + "/" + iso.slice(2, 4) : "";
-    const caixaBCB = (nome, valor, aa, linha, sub, hist, cls, ind) => `<div class="term-quote clicavel" data-acao="abrir-indicador" data-ind="${ind}" title="Abrir o histórico"><span class="tq-nome">${nome}<em>BCB</em></span>
+    const caixaBCB = (nome, valor, aa, linha, sub, hist, cls, ind) => `<div class="term-quote clicavel" data-acao="abrir-indicador" data-ind="${ind}" title="Abrir o histórico"><span class="tq-nome">${nome}<em>${bcb[ind] && bcb[ind].ref ? "REF." : "BCB"}</em></span>
         <b class="tq-preco ${cls}">${fTaxa(valor)}${aa ? ' <small class="tq-aa">a.a.</small>' : ""}</b>
-        <span class="tq-var ${cls}">${linha}</span><span class="tq-sub">${sub}</span>
+        ${bcb[ind] && bcb[ind].ref ? '<span class="tq-sub">valor de referência</span>' : `<span class="tq-var ${cls}">${linha}</span><span class="tq-sub">${sub}</span>`}
         ${hist && hist.length > 1 ? `<span class="tq-spark">${sparklineSVG(hist, cls === "t-down" ? G.CORES.down : G.CORES.up)}</span>` : ""}</div>`;
     const boxCDI = bcb.cdi ? caixaBCB("CDI", bcb.cdi.aa, true, `MÊS ${fTaxa(bcb.cdi.mes)}`, `ANO ${fTaxa(bcb.cdi.ano)}`, bcb.cdi.hist, "t-up", "cdi")
       : caixaTaxa("CDI", /CDI EFETIVO/i, [["MÊS", /CDI ACUMULADO M/i], ["ANO", /CDI ACUMULADO ANO/i]], false);
@@ -6921,11 +6934,11 @@
       const diaDe = (aa) => Math.pow(1 + aa / 100, 1 / 252) - 1;
       const aaCDB = (Math.pow(1 + diaDe(bcb.cdi.aa) * pctCDB / 100, 252) - 1) * 100;
       const serie = (bcb.cdi.serie || []).slice(-252);
-      const r12 = serie.length ? (serie.reduce((f, p) => f * (1 + diaDe(p[1]) * pctCDB / 100), 1) - 1) * 100 : null;
-      return `<div class="term-quote clicavel" data-acao="abrir-indicador" data-ind="cdi" title="Abrir o histórico do CDI"><span class="tq-nome">${nome}<em>${cdbs.length ? "CARTEIRA" : "BCB"}</em></span>
+      const r12 = serie.length > 200 ? (serie.reduce((f, p) => f * (1 + diaDe(p[1]) * pctCDB / 100), 1) - 1) * 100 : aaCDB;   // sem a série, a taxa ao ano
+      return `<div class="term-quote clicavel" data-acao="abrir-indicador" data-ind="cdi" title="Abrir o histórico do CDI"><span class="tq-nome"><span class="tq-n">${nome}</span><em>${cdbs.length ? "CARTEIRA" : bcb.cdi.ref ? "REF." : "BCB"}</em></span>
         <b class="tq-preco">${fTaxa(aaCDB)} <small class="tq-aa">a.a.</small></b>
         <span class="tq-var t-up">12 MESES ${fTaxa(r12)}</span>
-        <span class="tq-sub">R$ 10 MIL → +${r12 == null ? "—" : brl(100 * r12)}/ANO</span>
+        <span class="tq-sub">R$ 10 MIL → +${brl(Math.round(100 * r12)).replace(/,00$/, "")}/ANO</span>
         ${bcb.cdi.hist && bcb.cdi.hist.length > 1 ? `<span class="tq-spark">${sparklineSVG(bcb.cdi.hist.map((v) => (Math.pow(1 + diaDe(v) * pctCDB / 100, 252) - 1) * 100), G.CORES.up)}</span>` : ""}</div>`;
     })();
     // renda fixa: Selic meta do BCB; sem ela, a taxa do relatório (Juros Pré)
