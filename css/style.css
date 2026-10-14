@@ -2514,3 +2514,68 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
 .tq-nome.tq-inv { white-space: normal; align-items: flex-start; }
 .tq-nome.tq-inv .tq-n { white-space: normal; overflow: visible; line-height: 1.25; }
 .tq-nome.tq-inv em { flex: none; }
+
+/* ===== guia Bolsa: área de trabalho no estilo do ProfitChart (v3.6.285) =====
+   janelas com barra de título cinza sobre moldura cinza, corpo preto,
+   lista de cotações agrupada, painel do ativo com faixas de preço em tons
+   de amarelo (como o livro de ofertas) e fechamentos em azul/vermelho
+   (como o Times & Trades) */
+.prof { padding: 0; background: #2B2D31; border-color: #3A3D42; }
+.prof-barra { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 6px 10px; background: linear-gradient(#3B3E44, #2B2D31); border-bottom: 1px solid #1A1B1E; font: 600 12px Inter, system-ui, sans-serif; color: #D8DADF; }
+.prof-barra b { color: #fff; }
+.prof-barra label { display: inline-flex; align-items: center; gap: 6px; color: #A9ADB5; }
+.prof-barra select { background: #111; color: #fff; border: 1px solid #555; border-radius: 3px; padding: 3px 6px; font: 700 12px ui-monospace, Menlo, monospace; max-width: 260px; }
+.prof-status { margin-left: auto; color: #19E57A; font-family: ui-monospace, Menlo, monospace; }
+.prof-status.pf-busca { color: #FFD54F; }
+.prof-grade { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); grid-template-rows: 520px 460px; gap: 3px; padding: 3px; background: #2B2D31; }
+.prof-jan { display: flex; flex-direction: column; min-width: 0; min-height: 0; background: #000; border: 1px solid #4A4D53; }
+.prof-tit { display: flex; align-items: center; gap: 8px; padding: 3px 8px; background: linear-gradient(#45484F, #2F3136); color: #E6E7EA; font: 600 11.5px Inter, system-ui, sans-serif; white-space: nowrap; overflow: hidden; border-bottom: 1px solid #111; }
+.prof-tit small { color: #9EA3AB; font-weight: 500; overflow: hidden; text-overflow: ellipsis; }
+.prof-ico { width: 10px; height: 10px; border-radius: 2px; background: #FF9F1C; flex: none; }
+.prof-btns { margin-left: 8px; color: #7D828A; letter-spacing: .3em; font-size: 10px; }
+.prof-tit-dir { margin-left: auto; font-family: ui-monospace, Menlo, monospace; font-weight: 700; color: #C9CCD2; }
+.prof-tit-dir.t-up { color: #19E57A; } .prof-tit-dir.t-down { color: #FF3B4E; }
+.prof-tit-dir + .prof-btns { margin-left: 8px; }
+.prof-abrir { margin-left: auto; background: #1F4E8C; color: #fff; border: 0; border-radius: 3px; font: 700 10.5px Inter, system-ui, sans-serif; padding: 2px 8px; cursor: pointer; }
+.prof-corpo { flex: 1; min-height: 0; overflow: auto; }
+.prof-corpo > .term-rolar { height: 100%; overflow: auto; }
+.prof-tab { font-size: 12px; background: #000; }
+.prof-tab th { position: sticky; top: 0; z-index: 1; background: #1C1D20; color: #B9BDC4; border-bottom: 1px solid #3A3D42; text-transform: none; letter-spacing: .02em; font-size: 10.5px; padding: 4px 8px; }
+.prof-tab td { padding: 3px 8px; border-bottom: 1px solid #141518; color: #E8E8E8; }
+.prof-tab tbody tr:hover td { background: #1B2533; }
+.prof-tab tr[data-acao] { cursor: pointer; }
+.prof-tab .prof-sel td { background: #233554 !important; }
+.prof-tab .prof-grupo td { color: #FF9F1C; font-size: 10px; font-weight: 800; letter-spacing: .08em; background: #0B0B0C; padding-top: 6px; border-bottom: 1px solid #2A2A2A; }
+.prof-sim { color: #fff; font-weight: 800; }
+.prof-desc { color: #9A9EA6; font-weight: 500; font-family: Inter, system-ui, sans-serif; max-width: 150px; overflow: hidden; text-overflow: ellipsis; }
+.prof-hora { color: #9A9EA6; }
+.prof-tab .t-preco { color: #fff; }
+.prof-tab .t-up { color: #19E57A; } .prof-tab .t-down { color: #FF3B4E; } .prof-tab .t-zero { color: #E8EEF6; }
+.prof-tab .t-max { color: #7FE0A8; } .prof-tab .t-min { color: #FF8A95; } .prof-tab .t-ant { color: #B9C6D3; }
+.prof-tab td.t-aceso { background: none; }
+.prof-tab td.pisca-up { animation: pisca-up 3s ease-out; } .prof-tab td.pisca-down { animation: pisca-down 3s ease-out; }
+.prof-resumo td { font-size: 13px; padding: 6px 8px; }
+.prof-forca { display: flex; height: 18px; margin: 6px 8px; font: 700 10px Inter, system-ui, sans-serif; color: #fff; overflow: hidden; border-radius: 2px; }
+.prof-forca span { display: flex; align-items: center; padding: 0 6px; white-space: nowrap; overflow: hidden; }
+.pf-alta { background: #1D4ED8; } .pf-baixa { background: #C81E2B; justify-content: flex-end; }
+/* faixas de preço: amarelo mais forte onde o preço fechou mais vezes */
+.prof-escada td { color: #111; font-weight: 700; border-bottom: 1px solid rgba(0, 0, 0, .35);
+  background: hsl(calc(52 - var(--pe) * 22) 100% calc(78% - var(--pe) * 22%)); }
+.prof-escada tr.pe-atual td { box-shadow: inset 0 2px #fff, inset 0 -2px #fff; background: #FF8C1A; color: #000; }
+.prof-escada .pe-barra { width: 40%; }
+.prof-escada .pe-barra i { display: block; height: 8px; background: rgba(0, 0, 0, .45); border-radius: 1px; }
+.prof-escada tbody tr:hover td { filter: brightness(1.08); }
+.prof-graf .prof-corpo { overflow: hidden; }
+.prof-graf .term-velas { height: 100%; padding: 4px 6px; background: #000; }
+/* fechamentos diários: linha azul no dia de alta, vermelha no de baixa */
+.prof-negocios td { color: #fff; font-weight: 700; }
+.prof-negocios tr.pn-alta td { background: #0E2F7A; }
+.prof-negocios tr.pn-baixa td { background: #8E1420; }
+.prof-negocios tbody tr:hover td { filter: brightness(1.25); }
+@media (max-width: 900px) {
+  .prof-grade { grid-template-columns: minmax(0, 1fr); grid-template-rows: 460px auto 360px 360px; }
+  .prof-ativo .prof-corpo { max-height: none; }
+  .prof-cot .prof-desc { display: none; }
+  .prof-cot .prof-tab thead th:nth-child(2) { display: none; }
+  .prof-barra select { max-width: 200px; }
+}
