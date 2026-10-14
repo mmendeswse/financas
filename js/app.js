@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.294";
+  const VERSAO_APP = "3.6.295";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -7045,7 +7045,7 @@
       ${caixa("IBOVESPA", comSimbolo("^BVSP"), ativoRelatorio("IBOVESPA"), pts)}
       ${caixa("S&amp;P 500", comSimbolo("^GSPC"), ativoRelatorio("SP500"), pts)}
       ${caixa("NASDAQ", comSimbolo("^IXIC"), ativoRelatorio("NASDAQ"), pts)}
-      ${caixa("OURO · ONÇA", comSimbolo("GC=F"), ativoRelatorio("OURO") || REF_OURO, (v) => "US$ " + moeda2(v), ativoRelatorio("OURO") ? undefined : "REF.")}
+      ${caixa("OURO", comSimbolo("GC=F"), ativoRelatorio("OURO") || REF_OURO, (v) => "US$ " + moeda2(v), ativoRelatorio("OURO") ? undefined : "REF.")}
       ${caixa("DÓLAR", dolarVivo, ativoRelatorio("DÓLAR / REAL"), (v) => "R$ " + moeda2(v))}
       ${["BTC", "ETH"].map((m) => caixa(m === "BTC" ? "BITCOIN" : "ETHEREUM", criptoVivo(m), null, (v) => "R$ " + Number(v).toLocaleString("pt-BR", { maximumFractionDigits: 0 }))).join("")}
       ${(DADOS.acoes || []).map((a) => caixa(esc(String(a.ticker).toUpperCase()), acaoCarteira(a), null, brl)).join("")}
@@ -7068,7 +7068,16 @@
     const n2 = (v) => moeda2(v);
     // as caixas ficam em duas linhas no computador: metade em cada linha
     const nCaixas = (board.match(/class="term-quote/g) || []).length;
-    const boardDuas = board.replace('<div class="term-board">', `<div class="term-board" style="--cols:${Math.max(1, Math.ceil(nCaixas / 2))}">`);
+    // no nome de cada caixa só a primeira palavra fica em amarelo (o resto
+    // em cinza), menos no S&P 500, que fica inteiro em amarelo
+    const pintarNome = (txt) => {
+      const t = txt.trim(), m = /^(\S+)\s+(.+)$/.exec(t);
+      return !m || /^S&amp;P 500$/.test(t) ? txt : `${m[1]} <span class="tq-resto">${m[2]}</span>`;
+    };
+    const boardDuas = board
+      .replace(/<span class="tq-n">([^<]*)<\/span>/g, (_, n) => `<span class="tq-n">${pintarNome(n)}</span>`)
+      .replace(/(<span class="tq-nome[^"]*">)([^<]+)(?=<em>|<\/span>)/g, (_, a, n) => `${a}<span class="tq-n">${pintarNome(n)}</span>`)
+      .replace('<div class="term-board">', `<div class="term-board" style="--cols:${Math.max(1, Math.ceil(nCaixas / 2))}">`);
     // gráfico e análise automática
     const graficoCorpo = `<div class="term-graf prof-comp-graf">${tem ? '<canvas id="graf-mercado-comp"></canvas>' : '<p class="term-texto term-dim">O gráfico aparece quando as cotações chegarem.</p>'}</div>`;
 
