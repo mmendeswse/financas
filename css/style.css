@@ -2566,5 +2566,8 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
 .prof-graf .term-velas { flex: 1 1 auto; height: auto; min-height: 0; padding: 4px 6px 0; }
 .prof-osc { flex: none; height: 110px; padding: 0 6px 4px; border-top: 1px solid #26282C; background: #000; }
 .prof-vol { color: #B9BDC4; }
-.prof-grade { grid-template-rows: 520px 560px; }
-@media (max-width: 900px) { .prof-grade { grid-template-rows: 460px auto 470px 360px; } .prof-osc { height: 96px; } }
+.prof-grade:not(.prof-grade-2) { grid-template-rows: 520px 560px; }
+@media (max-width: 900px) { .prof-grade:not(.prof-grade-2) { grid-template-rows: 460px auto 470px 360px; } .prof-osc { height: 96px; } }
+/* gráfico Nasdaq × Ibovespa e notícias: uma linha só (sem sobrar faixa vazia) */
+.prof-grade.prof-grade-2 { grid-template-rows: 460px; }
+@media (max-width: 900px) { .prof-grade.prof-grade-2 { grid-template-rows: 340px 520px; } }
