@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.308";
+  const VERSAO_APP = "3.6.309";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -7012,11 +7012,16 @@
     // Cotação seleciona o ativo nas outras janelas.
     const citadas = new Set(acoesDoRelatorio(r).map((x) => x.ticker));
     const fDolar = (v) => Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 4, maximumFractionDigits: 4 });
+    // minhas ações (guia Ações) sempre no topo da tabela, num grupo próprio;
+    // elas saem dos grupos da B3 e da Nasdaq para não aparecerem duas vezes
+    const tickersCarteira = new Set((DADOS.acoes || []).map((a) => String(a.ticker).toUpperCase()));
+    const minhas = papeis.filter((x) => tickersCarteira.has(x.t)), outras = papeis.filter((x) => !tickersCarteira.has(x.t));
     const grupos = [
+      ...(minhas.length ? [["MINHAS AÇÕES", minhas.map((x) => [x.t, x.n, x.sim, n2, x])]] : []),
       ["ÍNDICES, MOEDAS E OURO", [["IBOV", "Índice Ibovespa", "^BVSP", fmtPontos], ["NASDAQ", "Nasdaq Composite", "^IXIC", fmtPontos], ["S&P 500", "S&P 500", "^GSPC", fmtPontos],
         ["DÓLAR", "Dólar comercial · R$", "USDBRL", fDolar], ["OURO", "Ouro · US$ por onça", "GC=F", n2]]],
-      ["B3 · AÇÕES · R$", papeis.filter((x) => /\.SA$/.test(x.sim)).map((x) => [x.t, x.n, x.sim, n2, x])],
-      [papeis.some((x) => !/\.SA$/.test(x.sim) && q[x.sim] && q[x.sim].bdr) ? "NASDAQ · AÇÕES · R$" : "NASDAQ · AÇÕES · US$", papeis.filter((x) => !/\.SA$/.test(x.sim)).map((x) => [x.t, x.n, x.sim, n2, x])],
+      ["B3 · AÇÕES · R$", outras.filter((x) => /\.SA$/.test(x.sim)).map((x) => [x.t, x.n, x.sim, n2, x])],
+      [papeis.some((x) => !/\.SA$/.test(x.sim) && q[x.sim] && q[x.sim].bdr) ? "NASDAQ · AÇÕES · R$" : "NASDAQ · AÇÕES · US$", outras.filter((x) => !/\.SA$/.test(x.sim)).map((x) => [x.t, x.n, x.sim, n2, x])],
     ];
     const cotDe = (sim, x) => sim === "USDBRL" ? dolarVivo : q[sim] || (x && x.c) || null;
     const todosSel = grupos.flatMap((g) => g[1]);
@@ -7040,7 +7045,7 @@
       const abe = ult && ult.abertura > 0 ? ult.abertura : null;
       // ação dos EUA: mesma linha das ações da B3 (bolinha da nota e números
       // sem símbolo de moeda); vinda pelo BDR, o código dele fica na dica
-      return `<tr class="${ativo}" data-acao="prof-sel" data-id="${esc(sim)}" title="Selecionar ${t}${c.bdr ? ` · cotação do BDR ${c.bdr} na B3, em reais` : ""}"><td class="prof-sim">${letraNota(sim)} ${t}${selo}</td><td class="prof-desc">${esc(nome)}</td>
+      return `<tr class="${ativo}" data-acao="prof-sel" data-id="${esc(sim)}" title="Selecionar ${t}${c.bdr ? ` · cotação do BDR ${c.bdr} na B3, em reais` : ""}"><td class="prof-sim">${x ? letraNota(sim) + " " : ""}${t}${selo}</td><td class="prof-desc">${esc(nome)}</td>
         <td class="r t-preco${piscaPreco(sim, c.preco)}">${f(c.preco)}</td>${celPinta(c.variacaoPct)}<td class="r prof-hora">${horaCot}</td>
         <td class="r">${numP(abe, f)}</td><td class="r t-max">${numP(max, f)}</td><td class="r t-min">${numP(min, f)}</td><td class="r t-ant">${numP(ant, f)}</td><td class="r prof-vol">${fmtVolume(ult && ult.volume)}</td>
         ${celPinta(variacaoSerie(h, 30))}${celPinta(variacaoSerie(h, 90))}</tr>`;
