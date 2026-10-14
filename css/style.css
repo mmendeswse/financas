@@ -2384,3 +2384,26 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
 .term-board { gap: 0; background: #000; }
 .term-board .term-quote { box-shadow: 1px 0 0 var(--t-linha), 0 1px 0 var(--t-linha); }
 .tq-nome .tq-n { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+/* guia Bolsa no padrão das plataformas de pregão (lista de cotações):
+   código em âmbar, último preço em branco, variação em verde/vermelho sem
+   fundo, máxima/mínima/fechamento anterior em tons próprios, preço pisca ao mudar */
+.tab-pregao { font-size: 13px; }
+.tab-pregao td { padding-top: 6px; padding-bottom: 6px; }
+.tab-pregao tbody tr:nth-child(even) td { background: #03060A; }
+.tab-pregao .term-ativo { color: #FF9F1C; font-size: 13.5px; letter-spacing: .02em; }
+.tab-pregao .term-ativo small { color: #6E8494; }
+.tab-pregao .t-preco { color: #FFFFFF; font-size: 14px; }
+.tab-pregao .t-max { color: #7FE0A8; }
+.tab-pregao .t-min { color: #FF8A95; }
+.tab-pregao .t-ant { color: #B9C6D3; }
+.tab-pregao td.t-aceso { background: none !important; }
+.tab-pregao .t-up { color: #19E57A; } .tab-pregao .t-down { color: #FF3B4E; } .tab-pregao .t-zero { color: #E8EEF6; }
+.term-cab-hora { float: right; color: #8FA3B3; font-family: ui-monospace, Menlo, monospace; font-weight: 700; letter-spacing: .04em; }
+@keyframes pisca-up { 0% { background: rgba(25, 229, 122, .55); } 100% { background: transparent; } }
+@keyframes pisca-down { 0% { background: rgba(255, 59, 78, .55); } 100% { background: transparent; } }
+.tab-pregao td.pisca-up { animation: pisca-up 1.4s ease-out; }
+.tab-pregao td.pisca-down { animation: pisca-down 1.4s ease-out; }
+/* caixas do topo: nome em âmbar, como os códigos dos terminais */
+.term-board .tq-nome { color: #FF9F1C; }
+.term-board .tq-var.t-up { color: #19E57A; } .term-board .tq-var.t-down { color: #FF3B4E; }
