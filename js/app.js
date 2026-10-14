@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.279";
+  const VERSAO_APP = "3.6.280";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1743,7 +1743,7 @@
     if (m && m.arquivo) {
       // todo logo ocupa o mesmo quadrado (largura = altura), do tamanho do do Itaú
       const azulejo = /itau|banco-do-brasil|nubank|mercado-pago|inter|caixa/.test(m.arquivo) ? "" : " marca-azulejo";   // todos os logos têm o quadrado próprio (o branco fica para algum novo)
-      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.279" alt="" loading="lazy"></span>`;
+      return `<span class="marca-logo${azulejo}" style="width:${t}px;height:${t}px"><img src="assets/icons/bancos/${m.arquivo}?v=3.6.280" alt="" loading="lazy"></span>`;
     }
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
@@ -6732,6 +6732,15 @@
 
 
 
+  // célula do preço pisca (verde ao subir, vermelho ao cair) quando o valor
+  // mudou desde a última vez que a tabela foi desenhada — como nos terminais
+  const ultimosPrecos = new Map();
+  function piscaPreco(sim, preco) {
+    const ant = ultimosPrecos.get(sim);
+    ultimosPrecos.set(sim, preco);
+    if (ant == null || ant === preco) return "";
+    return preco > ant ? " pisca-up" : " pisca-down";
+  }
   // com relatório ICL importado, a tabela da B3 mostra as ações do relatório:
   // onde cada uma aparece, a variação que o relatório traz e a cotação de hoje
   function tabelaRelatorioB3(r) {
@@ -6750,9 +6759,9 @@
       const vazio = `<td class="r term-dim">${mercado.carregando ? "buscando…" : "—"}</td>`;
       return `<tr ${c ? linkAtivo(x.ticker + ".SA") : ""}><td class="term-ativo">${letraNota(x.ticker + ".SA")} ${x.ticker} ${chips}${nome}</td>
         ${x.pct == null ? '<td class="r term-dim">—</td>' : celVar(x.pct, 3)}
-        ${c ? `<td class="r t-preco">${brl(c.preco)}</td>` : vazio}${c ? celVar(c.variacaoPct, 2) : vazio}${desde == null ? vazio : celVar(desde, 5)}<td class="term-spark">${spark}</td></tr>`;
+        ${c ? `<td class="r t-preco${piscaPreco(x.ticker + ".SA", c.preco)}">${brl(c.preco)}</td>` : vazio}${c ? celVar(c.variacaoPct, 2) : vazio}${desde == null ? vazio : celVar(desde, 5)}<td class="term-spark">${spark}</td></tr>`;
     }).join("");
-    return `<div class="term-painel"><div class="term-cab">B3 · IBOVESPA E AÇÕES DO RELATÓRIO ICL · FECHAMENTO ${esc(col)}</div><div class="term-rolar"><table class="term-tab">
+    return `<div class="term-painel"><div class="term-cab">B3 · IBOVESPA E AÇÕES DO RELATÓRIO ICL · FECHAMENTO ${esc(col)}</div><div class="term-rolar"><table class="term-tab tab-pregao">
       <thead><tr><th>Papel</th><th class="r">${esc(col)}</th><th class="r">Último</th><th class="r">Hoje</th><th class="r">Desde ${esc(col)}</th><th>3M</th></tr></thead>
       <tbody>${linhas}</tbody></table></div></div>`;
   }
@@ -7010,16 +7019,27 @@
       <div class="term-graf">${tem ? '<canvas id="graf-mercado-comp"></canvas>' : '<p class="term-texto term-dim">O gráfico aparece quando as cotações chegarem.</p>'}</div></div>`;
 
     // tabelas das bolsas (ações citadas no relatório ganham o selo ICL)
+    const quandoHora = mercado.em ? new Date(mercado.em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : "";
     const citadas = new Set(acoesDoRelatorio(r).map((x) => x.ticker));
-    const tabela = (titulo, lista, sufixo, fmt) => `<div class="term-painel"><div class="term-cab">${titulo}</div><div class="term-rolar"><table class="term-tab">
-      <thead><tr><th>Papel</th><th class="r">Último</th><th class="r">Dia</th><th class="r">1 mês</th><th class="r">3 meses</th><th>3M</th></tr></thead><tbody>
+    // tabelas no padrão das plataformas de pregão (lista de cotações): código
+    // em âmbar, último preço em branco, variação em verde/vermelho sem fundo,
+    // máxima e mínima do dia, fechamento anterior, e a célula do preço pisca
+    // quando o valor muda desde a última atualização
+    const tabela = (titulo, lista, sufixo, fmt) => `<div class="term-painel"><div class="term-cab">${titulo}<span class="term-cab-hora">${quandoHora}</span></div><div class="term-rolar"><table class="term-tab tab-pregao">
+      <thead><tr><th>Ativo</th><th class="r">Último</th><th class="r">Var. %</th><th class="r">Máx.</th><th class="r">Mín.</th><th class="r">Fech. ant.</th><th class="r">1 mês</th><th class="r">3 meses</th><th>3M</th></tr></thead><tbody>
       ${lista.slice().sort((a, b) => notaDe(b[0] + sufixo) - notaDe(a[0] + sufixo)).map(([t, nome]) => {
-        const c = q[t + sufixo];
+        const sim = t + sufixo, c = q[sim];
         const selo = citadas.has(t) ? ' <span class="term-chip c-acc">ICL</span>' : "";
-        if (!c) return `<tr><td class="term-ativo">${t}${selo}<small>${esc(nome)}</small></td><td class="r term-dim" colspan="5">${mercado.carregando ? "buscando…" : "sem cotação"}</td></tr>`;
-        const spark = c.historico && c.historico.length > 1 ? sparklineSVG(c.historico.map((h) => h.preco), c.variacaoPct >= 0 ? G.CORES.up : G.CORES.down) : "";
-        return `<tr ${linkAtivo(t + sufixo)} title="Abrir o gráfico de ${t}"><td class="term-ativo">${letraNota(t + sufixo)} ${t}${selo}<small>${esc(nome)}</small></td><td class="r t-preco">${fmt(c.preco)}</td>
-          ${celVar(c.variacaoPct, 2)}${celVar(variacaoSerie(c.historico, 30))}${celVar(variacaoSerie(c.historico, 90), 15)}<td class="term-spark">${spark}</td></tr>`;
+        if (!c) return `<tr><td class="term-ativo">${t}${selo}<small>${esc(nome)}</small></td><td class="r term-dim" colspan="8">${mercado.carregando ? "buscando…" : "sem cotação"}</td></tr>`;
+        const h = c.historico || [], ult = h[h.length - 1], ant = h.length > 1 ? h[h.length - 2].preco : null;
+        const max = ult && ult.maxima > 0 ? Math.max(ult.maxima, c.preco) : null, min = ult && ult.minima > 0 ? Math.min(ult.minima, c.preco) : null;
+        const spark = h.length > 1 ? sparklineSVG(h.map((x) => x.preco), c.variacaoPct >= 0 ? G.CORES.up : G.CORES.down) : "";
+        const pisca = piscaPreco(sim, c.preco);
+        const num = (v) => v == null ? '<span class="term-dim">—</span>' : fmt(v);
+        return `<tr ${linkAtivo(sim)} title="Abrir o gráfico de ${t}"><td class="term-ativo">${letraNota(sim)} ${t}${selo}<small>${esc(nome)}</small></td>
+          <td class="r t-preco${pisca}">${fmt(c.preco)}</td><td class="r ${corMov(c.variacaoPct)}">${tPct(c.variacaoPct)} <i>${setaMov(c.variacaoPct)}</i></td>
+          <td class="r t-max">${num(max)}</td><td class="r t-min">${num(min)}</td><td class="r t-ant">${num(ant)}</td>
+          ${celVar(variacaoSerie(h, 30))}${celVar(variacaoSerie(h, 90))}<td class="term-spark">${spark}</td></tr>`;
       }).join("")}</tbody></table></div></div>`;
 
     // notícias do mercado (as mais recentes primeiro) e, embaixo, a análise automática
