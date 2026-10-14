@@ -2575,8 +2575,6 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
 .prof-sec1:has(+ .prof-sec2) { margin-bottom: 0; border-bottom: 0; border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
 .prof-sec1 + .prof-sec2 { border-top: 0; border-top-left-radius: 0; border-top-right-radius: 0; }
 .prof-sec1 + .prof-sec2 > .prof-grade { padding-top: 0; }
-/* ação dos EUA cotada pelo BDR (brapi), em reais */
-.prof-tab .prof-bdr { font-size: 8.5px; padding: 1px 4px; margin-left: 4px; color: #38D6FF; border-color: #1F5770; background: rgba(56, 214, 255, .08); vertical-align: 1px; }
 
 /* área de trabalho: Cotação e Gráfico na largura toda; Ativo e Fechamentos
    diários lado a lado, abaixo do Gráfico */
