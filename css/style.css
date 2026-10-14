@@ -2623,8 +2623,6 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
 .pd-data { font-size: 16px; margin: 3px 0 6px; }
 .pd-chip { display: inline-block; font-size: 10.5px; font-weight: 800; padding: 2px 8px; border-radius: 999px; border: 1px solid; }
 .pd-chip-util { color: #3DFF9A; border-color: rgba(61, 255, 154, .35); background: rgba(61, 255, 154, .08); }
-.pd-chip-fds { color: #B9C6D3; border-color: rgba(185, 198, 211, .3); background: rgba(185, 198, 211, .06); }
-.pd-chip-fer { color: #FFB547; border-color: rgba(255, 181, 71, .4); background: rgba(255, 181, 71, .08); }
 .pd-hora { font-size: 26px; letter-spacing: .01em; }
 .pd-hora small { font-size: 15px; color: var(--dim); font-weight: 700; }
 .pd-fuso { margin-top: 3px; }
@@ -2640,6 +2638,8 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
 .pd-barra span { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 999px; background: linear-gradient(90deg, #00E5FF, #3DFF9A); }
 .pd-barra em { position: absolute; top: 50%; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: #FFFFFF; box-shadow: 0 0 0 3px rgba(0, 229, 255, .35); }
 .pd-horarios { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--dim); font-weight: 700; }
-.pd-contagem { font-size: 12px; color: #E4EAF5; font-weight: 700; padding-top: 6px; border-top: 1px solid var(--linha); }
-.pd-contagem small { display: block; font-size: 11px; color: var(--dim); font-weight: 700; margin-top: 1px; }
 .pd-barra-off span { background: rgba(185, 198, 211, .35); }
+.pd-chip-fecha { color: #FF8A95; border-color: rgba(255, 107, 122, .35); background: rgba(255, 107, 122, .08); }
+.dropdown.pop-data { width: 380px; }
+.pd-chip { white-space: nowrap; }
+.pd-esq { min-width: 0; }
