@@ -2593,3 +2593,19 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
 @media (max-width: 900px) {
   .prof-grade:not(.prof-grade-2) { grid-template-columns: minmax(0, 1fr); grid-template-rows: 460px 470px auto 360px; grid-template-areas: "cot" "graf" "ativo" "neg"; }
 }
+
+/* rodapé sempre numa linha só: no celular, texto curto (versão e hora da
+   atualização), sem "Sistema operando" e com o texto do meio encurtado */
+.rodape-app i { font-style: normal; }
+.rodape-app .rd-curto { display: none; }
+.rodape-app { flex-wrap: nowrap; }
+.rodape-app span { white-space: nowrap; }
+@media (max-width: 640px) {
+  .rodape-app { flex-wrap: nowrap; justify-content: space-between; gap: 8px; padding: 8px 12px; font-size: 9.5px; letter-spacing: 0; }
+  .rodape-app .rd-longo { display: none; }
+  .rodape-app .rd-curto { display: inline; }
+  .rodape-app span:first-child::before { content: "● "; }
+  .rodape-app span:nth-child(2) { min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: 0; }
+  .rodape-app span:nth-child(2)::after { content: "Dados locais"; font-size: 9.5px; }
+}
+@media (max-width: 360px) { .rodape-app { font-size: 8.5px; gap: 6px; padding: 8px 8px; } .rodape-app span:nth-child(2)::after { font-size: 8.5px; } }
