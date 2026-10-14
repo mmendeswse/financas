@@ -2643,3 +2643,31 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
 .dropdown.pop-data { width: 380px; }
 .pd-chip { white-space: nowrap; }
 .pd-esq { min-width: 0; }
+
+/* ===== iPad em pé (e telas até 980 px) =====
+   topo em duas linhas: logo, data/hora e sino na primeira; as guias na
+   segunda, ocupando a largura toda (antes a data e o sino ficavam sozinhos
+   numa terceira linha e a data sumia) */
+@media (min-width: 641px) and (max-width: 980px) {
+  .sidebar { flex-wrap: wrap; align-items: center; row-gap: 4px; padding-top: calc(6px + env(safe-area-inset-top)); padding-bottom: 4px; }
+  .sidebar > .logo { order: 1; }
+  .sidebar > .nav-ferramentas { order: 2; margin-left: auto; width: auto; }
+  .sidebar > .nav { order: 3; flex: 1 0 100%; width: 100%; justify-content: space-between; }
+  .sidebar .data-topbar { display: inline !important; }
+}
+/* quadros da Bolsa no iPad em pé: 4 por linha, sem rolar para o lado e
+   sem cortar nome, valor e variação */
+@media (min-width: 641px) and (max-width: 1100px) {
+  .term-board { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; overflow-x: visible; }
+  .term-board .tq-preco { font-size: clamp(15px, 11cqi, 20px); }
+}
+/* rodapé dos cartões de resumo (Relatórios): não herda a largura mínima da
+   legenda dos gráficos de rosca — no iPad em pé empurrava a página para o lado */
+.metric .legenda { min-width: 0; }
+/* Entradas e Despesas no iPad em pé: colunas mais estreitas para o Valor
+   não ficar cortado à direita */
+@media (min-width: 641px) and (max-width: 980px) {
+  .hd[style*="grid-template-columns:90px"], .rw[style*="grid-template-columns:90px"] { grid-template-columns: 74px minmax(0, 1fr) 96px 84px 116px 112px !important; gap: 6px; padding-left: 12px; padding-right: 12px; }
+  .rw .cel-banco { min-width: 0; overflow: hidden; }
+  .rw .cel-banco span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
