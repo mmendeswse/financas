@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.304";
+  const VERSAO_APP = "3.6.305";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1461,7 +1461,7 @@
           <div class="pd-dia${fer ? " pd-fer" : ""}">${esc(tipoDia)}</div></div>
         <div class="pd-direita"><div class="pd-hora">${agora.toLocaleTimeString("pt-BR")}</div><div class="pd-fuso">${fusoHorario(agora)}</div></div>
       </div>
-      <div class="pd-faixa"><span>${aberto ? '<i class="up">●</i> Mercado aberto · até 18h' : '<i class="down">●</i> Mercado fechado · abre às 9h'}</span></div>`;
+      <div class="pd-faixa"><span>${aberto ? '<i class="up">●</i> Mercado Aberto · Fechamento às 18 horas' : '<i class="down">●</i> Mercado Fechado · Abertura às 9 horas'}</span></div>`;
   }
 
   function ligarSidebar() {
@@ -2211,7 +2211,7 @@
     if (!dot) return;
     const aberto = mercadoDolarAberto(agora);
     dot.classList.toggle("fechado", !aberto);
-    if (caixa) caixa.title = aberto ? "Mercado aberto (dias úteis, 9h às 18h)" : "Mercado fechado (abre nos dias úteis às 9h)";
+    if (caixa) caixa.title = aberto ? "Mercado Aberto (dias úteis, das 9 às 18 horas)" : "Mercado Fechado (Abertura nos dias úteis às 9 horas)";
   }
 
   function renderDolar() {
