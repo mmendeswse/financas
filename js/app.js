@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.310";
+  const VERSAO_APP = "3.6.311";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1451,17 +1451,46 @@
     const util = (dt) => dt.getDay() >= 1 && dt.getDay() <= 5 && !feriado(dt);
     const fer = feriado(agora);
     const tipoDia = fer ? `Feriado · ${fer}` : util(agora) ? "Dia Útil" : "Fim de Semana";
-    const min = agora.getHours() * 60 + agora.getMinutes();
-    const aberto = util(agora) && min >= 9 * 60 && min < 18 * 60;
-    // data e hora no topo e a situação do dia numa faixa
+    const clsDia = fer ? "pd-chip-fer" : util(agora) ? "pd-chip-util" : "pd-chip-fds";
+    // pregão da B3: das 9 às 18 horas nos dias úteis
+    const ABRE = 9 * 60, FECHA = 18 * 60;
+    const min = agora.getHours() * 60 + agora.getMinutes() + agora.getSeconds() / 60;
+    const aberto = util(agora) && min >= ABRE && min < FECHA;
+    // próxima abertura: hoje (antes das 9 horas) ou o próximo dia útil
+    const proxAbertura = () => {
+      const d = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate(), 9, 0, 0);
+      if (util(agora) && min < ABRE) return d;
+      do { d.setDate(d.getDate() + 1); } while (!util(d));
+      return d;
+    };
+    const duracao = (ms) => {
+      const totalMin = Math.max(0, Math.round(ms / 60000)), dias = Math.floor(totalMin / 1440), h = Math.floor((totalMin % 1440) / 60), m = totalMin % 60;
+      const partes = [];
+      if (dias) partes.push(`${dias} ${dias === 1 ? "dia" : "dias"}`);
+      if (h) partes.push(`${h} ${h === 1 ? "hora" : "horas"}`);
+      if (m || !partes.length) partes.push(`${m} ${m === 1 ? "minuto" : "minutos"}`);
+      return partes.length > 1 ? partes.slice(0, -1).join(", ") + " e " + partes[partes.length - 1] : partes[0];
+    };
+    const fim = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate(), 18, 0, 0);
+    const prox = proxAbertura();
+    const contagem = aberto ? `Fechamento às 18 horas<small>em ${duracao(fim - agora)}</small>`
+      : `Abertura ${prox.toDateString() === agora.toDateString() ? "hoje" : (() => { const d = prox.toLocaleDateString("pt-BR", { weekday: "long" }); return d.charAt(0).toUpperCase() + d.slice(1); })()} às 9 horas<small>em ${duracao(prox - agora)}</small>`;
+    // andamento do pregão de hoje (0% às 9 horas, 100% às 18 horas)
+    const pct = util(agora) ? Math.max(0, Math.min(100, (min - ABRE) / (FECHA - ABRE) * 100)) : 0;
+    const hora = agora.toLocaleTimeString("pt-BR"), [hh, mm, ss] = hora.split(":");
     el.innerHTML = `
       <div class="pd-topo">
-        <div><div class="pd-semana">${agora.toLocaleDateString("pt-BR", { weekday: "long" })}</div>
+        <div class="pd-esq"><div class="pd-semana">${agora.toLocaleDateString("pt-BR", { weekday: "long" })}</div>
           <div class="pd-data">${agora.toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric" })}</div>
-          <div class="pd-dia${fer ? " pd-fer" : ""}">${esc(tipoDia)}</div></div>
-        <div class="pd-direita"><div class="pd-hora">${agora.toLocaleTimeString("pt-BR")}</div><div class="pd-fuso">${fusoHorario(agora)}</div></div>
+          <span class="pd-chip ${clsDia}">${esc(tipoDia)}</span></div>
+        <div class="pd-direita"><div class="pd-hora">${hh}:${mm}<small>:${ss}</small></div><div class="pd-fuso">${fusoHorario(agora)}</div></div>
       </div>
-      <div class="pd-faixa"><span>${aberto ? '<i class="up">●</i> Mercado Aberto · Fechamento às 18 horas' : '<i class="down">●</i> Mercado Fechado · Abertura às 9 horas'}</span></div>`;
+      <div class="pd-mercado">
+        <div class="pd-merc-topo"><b>Bolsa de Valores · B3</b><span class="pd-status ${aberto ? "pd-aberto" : "pd-fechado"}"><i></i>${aberto ? "Mercado Aberto" : "Mercado Fechado"}</span></div>
+        <div class="pd-barra${aberto ? "" : " pd-barra-off"}" title="Andamento do pregão de hoje"><span style="width:${pct.toFixed(1)}%"></span>${util(agora) && min >= ABRE && min <= FECHA ? `<em style="left:${pct.toFixed(1)}%"></em>` : ""}</div>
+        <div class="pd-horarios"><span>Abertura · 9 horas</span><span>Fechamento · 18 horas</span></div>
+        <div class="pd-contagem">${contagem}</div>
+      </div>`;
   }
 
   function ligarSidebar() {
