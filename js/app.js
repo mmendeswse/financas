@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.298";
+  const VERSAO_APP = "3.6.299";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -7004,8 +7004,7 @@
     });
     const comCot = papeis.filter((x) => x.c && x.c.preco > 0);
     const n2 = (v) => moeda2(v);
-    // até 10 caixas numa linha só; com mais, metade em cada uma de duas linhas
-    const nCaixas = (board.match(/class="term-quote/g) || []).length;
+    // sempre 9 caixas por linha (no computador e no iPad)
     // no título de cada caixa fica só a primeira palavra (em amarelo); o
     // S&P 500 e a RENDA FIXA ficam com o nome inteiro
     const pintarNome = (txt) => {
@@ -7017,7 +7016,7 @@
     const boardDuas = board
       .replace(/<span class="tq-n">([^<]*)<\/span>/g, (_, n) => `<span class="tq-n">${pintarNome(n)}</span>`)
       .replace(/(<span class="tq-nome[^"]*">)([^<]+)(?=<em>|<\/span>)/g, (_, a, n) => `${a}<span class="tq-n">${pintarNome(n)}</span>`)
-      .replace('<div class="term-board">', `<div class="term-board" style="--cols:${nCaixas <= 10 ? Math.max(1, nCaixas) : Math.ceil(nCaixas / 2)}">`);
+      .replace('<div class="term-board">', `<div class="term-board" style="--cols:9">`);
     // gráfico e análise automática
     const graficoCorpo = `<div class="term-graf prof-comp-graf">${tem ? '<canvas id="graf-mercado-comp"></canvas>' : '<p class="term-texto term-dim">O gráfico aparece quando as cotações chegarem.</p>'}</div>`;
 
