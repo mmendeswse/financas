@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.295";
+  const VERSAO_APP = "3.6.296";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -7068,11 +7068,13 @@
     const n2 = (v) => moeda2(v);
     // as caixas ficam em duas linhas no computador: metade em cada linha
     const nCaixas = (board.match(/class="term-quote/g) || []).length;
-    // no nome de cada caixa só a primeira palavra fica em amarelo (o resto
-    // em cinza), menos no S&P 500, que fica inteiro em amarelo
+    // no título de cada caixa fica só a primeira palavra (em amarelo); o
+    // S&P 500 e a RENDA FIXA ficam com o nome inteiro
     const pintarNome = (txt) => {
-      const t = txt.trim(), m = /^(\S+)\s+(.+)$/.exec(t);
-      return !m || /^S&amp;P 500$/.test(t) ? txt : `${m[1]} <span class="tq-resto">${m[2]}</span>`;
+      const t = txt.trim();
+      if (/^S&amp;P 500$/.test(t)) return t;
+      if (/^RENDA FIXA\b/i.test(t)) return "RENDA FIXA";
+      return t.split(/\s+/)[0];
     };
     const boardDuas = board
       .replace(/<span class="tq-n">([^<]*)<\/span>/g, (_, n) => `<span class="tq-n">${pintarNome(n)}</span>`)
