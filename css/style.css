@@ -2450,12 +2450,6 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
    de amarelo (como o livro de ofertas) e fechamentos em azul/vermelho
    (como o Times & Trades) */
 .prof { padding: 0; background: #2B2D31; border-color: #3A3D42; }
-.prof-barra { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 6px 10px; background: linear-gradient(#3B3E44, #2B2D31); border-bottom: 1px solid #1A1B1E; font: 600 12px Inter, system-ui, sans-serif; color: #D8DADF; }
-.prof-barra b { color: #fff; }
-.prof-barra label { display: inline-flex; align-items: center; gap: 6px; color: #A9ADB5; }
-.prof-barra select { background: #111; color: #fff; border: 1px solid #555; border-radius: 3px; padding: 3px 6px; font: 700 12px ui-monospace, Menlo, monospace; max-width: 260px; }
-.prof-status { margin-left: auto; color: #19E57A; font-family: ui-monospace, Menlo, monospace; }
-.prof-status.pf-busca { color: #FFD54F; }
 .prof-grade { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); grid-template-rows: 520px 460px; gap: 3px; padding: 3px; background: #2B2D31; }
 .prof-jan { display: flex; flex-direction: column; min-width: 0; min-height: 0; background: #000; border: 1px solid #4A4D53; }
 .prof-tit { display: flex; align-items: center; gap: 8px; padding: 3px 8px; background: linear-gradient(#45484F, #2F3136); color: #E6E7EA; font: 600 11.5px Inter, system-ui, sans-serif; white-space: nowrap; overflow: hidden; border-bottom: 1px solid #111; }
@@ -2506,5 +2500,4 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
   .prof-ativo .prof-corpo { max-height: none; }
   .prof-cot .prof-desc { display: none; }
   .prof-cot .prof-tab thead th:nth-child(2) { display: none; }
-  .prof-barra select { max-width: 200px; }
-}
+  }
