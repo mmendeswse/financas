@@ -367,6 +367,24 @@
     return tentar(0);
   }
 
+  // Reserva das ações dos EUA pela brapi (a mesma fonte das ações da B3, que
+  // responde no aparelho): o BDR da empresa negociado na B3, em reais, com o
+  // histórico diário de 3 meses (abertura, máxima, mínima e volume)
+  var BDR = {
+    AAPL: "AAPL34", MSFT: "MSFT34", NVDA: "NVDC34", AMZN: "AMZO34", GOOGL: "GOGL34", META: "M1TA34", TSLA: "TSLA34",
+    AVGO: "AVGO34", NFLX: "NFLX34", AMD: "A1MD34", COST: "COWC34", PEP: "PEPB34", ADBE: "ADBE34", CSCO: "CSCO34",
+    INTC: "ITLC34", QCOM: "QCOM34", TXN: "TEXA34", AMGN: "AMGN34", INTU: "INTU34", PYPL: "PYPL34", SBUX: "SBUB34",
+    BKNG: "BKNG34", MU: "MUTC34", PLTR: "P2LT34", ASML: "ASML34"
+  };
+  function lerBDR(simbolo, token) {
+    var bdr = BDR[simbolo];
+    if (!bdr) return Promise.reject(new Error("sem BDR"));
+    return buscarUm(bdr, token).then(function (r) {
+      if (!(r.preco > 0)) throw new Error("sem preço");
+      return { preco: r.preco, variacaoPct: r.variacaoPct, nome: r.nome, moeda: "BRL", historico: r.historico, bdr: bdr };
+    });
+  }
+
   // aoChegar(simbolo, cotação) é chamado a cada ativo que chega, para a tela
   // ir se preenchendo sem esperar a lista inteira. Uma fonte que falha três
   // vezes seguidas é pulada no resto da rodada (não trava a busca).
@@ -387,7 +405,9 @@
             return { preco: r.preco, variacaoPct: r.variacaoPct, nome: r.nome, moeda: "BRL", historico: r.historico };
           }).then(function (r) { if (r.historico.length < 2) throw new Error("sem histórico"); return r; })
             .catch(function () { return yahoo(s); })
-        : yahoo(s).catch(function () { return stooq(s); });
+        // EUA: Yahoo (US$); sem ele, o BDR pela brapi (R$, com histórico,
+        // como as ações da B3); por último a Stooq (só a cotação do dia)
+        : yahoo(s).catch(function () { return lerBDR(s, token); }).catch(function () { return stooq(s); });
       return p.then(function (r) { cotacoes[s] = r; if (aoChegar) { try { aoChegar(s, r); } catch (e) { /* tela */ } } },
         function (e) { erros[s] = e.message || "falhou"; });
     };
