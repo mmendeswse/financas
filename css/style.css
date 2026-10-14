@@ -2573,3 +2573,5 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
 /* gráfico Nasdaq × Ibovespa e notícias: uma linha só (sem sobrar faixa vazia) */
 .prof-grade.prof-grade-2 { grid-template-rows: 460px; }
 @media (max-width: 900px) { .prof-grade.prof-grade-2 { grid-template-rows: 340px 520px; } }
+/* caixas da guia Bolsa: só a primeira palavra do nome em amarelo */
+.term-board .tq-resto { color: #8FA3B3; }
