@@ -2519,3 +2519,18 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
   .rodape-app span:nth-child(2) { font-size: 0; }
   .rodape-app span:nth-child(2)::after { content: "Armazenamento local"; font-size: 9px; }
 }
+
+/* guia Bolsa: no computador as caixas ficam em duas linhas (metade em
+   cada uma); com mais colunas, letras um pouco menores para caber */
+@media (min-width: 1281px) {
+  .term-board { grid-template-columns: repeat(var(--cols, 7), minmax(0, 1fr)); }
+  .term-board .term-quote { padding: 9px 10px 7px; }
+  .term-board .tq-nome { font-size: 9px; letter-spacing: .05em; }
+  .term-board .tq-nome em { font-size: 8.5px; }
+  .term-board .term-quote { container-type: inline-size; }
+  /* o valor encolhe junto com a caixa para aparecer inteiro (até 12 caracteres) */
+  .term-board .tq-preco { font-size: clamp(12px, 12.5cqi, 21px); }
+  .term-board .tq-var { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: clamp(9.5px, 6.6cqi, 11.5px) !important; }
+  .term-board .tq-sub { font-size: 9.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .term-board .tq-aa { font-size: 10px; }
+}
