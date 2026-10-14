@@ -712,7 +712,7 @@
           var i = cursor ? g.scales.x.getValueForPixel(cursor.x) : serie.length - 1;
           var p = serie[Math.max(0, Math.min(serie.length - 1, Math.round(i)))]; if (!p) return;
           var c = g.ctx, x = g.chartArea.left + 4, y = g.chartArea.top - (duasLinhas ? 30 : 12);
-          var partes = [["Abr", p.abertura], ["Máx", p.maxima], ["Mín", p.minima], ["Fch", p.preco]];
+          var partes = [["Abertura", p.abertura], ["Máxima", p.maxima], ["Mínima", p.minima], ["Fechamento", p.preco]];
           c.save();
           c.textBaseline = "middle";
           partes.forEach(function (par) {

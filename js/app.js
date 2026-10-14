@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.303";
+  const VERSAO_APP = "3.6.304";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1449,23 +1449,11 @@
     const iso = (dt) => `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
     const feriado = (dt) => F.feriadosNacionais(dt.getFullYear())[iso(dt)] ? (NOMES_FERIADOS[iso(dt).slice(5)] || "Sexta-feira Santa") : "";
     const util = (dt) => dt.getDay() >= 1 && dt.getDay() <= 5 && !feriado(dt);
-    const ano = agora.getFullYear();
-    const inicio = new Date(ano, 0, 1), hojeZero = new Date(ano, agora.getMonth(), agora.getDate());
-    const diaAno = Math.round((hojeZero - inicio) / 864e5) + 1;
-    const diasAno = (ano % 4 === 0 && ano % 100 !== 0) || ano % 400 === 0 ? 366 : 365;
-    // semana ISO (a que contém a quinta-feira)
-    const qui = new Date(hojeZero); qui.setDate(qui.getDate() + 3 - ((qui.getDay() + 6) % 7));
-    const semana = 1 + Math.round(((qui - new Date(qui.getFullYear(), 0, 4)) / 864e5 - 3 + ((new Date(qui.getFullYear(), 0, 4).getDay() + 6) % 7)) / 7);
     const fer = feriado(agora);
     const tipoDia = fer ? `Feriado · ${fer}` : util(agora) ? "Dia útil" : "Fim de semana";
-    const prox = new Date(hojeZero); do { prox.setDate(prox.getDate() + 1); } while (!util(prox));
     const min = agora.getHours() * 60 + agora.getMinutes();
     const aberto = util(agora) && min >= 9 * 60 && min < 18 * 60;
-    const proxTxt = prox.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "2-digit" });
-    const ultimoMes = new Date(ano, agora.getMonth() + 1, 0).getDate();
-    // tudo consolidado: data e hora no topo, situação do dia numa faixa e os números em 4 quadrinhos
-    const proxCurto = proxTxt.replace(/^(\S+?)(-feira)?,/, (m, d) => d.slice(0, 3) + ",");
-    const caixa = (r, v) => `<div class="pd-caixa"><span>${r}</span><b title="${esc(v)}">${v}</b></div>`;
+    // data e hora no topo e a situação do dia numa faixa
     el.innerHTML = `
       <div class="pd-topo">
         <div><div class="pd-semana">${agora.toLocaleDateString("pt-BR", { weekday: "long" })}</div>
@@ -1473,13 +1461,7 @@
           <div class="pd-dia${fer ? " pd-fer" : ""}">${esc(tipoDia)}</div></div>
         <div class="pd-direita"><div class="pd-hora">${agora.toLocaleTimeString("pt-BR")}</div><div class="pd-fuso">${fusoHorario(agora)}</div></div>
       </div>
-      <div class="pd-faixa"><span>${aberto ? '<i class="up">●</i> Mercado aberto · até 18h' : '<i class="down">●</i> Mercado fechado · abre às 9h'}</span></div>
-      <div class="pd-caixas">
-        ${caixa("Próximo dia útil", proxCurto.charAt(0).toUpperCase() + proxCurto.slice(1))}
-        ${caixa("Semana do ano", `${semana}ª`)}
-        ${caixa("Dia do ano", `${diaAno}/${diasAno} · faltam ${diasAno - diaAno}`)}
-        ${caixa("Mês", `${agora.getDate()}/${ultimoMes} · ${Math.floor(agora.getMonth() / 3) + 1}º tri`)}
-      </div>`;
+      <div class="pd-faixa"><span>${aberto ? '<i class="up">●</i> Mercado aberto · até 18h' : '<i class="down">●</i> Mercado fechado · abre às 9h'}</span></div>`;
   }
 
   function ligarSidebar() {
@@ -6960,7 +6942,7 @@
       let preco, varDia, sub = "", spark = "", fonte;
       if (live) {
         preco = live.preco; varDia = live.variacaoPct; fonte = live.fonte || "AO VIVO";
-        sub = `1M ${tPct(variacaoSerie(live.historico, 30))} · 3M ${tPct(variacaoSerie(live.historico, 90))}`;
+        sub = `1 mês ${tPct(variacaoSerie(live.historico, 30))} · 3 meses ${tPct(variacaoSerie(live.historico, 90))}`;
         if (live.historico && live.historico.length > 1) spark = sparklineSVG(live.historico.map((h) => h.preco), varDia >= 0 ? G.CORES.up : G.CORES.down);
       } else if (rel) {
         preco = rel.atual; varDia = rel.dia; fonte = rotuloRel || rotRel;
@@ -7061,7 +7043,7 @@
         ${celVar(variacaoSerie(h, 30))}${celVar(variacaoSerie(h, 90))}</tr>`;
     };
     const jCot = janela("prof-cot", "Cotação", `<div class="term-rolar"><table class="term-tab prof-tab">
-      <thead><tr><th>Símbolo</th><th>Descrição</th><th class="r">Últ.</th><th class="r">%</th><th class="r">Hora</th><th class="r">Abert.</th><th class="r">Máx.</th><th class="r">Mín.</th><th class="r">Fech.</th><th class="r">Volume</th><th class="r">1 mês</th><th class="r">3 meses</th></tr></thead>
+      <thead><tr><th>Símbolo</th><th>Descrição</th><th class="r">Último</th><th class="r">%</th><th class="r">Hora</th><th class="r">Abertura</th><th class="r">Máxima</th><th class="r">Mínima</th><th class="r">Fechamento</th><th class="r">Volume</th><th class="r">1 mês</th><th class="r">3 meses</th></tr></thead>
       <tbody>${grupos.map(([g, itens]) => `<tr class="prof-grupo"><td colspan="12">${g}</td></tr>${itens.map(linhaCot).join("")}`).join("")}</tbody></table></div>`);
     // (2) Ativo: faixa de cotação, dias de alta × baixa e preços × dias
     const hs = cs && cs.historico ? cs.historico.filter((p) => p.preco > 0) : [];
@@ -7077,7 +7059,7 @@
       const maxDias = Math.max(...faixas.map((x) => x.dias)) || 1;
       const kAtual = Math.min(N - 1, Math.max(0, Math.floor((cs.preco - lo) / passo)));
       const dataBR = (d) => d ? d.slice(8, 10) + "/" + d.slice(5, 7) : "—";
-      corpoAtivo = `<table class="term-tab prof-tab prof-resumo"><thead><tr><th>Símbolo</th><th class="r">Últ.</th><th class="r">%</th><th class="r">Abert.</th><th class="r">Máx.</th><th class="r">Mín.</th><th class="r">Fech.</th></tr></thead>
+      corpoAtivo = `<table class="term-tab prof-tab prof-resumo"><thead><tr><th>Símbolo</th><th class="r">Último</th><th class="r">%</th><th class="r">Abertura</th><th class="r">Máxima</th><th class="r">Mínima</th><th class="r">Fechamento</th></tr></thead>
         <tbody><tr><td class="prof-sim">${sel[0]}</td><td class="r t-preco">${fs(cs.preco)}</td><td class="r ${corMov(cs.variacaoPct)}">${tPct(cs.variacaoPct)}</td>
         <td class="r">${numP(us && us.abertura, fs)}</td><td class="r t-max">${numP(us && us.maxima, fs)}</td><td class="r t-min">${numP(us && us.minima, fs)}</td><td class="r t-ant">${numP(antS, fs)}</td></tr></tbody></table>
         <div class="prof-forca" title="Pregões em alta × em baixa nos últimos ${hs.length} dias"><span class="pf-alta" style="flex:${altas || 0.0001}">${altas} dias de alta</span><span class="pf-baixa" style="flex:${baixas || 0.0001}">${baixas} de baixa</span></div>
@@ -7096,7 +7078,7 @@
       cs ? `<span class="prof-tit-dir ${corMov(cs.variacaoPct)}">${fs(cs.preco)} ${tPct(cs.variacaoPct)}</span>` : "");
     // (4) Fechamentos diários (mais recentes primeiro; azul alta, vermelho baixa)
     const jNeg = janela("prof-neg", `Fechamentos diários · ${sel[0]}`, hs.length > 1 ? `<div class="term-rolar"><table class="term-tab prof-tab prof-negocios">
-      <thead><tr><th>Data</th><th class="r">Fech.</th><th class="r">%</th><th class="r">Abert.</th><th class="r">Máx.</th><th class="r">Mín.</th><th class="r">Ampl.</th><th class="r">Volume</th></tr></thead><tbody>
+      <thead><tr><th>Data</th><th class="r">Fechamento</th><th class="r">%</th><th class="r">Abertura</th><th class="r">Máxima</th><th class="r">Mínima</th><th class="r">Amplitude</th><th class="r">Volume</th></tr></thead><tbody>
       ${hs.map((p, i) => ({ p, v: i ? (p.preco / hs[i - 1].preco - 1) * 100 : null })).reverse().map(({ p, v }) => `<tr class="${v == null ? "" : v >= 0 ? "pn-alta" : "pn-baixa"}"><td>${p.data.slice(8, 10)}/${p.data.slice(5, 7)}/${p.data.slice(2, 4)}</td>
         <td class="r">${fs(p.preco)}</td><td class="r">${v == null ? "—" : tPct(v)}</td><td class="r">${numP(p.abertura, fs)}</td><td class="r">${numP(p.maxima, fs)}</td><td class="r">${numP(p.minima, fs)}</td>
         <td class="r">${p.maxima > 0 && p.minima > 0 ? tPct((p.maxima / p.minima - 1) * 100).replace("+", "") : "—"}</td><td class="r">${fmtVolume(p.volume)}</td></tr>`).join("")}</tbody></table></div>` : '<p class="term-texto term-dim">Sem histórico deste ativo.</p>');
