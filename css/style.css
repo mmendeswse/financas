@@ -2573,3 +2573,9 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
 /* gráfico Nasdaq × Ibovespa e notícias: uma linha só (sem sobrar faixa vazia) */
 .prof-grade.prof-grade-2 { grid-template-rows: 460px; }
 @media (max-width: 900px) { .prof-grade.prof-grade-2 { grid-template-rows: 340px 520px; } }
+
+/* área de trabalho e o quadro do gráfico Nasdaq × Ibovespa/notícias numa
+   moldura só, quando um vem logo depois do outro */
+.prof-sec1:has(+ .prof-sec2) { margin-bottom: 0; border-bottom: 0; border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+.prof-sec1 + .prof-sec2 { border-top: 0; border-top-left-radius: 0; border-top-right-radius: 0; }
+.prof-sec1 + .prof-sec2 > .prof-grade { padding-top: 0; }
