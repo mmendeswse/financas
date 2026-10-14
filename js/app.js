@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.300";
+  const VERSAO_APP = "3.6.301";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -7031,7 +7031,7 @@
       ["ÍNDICES, MOEDAS E OURO", [["IBOV", "Índice Ibovespa", "^BVSP", fmtPontos], ["NASDAQ", "Nasdaq Composite", "^IXIC", fmtPontos], ["S&P 500", "S&P 500", "^GSPC", fmtPontos],
         ["DÓLAR", "Dólar comercial · R$", "USDBRL", fDolar], ["OURO", "Ouro · US$ por onça", "GC=F", n2]]],
       ["B3 · AÇÕES · R$", papeis.filter((x) => /\.SA$/.test(x.sim)).map((x) => [x.t, x.n, x.sim, n2, x])],
-      ["NASDAQ · AÇÕES · US$", papeis.filter((x) => !/\.SA$/.test(x.sim)).map((x) => [x.t, x.n, x.sim, n2, x])],
+      ["NASDAQ · AÇÕES · US$ (BDR em R$)", papeis.filter((x) => !/\.SA$/.test(x.sim)).map((x) => [x.t, x.n, x.sim, n2, x])],
     ];
     const cotDe = (sim, x) => sim === "USDBRL" ? dolarVivo : q[sim] || (x && x.c) || null;
     const todosSel = grupos.flatMap((g) => g[1]);
@@ -7049,7 +7049,10 @@
       const h = c.historico || [], ult = h[h.length - 1], ant = h.length > 1 ? h[h.length - 2].preco : null;
       const max = ult && ult.maxima > 0 ? Math.max(ult.maxima, c.preco) : null, min = ult && ult.minima > 0 ? Math.min(ult.minima, c.preco) : null;
       const abe = ult && ult.abertura > 0 ? ult.abertura : null;
-      return `<tr class="${ativo}" data-acao="prof-sel" data-id="${esc(sim)}" title="Selecionar ${t}"><td class="prof-sim">${/\.SA$/.test(sim) ? letraNota(sim) + " " : ""}${t}${selo}</td><td class="prof-desc">${esc(nome)}</td>
+      // ação dos EUA que veio pelo BDR (brapi): valores em reais, com o selo
+      if (c.bdr) { f = brl; }
+      const seloBdr = c.bdr ? ` <span class="term-chip prof-bdr" title="Cotação do BDR ${c.bdr} na B3, em reais">BDR ${c.bdr}</span>` : "";
+      return `<tr class="${ativo}" data-acao="prof-sel" data-id="${esc(sim)}" title="Selecionar ${t}"><td class="prof-sim">${/\.SA$/.test(sim) ? letraNota(sim) + " " : ""}${t}${selo}${seloBdr}</td><td class="prof-desc">${esc(nome)}</td>
         <td class="r t-preco${piscaPreco(sim, c.preco)}">${f(c.preco)}</td><td class="r ${corMov(c.variacaoPct)}">${tPct(c.variacaoPct)}</td><td class="r prof-hora">${horaCot}</td>
         <td class="r">${numP(abe, f)}</td><td class="r t-max">${numP(max, f)}</td><td class="r t-min">${numP(min, f)}</td><td class="r t-ant">${numP(ant, f)}</td><td class="r prof-vol">${fmtVolume(ult && ult.volume)}</td>
         ${celVar(variacaoSerie(h, 30))}${celVar(variacaoSerie(h, 90))}</tr>`;
