@@ -2407,3 +2407,110 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
 /* caixas do topo: nome em âmbar, como os códigos dos terminais */
 .term-board .tq-nome { color: #FF9F1C; }
 .term-board .tq-var.t-up { color: #19E57A; } .term-board .tq-var.t-down { color: #FF3B4E; }
+
+/* ===== Guia Bolsa no visual dos terminais de pregão (v3.6.281) =====
+   lista de cotações em grade cinza e gráfico de
+   velas ao lado, e a célula do preço acende inteira ao mudar */
+.term-velas { height: 420px; background: #000; }
+.velas-ult { margin-left: 10px; font-family: ui-monospace, Menlo, monospace; letter-spacing: .02em; }
+.velas-ult.t-up { color: #19E57A; } .velas-ult.t-down { color: #FF3B4E; }
+.velas-abas { float: right; display: inline-flex; gap: 2px; }
+.velas-abas button { background: #2A2A2A; color: #CFCFCF; border: 1px solid #3A3A3A; font: 800 10px ui-monospace, Menlo, monospace; letter-spacing: .06em; padding: 3px 8px; cursor: pointer; border-radius: 0; }
+.velas-abas button.ativo { background: #FF9F1C; color: #000; border-color: #FF9F1C; }
+.velas-abas button:disabled { opacity: .35; cursor: default; }
+
+/* lista de cotações em grade cinza (como a janela de cotações do terminal) */
+.term-grade-meio > .term-painel { background: #161616; }
+.term-grade-meio .term-cab { background: linear-gradient(#3A3A3A, #262626); color: #FFB547; border-color: #444; }
+.tab-pregao { background: #161616; }
+.tab-pregao th, .term-grade-meio .tab-pregao thead th { background: linear-gradient(#333, #242424); color: #E0E0E0; border: 1px solid #3C3C3C; text-transform: none; letter-spacing: .02em; font-size: 11px; }
+.tab-pregao td { border: 1px solid #2B2B2B; background: #1B1B1B; }
+.tab-pregao tbody tr:nth-child(even) td { background: #222222; }
+.tab-pregao tbody tr:hover td { background: #2E3A4A; }
+.tab-pregao .term-ativo { color: #FF9F1C; }
+.tab-pregao .term-ativo small { color: #8A8A8A; }
+@keyframes pisca-up { 0%, 55% { background: #1F9D45; color: #fff; } 100% { } }
+@keyframes pisca-down { 0%, 55% { background: #D2232F; color: #fff; } 100% { } }
+.tab-pregao td.pisca-up { animation: pisca-up 3s ease-out; }
+.tab-pregao td.pisca-down { animation: pisca-down 3s ease-out; }
+
+@media (max-width: 900px) {
+  .term-velas { height: 320px; }
+  .velas-abas { float: none; display: flex; margin-top: 6px; }
+}
+
+/* ===== guia Bolsa: tela "Mercado" no modelo do HUB3 (v3.6.283) =====
+   cartões cinza arredondados sobre fundo grafite, título das seções em
+   branco, variação com seta em verde/vermelho e logos das empresas */
+.hub { --h-bg: #121316; --h-card: #1D1F24; --h-borda: #2A2D34; --h-txt: #F2F3F5; --h-dim: #8B9099; --h-up: #2BD47D; --h-down: #FF5C5C;
+  background: var(--h-bg); color: var(--h-txt); border: 1px solid var(--h-borda); border-radius: 14px; padding: 6px 18px 18px; margin-bottom: 16px; font-family: Inter, system-ui, sans-serif; }
+.hub-tit { font-size: 17px; font-weight: 700; margin: 16px 0 10px; display: flex; align-items: center; gap: 6px; color: var(--h-txt); }
+.hub-tit span { color: var(--h-dim); font-weight: 400; }
+.hub-tit em { margin-left: auto; font-style: normal; font-size: 11px; font-weight: 500; color: var(--h-dim); }
+.hub-card { background: var(--h-card); border: 1px solid var(--h-borda); border-radius: 10px; cursor: pointer; transition: background .15s, border-color .15s; min-width: 0; }
+.hub-card:hover { background: #262930; border-color: #3A3E47; }
+.hub small { color: var(--h-dim); font-size: 11px; font-weight: 500; display: block; }
+.hub-pct { font-size: 12px; font-weight: 700; white-space: nowrap; color: var(--h-dim); }
+.hub-pct.up { color: var(--h-up); } .hub-pct.down { color: var(--h-down); }
+.hub-spark svg { width: 100%; height: 100%; display: block; }
+
+.hub-indices { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+.hub-ibov { padding: 14px 16px; background: linear-gradient(135deg, #1F2A22, var(--h-card) 55%); }
+.hub-ibov-topo { display: grid; grid-template-columns: auto auto 1fr; align-items: center; gap: 10px; }
+.hub-ibov-topo b { font-size: 15px; }
+.hub-band { width: 30px; height: 21px; }
+.hub-ok { font-style: normal; display: inline-grid; place-items: center; width: 14px; height: 14px; border-radius: 50%; background: var(--h-up); color: #000; font-size: 9px; margin-left: 4px; vertical-align: 1px; }
+.hub-spark-grande { height: 42px; max-width: 260px; justify-self: center; width: 100%; }
+.hub-ibov-base { display: flex; align-items: baseline; justify-content: space-between; margin-top: 8px; }
+.hub-ibov-val { font-size: 24px; font-weight: 700; letter-spacing: -.01em; }
+.hub-ibov-val small, .hub-mini-val small { display: inline; }
+.hub-minis { display: grid; grid-template-columns: repeat(5, minmax(150px, 1fr)); gap: 10px; overflow-x: auto; scrollbar-width: none; }
+.hub-mini { padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; }
+.hub-mini b { font-size: 13px; }
+.hub-mini-val { font-size: 14px; font-weight: 700; margin-top: 4px; }
+
+.hub-ranking { display: grid; grid-template-columns: repeat(3, minmax(260px, 1fr)); gap: 10px; overflow-x: auto; scrollbar-width: none; }
+.hub-rank { padding: 10px 12px 6px; cursor: default; }
+.hub-rank:hover { background: var(--h-card); border-color: var(--h-borda); }
+.hub-rank-alta { background: linear-gradient(180deg, rgba(43, 212, 125, .10), var(--h-card) 45%); }
+.hub-rank-baixa { background: linear-gradient(180deg, rgba(255, 92, 92, .10), var(--h-card) 45%); }
+.hub-rank-tit { font-size: 13px; color: var(--h-dim); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+.hub-rank-tit i { font-style: normal; font-weight: 800; }
+.hub-rank-alta .hub-rank-tit i { color: var(--h-up); } .hub-rank-baixa .hub-rank-tit i { color: var(--h-down); } .hub-rank-cart .hub-rank-tit i { color: #FFC24A; }
+.hub-rank-lin { display: grid; grid-template-columns: 26px 1fr auto 74px; align-items: center; gap: 10px; padding: 7px 4px; border-top: 1px solid var(--h-borda); cursor: pointer; border-radius: 6px; }
+.hub-rank-lin:first-of-type { border-top: 0; }
+.hub-rank-lin:hover { background: #262930; }
+.hub-rank-lin b { font-size: 13px; }
+.hub-rank-preco { font-size: 13px; font-weight: 600; text-align: right; }
+.hub-rank-lin .hub-pct { text-align: right; }
+.hub-logo { position: relative; display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 6px; color: #fff; font-size: 10px; font-weight: 800; overflow: hidden; flex: none; }
+.hub-logo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #fff; }
+.hub-cot .hub-logo { width: 38px; height: 38px; border-radius: 8px; font-size: 12px; }
+
+.hub-filtros { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-bottom: 10px; }
+.hub-filtros > span { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+.hub-chip { background: transparent; color: var(--h-txt); border: 1px solid #3A3E47; border-radius: 999px; padding: 4px 12px; font-size: 12px; font-weight: 600; cursor: pointer; }
+.hub-chip.ativo { border-color: #3B82F6; color: #7FB0FF; background: rgba(59, 130, 246, .12); }
+.hub-cots { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; max-height: 560px; overflow-y: auto; }
+.hub-cot { display: grid; grid-template-columns: 38px minmax(0, 1fr) 70px auto; align-items: center; gap: 12px; padding: 10px 12px; }
+.hub-cot[hidden] { display: none; }
+.hub-cot-id b { font-size: 14px; display: block; }
+.hub-cot-id small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hub-cot .hub-spark { height: 28px; }
+.hub-cot-val { text-align: right; display: flex; flex-direction: column; gap: 2px; }
+.hub-cot-val b { font-size: 14px; white-space: nowrap; }
+.hub-vazio { color: var(--h-dim); font-size: 13px; padding: 8px 2px; }
+
+@media (max-width: 700px) {
+  .hub { padding: 4px 12px 14px; border-radius: 12px; }
+  .hub-minis { grid-template-columns: repeat(5, 140px); }
+  .hub-ranking { grid-template-columns: repeat(3, 86%); scroll-snap-type: x mandatory; }
+  .hub-rank { scroll-snap-align: start; }
+  .hub-cots { grid-template-columns: minmax(0, 1fr); max-height: 470px; }
+  .hub-cot { grid-template-columns: 38px minmax(0, 1fr) 56px auto; gap: 10px; }
+  .hub-spark-grande { max-width: 140px; }
+}
+/* caixas de investimento: o nome inteiro aparece (quebra em duas linhas se precisar) */
+.tq-nome.tq-inv { white-space: normal; align-items: flex-start; }
+.tq-nome.tq-inv .tq-n { white-space: normal; overflow: visible; line-height: 1.25; }
+.tq-nome.tq-inv em { flex: none; }
