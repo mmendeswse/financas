@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.289";
+  const VERSAO_APP = "3.6.290";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -6885,6 +6885,10 @@
     `;
   }
 
+  // janela da área de trabalho da guia Bolsa (barra de título cinza e corpo preto)
+  function janelaBolsa(cls, titulo, corpo, extra) {
+    return `<div class="prof-jan ${cls}"><div class="prof-tit"><span class="prof-ico"></span>${titulo}${extra || ""}<span class="prof-btns">— ▢ ✕</span></div><div class="prof-corpo">${corpo}</div></div>`;
+  }
   function renderNasdaq() {
     const q = mercado.cotacoes, tem = Object.keys(q).length, r = DADOS.relatorioMercado;
     triagem = tem ? triagemAtivos() : new Map();
@@ -7036,8 +7040,7 @@
     const nCaixas = (board.match(/class="term-quote/g) || []).length;
     const boardDuas = board.replace('<div class="term-board">', `<div class="term-board" style="--cols:${Math.max(1, Math.ceil(nCaixas / 2))}">`);
     // gráfico e análise automática
-    const grafico = `<div class="term-painel"><div class="term-cab">NASDAQ × IBOVESPA · VARIAÇÃO EM 3 MESES</div>
-      <div class="term-graf">${tem ? '<canvas id="graf-mercado-comp"></canvas>' : '<p class="term-texto term-dim">O gráfico aparece quando as cotações chegarem.</p>'}</div></div>`;
+    const graficoCorpo = `<div class="term-graf prof-comp-graf">${tem ? '<canvas id="graf-mercado-comp"></canvas>' : '<p class="term-texto term-dim">O gráfico aparece quando as cotações chegarem.</p>'}</div>`;
 
     // ===== área de trabalho no estilo do ProfitChart (Nelogica) =====
     // janelas com barra de título sobre fundo cinza: Cotação (lista única,
@@ -7058,7 +7061,7 @@
     const sel = todosSel.find((i) => i[2] === velaBolsa), cs = cotDe(sel[2], sel[4]), fs = sel[3];
     cotSelecionada = cs;
     const horaCot = quandoHora || "—";
-    const janela = (cls, titulo, corpo, extra) => `<div class="prof-jan ${cls}"><div class="prof-tit"><span class="prof-ico"></span>${titulo}${extra || ""}<span class="prof-btns">— ▢ ✕</span></div><div class="prof-corpo">${corpo}</div></div>`;
+    const janela = janelaBolsa;
     const numP = (v, f) => v == null || !(v > 0) ? '<span class="term-dim">—</span>' : f(v);
     // (1) Cotação
     const linhaCot = ([t, nome, sim, f, x]) => {
@@ -7118,20 +7121,18 @@
     const haQuanto = (iso) => { const m = Math.max(0, Math.round((agoraMs - new Date(iso).getTime()) / 60000)); return m < 60 ? `${m} min` : m < 1440 ? `${Math.floor(m / 60)} h` : `${Math.floor(m / 1440)} d`; };
     const lista = mercado.noticias || [];
     // quadro de notícias ao lado do gráfico (com rolagem própria)
-    const noticias = `<div class="term-painel tp-noticias">
-      <div class="tp-metade"><div class="term-cab">NOTÍCIAS DO MERCADO · NASDAQ E B3</div><div class="tp-rolar">
+    const noticiasCorpo = `<div class="tp-rolar">
       ${lista.length ? `<div class="term-noticias">${lista.map((n) => `<a class="term-noticia" href="${esc(n.url)}" target="_blank" rel="noopener">
         <span class="tn-hora">${new Date(n.quando).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}<em>${haQuanto(n.quando)}</em></span>
         <span class="tn-titulo">${esc(n.titulo)}</span><span class="tn-fonte">${esc(n.fonte || "")}</span></a>`).join("")}</div>`
         : `<p class="term-texto term-dim">${mercado.carregando || noticiasMercado.buscando ? "Buscando notícias…" : "Nenhuma notícia por enquanto — o app tenta de novo sozinho em instantes."}</p>`}
-      </div></div>
       </div>`;
 
     // os quadros do relatório ICL (Índices, Moedas e Ouro, Renda Fixa…) vêm no início da guia
     return `${painelRelatorio("inicio")}<section class="term term-nasdaq term-board-sec">${boardDuas}</section>
-    ${areaTrabalho}${r ? `<section class="term term-nasdaq"><div class="term-grade term-grade-um term-grade-meio">${tabelaRelatorioB3(r)}</div></section>` : ""}${painelRelatorio("meio")}<section class="term term-nasdaq">
-      <div class="term-grade term-grade-2">${grafico}${noticias}</div>
-    </section>`;
+    ${areaTrabalho}${r ? `<section class="term term-nasdaq"><div class="term-grade term-grade-um term-grade-meio">${tabelaRelatorioB3(r)}</div></section>` : ""}${painelRelatorio("meio")}<section class="term term-nasdaq prof prof-sec2"><div class="prof-grade prof-grade-2">
+      ${janelaBolsa("prof-comp", "Gráfico · Nasdaq × Ibovespa · variação em 3 meses", graficoCorpo)}${janelaBolsa("prof-not", "Notícias do mercado · Nasdaq e B3", noticiasCorpo, lista.length ? `<span class="prof-tit-dir">${lista.length} notícias</span>` : "")}
+    </div></section>`;
   }
   // gráfico: variação acumulada desde o início dos 3 meses, nos dias da
   // Nasdaq; o Ibovespa e o dólar usam o último fechamento até cada dia
