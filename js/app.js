@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.292";
+  const VERSAO_APP = "3.6.293";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -6917,7 +6917,7 @@
 
   // janela da área de trabalho da guia Bolsa (barra de título cinza e corpo preto)
   function janelaBolsa(cls, titulo, corpo, extra) {
-    return `<div class="prof-jan ${cls}"><div class="prof-tit"><span class="prof-ico"></span>${titulo}${extra || ""}<span class="prof-btns">— ▢ ✕</span></div><div class="prof-corpo">${corpo}</div></div>`;
+    return `<div class="prof-jan ${cls}"><div class="prof-tit"><span class="prof-ico"></span>${titulo}${extra || ""}</div><div class="prof-corpo">${corpo}</div></div>`;
   }
   function renderNasdaq() {
     const q = mercado.cotacoes, tem = Object.keys(q).length, r = DADOS.relatorioMercado;
@@ -7108,7 +7108,7 @@
     };
     const jCot = janela("prof-cot", "Cotação", `<div class="term-rolar"><table class="term-tab prof-tab">
       <thead><tr><th>Símbolo</th><th>Descrição</th><th class="r">Últ.</th><th class="r">%</th><th class="r">Hora</th><th class="r">Abert.</th><th class="r">Máx.</th><th class="r">Mín.</th><th class="r">Fech.</th><th class="r">Volume</th><th class="r">1 mês</th><th class="r">3 meses</th></tr></thead>
-      <tbody>${grupos.map(([g, itens]) => `<tr class="prof-grupo"><td colspan="12">${g}</td></tr>${itens.map(linhaCot).join("")}`).join("")}</tbody></table></div>`, `<span class="prof-tit-dir">${horaCot}</span>`);
+      <tbody>${grupos.map(([g, itens]) => `<tr class="prof-grupo"><td colspan="12">${g}</td></tr>${itens.map(linhaCot).join("")}`).join("")}</tbody></table></div>`);
     // (2) Ativo: faixa de cotação, dias de alta × baixa e preços × dias
     const hs = cs && cs.historico ? cs.historico.filter((p) => p.preco > 0) : [];
     const us = hs[hs.length - 1], antS = hs.length > 1 ? hs[hs.length - 2].preco : null;
