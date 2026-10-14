@@ -2555,3 +2555,16 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
 @media (max-width: 900px) {
   .prof-grade-2 { grid-template-columns: minmax(0, 1fr); grid-template-rows: 340px 520px; }
 }
+
+/* gráfico da área de trabalho com indicadores (como no Profit): barra de
+   ferramentas, velas com médias/Bollinger e o oscilador embaixo */
+.prof-graf .prof-corpo { display: flex; flex-direction: column; overflow: hidden; }
+.prof-ferr { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; padding: 4px 6px; background: #141518; border-bottom: 1px solid #26282C; }
+.prof-ferr span { display: inline-flex; gap: 3px; flex-wrap: wrap; }
+.prof-bt { background: #2A2C31; color: #C9CCD2; border: 1px solid #3C3F45; border-radius: 2px; font: 700 10px Inter, system-ui, sans-serif; padding: 2px 7px; cursor: pointer; }
+.prof-bt.ativo { background: #1F4E8C; border-color: #3B82F6; color: #fff; }
+.prof-graf .term-velas { flex: 1 1 auto; height: auto; min-height: 0; padding: 4px 6px 0; }
+.prof-osc { flex: none; height: 110px; padding: 0 6px 4px; border-top: 1px solid #26282C; background: #000; }
+.prof-vol { color: #B9BDC4; }
+.prof-grade { grid-template-rows: 520px 560px; }
+@media (max-width: 900px) { .prof-grade { grid-template-rows: 460px auto 470px 360px; } .prof-osc { height: 96px; } }

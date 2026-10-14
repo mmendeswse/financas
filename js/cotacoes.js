@@ -118,7 +118,7 @@
           var dt = new Date(Number(h.date) * 1000);
           var iso = dt.getFullYear() + "-" + String(dt.getMonth() + 1).padStart(2, "0") + "-" + String(dt.getDate()).padStart(2, "0");
           // abertura, máxima e mínima do dia alimentam o gráfico de velas
-          return { data: iso, preco: Number(h.close), abertura: Number(h.open) || 0, maxima: Number(h.high) || 0, minima: Number(h.low) || 0 };
+          return { data: iso, preco: Number(h.close), abertura: Number(h.open) || 0, maxima: Number(h.high) || 0, minima: Number(h.low) || 0, volume: Number(h.volume) || 0 };
         }).filter(function (h) { return h.preco > 0; });
         return { preco: Number(q.regularMarketPrice), variacaoPct: Number(q.regularMarketChangePercent || 0), nome: q.longName || q.shortName || "", historico: historico };
       });
@@ -327,7 +327,8 @@
         var historico = (res.timestamp || []).map(function (t, i) {
           var dt = new Date((Number(t) + Number(m.gmtoffset || 0)) * 1000);
           return { data: dt.toISOString().slice(0, 10), preco: Number((q.close || [])[i]),
-                   abertura: Number((q.open || [])[i]) || 0, maxima: Number((q.high || [])[i]) || 0, minima: Number((q.low || [])[i]) || 0 };
+                   abertura: Number((q.open || [])[i]) || 0, maxima: Number((q.high || [])[i]) || 0, minima: Number((q.low || [])[i]) || 0,
+                   volume: Number((q.volume || [])[i]) || 0 };
         }).filter(function (h) { return h.preco > 0; });
         var preco = Number(m.regularMarketPrice);
         // o fechamento anterior de verdade é o penúltimo ponto da série
