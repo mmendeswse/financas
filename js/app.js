@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.313";
+  const VERSAO_APP = "3.6.314";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1487,7 +1487,7 @@
       <div class="pd-mercado">
         <div class="pd-merc-topo"><b>Bolsa de Valores · B3</b><span class="pd-status ${aberto ? "pd-aberto" : "pd-fechado"}"><i></i>${aberto ? "Mercado Aberto" : "Mercado Fechado"}</span></div>
         <div class="pd-barra${aberto ? "" : " pd-barra-off"}" title="Andamento do pregão de hoje"><span style="width:${pct.toFixed(1)}%"></span>${util(agora) && min >= ABRE && min <= FECHA ? `<em style="left:${pct.toFixed(1)}%"></em>` : ""}</div>
-        <div class="pd-horarios"><span>Abertura · 9 horas</span><span>Fechamento · 18 horas</span></div>
+        <div class="pd-horarios"><span>Abertura · 09 horas</span><span>Fechamento · 18 horas</span></div>
       </div>`;
   }
 
@@ -2238,7 +2238,7 @@
     if (!dot) return;
     const aberto = mercadoDolarAberto(agora);
     dot.classList.toggle("fechado", !aberto);
-    if (caixa) caixa.title = aberto ? "Mercado Aberto (dias úteis, das 9 às 18 horas)" : "Mercado Fechado (Abertura nos dias úteis às 9 horas)";
+    if (caixa) caixa.title = aberto ? "Mercado Aberto (dias úteis, das 09 às 18 horas)" : "Mercado Fechado (Abertura nos dias úteis às 09 horas)";
   }
 
   function renderDolar() {
