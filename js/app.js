@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.281";
+  const VERSAO_APP = "3.6.282";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -6988,7 +6988,8 @@
         ? (inv.indexador === "% do CDI" ? `${(Number(inv.taxaContratada) || 100).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}% DO CDI`
           : `${inv.indexador.replace(/\s*\+$/, "").toUpperCase()}${Number(inv.taxaContratada) ? (inv.indexador === "Prefixado" ? " " : " + ") + fTaxa(Number(inv.taxaContratada)) : ""}`) : (inv.categoria || "").toUpperCase();
       const hist = (inv.historicoValores || []).slice().sort((x, y) => (x.data < y.data ? -1 : 1)).map((p) => Number(p.valor)).filter((v) => v > 0);
-      const nome = String(inv.nome || inv.tipoAtivo || "Aplicação").toUpperCase();
+      // só o início do nome: o trecho a partir de "(CA" (ex.: "(Caixinha…)") fica de fora
+      const nome = String(inv.nome || inv.tipoAtivo || "Aplicação").replace(/\s*\(ca.*$/i, "").trim().toUpperCase() || "APLICAÇÃO";
       return `<div class="term-quote clicavel" data-acao="ir" data-secao="detalhe-investimento" data-id="${inv.id}" title="${esc(inv.nome || "")}">
         <span class="tq-nome"><span class="tq-n">${esc(nome)}</span><em>CARTEIRA</em></span>
         <b class="tq-preco">${brl(atual)}</b>
