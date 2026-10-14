@@ -7004,7 +7004,7 @@
     });
     const comCot = papeis.filter((x) => x.c && x.c.preco > 0);
     const n2 = (v) => moeda2(v);
-    // sempre 9 caixas por linha (no computador e no iPad)
+    // sempre 8 caixas por linha (no computador e no iPad)
     // no título de cada caixa fica só a primeira palavra (em amarelo); o
     // S&P 500 e a RENDA FIXA ficam com o nome inteiro
     const pintarNome = (txt) => {
@@ -7016,7 +7016,7 @@
     const boardDuas = board
       .replace(/<span class="tq-n">([^<]*)<\/span>/g, (_, n) => `<span class="tq-n">${pintarNome(n)}</span>`)
       .replace(/(<span class="tq-nome[^"]*">)([^<]+)(?=<em>|<\/span>)/g, (_, a, n) => `${a}<span class="tq-n">${pintarNome(n)}</span>`)
-      .replace('<div class="term-board">', `<div class="term-board" style="--cols:9">`);
+      .replace('<div class="term-board">', `<div class="term-board" style="--cols:8">`);
     // gráfico e análise automática
     const graficoCorpo = `<div class="term-graf prof-comp-graf">${tem ? '<canvas id="graf-mercado-comp"></canvas>' : '<p class="term-texto term-dim">O gráfico aparece quando as cotações chegarem.</p>'}</div>`;
 
