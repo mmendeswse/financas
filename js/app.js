@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.297";
+  const VERSAO_APP = "3.6.298";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -6969,96 +6969,15 @@
         <span class="tq-var ${corMov(varDia)}">${tPct(varDia)} ${setaMov(varDia)}</span>
         <span class="tq-sub">${sub}</span>${spark ? `<span class="tq-spark">${spark}</span>` : ""}</div>`;
     };
-    // CDI e IPCA do relatório ICL (taxa principal grande e as acumuladas embaixo);
-    // no IPCA, inflação subindo aparece em vermelho
-    const taxaRel = (re) => { const i = r && r.indicadores.find((x) => re.test(x.nome)); return i ? i.valor : null; };
-    const fTaxa = (v) => v == null ? "—" : `${v < 0 ? "−" : ""}${Math.abs(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
-    const caixaTaxa = (nome, rePrincipal, extras, inflacao) => {
-      const v = taxaRel(rePrincipal);
-      if (v == null) return `<div class="term-quote"><span class="tq-nome">${nome}<em>BCB</em></span><b class="tq-preco term-dim">—</b><span class="tq-sub term-dim">buscando no Banco Central…</span></div>`;
-      const cor = (x) => x == null ? "" : inflacao ? (x > 0 ? "t-down" : "t-up") : "t-up";
-      const [e1, e2] = extras.map(([rot, re]) => [rot, taxaRel(re)]);
-      return `<div class="term-quote"><span class="tq-nome">${nome}<em>${rotRel}</em></span>
-        <b class="tq-preco ${cor(v)}">${fTaxa(v)}${inflacao ? "" : ' <small class="tq-aa">a.a.</small>'}</b>
-        <span class="tq-var ${cor(e1[1])}">${e1[0]} ${fTaxa(e1[1])}</span>
-        <span class="tq-sub">${e2[0]} ${fTaxa(e2[1])}</span></div>`;
-    };
-    // CDI, Selic e IPCA ao vivo do Banco Central (como as outras caixas: valor
-    // grande, variação e minigráfico); sem o BCB, ficam os números do relatório
-    // sem nenhum dado do BCB ainda (nem guardado), usa a última referência
-    // conhecida (marcada "REF.") até a busca chegar — a caixa nunca fica vazia
-    const REF_BCB = { cdi: { aa: 13.65, ref: true }, selic: { aa: 13.75, ref: true }, ipca: { d12: 4.58, ref: true } };
-    const bcbReal = mercado.bcb || {};
-    // ordem: Banco Central → relatório ICL importado → referência
-    const temRel = { cdi: taxaRel(/CDI EFETIVO/i) != null, selic: false, ipca: taxaRel(/IPCA ACUMULADO EM 12/i) != null };
-    const bcb = { ...bcbReal };
-    ["cdi", "selic", "ipca"].forEach((k) => { if (!bcb[k] && !temRel[k]) bcb[k] = REF_BCB[k]; });
-    const pp = (v) => v == null ? "—" : `${v > 0 ? "+" : v < 0 ? "−" : ""}${Math.abs(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} p.p.`;
-    const mesAno = (iso) => iso ? ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"][Number(iso.slice(5, 7)) - 1] + "/" + iso.slice(2, 4) : "";
-    const caixaBCB = (nome, valor, aa, linha, sub, hist, cls, ind) => `<div class="term-quote clicavel" data-acao="abrir-indicador" data-ind="${ind}" title="Abrir o histórico"><span class="tq-nome">${nome}<em>${bcb[ind] && bcb[ind].ref ? "REF." : "BCB"}</em></span>
-        <b class="tq-preco ${cls}">${fTaxa(valor)}${aa ? ' <small class="tq-aa">a.a.</small>' : ""}</b>
-        ${bcb[ind] && bcb[ind].ref ? '<span class="tq-sub">valor de referência</span>' : `<span class="tq-var ${cls}">${linha}</span><span class="tq-sub">${sub}</span>`}
-        ${hist && hist.length > 1 ? `<span class="tq-spark">${sparklineSVG(hist, cls === "t-down" ? G.CORES.down : G.CORES.up)}</span>` : ""}</div>`;
-    const boxCDI = bcb.cdi ? caixaBCB("CDI", bcb.cdi.aa, true, `MÊS ${fTaxa(bcb.cdi.mes)}`, `ANO ${fTaxa(bcb.cdi.ano)}`, bcb.cdi.hist, "t-up", "cdi")
-      : caixaTaxa("CDI", /CDI EFETIVO/i, [["MÊS", /CDI ACUMULADO M/i], ["ANO", /CDI ACUMULADO ANO/i]], false);
-    const boxIPCA = bcb.ipca ? caixaBCB("IPCA 12 MESES", bcb.ipca.d12, false, `${mesAno(bcb.ipca.data).toUpperCase()} ${fTaxa(bcb.ipca.mes)}`, `ANO ${fTaxa(bcb.ipca.ano)}`, bcb.ipca.hist, bcb.ipca.mes > 0 ? "t-down" : "t-up", "ipca")
-      : caixaTaxa("IPCA 12 MESES", /IPCA ACUMULADO EM 12/i, [["MÊS", /IPCA ACUMULADO M/i], ["ANO", /IPCA ACUMULADO NO ANO/i]], true);
-    // renda fixa do relatório (a primeira taxa do grupo, ex.: Juros Pré Jan/2027)
-    const rendaFixaRel = (() => { const g = r && r.grupos.find((x) => /renda fixa/i.test(x.nome)); return g && g.ativos[0] ? g.ativos[0] : null; })();
-    // CDB: % do CDI dos CDBs cadastrados em Investimentos (média pelo valor) ou
-    // 100% do CDI; taxa ao ano e rendimento de 12 meses pela série do CDI
-    const cdbs = (DADOS.investimentos || []).filter((i) => /CDB/i.test(`${i.tipoAtivo || ""} ${i.nome || ""}`));
-    const pctCDB = (() => {
-      const comPct = cdbs.map((i) => ({ v: Number(i.valorAtual || i.valorInvestido || 0), p: i.indexador === "% do CDI" && Number(i.taxaContratada) > 0 ? Number(i.taxaContratada) : Number((/(\d+(?:[.,]\d+)?)\s*%\s*(?:do\s*)?CDI/i.exec(i.nome || "") || [])[1]?.replace(",", ".")) || 0 })).filter((x) => x.p > 0);
-      const tot = comPct.reduce((a, x) => a + (x.v || 1), 0);
-      return comPct.length ? comPct.reduce((a, x) => a + x.p * (x.v || 1), 0) / tot : 100;
-    })();
-    const boxCDB = (() => {
-      const nome = `CDB · ${pctCDB.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}% DO CDI`;
-      if (!bcb.cdi) return `<div class="term-quote"><span class="tq-nome">${nome}<em>BCB</em></span><b class="tq-preco term-dim">—</b><span class="tq-sub term-dim">buscando no Banco Central…</span></div>`;
-      const diaDe = (aa) => Math.pow(1 + aa / 100, 1 / 252) - 1;
-      const aaCDB = (Math.pow(1 + diaDe(bcb.cdi.aa) * pctCDB / 100, 252) - 1) * 100;
-      const serie = (bcb.cdi.serie || []).slice(-252);
-      const r12 = serie.length > 200 ? (serie.reduce((f, p) => f * (1 + diaDe(p[1]) * pctCDB / 100), 1) - 1) * 100 : aaCDB;   // sem a série, a taxa ao ano
-      return `<div class="term-quote clicavel" data-acao="abrir-indicador" data-ind="cdi" title="Abrir o histórico do CDI"><span class="tq-nome"><span class="tq-n">${nome}</span><em>${cdbs.length ? "CARTEIRA" : bcb.cdi.ref ? "REF." : "BCB"}</em></span>
-        <b class="tq-preco">${fTaxa(aaCDB)} <small class="tq-aa">a.a.</small></b>
-        <span class="tq-var t-up">12 MESES ${fTaxa(r12)}</span>
-        <span class="tq-sub">R$ 10 MIL → +${brl(Math.round(100 * r12)).replace(/,00$/, "")}/ANO</span>
-        ${bcb.cdi.hist && bcb.cdi.hist.length > 1 ? `<span class="tq-spark">${sparklineSVG(bcb.cdi.hist.map((v) => (Math.pow(1 + diaDe(v) * pctCDB / 100, 252) - 1) * 100), G.CORES.up)}</span>` : ""}</div>`;
-    })();
-    // renda fixa: Selic meta do BCB; sem ela, a taxa do relatório (Juros Pré)
-    const boxRF = bcb.selic ? caixaBCB("RENDA FIXA · SELIC", bcb.selic.aa, true, `30 DIAS ${pp(bcb.selic.var30)}`, `12 MESES ${pp(bcb.selic.var365)}`, bcb.selic.hist, "t-up", "selic")
-      : null;
-    // dólar, bitcoin, ethereum e as ações da carteira (guia Ações), ao lado do ouro;
-    // cada uma abre a própria tela ao tocar
+    // só os índices, o ouro, o dólar, as criptos e as ações da carteira (guia
+    // Ações — uma ação comprada lá entra aqui sozinha); cada uma abre a
+    // própria tela ao tocar
     const dolarVivo = dolar && dolar.valor ? { preco: dolar.valor, variacaoPct: dolar.variacaoPct || 0, historico: serieDolar || mercado.dolar || [], clique: 'data-acao="ir" data-secao="detalhe-dolar"' } : null;
     const criptoVivo = (m) => { const c = cripto && cripto[m]; return c && c.valor ? { preco: c.valor, variacaoPct: c.variacaoPct || 0, historico: seriesCripto[m] || [], clique: `data-cripto="${m}"`, fonte: qtdCripto(m) > 0 ? "CARTEIRA" : undefined } : null; };
     const acaoCarteira = (a) => {
       if (!(Number(a.precoAtual) > 0)) return null;
       const v = a.fontePreco === "auto" && a.variacaoDiaPct != null ? a.variacaoDiaPct : I.variacaoRecente(a).pct;
       return { preco: Number(a.precoAtual), variacaoPct: v, historico: (a.historicoPrecos || []).slice().sort((x, y) => (x.data < y.data ? -1 : 1)), fonte: "CARTEIRA", clique: `data-acao="ir" data-secao="detalhe-acao" data-id="${a.id}"` };
-    };
-    // uma caixa para cada aplicação da guia Investimentos (Tesouro, RDB, CDB,
-    // fundos…): valor atual, resultado desde a aplicação, taxa e o histórico;
-    // aplicações novas entram sozinhas. Tocar abre a tela da aplicação.
-    const caixaInvestimento = (inv) => {
-      const atual = Number(inv.valorAtual || 0), aplicado = Number(inv.valorInvestido || 0);
-      const res = atual - aplicado, rent = aplicado > 0 ? (atual / aplicado - 1) * 100 : null;
-      const taxa = inv.indexador && inv.indexador !== "Não se aplica"
-        ? (inv.indexador === "% do CDI" ? `${(Number(inv.taxaContratada) || 100).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}% DO CDI`
-          : `${inv.indexador.replace(/\s*\+$/, "").toUpperCase()}${Number(inv.taxaContratada) ? (inv.indexador === "Prefixado" ? " " : " + ") + fTaxa(Number(inv.taxaContratada)) : ""}`) : (inv.categoria || "").toUpperCase();
-      const hist = (inv.historicoValores || []).slice().sort((x, y) => (x.data < y.data ? -1 : 1)).map((p) => Number(p.valor)).filter((v) => v > 0);
-      // só o início do nome: RDB fica "RDB RESGATE IMEDIATO" ou "RDB RESGATE
-      // PLANEJADO"; nos demais, o trecho a partir de "(CA" ("(Caixinha…)") sai
-      const nomeOrig = String(inv.nome || inv.tipoAtivo || "Aplicação");
-      const rdb = /^RDB\b.*?\bresgate\s+(imediato|planejado)/i.exec(nomeOrig);
-      const nome = rdb ? `RDB RESGATE ${rdb[1].toUpperCase()}` : nomeOrig.replace(/\s*\(ca.*$/i, "").trim().toUpperCase() || "APLICAÇÃO";
-      return `<div class="term-quote clicavel" data-acao="ir" data-secao="detalhe-investimento" data-id="${inv.id}" title="${esc(inv.nome || "")}">
-        <span class="tq-nome tq-inv"><span class="tq-n">${esc(nome)}</span><em>CARTEIRA</em></span>
-        <b class="tq-preco">${brl(atual)}</b>
-        <span class="tq-var ${corMov(res)}">${res >= 0 ? "+" : "−"}${brl(Math.abs(res))}${rent == null ? "" : ` · ${tPct(rent)}`}</span>
-        <span class="tq-sub">${esc(taxa)}</span>
-        ${hist.length > 1 ? `<span class="tq-spark">${sparklineSVG(hist, res >= 0 ? G.CORES.up : G.CORES.down)}</span>` : ""}</div>`;
     };
     // ouro sem cotação nem relatório: última referência conhecida (relatório ICL de 07/10/2026)
     const REF_OURO = { atual: 4303.48, dia: 0.37, mes: -3.27, ano: -0.81 };
@@ -7073,11 +6992,6 @@
       ${caixa("DÓLAR", dolarVivo, ativoRelatorio("DÓLAR / REAL"), (v) => "R$ " + moeda2(v))}
       ${["BTC", "ETH"].map((m) => caixa(m === "BTC" ? "BITCOIN" : "ETHEREUM", criptoVivo(m), null, (v) => "R$ " + Number(v).toLocaleString("pt-BR", { maximumFractionDigits: 0 }))).join("")}
       ${(DADOS.acoes || []).map((a) => caixa(esc(String(a.ticker).toUpperCase()), acaoCarteira(a), null, brl)).join("")}
-      ${(DADOS.investimentos || []).map(caixaInvestimento).join("")}
-      ${boxCDI}
-      ${boxRF || (rendaFixaRel ? caixa("RENDA FIXA", null, rendaFixaRel, fTaxa) : `<div class="term-quote"><span class="tq-nome">RENDA FIXA<em>BCB</em></span><b class="tq-preco term-dim">—</b><span class="tq-sub term-dim">buscando no Banco Central…</span></div>`)}
-      ${boxCDB}
-      ${boxIPCA}
     </div>`;
 
     const quandoHora = mercado.em ? new Date(mercado.em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : "";
@@ -7090,7 +7004,7 @@
     });
     const comCot = papeis.filter((x) => x.c && x.c.preco > 0);
     const n2 = (v) => moeda2(v);
-    // as caixas ficam em duas linhas no computador: metade em cada linha
+    // até 10 caixas numa linha só; com mais, metade em cada uma de duas linhas
     const nCaixas = (board.match(/class="term-quote/g) || []).length;
     // no título de cada caixa fica só a primeira palavra (em amarelo); o
     // S&P 500 e a RENDA FIXA ficam com o nome inteiro
@@ -7103,7 +7017,7 @@
     const boardDuas = board
       .replace(/<span class="tq-n">([^<]*)<\/span>/g, (_, n) => `<span class="tq-n">${pintarNome(n)}</span>`)
       .replace(/(<span class="tq-nome[^"]*">)([^<]+)(?=<em>|<\/span>)/g, (_, a, n) => `${a}<span class="tq-n">${pintarNome(n)}</span>`)
-      .replace('<div class="term-board">', `<div class="term-board" style="--cols:${Math.max(1, Math.ceil(nCaixas / 2))}">`);
+      .replace('<div class="term-board">', `<div class="term-board" style="--cols:${nCaixas <= 10 ? Math.max(1, nCaixas) : Math.ceil(nCaixas / 2)}">`);
     // gráfico e análise automática
     const graficoCorpo = `<div class="term-graf prof-comp-graf">${tem ? '<canvas id="graf-mercado-comp"></canvas>' : '<p class="term-texto term-dim">O gráfico aparece quando as cotações chegarem.</p>'}</div>`;
 
