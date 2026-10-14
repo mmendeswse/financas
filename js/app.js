@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.295";
+  const VERSAO_APP = "3.6.297";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -657,10 +657,20 @@
     const nav = document.getElementById("navPrincipal");
     if (!barra || !nav) return;
     const NIVEIS = 6;
-    // tolerância: diferenças de poucos pixels não valem encolher a barra,
-    // para o visual continuar igual ao tamanho cheio sempre que possível
-    const FOLGA = 6;
-    const cabe = () => nav.scrollWidth <= nav.clientWidth + FOLGA && barra.scrollWidth <= barra.clientWidth + FOLGA;
+    // a última guia (Configurações) precisa aparecer inteira: nada de
+    // tolerância, senão o fim da palavra fica cortado embaixo da data/hora
+    // (no iPad a fonte do sistema é mais larga que no computador)
+    const cabe = () => {
+      if (nav.scrollWidth > nav.clientWidth + 0.5 || barra.scrollWidth > barra.clientWidth + 0.5) return false;
+      const ult = [...nav.querySelectorAll("button[data-secao]")].filter((b) => b.offsetParent).pop();
+      const ferr = barra.querySelector(".nav-ferramentas");
+      if (!ult) return true;
+      const r = ult.getBoundingClientRect(), rn = nav.getBoundingClientRect();
+      if (r.right > rn.right + 0.5) return false;
+      // espaço entre "Configurações" e a data/hora quando estão na mesma linha
+      if (ferr) { const rf = ferr.getBoundingClientRect(); if (rf.top < r.bottom && rf.bottom > r.top && r.right > rf.left - 8) return false; }
+      return true;
+    };
     aplicarRotulos(false);
     let coube = false;
     for (let n = 0; n <= NIVEIS; n++) {
@@ -1086,6 +1096,20 @@
     ligarMascaraMoeda(document.getElementById("conteudo"));
     iniciarRelogio();
     ajustarBarraGuias();
+    // mede de novo quando as fontes terminam de carregar e quando a
+    // data/hora muda de largura (a barra pode ter ficado apertada)
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(ajustarBarraGuias);
+    setTimeout(ajustarBarraGuias, 800);
+    if (window.ResizeObserver) {
+      let agendado = false, largAnt = 0;
+      const sv = document.getElementById("statusVivo");
+      if (sv) new ResizeObserver(() => {
+        const l = Math.round(sv.getBoundingClientRect().width);
+        if (Math.abs(l - largAnt) < 2 || agendado) return;
+        largAnt = l; agendado = true;
+        requestAnimationFrame(() => { agendado = false; ajustarBarraGuias(); });
+      }).observe(sv);
+    }
     window.addEventListener("resize", ajustarBarraGuias);
     if (window.visualViewport) window.visualViewport.addEventListener("resize", ajustarBarraGuias);
     window.addEventListener("orientationchange", () => setTimeout(ajustarBarraGuias, 300));
@@ -7068,11 +7092,13 @@
     const n2 = (v) => moeda2(v);
     // as caixas ficam em duas linhas no computador: metade em cada linha
     const nCaixas = (board.match(/class="term-quote/g) || []).length;
-    // no nome de cada caixa só a primeira palavra fica em amarelo (o resto
-    // em cinza), menos no S&P 500, que fica inteiro em amarelo
+    // no título de cada caixa fica só a primeira palavra (em amarelo); o
+    // S&P 500 e a RENDA FIXA ficam com o nome inteiro
     const pintarNome = (txt) => {
-      const t = txt.trim(), m = /^(\S+)\s+(.+)$/.exec(t);
-      return !m || /^S&amp;P 500$/.test(t) ? txt : `${m[1]} <span class="tq-resto">${m[2]}</span>`;
+      const t = txt.trim();
+      if (/^S&amp;P 500$/.test(t)) return t;
+      if (/^RENDA FIXA\b/i.test(t)) return "RENDA FIXA";
+      return t.split(/\s+/)[0];
     };
     const boardDuas = board
       .replace(/<span class="tq-n">([^<]*)<\/span>/g, (_, n) => `<span class="tq-n">${pintarNome(n)}</span>`)
