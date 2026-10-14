@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.305";
+  const VERSAO_APP = "3.6.306";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1450,7 +1450,7 @@
     const feriado = (dt) => F.feriadosNacionais(dt.getFullYear())[iso(dt)] ? (NOMES_FERIADOS[iso(dt).slice(5)] || "Sexta-feira Santa") : "";
     const util = (dt) => dt.getDay() >= 1 && dt.getDay() <= 5 && !feriado(dt);
     const fer = feriado(agora);
-    const tipoDia = fer ? `Feriado · ${fer}` : util(agora) ? "Dia útil" : "Fim de semana";
+    const tipoDia = fer ? `Feriado · ${fer}` : util(agora) ? "Dia Útil" : "Fim de Semana";
     const min = agora.getHours() * 60 + agora.getMinutes();
     const aberto = util(agora) && min >= 9 * 60 && min < 18 * 60;
     // data e hora no topo e a situação do dia numa faixa
