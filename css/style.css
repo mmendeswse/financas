@@ -2383,3 +2383,4 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
 /* caixas do topo: o vão no fim da última linha fica preto como as caixas (as divisórias são feitas por sombra) */
 .term-board { gap: 0; background: #000; }
 .term-board .term-quote { box-shadow: 1px 0 0 var(--t-linha), 0 1px 0 var(--t-linha); }
+.tq-nome .tq-n { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
