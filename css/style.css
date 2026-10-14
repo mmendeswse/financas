@@ -2510,3 +2510,7 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
   .hub-cot { grid-template-columns: 38px minmax(0, 1fr) 56px auto; gap: 10px; }
   .hub-spark-grande { max-width: 140px; }
 }
+/* caixas de investimento: o nome inteiro aparece (quebra em duas linhas se precisar) */
+.tq-nome.tq-inv { white-space: normal; align-items: flex-start; }
+.tq-nome.tq-inv .tq-n { white-space: normal; overflow: visible; line-height: 1.25; }
+.tq-nome.tq-inv em { flex: none; }
