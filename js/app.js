@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.280";
+  const VERSAO_APP = "3.6.281";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -6735,6 +6735,8 @@
   // célula do preço pisca (verde ao subir, vermelho ao cair) quando o valor
   // mudou desde a última vez que a tabela foi desenhada — como nos terminais
   const ultimosPrecos = new Map();
+  let velaBolsa = "^BVSP";   // ativo do gráfico de velas da guia Bolsa
+  const OPC_VELAS = [["^BVSP", "IBOV"], ["^IXIC", "NASDAQ"], ["^GSPC", "S&P 500"], ["GC=F", "OURO"]];
   function piscaPreco(sim, preco) {
     const ant = ultimosPrecos.get(sim);
     ultimosPrecos.set(sim, preco);
@@ -7014,30 +7016,53 @@
       ${boxIPCA}
     </div>`;
 
+    const quandoHora = mercado.em ? new Date(mercado.em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : "";
+    // ===== padrão das plataformas de pregão =====
+    // todos os papéis acompanhados (B3, Nasdaq e as ações da carteira)
+    const papeis = [...MERCADO_BR.map(([t, n]) => ({ t, n, sim: t + ".SA", c: q[t + ".SA"] })), ...MERCADO_EUA.map(([t, n]) => ({ t, n, sim: t, c: q[t] }))];
+    (DADOS.acoes || []).forEach((a) => {
+      const t = String(a.ticker).toUpperCase();
+      if (!papeis.some((x) => x.t === t)) papeis.push({ t, n: a.empresa || "", sim: t + ".SA", c: q[t + ".SA"] || acaoCarteira(a), clique: `data-acao="ir" data-secao="detalhe-acao" data-id="${a.id}"` });
+    });
+    const comCot = papeis.filter((x) => x.c && x.c.preco > 0);
+    const n2 = (v) => moeda2(v);
+    // painel luminoso (como os painéis da B3): código em âmbar,
+    // variação e preço em verde/vermelho, maiores movimentos primeiro
+    const painelLed = `<div class="term-painel"><div class="term-cab">PAINEL DE COTAÇÕES · B3 E NASDAQ<span class="term-cab-hora">${quandoHora}</span></div>
+      <div class="led-painel">${comCot.length ? comCot.slice().sort((a, b) => Math.abs(b.c.variacaoPct || 0) - Math.abs(a.c.variacaoPct || 0)).map((x) => {
+        const cor = corMov(x.c.variacaoPct);
+        return `<button class="led${piscaPreco("led:" + x.sim, x.c.preco)}" ${x.clique || linkAtivo(x.sim)} title="${esc(x.n)}"><b class="led-tk">${x.t}</b><span class="led-pct ${cor}">${tPct(x.c.variacaoPct)}</span><span class="led-preco ${cor}">${n2(x.c.preco)}</span></button>`;
+      }).join("") : `<p class="term-texto term-dim">${mercado.carregando ? "Buscando cotações…" : "Sem cotações agora."}</p>`}</div></div>`;
+    // gráfico de velas diário (como o gráfico ao lado da lista de cotações)
+    const cv = q[velaBolsa], nomeVela = (OPC_VELAS.find((o) => o[0] === velaBolsa) || OPC_VELAS[0])[1];
+    const painelVelas = `<div class="term-painel"><div class="term-cab">GRÁFICO DIÁRIO · <span id="velaBolsaNome">${nomeVela}</span>
+      ${cv ? `<span class="velas-ult ${corMov(cv.variacaoPct)}" id="velaBolsaUlt">${velaBolsa === "GC=F" ? n2(cv.preco) : pts(cv.preco)} ${tPct(cv.variacaoPct)}</span>` : ""}
+      <span class="velas-abas">${OPC_VELAS.map(([sim, rot]) => `<button class="${sim === velaBolsa ? "ativo" : ""}" data-acao="vela-bolsa" data-id="${sim}" ${q[sim] ? "" : "disabled"}>${rot}</button>`).join("")}</span></div>
+      <div class="term-graf term-velas">${cv && cv.historico && cv.historico.length > 1 ? '<canvas id="graf-bolsa-velas"></canvas>' : '<p class="term-texto term-dim">O gráfico aparece quando as cotações chegarem.</p>'}</div></div>`;
+
     // gráfico e análise automática
     const grafico = `<div class="term-painel"><div class="term-cab">NASDAQ × IBOVESPA · VARIAÇÃO EM 3 MESES</div>
       <div class="term-graf">${tem ? '<canvas id="graf-mercado-comp"></canvas>' : '<p class="term-texto term-dim">O gráfico aparece quando as cotações chegarem.</p>'}</div></div>`;
 
     // tabelas das bolsas (ações citadas no relatório ganham o selo ICL)
-    const quandoHora = mercado.em ? new Date(mercado.em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : "";
     const citadas = new Set(acoesDoRelatorio(r).map((x) => x.ticker));
     // tabelas no padrão das plataformas de pregão (lista de cotações): código
     // em âmbar, último preço em branco, variação em verde/vermelho sem fundo,
     // máxima e mínima do dia, fechamento anterior, e a célula do preço pisca
     // quando o valor muda desde a última atualização
     const tabela = (titulo, lista, sufixo, fmt) => `<div class="term-painel"><div class="term-cab">${titulo}<span class="term-cab-hora">${quandoHora}</span></div><div class="term-rolar"><table class="term-tab tab-pregao">
-      <thead><tr><th>Ativo</th><th class="r">Último</th><th class="r">Var. %</th><th class="r">Máx.</th><th class="r">Mín.</th><th class="r">Fech. ant.</th><th class="r">1 mês</th><th class="r">3 meses</th><th>3M</th></tr></thead><tbody>
+      <thead><tr><th>Ativo</th><th class="r">Último</th><th class="r">Var.</th><th class="r">Var. %</th><th class="r">Máx.</th><th class="r">Mín.</th><th class="r">Fech. ant.</th><th class="r">1 mês</th><th class="r">3 meses</th><th>3M</th></tr></thead><tbody>
       ${lista.slice().sort((a, b) => notaDe(b[0] + sufixo) - notaDe(a[0] + sufixo)).map(([t, nome]) => {
         const sim = t + sufixo, c = q[sim];
         const selo = citadas.has(t) ? ' <span class="term-chip c-acc">ICL</span>' : "";
-        if (!c) return `<tr><td class="term-ativo">${t}${selo}<small>${esc(nome)}</small></td><td class="r term-dim" colspan="8">${mercado.carregando ? "buscando…" : "sem cotação"}</td></tr>`;
+        if (!c) return `<tr><td class="term-ativo">${t}${selo}<small>${esc(nome)}</small></td><td class="r term-dim" colspan="9">${mercado.carregando ? "buscando…" : "sem cotação"}</td></tr>`;
         const h = c.historico || [], ult = h[h.length - 1], ant = h.length > 1 ? h[h.length - 2].preco : null;
         const max = ult && ult.maxima > 0 ? Math.max(ult.maxima, c.preco) : null, min = ult && ult.minima > 0 ? Math.min(ult.minima, c.preco) : null;
         const spark = h.length > 1 ? sparklineSVG(h.map((x) => x.preco), c.variacaoPct >= 0 ? G.CORES.up : G.CORES.down) : "";
         const pisca = piscaPreco(sim, c.preco);
         const num = (v) => v == null ? '<span class="term-dim">—</span>' : fmt(v);
         return `<tr ${linkAtivo(sim)} title="Abrir o gráfico de ${t}"><td class="term-ativo">${letraNota(sim)} ${t}${selo}<small>${esc(nome)}</small></td>
-          <td class="r t-preco${pisca}">${fmt(c.preco)}</td><td class="r ${corMov(c.variacaoPct)}">${tPct(c.variacaoPct)} <i>${setaMov(c.variacaoPct)}</i></td>
+          <td class="r t-preco${pisca}">${fmt(c.preco)}</td><td class="r ${corMov(c.variacaoPct)}">${ant == null ? "—" : (c.preco - ant >= 0 ? "+" : "−") + moeda2(Math.abs(c.preco - ant))}</td><td class="r ${corMov(c.variacaoPct)}">${tPct(c.variacaoPct)} <i>${setaMov(c.variacaoPct)}</i></td>
           <td class="r t-max">${num(max)}</td><td class="r t-min">${num(min)}</td><td class="r t-ant">${num(ant)}</td>
           ${celVar(variacaoSerie(h, 30))}${celVar(variacaoSerie(h, 90))}<td class="term-spark">${spark}</td></tr>`;
       }).join("")}</tbody></table></div></div>`;
@@ -7057,7 +7082,8 @@
       </div>`;
 
     // os quadros do relatório ICL (Índices, Moedas e Ouro, Renda Fixa…) vêm no início da guia
-    return `${painelRelatorio("inicio")}<section class="term term-nasdaq term-board-sec">${board}</section><section class="term term-nasdaq">
+    return `${painelRelatorio("inicio")}<section class="term term-nasdaq term-board-sec">${board}</section>
+    <section class="term term-nasdaq"><div class="term-grade term-grade-led">${painelLed}${painelVelas}</div></section><section class="term term-nasdaq">
       <div class="term-grade term-grade-meio">${r ? tabelaRelatorioB3(r) : tabela("B3 · MAIORES DO IBOVESPA · R$", MERCADO_BR, ".SA", brl)}${tabela("NASDAQ · MAIORES EMPRESAS · US$", MERCADO_EUA, "", usd)}</div>
     </section>${painelRelatorio("meio")}<section class="term term-nasdaq">
       <div class="term-grade term-grade-2">${grafico}${noticias}</div>
@@ -7065,7 +7091,15 @@
   }
   // gráfico: variação acumulada desde o início dos 3 meses, nos dias da
   // Nasdaq; o Ibovespa e o dólar usam o último fechamento até cada dia
+  // velas diárias do ativo escolhido (IBOV, Nasdaq, S&P 500 ou ouro)
+  function montarVelasBolsa() {
+    const c = mercado.cotacoes[velaBolsa];
+    if (!c || !c.historico || c.historico.length < 2 || !document.getElementById("graf-bolsa-velas")) return;
+    const v = velasPeriodo(c.historico, c.preco);
+    G.renderVelas("graf-bolsa-velas", v.velas, { visiveis: Math.min(v.velas.length, 60), casas: 2, linhaAtual: c.preco, corAtual: "#FFD633", rotuloAtual: "Último" });
+  }
   function montarGraficoMercado() {
+    montarVelasBolsa();
     const q = mercado.cotacoes, nq = q["^IXIC"], ib = q["^BVSP"];
     const ref = (nq || ib) && (nq || ib).historico;
     if (!ref || ref.length < 2) return;
@@ -8136,6 +8170,14 @@
         case "periodo-metas": periodoMetas = Number(b.dataset.meses); renderRota(); break;
         case "periodo-evo": mesesEvo = Number(b.dataset.meses); renderRota(); break;
         case "periodo-grafico": periodoGrafico = b.dataset.periodo; renderRota(); break;
+        case "vela-bolsa": {
+          velaBolsa = id;
+          document.querySelectorAll('[data-acao="vela-bolsa"]').forEach((x) => x.classList.toggle("ativo", x.dataset.id === id));
+          const nm = document.getElementById("velaBolsaNome"); if (nm) nm.textContent = (OPC_VELAS.find((o) => o[0] === id) || OPC_VELAS[0])[1];
+          const ul = document.getElementById("velaBolsaUlt"), c = mercado.cotacoes[id];
+          if (ul && c) { ul.className = "velas-ult " + corMov(c.variacaoPct); ul.textContent = `${id === "GC=F" ? Number(c.preco).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : fmtPontos(c.preco)} ${tPct(c.variacaoPct)}`; }
+          montarVelasBolsa(); break;
+        }
         case "novo-preco-acao": abrirModalNovoPreco(id); break;
         case "novo-valor-investimento": abrirModalNovoValor(id); break;
         case "dispensar-contas": {

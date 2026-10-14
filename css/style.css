@@ -2407,3 +2407,53 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
 /* caixas do topo: nome em âmbar, como os códigos dos terminais */
 .term-board .tq-nome { color: #FF9F1C; }
 .term-board .tq-var.t-up { color: #19E57A; } .term-board .tq-var.t-down { color: #FF3B4E; }
+
+/* ===== Guia Bolsa no visual dos terminais de pregão (v3.6.281) =====
+   painel luminoso (código âmbar, variação e
+   preço em verde/vermelho), lista de cotações em grade cinza e gráfico de
+   velas ao lado, e a célula do preço acende inteira ao mudar */
+.term-grade-led { grid-template-columns: minmax(0, 6fr) minmax(0, 6fr); border-bottom: 1px solid var(--t-linha); }
+.term-grade-led > .term-painel { background: #000; }
+.led-painel { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 0; max-height: 420px; overflow-y: auto; padding: 4px 6px; }
+.led { all: unset; cursor: pointer; display: grid; grid-template-columns: 1fr; padding: 6px 8px; border-bottom: 1px solid #141414; border-right: 1px solid #141414; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-weight: 800; line-height: 1.15; }
+.led:hover { background: #1A1A1A; }
+.led-tk { color: #FF9F1C; font-size: 17px; letter-spacing: .02em; text-shadow: 0 0 6px rgba(255, 159, 28, .35); }
+.led-pct { font-size: 14px; }
+.led-preco { font-size: 15px; color: #F5F5F5; }
+.led .t-up { color: #19E57A; text-shadow: 0 0 6px rgba(25, 229, 122, .3); }
+.led .t-down { color: #FF3B4E; text-shadow: 0 0 6px rgba(255, 59, 78, .3); }
+.led .t-zero { color: #F5F5F5; }
+.led.pisca-up { animation: led-up 2.4s ease-out; } .led.pisca-down { animation: led-down 2.4s ease-out; }
+@keyframes led-up { 0%, 50% { background: #157A3A; } 100% { background: transparent; } }
+@keyframes led-down { 0%, 50% { background: #9E1F2A; } 100% { background: transparent; } }
+
+.term-velas { height: 420px; background: #000; }
+.velas-ult { margin-left: 10px; font-family: ui-monospace, Menlo, monospace; letter-spacing: .02em; }
+.velas-ult.t-up { color: #19E57A; } .velas-ult.t-down { color: #FF3B4E; }
+.velas-abas { float: right; display: inline-flex; gap: 2px; }
+.velas-abas button { background: #2A2A2A; color: #CFCFCF; border: 1px solid #3A3A3A; font: 800 10px ui-monospace, Menlo, monospace; letter-spacing: .06em; padding: 3px 8px; cursor: pointer; border-radius: 0; }
+.velas-abas button.ativo { background: #FF9F1C; color: #000; border-color: #FF9F1C; }
+.velas-abas button:disabled { opacity: .35; cursor: default; }
+
+/* lista de cotações em grade cinza (como a janela de cotações do terminal) */
+.term-grade-meio > .term-painel { background: #161616; }
+.term-grade-meio .term-cab { background: linear-gradient(#3A3A3A, #262626); color: #FFB547; border-color: #444; }
+.tab-pregao { background: #161616; }
+.tab-pregao th, .term-grade-meio .tab-pregao thead th { background: linear-gradient(#333, #242424); color: #E0E0E0; border: 1px solid #3C3C3C; text-transform: none; letter-spacing: .02em; font-size: 11px; }
+.tab-pregao td { border: 1px solid #2B2B2B; background: #1B1B1B; }
+.tab-pregao tbody tr:nth-child(even) td { background: #222222; }
+.tab-pregao tbody tr:hover td { background: #2E3A4A; }
+.tab-pregao .term-ativo { color: #FF9F1C; }
+.tab-pregao .term-ativo small { color: #8A8A8A; }
+@keyframes pisca-up { 0%, 55% { background: #1F9D45; color: #fff; } 100% { } }
+@keyframes pisca-down { 0%, 55% { background: #D2232F; color: #fff; } 100% { } }
+.tab-pregao td.pisca-up { animation: pisca-up 3s ease-out; }
+.tab-pregao td.pisca-down { animation: pisca-down 3s ease-out; }
+
+@media (max-width: 900px) {
+  .term-grade-led { grid-template-columns: minmax(0, 1fr); }
+  .led-painel { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); max-height: 340px; }
+  .led-tk { font-size: 15px; }
+  .term-velas { height: 320px; }
+  .velas-abas { float: none; display: flex; margin-top: 6px; }
+}
