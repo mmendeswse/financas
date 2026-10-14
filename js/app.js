@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.311";
+  const VERSAO_APP = "3.6.312";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1409,13 +1409,15 @@
 
     const btnNotif = document.getElementById("btnNotificacoes");
     const dropNotif = document.getElementById("dropdownNotificacoes");
+    const popDataEl = document.getElementById("popData");
     btnNotif.addEventListener("click", (e) => {
       e.stopPropagation();
       dropNotif.classList.toggle("on");
-      if (dropNotif.classList.contains("on")) preencherNotificacoes();
+      // abrir as notificações fecha o quadro da data (e vice-versa, abaixo)
+      if (dropNotif.classList.contains("on")) { if (popDataEl) popDataEl.classList.remove("on"); preencherNotificacoes(); }
     });
     document.addEventListener("click", (e) => {
-      if (!dropNotif.contains(e.target) && e.target !== btnNotif) dropNotif.classList.remove("on");
+      if (!dropNotif.contains(e.target) && !btnNotif.contains(e.target)) dropNotif.classList.remove("on");
     });
 
     // data e hora: um toque abre o quadro com a data completa, outro toque esconde
