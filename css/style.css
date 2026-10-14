@@ -2603,3 +2603,15 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
   .rodape-app span:nth-child(2)::after { content: "Dados locais"; font-size: 9.5px; }
 }
 @media (max-width: 360px) { .rodape-app { font-size: 8.5px; gap: 6px; padding: 8px 8px; } .rodape-app span:nth-child(2)::after { font-size: 8.5px; } }
+
+/* tabela Cotação: variações com a célula pintada (verde na alta, vermelho na
+   queda) e as ações da carteira com a linha em destaque */
+.prof-tab td.cel-alta { background: rgba(25, 229, 122, .2); color: #3DFF9A; }
+.prof-tab td.cel-baixa { background: rgba(255, 59, 78, .22); color: #FF6B7A; }
+.prof-tab tr:hover td.cel-alta { background: rgba(25, 229, 122, .3); }
+.prof-tab tr:hover td.cel-baixa { background: rgba(255, 59, 78, .32); }
+.prof-tab tr.prof-cart td { background: rgba(255, 159, 28, .1); }
+.prof-tab tr.prof-cart td:first-child { box-shadow: inset 3px 0 0 #FF9F1C; }
+.prof-tab tr.prof-cart .prof-sim, .prof-tab tr.prof-cart .prof-desc { color: #FFC266; }
+.prof-tab tr.prof-cart td.cel-alta { background: rgba(25, 229, 122, .26); }
+.prof-tab tr.prof-cart td.cel-baixa { background: rgba(255, 59, 78, .28); }

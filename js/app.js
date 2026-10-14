@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.307";
+  const VERSAO_APP = "3.6.308";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -7027,9 +7027,13 @@
     const janela = janelaBolsa;
     const numP = (v, f) => v == null || !(v > 0) ? '<span class="term-dim">—</span>' : f(v);
     // (1) Cotação
+    // célula da variação pintada de verde (alta) ou vermelho (queda)
+    const celPinta = (v) => `<td class="r ${v == null ? "" : v > 0 ? "cel-alta" : v < 0 ? "cel-baixa" : "t-zero"}">${tPct(v)}${v ? ` <i>${setaMov(v)}</i>` : ""}</td>`;
     const linhaCot = ([t, nome, sim, f, x]) => {
       const c = cotDe(sim, x), selo = citadas.has(t) ? ' <span class="term-chip c-acc">ICL</span>' : "";
-      const ativo = sim === velaBolsa ? " prof-sel" : "";
+      // linha em destaque quando a ação está na carteira (guia Ações)
+      const naCarteira = (DADOS.acoes || []).some((a) => String(a.ticker).toUpperCase() === t);
+      const ativo = (sim === velaBolsa ? " prof-sel" : "") + (naCarteira ? " prof-cart" : "");
       if (!c) return `<tr class="${ativo}" data-acao="prof-sel" data-id="${esc(sim)}"><td class="prof-sim">${t}${selo}</td><td class="prof-desc">${esc(nome)}</td><td class="r term-dim" colspan="10">${mercado.carregando ? "buscando…" : "sem cotação"}</td></tr>`;
       const h = c.historico || [], ult = h[h.length - 1], ant = h.length > 1 ? h[h.length - 2].preco : null;
       const max = ult && ult.maxima > 0 ? Math.max(ult.maxima, c.preco) : null, min = ult && ult.minima > 0 ? Math.min(ult.minima, c.preco) : null;
@@ -7037,9 +7041,9 @@
       // ação dos EUA: mesma linha das ações da B3 (bolinha da nota e números
       // sem símbolo de moeda); vinda pelo BDR, o código dele fica na dica
       return `<tr class="${ativo}" data-acao="prof-sel" data-id="${esc(sim)}" title="Selecionar ${t}${c.bdr ? ` · cotação do BDR ${c.bdr} na B3, em reais` : ""}"><td class="prof-sim">${letraNota(sim)} ${t}${selo}</td><td class="prof-desc">${esc(nome)}</td>
-        <td class="r t-preco${piscaPreco(sim, c.preco)}">${f(c.preco)}</td><td class="r ${corMov(c.variacaoPct)}">${tPct(c.variacaoPct)}</td><td class="r prof-hora">${horaCot}</td>
+        <td class="r t-preco${piscaPreco(sim, c.preco)}">${f(c.preco)}</td>${celPinta(c.variacaoPct)}<td class="r prof-hora">${horaCot}</td>
         <td class="r">${numP(abe, f)}</td><td class="r t-max">${numP(max, f)}</td><td class="r t-min">${numP(min, f)}</td><td class="r t-ant">${numP(ant, f)}</td><td class="r prof-vol">${fmtVolume(ult && ult.volume)}</td>
-        ${celVar(variacaoSerie(h, 30))}${celVar(variacaoSerie(h, 90))}</tr>`;
+        ${celPinta(variacaoSerie(h, 30))}${celPinta(variacaoSerie(h, 90))}</tr>`;
     };
     const jCot = janela("prof-cot", "Cotação", `<div class="term-rolar"><table class="term-tab prof-tab">
       <thead><tr><th>Símbolo</th><th>Descrição</th><th class="r">Último</th><th class="r">%</th><th class="r">Hora</th><th class="r">Abertura</th><th class="r">Máxima</th><th class="r">Mínima</th><th class="r">Fechamento</th><th class="r">Volume</th><th class="r">1 mês</th><th class="r">3 meses</th></tr></thead>
