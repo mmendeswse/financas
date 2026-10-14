@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.285";
+  const VERSAO_APP = "3.6.290";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -6885,6 +6885,10 @@
     `;
   }
 
+  // janela da área de trabalho da guia Bolsa (barra de título cinza e corpo preto)
+  function janelaBolsa(cls, titulo, corpo, extra) {
+    return `<div class="prof-jan ${cls}"><div class="prof-tit"><span class="prof-ico"></span>${titulo}${extra || ""}<span class="prof-btns">— ▢ ✕</span></div><div class="prof-corpo">${corpo}</div></div>`;
+  }
   function renderNasdaq() {
     const q = mercado.cotacoes, tem = Object.keys(q).length, r = DADOS.relatorioMercado;
     triagem = tem ? triagemAtivos() : new Map();
@@ -7032,53 +7036,11 @@
     });
     const comCot = papeis.filter((x) => x.c && x.c.preco > 0);
     const n2 = (v) => moeda2(v);
-    // ===== tela "Mercado" no modelo do HUB3 (Nelogica) =====
-    // Índices (cartão grande do Ibovespa e cartões menores), Ranking
-    // (maiores altas e baixas, carteira) e Cotações em cartões com logo,
-    // minigráfico, preço e variação; filtros e ordem trocam sem recarregar
-    const corTk = (t) => { let h = 0; for (const ch of t) h = (h * 31 + ch.charCodeAt(0)) % 360; return `hsl(${h} 55% 42%)`; };
-    const logoPapel = (x) => `<span class="hub-logo" style="background:${corTk(x.t)}">${esc(x.t.slice(0, 2))}${/\.SA$/.test(x.sim) ? `<img src="https://icons.brapi.dev/icons/${encodeURIComponent(x.t)}.svg" alt="" loading="lazy" onerror="this.remove()">` : ""}</span>`;
-    const pctHub = (v) => `<span class="hub-pct ${v > 0 ? "up" : v < 0 ? "down" : ""}">${v > 0 ? "▲" : v < 0 ? "▼" : "►"} ${tPct(Math.abs(v || 0)).replace("+", "")}</span>`;
-    const precoHub = (x) => /\.SA$/.test(x.sim) ? brl(x.c.preco) : usd(x.c.preco);
-    const sparkHub = (c, w) => c && c.historico && c.historico.length > 1 ? `<span class="hub-spark${w ? " " + w : ""}">${sparklineSVG(c.historico.slice(-30).map((h) => h.preco), (c.variacaoPct || 0) >= 0 ? G.CORES.up : G.CORES.down)}</span>` : "";
-    const bandeiraBR = '<svg class="hub-band" viewBox="0 0 28 20"><rect width="28" height="20" rx="3" fill="#169B3A"/><path d="M14 3 25 10 14 17 3 10Z" fill="#FFD400"/><circle cx="14" cy="10" r="4.2" fill="#1F3F95"/></svg>';
-    const ib = q["^BVSP"];
-    const cartaoIbov = `<div class="hub-card hub-ibov" ${ib ? linkAtivo("^BVSP") : ""}>
-      <div class="hub-ibov-topo">${bandeiraBR}<div><b>IBOV <i class="hub-ok">✓</i></b><small>Índice Ibovespa</small></div>${sparkHub(ib, "hub-spark-grande")}</div>
-      <div class="hub-ibov-base"><span class="hub-ibov-val">${ib ? fmtPontos(ib.preco) : "—"} <small>pts</small></span>${ib ? pctHub(ib.variacaoPct) : ""}</div></div>`;
-    const miniIndice = (cod, nome, c, fmt, clique) => `<div class="hub-card hub-mini" ${c ? clique : ""}><b>${cod}</b><small>${nome}</small>
-      <span class="hub-mini-val">${c ? fmt(c.preco) : "—"}</span>${c ? pctHub(c.variacaoPct) : ""}</div>`;
-    const indices = `<div class="hub-indices">${cartaoIbov}<div class="hub-minis">
-      ${miniIndice("IXIC", "Nasdaq Composite", q["^IXIC"], (v) => fmtPontos(v) + " <small>pts</small>", linkAtivo("^IXIC"))}
-      ${miniIndice("SPX", "S&amp;P 500", q["^GSPC"], (v) => fmtPontos(v) + " <small>pts</small>", linkAtivo("^GSPC"))}
-      ${miniIndice("USD/BRL", "Dólar comercial", dolarVivo, (v) => "R$ " + Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 4, maximumFractionDigits: 4 }), 'data-acao="ir" data-secao="detalhe-dolar"')}
-      ${miniIndice("XAU", "Ouro · onça", q["GC=F"], (v) => "US$ " + moeda2(v), linkAtivo("GC=F"))}
-      ${miniIndice("BTC", "Bitcoin", criptoVivo("BTC"), (v) => "R$ " + Number(v).toLocaleString("pt-BR", { maximumFractionDigits: 0 }), 'data-acao="ir" data-secao="detalhe-cripto" data-id="BTC"')}
-    </div></div>`;
-    const ordenados = comCot.slice().sort((a, b) => (b.c.variacaoPct || 0) - (a.c.variacaoPct || 0));
-    const linhaRank = (x) => `<div class="hub-rank-lin" ${x.clique || linkAtivo(x.sim)}>${logoPapel(x)}<b>${x.t}</b><span class="hub-rank-preco">${precoHub(x)}</span>${pctHub(x.c.variacaoPct)}</div>`;
-    const quadroRank = (tit, ic, cls, lista) => `<div class="hub-card hub-rank ${cls}"><div class="hub-rank-tit"><i>${ic}</i>${tit}</div>${lista.length ? lista.map(linhaRank).join("") : '<p class="hub-vazio">Sem cotações agora.</p>'}</div>`;
-    const daCarteira = comCot.filter((x) => (DADOS.acoes || []).some((a) => String(a.ticker).toUpperCase() === x.t));
-    const ranking = `<div class="hub-ranking">
-      ${quadroRank("Maiores altas", "︽", "hub-rank-alta", ordenados.filter((x) => x.c.variacaoPct > 0).slice(0, 5))}
-      ${quadroRank("Maiores baixas", "︾", "hub-rank-baixa", ordenados.filter((x) => x.c.variacaoPct < 0).reverse().slice(0, 5))}
-      ${daCarteira.length ? quadroRank("Minha carteira", "★", "hub-rank-cart", daCarteira.slice(0, 5)) : ""}
-    </div>`;
-    const cartaoCot = (x, i) => `<div class="hub-card hub-cot" ${x.clique || linkAtivo(x.sim)} data-grupo="${/\.SA$/.test(x.sim) ? "b3" : "eua"}${daCarteira.includes(x) ? " cart" : ""}" data-var="${x.c.variacaoPct || 0}" data-nome="${x.t}" data-ordem="${i}">
-      ${logoPapel(x)}<div class="hub-cot-id"><b>${x.t}</b><small>${esc(x.n)}</small></div>${sparkHub(x.c)}
-      <div class="hub-cot-val"><b>${precoHub(x)}</b>${pctHub(x.c.variacaoPct)}</div></div>`;
-    const cotacoesHub = `<div class="hub-filtros">
-      <span class="hub-chip-grupo">${[["todos", "Todos"], ["b3", "B3"], ["eua", "Nasdaq"], ["cart", "Carteira"]].map(([k, rot]) => `<button class="hub-chip${k === "todos" ? " ativo" : ""}" data-acao="hub-filtro" data-id="${k}">${rot}</button>`).join("")}</span>
-      <span class="hub-chip-ordem">${[["padrao", "Padrão"], ["alta", "Maior alta"], ["baixa", "Maior baixa"], ["nome", "A–Z"]].map(([k, rot]) => `<button class="hub-chip${k === "padrao" ? " ativo" : ""}" data-acao="hub-ordem" data-id="${k}">${rot}</button>`).join("")}</span></div>
-      <div class="hub-cots" id="hubCots">${comCot.map(cartaoCot).join("") || `<p class="hub-vazio">${mercado.carregando ? "Buscando cotações…" : "Sem cotações agora."}</p>`}</div>`;
-    const telaHub = `<section class="hub">
-      <h3 class="hub-tit">Índices</h3>${indices}
-      <h3 class="hub-tit">Ranking <span>›</span></h3>${ranking}
-      <h3 class="hub-tit">Cotações <span>›</span><em>${quandoHora ? "atualizado " + quandoHora : ""}</em></h3>${cotacoesHub}
-    </section>`;
+    // as caixas ficam em duas linhas no computador: metade em cada linha
+    const nCaixas = (board.match(/class="term-quote/g) || []).length;
+    const boardDuas = board.replace('<div class="term-board">', `<div class="term-board" style="--cols:${Math.max(1, Math.ceil(nCaixas / 2))}">`);
     // gráfico e análise automática
-    const grafico = `<div class="term-painel"><div class="term-cab">NASDAQ × IBOVESPA · VARIAÇÃO EM 3 MESES</div>
-      <div class="term-graf">${tem ? '<canvas id="graf-mercado-comp"></canvas>' : '<p class="term-texto term-dim">O gráfico aparece quando as cotações chegarem.</p>'}</div></div>`;
+    const graficoCorpo = `<div class="term-graf prof-comp-graf">${tem ? '<canvas id="graf-mercado-comp"></canvas>' : '<p class="term-texto term-dim">O gráfico aparece quando as cotações chegarem.</p>'}</div>`;
 
     // ===== área de trabalho no estilo do ProfitChart (Nelogica) =====
     // janelas com barra de título sobre fundo cinza: Cotação (lista única,
@@ -7099,7 +7061,7 @@
     const sel = todosSel.find((i) => i[2] === velaBolsa), cs = cotDe(sel[2], sel[4]), fs = sel[3];
     cotSelecionada = cs;
     const horaCot = quandoHora || "—";
-    const janela = (cls, titulo, corpo, extra) => `<div class="prof-jan ${cls}"><div class="prof-tit"><span class="prof-ico"></span>${titulo}${extra || ""}<span class="prof-btns">— ▢ ✕</span></div><div class="prof-corpo">${corpo}</div></div>`;
+    const janela = janelaBolsa;
     const numP = (v, f) => v == null || !(v > 0) ? '<span class="term-dim">—</span>' : f(v);
     // (1) Cotação
     const linhaCot = ([t, nome, sim, f, x]) => {
@@ -7150,10 +7112,7 @@
       ${hs.map((p, i) => ({ p, v: i ? (p.preco / hs[i - 1].preco - 1) * 100 : null })).reverse().map(({ p, v }) => `<tr class="${v == null ? "" : v >= 0 ? "pn-alta" : "pn-baixa"}"><td>${p.data.slice(8, 10)}/${p.data.slice(5, 7)}/${p.data.slice(2, 4)}</td>
         <td class="r">${fs(p.preco)}</td><td class="r">${v == null ? "—" : tPct(v)}</td><td class="r">${numP(p.abertura, fs)}</td><td class="r">${numP(p.maxima, fs)}</td><td class="r">${numP(p.minima, fs)}</td>
         <td class="r">${p.maxima > 0 && p.minima > 0 ? tPct((p.maxima / p.minima - 1) * 100).replace("+", "") : "—"}</td></tr>`).join("")}</tbody></table></div>` : '<p class="term-texto term-dim">Sem histórico deste ativo.</p>');
-    const opcoesSel = grupos.map(([g, itens]) => `<optgroup label="${g}">${itens.map((i) => `<option value="${esc(i[2])}" ${i[2] === velaBolsa ? "selected" : ""}>${i[0]} · ${esc(i[1])}</option>`).join("")}</optgroup>`).join("");
     const areaTrabalho = `<section class="term term-nasdaq prof">
-      <div class="prof-barra"><b>Área de trabalho</b><label>Ativo <select id="profAtivoSel">${opcoesSel}</select></label>
-        <span class="prof-status ${mercado.carregando ? "pf-busca" : ""}">● ${mercado.carregando ? "atualizando…" : quandoHora ? "cotações " + quandoHora : "sem cotações"}</span></div>
       <div class="prof-grade">${jCot}${jAtivo}${jGraf}${jNeg}</div>
     </section>`;
 
@@ -7162,20 +7121,18 @@
     const haQuanto = (iso) => { const m = Math.max(0, Math.round((agoraMs - new Date(iso).getTime()) / 60000)); return m < 60 ? `${m} min` : m < 1440 ? `${Math.floor(m / 60)} h` : `${Math.floor(m / 1440)} d`; };
     const lista = mercado.noticias || [];
     // quadro de notícias ao lado do gráfico (com rolagem própria)
-    const noticias = `<div class="term-painel tp-noticias">
-      <div class="tp-metade"><div class="term-cab">NOTÍCIAS DO MERCADO · NASDAQ E B3</div><div class="tp-rolar">
+    const noticiasCorpo = `<div class="tp-rolar">
       ${lista.length ? `<div class="term-noticias">${lista.map((n) => `<a class="term-noticia" href="${esc(n.url)}" target="_blank" rel="noopener">
         <span class="tn-hora">${new Date(n.quando).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}<em>${haQuanto(n.quando)}</em></span>
         <span class="tn-titulo">${esc(n.titulo)}</span><span class="tn-fonte">${esc(n.fonte || "")}</span></a>`).join("")}</div>`
         : `<p class="term-texto term-dim">${mercado.carregando || noticiasMercado.buscando ? "Buscando notícias…" : "Nenhuma notícia por enquanto — o app tenta de novo sozinho em instantes."}</p>`}
-      </div></div>
       </div>`;
 
     // os quadros do relatório ICL (Índices, Moedas e Ouro, Renda Fixa…) vêm no início da guia
-    return `${telaHub}${painelRelatorio("inicio")}<section class="term term-nasdaq term-board-sec">${board}</section>
-    ${areaTrabalho}${r ? `<section class="term term-nasdaq"><div class="term-grade term-grade-um term-grade-meio">${tabelaRelatorioB3(r)}</div></section>` : ""}${painelRelatorio("meio")}<section class="term term-nasdaq">
-      <div class="term-grade term-grade-2">${grafico}${noticias}</div>
-    </section>`;
+    return `${painelRelatorio("inicio")}<section class="term term-nasdaq term-board-sec">${boardDuas}</section>
+    ${areaTrabalho}${r ? `<section class="term term-nasdaq"><div class="term-grade term-grade-um term-grade-meio">${tabelaRelatorioB3(r)}</div></section>` : ""}${painelRelatorio("meio")}<section class="term term-nasdaq prof prof-sec2"><div class="prof-grade prof-grade-2">
+      ${janelaBolsa("prof-comp", "Gráfico · Nasdaq × Ibovespa · variação em 3 meses", graficoCorpo)}${janelaBolsa("prof-not", "Notícias do mercado · Nasdaq e B3", noticiasCorpo, lista.length ? `<span class="prof-tit-dir">${lista.length} notícias</span>` : "")}
+    </div></section>`;
   }
   // gráfico: variação acumulada desde o início dos 3 meses, nos dias da
   // Nasdaq; o Ibovespa e o dólar usam o último fechamento até cada dia
@@ -8268,17 +8225,6 @@
         case "periodo-metas": periodoMetas = Number(b.dataset.meses); renderRota(); break;
         case "periodo-evo": mesesEvo = Number(b.dataset.meses); renderRota(); break;
         case "periodo-grafico": periodoGrafico = b.dataset.periodo; renderRota(); break;
-        case "hub-filtro": case "hub-ordem": {
-          b.parentElement.querySelectorAll(".hub-chip").forEach((x) => x.classList.toggle("ativo", x === b));
-          const caixa = document.getElementById("hubCots"); if (!caixa) break;
-          const filtro = (document.querySelector('[data-acao="hub-filtro"].ativo') || {}).dataset?.id || "todos";
-          const ordem = (document.querySelector('[data-acao="hub-ordem"].ativo') || {}).dataset?.id || "padrao";
-          const cards = [...caixa.querySelectorAll(".hub-cot")];
-          cards.forEach((c) => { c.hidden = filtro !== "todos" && !c.dataset.grupo.split(" ").includes(filtro); });
-          const chave = { padrao: (c) => +c.dataset.ordem, alta: (c) => -c.dataset.var, baixa: (c) => +c.dataset.var }[ordem];
-          cards.sort(chave ? (x, y) => chave(x) - chave(y) : (x, y) => x.dataset.nome.localeCompare(y.dataset.nome)).forEach((c) => caixa.appendChild(c));
-          break;
-        }
         case "prof-sel": selecionarAtivoBolsa(id); break;
         case "novo-preco-acao": abrirModalNovoPreco(id); break;
         case "novo-valor-investimento": abrirModalNovoValor(id); break;
@@ -8391,7 +8337,6 @@
 
     cont.addEventListener("change", (e) => {
       const id = e.target.id;
-      if (id === "profAtivoSel") { selecionarAtivoBolsa(e.target.value); return; }
       if (id === "anoRelA") { anoRelA = e.target.value; renderRota(); return; }
       if (id === "anoRelB") { anoRelB = e.target.value; renderRota(); return; }
       if (id === "anoBancos") { anoBancos = e.target.value; renderRota(); return; }
