@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.290";
+  const VERSAO_APP = "3.6.291";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -6005,7 +6005,7 @@
     const serie = (historico || []).filter((p) => p.preco > 0).slice().sort((a, b) => (a.data < b.data ? -1 : 1));
     const velas = serie.map((p, i) => {
       const abertura = p.abertura > 0 ? p.abertura : (i > 0 ? serie[i - 1].preco : p.preco);
-      return { data: p.data, preco: p.preco, abertura,
+      return { data: p.data, preco: p.preco, abertura, volume: Number(p.volume) || 0,
         maxima: Math.max(p.maxima > 0 ? p.maxima : 0, abertura, p.preco),
         minima: Math.min(p.minima > 0 ? p.minima : Infinity, abertura, p.preco) };
     });
@@ -6739,6 +6739,36 @@
   // gráfico, painel do ativo e fechamentos diários seguem a seleção)
   let velaBolsa = "^BVSP";
   let cotSelecionada = null;   // cotação do ativo selecionado (para o gráfico)
+  // indicadores do gráfico (como no Profit): médias móveis e Bollinger sobre
+  // as velas e um oscilador embaixo (IFR, MACD ou volume)
+  const indBolsa = { mm9: true, mm21: true, bb: false };
+  let oscBolsa = "ifr";
+  const IND = {
+    mms(v, n) { return v.map((_, i) => i + 1 < n ? null : v.slice(i + 1 - n, i + 1).reduce((a, b) => a + b, 0) / n); },
+    mme(v, n) { const k = 2 / (n + 1); let e = null; return v.map((x, i) => { if (i + 1 < n) return null; e = e == null ? v.slice(0, n).reduce((a, b) => a + b, 0) / n : x * k + e * (1 - k); return e; }); },
+    bollinger(v, n, d) {
+      const m = IND.mms(v, n);
+      const dp = v.map((_, i) => { if (m[i] == null) return null; const j = v.slice(i + 1 - n, i + 1); return Math.sqrt(j.reduce((a, x) => a + (x - m[i]) ** 2, 0) / n); });
+      return { sup: m.map((x, i) => x == null ? null : x + d * dp[i]), inf: m.map((x, i) => x == null ? null : x - d * dp[i]) };
+    },
+    // IFR de Wilder (14)
+    ifr(v, n) {
+      const out = v.map(() => null); if (v.length <= n) return out;
+      let g = 0, p = 0;
+      for (let i = 1; i <= n; i++) { const d = v[i] - v[i - 1]; if (d > 0) g += d; else p -= d; }
+      g /= n; p /= n; out[n] = p === 0 ? 100 : 100 - 100 / (1 + g / p);
+      for (let i = n + 1; i < v.length; i++) { const d = v[i] - v[i - 1]; g = (g * (n - 1) + Math.max(d, 0)) / n; p = (p * (n - 1) + Math.max(-d, 0)) / n; out[i] = p === 0 ? 100 : 100 - 100 / (1 + g / p); }
+      return out;
+    },
+    macd(v) {
+      const r = IND.mme(v, 12), l = IND.mme(v, 26);
+      const m = v.map((_, i) => r[i] == null || l[i] == null ? null : r[i] - l[i]);
+      const base = m.findIndex((x) => x != null), sinal = m.map(() => null);
+      if (base >= 0) { const sub = IND.mme(m.slice(base), 9); sub.forEach((x, i) => { sinal[base + i] = x; }); }
+      return { macd: m, sinal, hist: m.map((x, i) => x == null || sinal[i] == null ? null : x - sinal[i]) };
+    },
+  };
+  const fmtVolume = (v) => !(v > 0) ? "—" : v >= 1e9 ? (v / 1e9).toLocaleString("pt-BR", { maximumFractionDigits: 2 }) + " bi" : v >= 1e6 ? (v / 1e6).toLocaleString("pt-BR", { maximumFractionDigits: 1 }) + " mi" : v >= 1e3 ? (v / 1e3).toLocaleString("pt-BR", { maximumFractionDigits: 0 }) + " mil" : String(Math.round(v));
   function piscaPreco(sim, preco) {
     const ant = ultimosPrecos.get(sim);
     ultimosPrecos.set(sim, preco);
@@ -7067,18 +7097,18 @@
     const linhaCot = ([t, nome, sim, f, x]) => {
       const c = cotDe(sim, x), selo = citadas.has(t) ? ' <span class="term-chip c-acc">ICL</span>' : "";
       const ativo = sim === velaBolsa ? " prof-sel" : "";
-      if (!c) return `<tr class="${ativo}" data-acao="prof-sel" data-id="${esc(sim)}"><td class="prof-sim">${t}${selo}</td><td class="prof-desc">${esc(nome)}</td><td class="r term-dim" colspan="9">${mercado.carregando ? "buscando…" : "sem cotação"}</td></tr>`;
+      if (!c) return `<tr class="${ativo}" data-acao="prof-sel" data-id="${esc(sim)}"><td class="prof-sim">${t}${selo}</td><td class="prof-desc">${esc(nome)}</td><td class="r term-dim" colspan="10">${mercado.carregando ? "buscando…" : "sem cotação"}</td></tr>`;
       const h = c.historico || [], ult = h[h.length - 1], ant = h.length > 1 ? h[h.length - 2].preco : null;
       const max = ult && ult.maxima > 0 ? Math.max(ult.maxima, c.preco) : null, min = ult && ult.minima > 0 ? Math.min(ult.minima, c.preco) : null;
       const abe = ult && ult.abertura > 0 ? ult.abertura : null;
       return `<tr class="${ativo}" data-acao="prof-sel" data-id="${esc(sim)}" title="Selecionar ${t}"><td class="prof-sim">${/\.SA$/.test(sim) ? letraNota(sim) + " " : ""}${t}${selo}</td><td class="prof-desc">${esc(nome)}</td>
         <td class="r t-preco${piscaPreco(sim, c.preco)}">${f(c.preco)}</td><td class="r ${corMov(c.variacaoPct)}">${tPct(c.variacaoPct)}</td><td class="r prof-hora">${horaCot}</td>
-        <td class="r">${numP(abe, f)}</td><td class="r t-max">${numP(max, f)}</td><td class="r t-min">${numP(min, f)}</td><td class="r t-ant">${numP(ant, f)}</td>
+        <td class="r">${numP(abe, f)}</td><td class="r t-max">${numP(max, f)}</td><td class="r t-min">${numP(min, f)}</td><td class="r t-ant">${numP(ant, f)}</td><td class="r prof-vol">${fmtVolume(ult && ult.volume)}</td>
         ${celVar(variacaoSerie(h, 30))}${celVar(variacaoSerie(h, 90))}</tr>`;
     };
     const jCot = janela("prof-cot", "Cotação", `<div class="term-rolar"><table class="term-tab prof-tab">
-      <thead><tr><th>Símbolo</th><th>Descrição</th><th class="r">Últ.</th><th class="r">%</th><th class="r">Hora</th><th class="r">Abert.</th><th class="r">Máx.</th><th class="r">Mín.</th><th class="r">Fech.</th><th class="r">1 mês</th><th class="r">3 meses</th></tr></thead>
-      <tbody>${grupos.map(([g, itens]) => `<tr class="prof-grupo"><td colspan="11">${g}</td></tr>${itens.map(linhaCot).join("")}`).join("")}</tbody></table></div>`, `<span class="prof-tit-dir">${horaCot}</span>`);
+      <thead><tr><th>Símbolo</th><th>Descrição</th><th class="r">Últ.</th><th class="r">%</th><th class="r">Hora</th><th class="r">Abert.</th><th class="r">Máx.</th><th class="r">Mín.</th><th class="r">Fech.</th><th class="r">Volume</th><th class="r">1 mês</th><th class="r">3 meses</th></tr></thead>
+      <tbody>${grupos.map(([g, itens]) => `<tr class="prof-grupo"><td colspan="12">${g}</td></tr>${itens.map(linhaCot).join("")}`).join("")}</tbody></table></div>`, `<span class="prof-tit-dir">${horaCot}</span>`);
     // (2) Ativo: faixa de cotação, dias de alta × baixa e preços × dias
     const hs = cs && cs.historico ? cs.historico.filter((p) => p.preco > 0) : [];
     const us = hs[hs.length - 1], antS = hs.length > 1 ? hs[hs.length - 2].preco : null;
@@ -7088,7 +7118,8 @@
       hs.forEach((p, i) => { if (i) { if (p.preco > hs[i - 1].preco) altas++; else if (p.preco < hs[i - 1].preco) baixas++; } });
       const fechs = hs.map((p) => p.preco), lo = Math.min(...fechs), hi = Math.max(...fechs), N = 14, passo = (hi - lo) / N || 1;
       const faixas = Array.from({ length: N }, (_, k) => ({ de: lo + k * passo, ate: lo + (k + 1) * passo, dias: 0, ult: null }));
-      hs.forEach((p) => { const k = Math.min(N - 1, Math.floor((p.preco - lo) / passo)); faixas[k].dias++; faixas[k].ult = p.data; });
+      const comVolume = hs.some((p) => p.volume > 0);
+      hs.forEach((p) => { const k = Math.min(N - 1, Math.floor((p.preco - lo) / passo)); faixas[k].dias += comVolume ? (p.volume || 0) : 1; faixas[k].ult = p.data; });
       const maxDias = Math.max(...faixas.map((x) => x.dias)) || 1;
       const kAtual = Math.min(N - 1, Math.max(0, Math.floor((cs.preco - lo) / passo)));
       const dataBR = (d) => d ? d.slice(8, 10) + "/" + d.slice(5, 7) : "—";
@@ -7096,22 +7127,25 @@
         <tbody><tr><td class="prof-sim">${sel[0]}</td><td class="r t-preco">${fs(cs.preco)}</td><td class="r ${corMov(cs.variacaoPct)}">${tPct(cs.variacaoPct)}</td>
         <td class="r">${numP(us && us.abertura, fs)}</td><td class="r t-max">${numP(us && us.maxima, fs)}</td><td class="r t-min">${numP(us && us.minima, fs)}</td><td class="r t-ant">${numP(antS, fs)}</td></tr></tbody></table>
         <div class="prof-forca" title="Pregões em alta × em baixa nos últimos ${hs.length} dias"><span class="pf-alta" style="flex:${altas || 0.0001}">${altas} dias de alta</span><span class="pf-baixa" style="flex:${baixas || 0.0001}">${baixas} de baixa</span></div>
-        <table class="term-tab prof-tab prof-escada"><thead><tr><th class="r">Faixa de preço</th><th class="r">Dias</th><th>Fechamentos em ${hs.length} pregões</th><th class="r">Último dia</th></tr></thead><tbody>
-        ${faixas.map((x, k) => ({ x, k })).reverse().map(({ x, k }) => `<tr class="${k === kAtual ? "pe-atual" : ""}" style="--pe:${(x.dias / maxDias).toFixed(2)}"><td class="r">${fs(x.de)} – ${fs(x.ate)}</td><td class="r">${x.dias}</td>
+        <table class="term-tab prof-tab prof-escada"><thead><tr><th class="r">Faixa de preço</th><th class="r">${comVolume ? "Volume" : "Dias"}</th><th>${comVolume ? `Volume at Price · ${hs.length} pregões` : `Fechamentos em ${hs.length} pregões`}</th><th class="r">Último dia</th></tr></thead><tbody>
+        ${faixas.map((x, k) => ({ x, k })).reverse().map(({ x, k }) => `<tr class="${k === kAtual ? "pe-atual" : ""}" style="--pe:${(x.dias / maxDias).toFixed(2)}"><td class="r">${fs(x.de)} – ${fs(x.ate)}</td><td class="r">${comVolume ? fmtVolume(x.dias) : x.dias}</td>
           <td class="pe-barra"><i style="width:${(x.dias / maxDias * 100).toFixed(0)}%"></i></td><td class="r">${k === kAtual ? "◄ atual" : dataBR(x.ult)}</td></tr>`).join("")}
         </tbody></table>`;
     }
     const abrirAtivo = sel[2] === "USDBRL" ? 'data-acao="ir" data-secao="detalhe-dolar"' : sel[4] && sel[4].clique ? sel[4].clique : cs ? linkAtivo(sel[2]) : "";
     const jAtivo = janela("prof-ativo", `Ativo · ${sel[0]} <small>${esc(sel[1])}</small>`, corpoAtivo, abrirAtivo ? `<button class="prof-abrir" ${abrirAtivo}>abrir ↗</button>` : "");
     // (3) Gráfico de velas do ativo selecionado
-    const jGraf = janela("prof-graf", `Gráfico · ${sel[0]} · Diário`, hs.length > 1 ? '<div class="term-velas"><canvas id="graf-bolsa-velas"></canvas></div>' : '<p class="term-texto term-dim">O gráfico aparece quando as cotações chegarem.</p>',
+    const botInd = [["mm9", "MME 9"], ["mm21", "MMA 21"], ["bb", "Bollinger"]].map(([k, rot]) => `<button class="prof-bt${indBolsa[k] ? " ativo" : ""}" data-acao="ind-bolsa" data-id="${k}">${rot}</button>`).join("");
+    const botOsc = [["ifr", "IFR"], ["macd", "MACD"], ["vol", "Volume"]].map(([k, rot]) => `<button class="prof-bt${oscBolsa === k ? " ativo" : ""}" data-acao="osc-bolsa" data-id="${k}">${rot}</button>`).join("");
+    const jGraf = janela("prof-graf", `Gráfico · ${sel[0]} · Diário`, hs.length > 1 ? `<div class="prof-ferr"><span>${botInd}</span><span>${botOsc}</span></div>
+      <div class="term-velas"><canvas id="graf-bolsa-velas"></canvas></div><div class="prof-osc"><canvas id="graf-bolsa-osc"></canvas></div>` : '<p class="term-texto term-dim">O gráfico aparece quando as cotações chegarem.</p>',
       cs ? `<span class="prof-tit-dir ${corMov(cs.variacaoPct)}">${fs(cs.preco)} ${tPct(cs.variacaoPct)}</span>` : "");
     // (4) Fechamentos diários (mais recentes primeiro; azul alta, vermelho baixa)
     const jNeg = janela("prof-neg", `Fechamentos diários · ${sel[0]}`, hs.length > 1 ? `<div class="term-rolar"><table class="term-tab prof-tab prof-negocios">
-      <thead><tr><th>Data</th><th class="r">Fech.</th><th class="r">%</th><th class="r">Abert.</th><th class="r">Máx.</th><th class="r">Mín.</th><th class="r">Ampl.</th></tr></thead><tbody>
+      <thead><tr><th>Data</th><th class="r">Fech.</th><th class="r">%</th><th class="r">Abert.</th><th class="r">Máx.</th><th class="r">Mín.</th><th class="r">Ampl.</th><th class="r">Volume</th></tr></thead><tbody>
       ${hs.map((p, i) => ({ p, v: i ? (p.preco / hs[i - 1].preco - 1) * 100 : null })).reverse().map(({ p, v }) => `<tr class="${v == null ? "" : v >= 0 ? "pn-alta" : "pn-baixa"}"><td>${p.data.slice(8, 10)}/${p.data.slice(5, 7)}/${p.data.slice(2, 4)}</td>
         <td class="r">${fs(p.preco)}</td><td class="r">${v == null ? "—" : tPct(v)}</td><td class="r">${numP(p.abertura, fs)}</td><td class="r">${numP(p.maxima, fs)}</td><td class="r">${numP(p.minima, fs)}</td>
-        <td class="r">${p.maxima > 0 && p.minima > 0 ? tPct((p.maxima / p.minima - 1) * 100).replace("+", "") : "—"}</td></tr>`).join("")}</tbody></table></div>` : '<p class="term-texto term-dim">Sem histórico deste ativo.</p>');
+        <td class="r">${p.maxima > 0 && p.minima > 0 ? tPct((p.maxima / p.minima - 1) * 100).replace("+", "") : "—"}</td><td class="r">${fmtVolume(p.volume)}</td></tr>`).join("")}</tbody></table></div>` : '<p class="term-texto term-dim">Sem histórico deste ativo.</p>');
     const areaTrabalho = `<section class="term term-nasdaq prof">
       <div class="prof-grade">${jCot}${jAtivo}${jGraf}${jNeg}</div>
     </section>`;
@@ -7150,8 +7184,39 @@
   function montarVelasBolsa() {
     const c = cotSelecionada;
     if (!c || !c.historico || c.historico.length < 2 || !document.getElementById("graf-bolsa-velas")) return;
-    const v = velasPeriodo(c.historico, c.preco);
-    G.renderVelas("graf-bolsa-velas", v.velas, { visiveis: Math.min(v.velas.length, 60), casas: 2, linhaAtual: c.preco, corAtual: "#FFD633", rotuloAtual: "Último" });
+    const v = velasPeriodo(c.historico, c.preco), fech = v.velas.map((p) => p.preco);
+    const sob = [];
+    if (indBolsa.bb) { const b = IND.bollinger(fech, 20, 2); sob.push({ valores: b.sup, cor: "#B0B6C0", largura: 1, traco: [4, 3], rotulo: "Bollinger 20,2" }, { valores: b.inf, cor: "#B0B6C0", largura: 1, traco: [4, 3] }); }
+    if (indBolsa.mm9) sob.push({ valores: IND.mme(fech, 9), cor: "#FFD633", rotulo: "MME 9" });
+    if (indBolsa.mm21) sob.push({ valores: IND.mms(fech, 21), cor: "#3B82F6", rotulo: "MMA 21" });
+    const visiveis = Math.min(v.velas.length, 60);
+    G.renderVelas("graf-bolsa-velas", v.velas, { visiveis, casas: 2, linhaAtual: c.preco, corAtual: "#FFD633", rotuloAtual: "Último", sobreposicoes: sob,
+      aoMudarJanela: (d1, d2) => montarOsciladorBolsa(v.velas, d1, d2) });
+    montarOsciladorBolsa(v.velas, v.velas[v.velas.length - visiveis].data, v.velas[v.velas.length - 1].data);
+  }
+  // oscilador embaixo das velas, mostrando os mesmos dias que estão na tela
+  function montarOsciladorBolsa(velas, d1, d2) {
+    if (!document.getElementById("graf-bolsa-osc")) return;
+    const fech = velas.map((p) => p.preco), ids = velas.map((p, i) => (p.data >= d1 && p.data <= d2 ? i : -1)).filter((i) => i >= 0);
+    const corte = (arr) => ids.map((i) => (arr[i] == null ? null : +arr[i].toFixed(4)));
+    const rot = ids.map((i) => velas[i].data.slice(8, 10) + "/" + velas[i].data.slice(5, 7));
+    const cimaG = window.Chart && Chart.getChart ? Chart.getChart("graf-bolsa-velas") : null;
+    const larguraEixo = cimaG && cimaG.scales && cimaG.scales.y ? cimaG.scales.y.width : 0;
+    if (oscBolsa === "macd") {
+      const m = IND.macd(fech), h = corte(m.hist);
+      G.renderOscilador("graf-bolsa-osc", rot, [
+        { rotulo: "Hist.", valores: h, tipo: "barra", cores: h.map((x) => (x >= 0 ? "rgba(25,229,122,.55)" : "rgba(255,59,78,.55)")), cor: "#888", semLegenda: true },
+        { rotulo: "MACD", valores: corte(m.macd), cor: "#38D6FF" }, { rotulo: "Sinal", valores: corte(m.sinal), cor: "#FF9F1C" }],
+        { titulo: "MACD 12,26,9", larguraEixo, referencias: [0], formato: (x) => Number(x).toLocaleString("pt-BR", { maximumFractionDigits: 2 }) });
+    } else if (oscBolsa === "vol") {
+      const vol = ids.map((i) => velas[i].volume || 0);
+      G.renderOscilador("graf-bolsa-osc", rot, [{ rotulo: "Volume", valores: vol.map((x) => x || null), tipo: "barra",
+        cores: ids.map((i) => (velas[i].preco >= velas[i].abertura ? "rgba(25,229,122,.6)" : "rgba(255,59,78,.6)")), cor: "#19E57A" }],
+        { titulo: vol.some((x) => x > 0) ? "Volume" : "Volume (a fonte não informa para este ativo)", larguraEixo, formato: fmtVolume, min: 0 });
+    } else {
+      G.renderOscilador("graf-bolsa-osc", rot, [{ rotulo: "IFR", valores: corte(IND.ifr(fech, 14)), cor: "#B98CFF" }],
+        { titulo: "IFR 14", larguraEixo, referencias: [70, 30], min: 0, max: 100, formato: (x) => Number(x).toFixed(0) });
+    }
   }
   function montarGraficoMercado() {
     montarVelasBolsa();
@@ -8226,6 +8291,11 @@
         case "periodo-evo": mesesEvo = Number(b.dataset.meses); renderRota(); break;
         case "periodo-grafico": periodoGrafico = b.dataset.periodo; renderRota(); break;
         case "prof-sel": selecionarAtivoBolsa(id); break;
+        case "ind-bolsa": indBolsa[id] = !indBolsa[id]; b.classList.toggle("ativo", indBolsa[id]); montarVelasBolsa(); break;
+        case "osc-bolsa":
+          oscBolsa = id;
+          document.querySelectorAll('[data-acao="osc-bolsa"]').forEach((x) => x.classList.toggle("ativo", x.dataset.id === id));
+          montarVelasBolsa(); break;
         case "novo-preco-acao": abrirModalNovoPreco(id); break;
         case "novo-valor-investimento": abrirModalNovoValor(id); break;
         case "dispensar-contas": {

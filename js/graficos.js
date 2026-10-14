@@ -591,6 +591,10 @@
       // a escala cobre as velas na tela e, nas ações, também o preço de
       // compra, para o Resultado (atual × compra) ficar sempre visível
       var extras = opcoes.linhaCompra > 0 ? [opcoes.linhaCompra] : [];
+      // indicadores sobre as velas (médias, Bollinger) também cabem na escala
+      (opcoes.sobreposicoes || []).forEach(function (o) {
+        for (var k = ini; k < fim; k++) { var v = o.valores[k]; if (v != null && isFinite(v)) extras.push(v); }
+      });
       var mn = Math.min.apply(null, serie.map(function (p) { return p.minima; }).concat(extras));
       var mx = Math.max.apply(null, serie.map(function (p) { return p.maxima; }).concat(extras));
       var folga = (mx - mn) * 0.08 || mx * 0.01;
@@ -750,6 +754,36 @@
           desenharDiferencaCompra(g, opcoes.linhaAtual, opcoes.linhaCompra, Number(opcoes.quantidade) || 0, true, obst);
         }
       } : { id: "semDiferenca" },
+      {
+        // indicadores sobre as velas: médias móveis e Bandas de Bollinger
+        // (valores alinhados com a série toda; null onde não há cálculo)
+        id: "sobreposicoes",
+        afterDatasetsDraw: function (g) {
+          var lista = opcoes.sobreposicoes || []; if (!lista.length) return;
+          var meta = g.getDatasetMeta(0), y = g.scales.y, c = g.ctx, ca = g.chartArea;
+          c.save();
+          c.beginPath(); c.rect(ca.left, ca.top, ca.right - ca.left, ca.bottom - ca.top); c.clip();
+          lista.forEach(function (o) {
+            c.strokeStyle = o.cor; c.lineWidth = o.largura || 1.4; c.setLineDash(o.traco || []);
+            c.beginPath(); var comecou = false;
+            meta.data.forEach(function (barra, i) {
+              var v = o.valores[ini + i];
+              if (v == null || !isFinite(v)) { comecou = false; return; }
+              var py = y.getPixelForValue(v);
+              if (!comecou) { c.moveTo(barra.x, py); comecou = true; } else c.lineTo(barra.x, py);
+            });
+            c.stroke();
+          });
+          // legenda dos indicadores no canto inferior esquerdo
+          c.setLineDash([]); c.font = "700 10px 'Segoe UI', Roboto, sans-serif"; c.textBaseline = "middle";
+          var x = ca.left + 6, yl = ca.bottom - 10;
+          lista.filter(function (o) { return o.rotulo; }).forEach(function (o) {
+            c.fillStyle = o.cor; c.fillRect(x, yl - 1, 10, 2); x += 14;
+            c.fillText(o.rotulo, x, yl); x += c.measureText(o.rotulo).width + 12;
+          });
+          c.restore();
+        }
+      },
       {
         // "N" em cima das velas com variação forte que tiveram notícia no dia
         id: "marcasNoticias",
@@ -1074,6 +1108,60 @@
   // series = [{ rotulo, valores, cor }]; opcoes.formato(v) troca o R$ do
   // eixo e da dica (ex.: variação em %); opcoes.aoClicar(índice do ponto)
   // ---------------------------------------------------------------------
+  // Oscilador abaixo das velas: linhas (IFR, MACD e sinal) e barras
+  // (histograma do MACD, volume), com linhas de referência (70/30, zero)
+  // series = [{ rotulo, valores, cor, tipo: "linha" | "barra", cores? }]
+  function renderOscilador(canvasId, rotulos, series, opcoes) {
+    opcoes = opcoes || {};
+    destruir(canvasId);
+    var ctx = ctxOf(canvasId); if (!ctx) return;
+    var fmt = opcoes.formato || function (v) { return Number(v).toFixed(1); };
+    var refs = opcoes.referencias || [];
+    instancias[canvasId] = new Chart(ctx, {
+      data: { labels: rotulos, datasets: series.map(function (s) {
+        return s.tipo === "barra"
+          ? { type: "bar", label: s.rotulo, data: s.valores, backgroundColor: s.cores || s.cor, borderWidth: 0, barPercentage: 0.7, categoryPercentage: 0.9, order: 2 }
+          : { type: "line", label: s.rotulo, data: s.valores, borderColor: s.cor, borderWidth: 1.4, pointRadius: 0, tension: 0.2, spanGaps: true, order: 1 };
+      }) },
+      options: {
+        responsive: true, maintainAspectRatio: false, animation: false,
+        interaction: { mode: "index", intersect: false },
+        layout: { padding: { top: 14 } },
+        scales: {
+          x: eixoX({ ticks: { display: false } }),
+          y: eixoY({ position: "right", min: opcoes.min, max: opcoes.max, ticks: { color: CORES.texto, font: fonte(9.5), maxTicksLimit: 4, callback: function (v) { return fmt(v); } },
+            // mesma largura do eixo do gráfico de cima, para os dias ficarem alinhados
+            afterFit: function (eixo) { if (opcoes.larguraEixo > 0) eixo.width = opcoes.larguraEixo; } })
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: { backgroundColor: "#111", titleFont: fonte(10), bodyFont: fonte(10), callbacks: { label: function (c) { return c.dataset.label + ": " + (c.raw == null ? "—" : fmt(c.raw)); } } }
+        }
+      },
+      plugins: [{
+        id: "refsOscilador",
+        beforeDatasetsDraw: function (g) {
+          var c = g.ctx, ca = g.chartArea, y = g.scales.y;
+          c.save(); c.strokeStyle = "rgba(200,200,200,.35)"; c.setLineDash([3, 3]); c.lineWidth = 1;
+          refs.forEach(function (r) { var py = Math.round(y.getPixelForValue(r)) + 0.5; if (py < ca.top || py > ca.bottom) return; c.beginPath(); c.moveTo(ca.left, py); c.lineTo(ca.right, py); c.stroke(); });
+          c.restore();
+        },
+        afterDatasetsDraw: function (g) {
+          // nome do oscilador e o último valor de cada série no topo
+          var c = g.ctx, ca = g.chartArea, x = ca.left + 4;
+          c.save(); c.font = "700 10px 'Segoe UI', Roboto, sans-serif"; c.textBaseline = "middle";
+          c.fillStyle = "#E6E7EA"; c.fillText(opcoes.titulo || "", x, ca.top - 7); x += c.measureText(opcoes.titulo || "").width + 10;
+          series.forEach(function (s) {
+            var ult = null; for (var k = s.valores.length - 1; k >= 0; k--) if (s.valores[k] != null) { ult = s.valores[k]; break; }
+            if (ult == null || s.semLegenda) return;
+            c.fillStyle = s.cor; var t = s.rotulo + " " + fmt(ult); c.fillText(t, x, ca.top - 7); x += c.measureText(t).width + 10;
+          });
+          c.restore();
+        }
+      }]
+    });
+  }
+
   function renderLinhaMultipla(canvasId, rotulos, series, opcoes) {
     destruir(canvasId);
     var ctx = ctxOf(canvasId); if (!ctx) return;
@@ -1219,6 +1307,7 @@
       g.update("none");
     },
     renderLinhaMultipla: renderLinhaMultipla,
+    renderOscilador: renderOscilador,
     renderBarrasObjetivo: renderBarrasObjetivo,
     renderVariacaoDiaria: renderVariacaoDiaria,
     renderEvolucaoValor: renderEvolucaoValor
