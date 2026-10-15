@@ -385,6 +385,52 @@
     });
   }
 
+  // Listas completas (cotação do dia de todas as ações, numa chamada só):
+  //   buscarListaB3(token)   -> [{ t, n, preco, variacaoPct, volume }]  (brapi)
+  //   buscarListaNasdaq()    -> [{ t, n, preco, variacaoPct, volume, moeda }]
+  // A da Nasdaq vem do screener da própria Nasdaq (direto ou pelos
+  // repassadores); sem ela, usa a lista de BDRs da brapi (empresas dos EUA
+  // negociadas na B3, em reais).
+  function lerJsonPorCaminhos(url, tempo) {
+    var caminhos = [url, "https://corsproxy.io/?url=" + encodeURIComponent(url), "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(url), "https://api.allorigins.win/raw?url=" + encodeURIComponent(url)];
+    var tentar = function (k) {
+      if (k >= caminhos.length) return Promise.reject(new Error("indisponível"));
+      return comTimeout(fetch(caminhos[k], { cache: "no-store" }).then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); }), tempo || 15000)
+        .catch(function () { return tentar(k + 1); });
+    };
+    return tentar(0);
+  }
+  function listaBrapi(tipo, token) {
+    var todos = [];
+    var pagina = function (n) {
+      var url = "https://brapi.dev/api/quote/list?type=" + tipo + "&sortBy=volume&sortOrder=desc&limit=100&page=" + n + (token ? "&token=" + encodeURIComponent(token) : "");
+      return comTimeout(fetch(url, { cache: "no-store" }).then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); }), 12000).then(function (j) {
+        (j.stocks || []).forEach(function (x) {
+          if (x && x.stock && Number(x.close) > 0) todos.push({ t: String(x.stock).toUpperCase(), n: x.name || "", preco: Number(x.close), variacaoPct: Number(x.change) || 0, volume: Number(x.volume) || 0 });
+        });
+        var total = Number(j.totalPages) || 1;
+        return n < total && n < 30 ? pagina(n + 1) : todos;
+      });
+    };
+    return pagina(1).then(function (l) { if (!l.length) throw new Error("lista vazia"); return l; });
+  }
+  function buscarListaB3(token) { return listaBrapi("stock", token); }
+  function buscarListaNasdaq(token) {
+    var url = "https://api.nasdaq.com/api/screener/stocks?tableonly=true&limit=10000&exchange=nasdaq&download=true";
+    var num = function (v) { var n = Number(String(v == null ? "" : v).replace(/[$,%\s]/g, "")); return isFinite(n) ? n : 0; };
+    return lerJsonPorCaminhos(url, 20000).then(function (j) {
+      var linhas = (j && j.data && (j.data.rows || (j.data.table && j.data.table.rows))) || [];
+      var l = linhas.map(function (x) {
+        return { t: String(x.symbol || "").trim().toUpperCase(), n: String(x.name || "").replace(/\s+(Common Stock|Class [A-C] .*|Ordinary Shares.*|American Depositary Shares.*)$/i, "").trim(),
+          preco: num(x.lastsale), variacaoPct: num(x.pctchange), volume: num(x.volume), valor: num(x.marketCap), moeda: "USD" };
+      }).filter(function (x) { return x.t && x.preco > 0 && !/[\^\/]/.test(x.t); });
+      if (!l.length) throw new Error("lista vazia");
+      return l.sort(function (a, b) { return b.valor - a.valor; });
+    }).catch(function () {
+      return listaBrapi("bdr", token).then(function (l) { return l.map(function (x) { x.moeda = "BRL"; x.bdr = x.t; return x; }); });
+    });
+  }
+
   // aoChegar(simbolo, cotação) é chamado a cada ativo que chega, para a tela
   // ir se preenchendo sem esperar a lista inteira. Uma fonte que falha três
   // vezes seguidas é pulada no resto da rodada (não trava a busca).
@@ -430,5 +476,5 @@
     }), 8000);
   }
 
-  global.Cotacoes = { buscarDolar: buscarDolar, buscarCripto: buscarCripto, buscarSerieDolar: buscarSerieDolar, buscarSerieMoeda: buscarSerieMoeda, buscarCotacoes: buscarCotacoes, buscarSerieBCB: buscarSerieBCB, buscarNoticiasDia: buscarNoticiasDia, buscarNoticiasPeriodo: buscarNoticiasPeriodo, buscarMercado: buscarMercado, buscarOuro: buscarOuro };
+  global.Cotacoes = { buscarDolar: buscarDolar, buscarCripto: buscarCripto, buscarSerieDolar: buscarSerieDolar, buscarSerieMoeda: buscarSerieMoeda, buscarCotacoes: buscarCotacoes, buscarSerieBCB: buscarSerieBCB, buscarNoticiasDia: buscarNoticiasDia, buscarNoticiasPeriodo: buscarNoticiasPeriodo, buscarMercado: buscarMercado, buscarOuro: buscarOuro, buscarListaB3: buscarListaB3, buscarListaNasdaq: buscarListaNasdaq };
 })(window);
