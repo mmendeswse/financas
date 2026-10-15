@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.316";
+  const VERSAO_APP = "3.6.317";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -6399,6 +6399,21 @@
     ["KLBN11", "Klabin"], ["CSAN3", "Cosan"], ["TOTS3", "Totvs"]
   ];
   const CHAVE_MERCADO = "mercado1";
+  // listas completas da B3 e da Nasdaq (cotação do dia de todas as ações)
+  let listasBolsa = { b3: [], nasdaq: [], em: 0 };
+  try { const l = JSON.parse(localStorage.getItem("listas1") || "null"); if (l && Array.isArray(l.b3)) listasBolsa = l; } catch (e) { /* sem acesso */ }
+  let buscandoListas = false;
+  function atualizarListasBolsa(forcar) {
+    if (buscandoListas || (!forcar && Date.now() - (listasBolsa.em || 0) < 15 * 60 * 1000 && listasBolsa.b3.length)) return;
+    buscandoListas = true;
+    const tk = configCotacoes().token;
+    Promise.all([C.buscarListaB3(tk).catch(() => null), C.buscarListaNasdaq(tk).catch(() => null)]).then(([b3, nq]) => {
+      if (!b3 && !nq) return;
+      listasBolsa = { b3: b3 || listasBolsa.b3, nasdaq: nq || listasBolsa.nasdaq, em: Date.now() };
+      try { localStorage.setItem("listas1", JSON.stringify(listasBolsa)); } catch (e) { /* sem espaço */ }
+      if (ROTA.secao === "nasdaq") manterRolagemCotacao(renderRota);
+    }).finally(() => { buscandoListas = false; });
+  }
   let mercado = (() => {
     try { const m = JSON.parse(localStorage.getItem(CHAVE_MERCADO) || "null"); if (m && m.cotacoes) return { ...m, carregando: false }; } catch (e) { /* sem acesso */ }
     return { cotacoes: {}, erros: {}, dolar: null, em: 0, carregando: false };
@@ -6552,6 +6567,7 @@
   }
 
   function atualizarMercado(forcar, silencioso) {
+    atualizarListasBolsa(forcar);
     if (mercado.carregando) return;
     if (!forcar && Date.now() - mercado.em < 10 * 60 * 1000 && Object.keys(mercado.cotacoes).length) return;
     const doRelatorio = acoesDoRelatorio(DADOS.relatorioMercado).map((x) => x.ticker + ".SA");
@@ -6775,6 +6791,31 @@
   // gráfico, painel do ativo e fechamentos diários seguem a seleção)
   let velaBolsa = "^BVSP";
   let cotSelecionada = null;   // cotação do ativo selecionado (para o gráfico)
+  let renderSoJanelas = false;  // true: renderNasdaq devolve só as janelas do ativo
+  let linhasPendentes = [];      // linhas da Cotação que entram depois, em lotes
+  let loteCotacao = 0;           // cancela lotes de um desenho anterior
+  function inserirLinhasPendentes() {
+    const meu = ++loteCotacao, fila = linhasPendentes.slice();
+    const passo = () => {
+      if (meu !== loteCotacao || !fila.length) return;
+      const g = fila[0], marca = document.getElementById(g.id);
+      if (!marca) { fila.shift(); return setTimeout(passo, 0); }
+      const lote = g.itens.splice(0, 250);
+      marca.insertAdjacentHTML("beforebegin", lote.map(g.linha).join(""));
+      if (!g.itens.length) { marca.remove(); fila.shift(); }
+      else marca.firstElementChild.textContent = `carregando ${g.itens.length} ativos…`;
+      setTimeout(passo, 30);
+    };
+    setTimeout(passo, 60);
+  }
+  // redesenha a guia sem perder a rolagem da página nem a da lista Cotação
+  function manterRolagemCotacao(fn) {
+    const lista = document.querySelector(".prof-cot .term-rolar"), topo = lista ? lista.scrollTop : 0, y = window.scrollY;
+    fn();
+    const nova = document.querySelector(".prof-cot .term-rolar");
+    if (nova) nova.scrollTop = topo;
+    window.scrollTo(0, y);
+  }
   // indicadores do gráfico (como no Profit): médias móveis e Bollinger sobre
   // as velas e um oscilador embaixo (IFR, MACD ou volume)
   const indBolsa = { mm9: true, mm21: true, bb: false };
@@ -7009,11 +7050,22 @@
     const quandoHora = mercado.em ? new Date(mercado.em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : "";
     // ===== padrão das plataformas de pregão =====
     // todos os papéis acompanhados (B3, Nasdaq e as ações da carteira)
-    const papeis = [...MERCADO_BR.map(([t, n]) => ({ t, n, sim: t + ".SA", c: q[t + ".SA"] })), ...MERCADO_EUA.map(([t, n]) => ({ t, n, sim: t, c: q[t] }))];
+    const papeis = [...MERCADO_BR.map(([t, n]) => ({ t, n, sim: t + ".SA", c: q[t + ".SA"] })), ...MERCADO_EUA.map(([t, n]) => ({ t, n, sim: t, c: q[t], eua: true }))];
     (DADOS.acoes || []).forEach((a) => {
       const t = String(a.ticker).toUpperCase();
       if (!papeis.some((x) => x.t === t)) papeis.push({ t, n: a.empresa || "", sim: t + ".SA", c: q[t + ".SA"] || acaoCarteira(a), clique: `data-acao="ir" data-secao="detalhe-acao" data-id="${a.id}"` });
     });
+    // todas as outras ações da B3 e da Nasdaq (listas completas com a cotação
+    // do dia; o histórico de cada uma é buscado quando ela é selecionada)
+    const jaTem = new Set(papeis.map((x) => x.sim));
+    const daLista = (l, eua) => (l || []).forEach((x) => {
+      const sim = eua && !x.bdr ? x.t : x.t + ".SA";
+      if (jaTem.has(sim)) return;
+      jaTem.add(sim);
+      papeis.push({ t: x.t, n: x.n, sim, eua, c: q[sim] || { preco: x.preco, variacaoPct: x.variacaoPct, volume: x.volume, historico: [], lista: true, bdr: x.bdr } });
+    });
+    daLista(listasBolsa.b3, false);
+    daLista(listasBolsa.nasdaq, true);
     const comCot = papeis.filter((x) => x.c && x.c.preco > 0);
     const n2 = (v) => moeda2(v);
     // sempre 8 caixas por linha (no computador e no iPad)
@@ -7046,8 +7098,8 @@
     const grupos = [
       ["ÍNDICES, MOEDAS E OURO", [["IBOV", "Índice Ibovespa", "^BVSP", fmtPontos], ["NASDAQ", "Nasdaq Composite", "^IXIC", fmtPontos], ["S&P 500", "S&P 500", "^GSPC", fmtPontos],
         ["DÓLAR", "Dólar comercial · R$", "USDBRL", fDolar], ["OURO", "Ouro · US$ por onça", "GC=F", n2]]],
-      ["B3 · AÇÕES · R$", ordenados.filter((x) => /\.SA$/.test(x.sim)).map((x) => [x.t, x.n, x.sim, n2, x])],
-      [papeis.some((x) => !/\.SA$/.test(x.sim) && q[x.sim] && q[x.sim].bdr) ? "NASDAQ · AÇÕES · R$" : "NASDAQ · AÇÕES · US$", ordenados.filter((x) => !/\.SA$/.test(x.sim)).map((x) => [x.t, x.n, x.sim, n2, x])],
+      [`B3 · AÇÕES · R$ · ${ordenados.filter((x) => !x.eua).length} ativos`, ordenados.filter((x) => !x.eua).map((x) => [x.t, x.n, x.sim, n2, x])],
+      [`NASDAQ · AÇÕES · ${ordenados.filter((x) => x.eua).length} ativos`, ordenados.filter((x) => x.eua).map((x) => [x.t, x.n, x.sim, n2, x])],
     ];
     const cotDe = (sim, x) => sim === "USDBRL" ? dolarVivo : q[sim] || (x && x.c) || null;
     const todosSel = grupos.flatMap((g) => g[1]);
@@ -7069,16 +7121,24 @@
       const h = c.historico || [], ult = h[h.length - 1], ant = h.length > 1 ? h[h.length - 2].preco : null;
       const max = ult && ult.maxima > 0 ? Math.max(ult.maxima, c.preco) : null, min = ult && ult.minima > 0 ? Math.min(ult.minima, c.preco) : null;
       const abe = ult && ult.abertura > 0 ? ult.abertura : null;
+      const antL = ant == null && c.lista && c.variacaoPct > -100 ? c.preco / (1 + (c.variacaoPct || 0) / 100) : ant;
       // ação dos EUA: mesma linha das ações da B3 (bolinha da nota e números
       // sem símbolo de moeda); vinda pelo BDR, o código dele fica na dica
       return `<tr class="${ativo}" data-acao="prof-sel" data-id="${esc(sim)}" title="Selecionar ${t}${c.bdr ? ` · cotação do BDR ${c.bdr} na B3, em reais` : ""}"><td class="prof-sim">${x ? letraNota(sim) + " " : ""}${t}${selo}</td><td class="prof-desc">${esc(nome)}</td>
         <td class="r t-preco${piscaPreco(sim, c.preco)}">${f(c.preco)}</td>${celPinta(c.variacaoPct)}<td class="r prof-hora">${horaCot}</td>
-        <td class="r">${numP(abe, f)}</td><td class="r t-max">${numP(max, f)}</td><td class="r t-min">${numP(min, f)}</td><td class="r t-ant">${numP(ant, f)}</td><td class="r prof-vol">${fmtVolume(ult && ult.volume)}</td>
+        <td class="r">${numP(abe, f)}</td><td class="r t-max">${numP(max, f)}</td><td class="r t-min">${numP(min, f)}</td><td class="r t-ant">${numP(antL, f)}</td><td class="r prof-vol">${fmtVolume(ult && ult.volume ? ult.volume : c.volume)}</td>
         ${celPinta(variacaoSerie(h, 30))}${celPinta(variacaoSerie(h, 90))}</tr>`;
     };
-    const jCot = janela("prof-cot", "Cotação", `<div class="term-rolar"><table class="term-tab prof-tab">
+    // as ações que vieram só das listas completas (centenas na B3, milhares
+    // na Nasdaq) entram depois do desenho, em lotes, para a tela não travar
+    linhasPendentes = [];
+    const jCot = renderSoJanelas ? "" : janela("prof-cot", "Cotação", `<div class="term-rolar"><table class="term-tab prof-tab">
       <thead><tr><th>Símbolo</th><th>Descrição</th><th class="r">Último</th><th class="r">%</th><th class="r">Hora</th><th class="r">Abertura</th><th class="r">Máxima</th><th class="r">Mínima</th><th class="r">Fechamento</th><th class="r">Volume</th><th class="r">1 mês</th><th class="r">3 meses</th></tr></thead>
-      <tbody>${grupos.map(([g, itens]) => `<tr class="prof-grupo"><td colspan="12">${g}</td></tr>${itens.map(linhaCot).join("")}`).join("")}</tbody></table></div>`);
+      <tbody>${grupos.map(([g, itens], gi) => {
+        const ja = itens.filter((i) => !(i[4] && i[4].c && i[4].c.lista) || i[2] === velaBolsa), depois = itens.filter((i) => !ja.includes(i));
+        if (depois.length) linhasPendentes.push({ id: "pend-" + gi, itens: depois, linha: linhaCot });
+        return `<tr class="prof-grupo"><td colspan="12">${g}</td></tr>${ja.map(linhaCot).join("")}${depois.length ? `<tr class="prof-pend" id="pend-${gi}"><td colspan="12">carregando ${depois.length} ativos…</td></tr>` : ""}`;
+      }).join("")}</tbody></table></div>`);
     // (2) Ativo: faixa de cotação, dias de alta × baixa e preços × dias
     const hs = cs && cs.historico ? cs.historico.filter((p) => p.preco > 0) : [];
     const us = hs[hs.length - 1], antS = hs.length > 1 ? hs[hs.length - 2].preco : null;
@@ -7116,6 +7176,8 @@
       ${hs.map((p, i) => ({ p, v: i ? (p.preco / hs[i - 1].preco - 1) * 100 : null })).reverse().map(({ p, v }) => `<tr class="${v == null ? "" : v >= 0 ? "pn-alta" : "pn-baixa"}"><td>${p.data.slice(8, 10)}/${p.data.slice(5, 7)}/${p.data.slice(2, 4)}</td>
         <td class="r">${fs(p.preco)}</td><td class="r">${v == null ? "—" : tPct(v)}</td><td class="r">${numP(p.abertura, fs)}</td><td class="r">${numP(p.maxima, fs)}</td><td class="r">${numP(p.minima, fs)}</td>
         <td class="r">${p.maxima > 0 && p.minima > 0 ? tPct((p.maxima / p.minima - 1) * 100).replace("+", "") : "—"}</td><td class="r">${fmtVolume(p.volume)}</td></tr>`).join("")}</tbody></table></div>` : '<p class="term-texto term-dim">Sem histórico deste ativo.</p>');
+    // troca de ativo: só as janelas Ativo, Gráfico e Fechamentos são refeitas
+    if (renderSoJanelas) return `${jAtivo}${jGraf}${jNeg}`;
     const areaTrabalho = `<section class="term term-nasdaq prof prof-sec1">
       <div class="prof-grade">${jCot}${jAtivo}${jGraf}${jNeg}</div>
     </section>`;
@@ -7140,15 +7202,34 @@
   }
   // gráfico: variação acumulada desde o início dos 3 meses, nos dias da
   // Nasdaq; o Ibovespa e o dólar usam o último fechamento até cada dia
+  // refaz só as janelas Ativo, Gráfico e Fechamentos (a tabela Cotação, com
+  // milhares de linhas, fica como está; só a linha selecionada muda)
+  function atualizarJanelasAtivo() {
+    if (ROTA.secao !== "nasdaq" || !document.querySelector(".prof-sec1")) return manterRolagemCotacao(renderRota);
+    renderSoJanelas = true;
+    let html = "";
+    try { html = renderNasdaq(); } finally { renderSoJanelas = false; }
+    const tmp = document.createElement("div"); tmp.innerHTML = html;
+    ["prof-ativo", "prof-graf", "prof-neg"].forEach((c) => { const novo = tmp.querySelector("." + c), velho = document.querySelector(".prof-sec1 ." + c); if (novo && velho) velho.replaceWith(novo); });
+    document.querySelectorAll(".prof-cot tr.prof-sel").forEach((tr) => tr.classList.remove("prof-sel"));
+    const linha = [...document.querySelectorAll(".prof-cot tr[data-id]")].find((tr) => tr.dataset.id === velaBolsa);
+    if (linha) linha.classList.add("prof-sel");
+    montarVelasBolsa();
+  }
   // troca o ativo da área de trabalho sem perder a rolagem da página e da lista
   function selecionarAtivoBolsa(sim) {
     if (!sim || sim === velaBolsa) return;
-    const lista = document.querySelector(".prof-cot .term-rolar"), topo = lista ? lista.scrollTop : 0, y = window.scrollY;
     velaBolsa = sim;
-    renderRota();
-    const nova = document.querySelector(".prof-cot .term-rolar");
-    if (nova) nova.scrollTop = topo;
-    window.scrollTo(0, y);
+    atualizarJanelasAtivo();
+    // ação que veio só da lista (sem histórico): busca o histórico agora
+    const c = mercado.cotacoes[sim];
+    if (sim !== "USDBRL" && !(c && c.historico && c.historico.length > 1)) {
+      C.buscarMercado([sim], configCotacoes().token, (s2, cot) => {
+        mercado.cotacoes = { ...mercado.cotacoes, [s2]: cot };
+        try { localStorage.setItem(CHAVE_MERCADO, JSON.stringify({ ...mercado, carregando: false })); } catch (e) { /* sem espaço */ }
+        if (ROTA.secao === "nasdaq" && velaBolsa === s2) atualizarJanelasAtivo();
+      });
+    }
   }
   // velas diárias do ativo selecionado na área de trabalho
   function montarVelasBolsa() {
@@ -8014,7 +8095,7 @@
         if (itensPatrimonio(d).length) G.renderDoughnutGenerico("graf-dash-composicao", itensPatrimonio(d), { semLegenda: true, aoClicar: (item) => explicarClasse(item.rotulo) });
         break;
       }
-      case "nasdaq": montarGraficoMercado(); break;
+      case "nasdaq": montarGraficoMercado(); inserirLinhasPendentes(); break;
       case "financas": {
         if (itensPatrimonio(d).length) G.renderDoughnutGenerico("graf-patrimonio-divisao", itensPatrimonio(d), { semLegenda: true, aoClicar: (item) => explicarClasse(item.rotulo) });
         const serie = serieMensalEfetiva(d, 12);
