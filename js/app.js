@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.320";
+  const VERSAO_APP = "3.6.321";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -6300,7 +6300,7 @@
       <div class="grid g-top">
         <div class="c12">${card("", `USD/BRL <span class="selo-tag selo-acao">moeda</span>`,
           "dólar comercial · AwesomeAPI",
-          `${abasPeriodo()}<button class="btn" data-acao="buscar-cotacoes">↻ Buscar</button>`,
+          `${botoesIndicadores()}${abasPeriodo()}<button class="btn" data-acao="buscar-cotacoes">↻ Buscar</button>`,
           filtrada.length >= 2
             ? `<div class="grafico-acao-area grafico-tela-cheia"><canvas id="graf-dolar"></canvas></div>`
             : `<div class="empty">${buscandoSerieDolar ? "Carregando o histórico do dólar…" : "Não foi possível carregar o histórico agora. Verifique a internet e toque em ↻ Buscar."}</div>`)}</div>
@@ -8200,7 +8200,7 @@
         }
         const alternar = () => { velasDolar = !velasDolar; renderRota(); };
         const vd = velasDolarPeriodo();
-        if (velasDolar && vd.velas.length >= 2) G.renderVelas("graf-dolar", vd.velas, { visiveis: vd.visiveis, linhaAtual: atualDolar, corAtual: "#FFD633", rotuloAtual: "Valor Atual", aoClicar: alternar, aoMudarJanela: marcarPeriodoDoZoom });
+        if (velasDolar && vd.velas.length >= 2) G.renderVelas("graf-dolar", vd.velas, { visiveis: vd.visiveis, linhaAtual: atualDolar, corAtual: "#FFD633", rotuloAtual: "Valor Atual", sobreposicoes: sobreposicoesAcao(vd.velas), aoClicar: alternar, aoMudarJanela: marcarPeriodoDoZoom });
         else if (serie.length >= 2) G.renderPrecoAcao("graf-dolar", serie, 0, 0, { linhaAtual: atualDolar, aoClicar: alternar });
         // notícias: a busca já começa na visão de linha, para estar pronta ao trocar para velas
         noticiasDoDolar(true);   // gráfico aberto: tem prioridade sobre o segundo plano
@@ -8397,7 +8397,7 @@
         case "periodo-evo": mesesEvo = Number(b.dataset.meses); renderRota(); break;
         case "periodo-grafico": periodoGrafico = b.dataset.periodo; renderRota(); break;
         case "prof-sel": selecionarAtivoBolsa(id); break;
-        case "ind-acao": indAcao[id] = !indAcao[id]; velasAcao = true; renderRota(); break;
+        case "ind-acao": indAcao[id] = !indAcao[id]; if (ROTA.secao === "detalhe-dolar") velasDolar = true; else velasAcao = true; renderRota(); break;
         case "ind-bolsa": indBolsa[id] = !indBolsa[id]; b.classList.toggle("ativo", indBolsa[id]); montarVelasBolsa(); break;
         case "osc-bolsa":
           oscBolsa = id;
