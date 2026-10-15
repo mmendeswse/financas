@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.319";
+  const VERSAO_APP = "3.6.320";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -7006,7 +7006,7 @@
       ${voltar}
       <div class="grid g-top">
         <div class="c12">${card("", `${esc(NOMES_INDICES[simbolo] || a.ticker)} <span class="selo-tag ${a.categoria === "Índice" ? "selo-cat" : "selo-acao"}">${a.categoria}</span>`, sub,
-          abasPeriodo(),
+          botoesIndicadores() + abasPeriodo(),
           a.historicoPrecos.length > 1 ? `<div class="grafico-acao-area grafico-tela-cheia"><canvas id="graf-preco-acao"></canvas></div>`
             : `<div class="empty">${buscandoHistorico.has(simbolo) ? "Buscando o histórico diário…" : "Sem histórico diário deste ativo agora. Toque em ↻ Atualizar na guia Bolsa e tente de novo."}</div>`)}</div>
       </div>
@@ -7699,6 +7699,20 @@
       `<button class="${atual === op.meses ? "ativo" : ""}" data-acao="${acao}" data-meses="${op.meses}">${op.rotulo}</button>`).join("")}</div>`;
   }
 
+  // indicadores do gráfico de velas das telas de ação (MME 9, MMA 21, Bollinger)
+  const indAcao = { mm9: false, mm21: false, bb: false };
+  function botoesIndicadores() {
+    return `<div class="ind-acao">${[["mm9", "MME 9"], ["mm21", "MMA 21"], ["bb", "Bollinger"]].map(([k, rot]) =>
+      `<button class="prof-bt${indAcao[k] ? " ativo" : ""}" data-acao="ind-acao" data-id="${k}" title="Mostrar ${rot} no gráfico de velas">${rot}</button>`).join("")}</div>`;
+  }
+  // linhas dos indicadores ligados, alinhadas com as velas
+  function sobreposicoesAcao(velas) {
+    const fech = velas.map((p) => p.preco), sob = [];
+    if (indAcao.bb) { const b = IND.bollinger(fech, 20, 2); sob.push({ valores: b.sup, cor: "#B0B6C0", largura: 1, traco: [4, 3], rotulo: "Bollinger 20,2" }, { valores: b.inf, cor: "#B0B6C0", largura: 1, traco: [4, 3] }); }
+    if (indAcao.mm9) sob.push({ valores: IND.mme(fech, 9), cor: "#FFD633", rotulo: "MME 9" });
+    if (indAcao.mm21) sob.push({ valores: IND.mms(fech, 21), cor: "#3B82F6", rotulo: "MMA 21" });
+    return sob;
+  }
   function abasPeriodo() {
     return `<div class="abas abas-periodo">${PERIODOS_GRAFICO.map((op) =>
       `<button class="${periodoGrafico === op.chave ? "ativo" : ""}" data-acao="periodo-grafico" data-periodo="${op.chave}">${op.rotulo}</button>`).join("")}</div>`;
@@ -7712,7 +7726,7 @@
       <button class="voltar" data-acao="ir" data-secao="acoes"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONES.voltar}</svg>Voltar para Ações</button>
       <div class="grid g-top">
         <div class="c12">${card("", `${esc(a.ticker)} <span class="selo-tag ${classeSelo(a.categoria)}">${esc(a.categoria)}</span>`, esc(a.empresa),
-          `${abasPeriodo()}<button class="btn primario" data-acao="editar-acao" data-id="${a.id}">✎ Editar</button>`,
+          `${botoesIndicadores()}${abasPeriodo()}<button class="btn primario" data-acao="editar-acao" data-id="${a.id}">✎ Editar</button>`,
           `<div class="grafico-acao-area grafico-tela-cheia"><canvas id="graf-preco-acao"></canvas></div>`)}</div>
       </div>
     `;
@@ -8221,7 +8235,7 @@
         const a = achar(d.acoes, ROTA.param);
         const alternarAcao = () => { velasAcao = !velasAcao; renderRota(); };
         const va = a ? velasPeriodo(a.historicoPrecos, Number(a.precoAtual) || 0) : { velas: [] };
-        if (velasAcao && va.velas.length >= 2) G.renderVelas("graf-preco-acao", va.velas, { visiveis: va.visiveis, linhaAtual: Number(a.precoAtual) || 0, linhaCompra: Number(a.precoMedio) || 0, quantidade: Number(a.quantidade) || 0, casas: 2, aoClicar: alternarAcao, aoMudarJanela: marcarPeriodoDoZoom });
+        if (velasAcao && va.velas.length >= 2) G.renderVelas("graf-preco-acao", va.velas, { visiveis: va.visiveis, linhaAtual: Number(a.precoAtual) || 0, linhaCompra: Number(a.precoMedio) || 0, quantidade: Number(a.quantidade) || 0, casas: 2, sobreposicoes: sobreposicoesAcao(va.velas), aoClicar: alternarAcao, aoMudarJanela: marcarPeriodoDoZoom });
         else if (a && a.historicoPrecos.length) G.renderPrecoAcao("graf-preco-acao", filtrarPeriodo(a.historicoPrecos, periodoGrafico), a.precoMedio, Number(a.precoAtual) || 0, { quantidade: Number(a.quantidade) || 0, aoClicar: alternarAcao });
         // notícias: a busca já começa na visão de linha
         if (a) noticiasDaAcao(a, true);   // gráfico aberto: tem prioridade sobre o segundo plano
@@ -8233,7 +8247,7 @@
         if (!a) break;
         const alternar = () => { velasAcao = !velasAcao; renderRota(); };
         const va = velasPeriodo(a.historicoPrecos, Number(a.precoAtual) || 0);
-        if (velasAcao && va.velas.length >= 2) G.renderVelas("graf-preco-acao", va.velas, { visiveis: va.visiveis, linhaAtual: Number(a.precoAtual) || 0, linhaCompra: 0, quantidade: 0, casas: 2, aoClicar: alternar, aoMudarJanela: marcarPeriodoDoZoom });
+        if (velasAcao && va.velas.length >= 2) G.renderVelas("graf-preco-acao", va.velas, { visiveis: va.visiveis, linhaAtual: Number(a.precoAtual) || 0, linhaCompra: 0, quantidade: 0, casas: 2, sobreposicoes: sobreposicoesAcao(va.velas), aoClicar: alternar, aoMudarJanela: marcarPeriodoDoZoom });
         else if (a.historicoPrecos.length) G.renderPrecoAcao("graf-preco-acao", filtrarPeriodo(a.historicoPrecos, periodoGrafico), 0, Number(a.precoAtual) || 0, { quantidade: 0, aoClicar: alternar });
         if (va.velas.length >= 2) {
           const termos = NOMES_INDICES[ROTA.param] ? { google: `"${NOMES_INDICES[ROTA.param]}"`, gdelt: `"${NOMES_INDICES[ROTA.param]}"` } : termosNoticiasAcao(a);
@@ -8383,6 +8397,7 @@
         case "periodo-evo": mesesEvo = Number(b.dataset.meses); renderRota(); break;
         case "periodo-grafico": periodoGrafico = b.dataset.periodo; renderRota(); break;
         case "prof-sel": selecionarAtivoBolsa(id); break;
+        case "ind-acao": indAcao[id] = !indAcao[id]; velasAcao = true; renderRota(); break;
         case "ind-bolsa": indBolsa[id] = !indBolsa[id]; b.classList.toggle("ativo", indBolsa[id]); montarVelasBolsa(); break;
         case "osc-bolsa":
           oscBolsa = id;
