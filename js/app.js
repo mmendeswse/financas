@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.317";
+  const VERSAO_APP = "3.6.318";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -6966,8 +6966,27 @@
   }
   const NOMES_INDICES = { "^IXIC": "Nasdaq Composite", "^NDX": "Nasdaq-100", "^GSPC": "S&P 500", "^BVSP": "Ibovespa" };
   // a ação do mercado no formato de uma ação da carteira (sem quantidade nem preço de compra)
-  function ativoMercado(simbolo) {
+  // ação da lista completa (B3/Nasdaq) sem cotação guardada: a da lista
+  function cotacaoDaLista(simbolo) {
+    const t = simbolo.replace(/\.SA$/, "");
+    const x = (/\.SA$/.test(simbolo) ? [...listasBolsa.b3, ...listasBolsa.nasdaq.filter((y) => y.bdr)] : listasBolsa.nasdaq).find((y) => y.t === t);
+    return x ? { preco: x.preco, variacaoPct: x.variacaoPct, nome: x.n, moeda: x.moeda || (/\.SA$/.test(simbolo) ? "BRL" : "USD"), historico: [], lista: true } : null;
+  }
+  const buscandoHistorico = new Set();
+  function garantirHistorico(simbolo) {
     const c = mercado.cotacoes[simbolo];
+    if ((c && c.historico && c.historico.length > 1) || buscandoHistorico.has(simbolo) || !NOMES_INDICES[simbolo] && !/^[A-Z0-9.^=-]+$/.test(simbolo)) return;
+    buscandoHistorico.add(simbolo);
+    C.buscarMercado([simbolo], configCotacoes().token, (s2, cot) => {
+      mercado.cotacoes = { ...mercado.cotacoes, [s2]: cot };
+      try { localStorage.setItem(CHAVE_MERCADO, JSON.stringify({ ...mercado, carregando: false })); } catch (e) { /* sem espaço */ }
+    }).finally(() => {
+      buscandoHistorico.delete(simbolo);
+      if (ROTA.secao === "detalhe-mercado" && ROTA.param === simbolo) renderRota();
+    });
+  }
+  function ativoMercado(simbolo) {
+    const c = mercado.cotacoes[simbolo] || cotacaoDaLista(simbolo);
     if (!c) return null;
     const tk = simbolo.replace(/\.SA$/, "");
     const lista = [...MERCADO_EUA, ...MERCADO_BR].find((x) => x[0] === tk);
@@ -6979,7 +6998,8 @@
     const a = ativoMercado(simbolo);
     const voltar = `<button class="voltar" data-acao="ir" data-secao="nasdaq"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONES.voltar}</svg>Voltar para Bolsa</button>`;
     if (!a) return `${voltar}<div class="empty">Sem cotação deste ativo agora. Volte para a guia Bolsa e toque em ↻ Atualizar.</div>`;
-    const c = mercado.cotacoes[simbolo], v = c.variacaoPct || 0;
+    garantirHistorico(simbolo);
+    const c = mercado.cotacoes[simbolo] || cotacaoDaLista(simbolo), v = c.variacaoPct || 0;
     const preco = NOMES_INDICES[simbolo] ? fmtPontos(a.precoAtual) + " pts" : a.moeda === "USD" ? usd(a.precoAtual) : brl(a.precoAtual);
     const sub = `${esc(a.empresa)} · <b class="${v >= 0 ? "up" : "down"}">${preco} ${v >= 0 ? "▲" : "▼"} ${pctMercado(v)}</b>`;
     return `
@@ -6987,7 +7007,8 @@
       <div class="grid g-top">
         <div class="c12">${card("", `${esc(NOMES_INDICES[simbolo] || a.ticker)} <span class="selo-tag ${a.categoria === "Índice" ? "selo-cat" : "selo-acao"}">${a.categoria}</span>`, sub,
           abasPeriodo(),
-          `<div class="grafico-acao-area grafico-tela-cheia"><canvas id="graf-preco-acao"></canvas></div>`)}</div>
+          a.historicoPrecos.length > 1 ? `<div class="grafico-acao-area grafico-tela-cheia"><canvas id="graf-preco-acao"></canvas></div>`
+            : `<div class="empty">${buscandoHistorico.has(simbolo) ? "Buscando o histórico diário…" : "Sem histórico diário deste ativo agora. Toque em ↻ Atualizar na guia Bolsa e tente de novo."}</div>`)}</div>
       </div>
     `;
   }
@@ -7112,19 +7133,25 @@
     // (1) Cotação
     // célula da variação pintada de verde (alta) ou vermelho (queda)
     const celPinta = (v) => `<td class="r ${v == null ? "" : v > 0 ? "cel-alta" : v < 0 ? "cel-baixa" : "t-zero"}">${tPct(v)}${v ? ` <i>${setaMov(v)}</i>` : ""}</td>`;
+    // tocar na linha abre a tela do gráfico diário do ativo (como na guia
+    // Ações); o ativo também fica selecionado na área de trabalho
+    const abrirLinha = (sim, x) => {
+      const destino = sim === "USDBRL" ? 'data-acao="ir" data-secao="detalhe-dolar"' : x && x.clique ? x.clique : `data-acao="ir" data-secao="detalhe-mercado" data-id="${esc(sim)}"`;
+      return `${destino} data-sel="${esc(sim)}"`;
+    };
     const linhaCot = ([t, nome, sim, f, x]) => {
       const c = cotDe(sim, x), selo = citadas.has(t) ? ' <span class="term-chip c-acc">ICL</span>' : "";
       // linha em destaque quando a ação está na carteira (guia Ações)
       const naCarteira = (DADOS.acoes || []).some((a) => String(a.ticker).toUpperCase() === t);
       const ativo = (sim === velaBolsa ? " prof-sel" : "") + (naCarteira ? " prof-cart" : "");
-      if (!c) return `<tr class="${ativo}" data-acao="prof-sel" data-id="${esc(sim)}"><td class="prof-sim">${t}${selo}</td><td class="prof-desc">${esc(nome)}</td><td class="r term-dim" colspan="10">${mercado.carregando ? "buscando…" : "sem cotação"}</td></tr>`;
+      if (!c) return `<tr class="${ativo}" ${abrirLinha(sim, x)}><td class="prof-sim">${t}${selo}</td><td class="prof-desc">${esc(nome)}</td><td class="r term-dim" colspan="10">${mercado.carregando ? "buscando…" : "sem cotação"}</td></tr>`;
       const h = c.historico || [], ult = h[h.length - 1], ant = h.length > 1 ? h[h.length - 2].preco : null;
       const max = ult && ult.maxima > 0 ? Math.max(ult.maxima, c.preco) : null, min = ult && ult.minima > 0 ? Math.min(ult.minima, c.preco) : null;
       const abe = ult && ult.abertura > 0 ? ult.abertura : null;
       const antL = ant == null && c.lista && c.variacaoPct > -100 ? c.preco / (1 + (c.variacaoPct || 0) / 100) : ant;
       // ação dos EUA: mesma linha das ações da B3 (bolinha da nota e números
       // sem símbolo de moeda); vinda pelo BDR, o código dele fica na dica
-      return `<tr class="${ativo}" data-acao="prof-sel" data-id="${esc(sim)}" title="Selecionar ${t}${c.bdr ? ` · cotação do BDR ${c.bdr} na B3, em reais` : ""}"><td class="prof-sim">${x ? letraNota(sim) + " " : ""}${t}${selo}</td><td class="prof-desc">${esc(nome)}</td>
+      return `<tr class="${ativo}" ${abrirLinha(sim, x)} title="Abrir o gráfico diário de ${t}${c.bdr ? ` · cotação do BDR ${c.bdr} na B3, em reais` : ""}"><td class="prof-sim">${x ? letraNota(sim) + " " : ""}${t}${selo}</td><td class="prof-desc">${esc(nome)}</td>
         <td class="r t-preco${piscaPreco(sim, c.preco)}">${f(c.preco)}</td>${celPinta(c.variacaoPct)}<td class="r prof-hora">${horaCot}</td>
         <td class="r">${numP(abe, f)}</td><td class="r t-max">${numP(max, f)}</td><td class="r t-min">${numP(min, f)}</td><td class="r t-ant">${numP(antL, f)}</td><td class="r prof-vol">${fmtVolume(ult && ult.volume ? ult.volume : c.volume)}</td>
         ${celPinta(variacaoSerie(h, 30))}${celPinta(variacaoSerie(h, 90))}</tr>`;
@@ -8245,7 +8272,7 @@
       const id = b.dataset.id;
 
       switch (acao) {
-        case "ir": navegarPara(b.dataset.secao, b.dataset.id); break;
+        case "ir": if (b.dataset.sel) velaBolsa = b.dataset.sel; navegarPara(b.dataset.secao, b.dataset.id); break;
 
         case "entrada-banco": abrirModalValorBanco(id); break;
         case "nova-banco": abrirModalBanco(null); break;
