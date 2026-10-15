@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.318";
+  const VERSAO_APP = "3.6.319";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -7133,12 +7133,9 @@
     // (1) Cotação
     // célula da variação pintada de verde (alta) ou vermelho (queda)
     const celPinta = (v) => `<td class="r ${v == null ? "" : v > 0 ? "cel-alta" : v < 0 ? "cel-baixa" : "t-zero"}">${tPct(v)}${v ? ` <i>${setaMov(v)}</i>` : ""}</td>`;
-    // tocar na linha abre a tela do gráfico diário do ativo (como na guia
-    // Ações); o ativo também fica selecionado na área de trabalho
-    const abrirLinha = (sim, x) => {
-      const destino = sim === "USDBRL" ? 'data-acao="ir" data-secao="detalhe-dolar"' : x && x.clique ? x.clique : `data-acao="ir" data-secao="detalhe-mercado" data-id="${esc(sim)}"`;
-      return `${destino} data-sel="${esc(sim)}"`;
-    };
+    // tocar na linha seleciona o ativo e mostra o gráfico diário dele na
+    // janela Gráfico, logo abaixo da tabela
+    const abrirLinha = (sim) => `data-acao="prof-sel" data-id="${esc(sim)}"`;
     const linhaCot = ([t, nome, sim, f, x]) => {
       const c = cotDe(sim, x), selo = citadas.has(t) ? ' <span class="term-chip c-acc">ICL</span>' : "";
       // linha em destaque quando a ação está na carteira (guia Ações)
@@ -7151,7 +7148,7 @@
       const antL = ant == null && c.lista && c.variacaoPct > -100 ? c.preco / (1 + (c.variacaoPct || 0) / 100) : ant;
       // ação dos EUA: mesma linha das ações da B3 (bolinha da nota e números
       // sem símbolo de moeda); vinda pelo BDR, o código dele fica na dica
-      return `<tr class="${ativo}" ${abrirLinha(sim, x)} title="Abrir o gráfico diário de ${t}${c.bdr ? ` · cotação do BDR ${c.bdr} na B3, em reais` : ""}"><td class="prof-sim">${x ? letraNota(sim) + " " : ""}${t}${selo}</td><td class="prof-desc">${esc(nome)}</td>
+      return `<tr class="${ativo}" ${abrirLinha(sim, x)} title="Ver o gráfico diário de ${t}${c.bdr ? ` · cotação do BDR ${c.bdr} na B3, em reais` : ""}"><td class="prof-sim">${x ? letraNota(sim) + " " : ""}${t}${selo}</td><td class="prof-desc">${esc(nome)}</td>
         <td class="r t-preco${piscaPreco(sim, c.preco)}">${f(c.preco)}</td>${celPinta(c.variacaoPct)}<td class="r prof-hora">${horaCot}</td>
         <td class="r">${numP(abe, f)}</td><td class="r t-max">${numP(max, f)}</td><td class="r t-min">${numP(min, f)}</td><td class="r t-ant">${numP(antL, f)}</td><td class="r prof-vol">${fmtVolume(ult && ult.volume ? ult.volume : c.volume)}</td>
         ${celPinta(variacaoSerie(h, 30))}${celPinta(variacaoSerie(h, 90))}</tr>`;
@@ -7245,9 +7242,18 @@
   }
   // troca o ativo da área de trabalho sem perder a rolagem da página e da lista
   function selecionarAtivoBolsa(sim) {
-    if (!sim || sim === velaBolsa) return;
+    if (!sim) return;
+    const outro = sim !== velaBolsa;
     velaBolsa = sim;
-    atualizarJanelasAtivo();
+    if (outro) atualizarJanelasAtivo();
+    // leva a tela até o gráfico diário (janela Gráfico, abaixo da tabela)
+    const graf = document.querySelector(".prof-sec1 .prof-graf");
+    if (graf) {
+      // desconta o topo fixo (barra de guias e faixa de cotações)
+      const alt = ["sidebar", "tickerTape"].reduce((m, id) => { const e = document.getElementById(id); if (!e || !/sticky|fixed/.test(getComputedStyle(e).position)) return m; return m + e.getBoundingClientRect().height; }, 0);
+      window.scrollTo({ top: graf.getBoundingClientRect().top + window.scrollY - alt - 8, behavior: "smooth" });
+    }
+    if (!outro) return;
     // ação que veio só da lista (sem histórico): busca o histórico agora
     const c = mercado.cotacoes[sim];
     if (sim !== "USDBRL" && !(c && c.historico && c.historico.length > 1)) {
@@ -7259,16 +7265,24 @@
     }
   }
   // velas diárias do ativo selecionado na área de trabalho
+  let linhaBolsa = false;   // true: gráfico da área de trabalho em linha
   function montarVelasBolsa() {
     const c = cotSelecionada;
     if (!c || !c.historico || c.historico.length < 2 || !document.getElementById("graf-bolsa-velas")) return;
+    const alternar = () => { linhaBolsa = !linhaBolsa; montarVelasBolsa(); };
+    if (linhaBolsa) {
+      G.renderPrecoAcao("graf-bolsa-velas", c.historico.slice(-60), 0, c.preco, { quantidade: 0, aoClicar: alternar });
+      const vv = velasPeriodo(c.historico, c.preco);
+      montarOsciladorBolsa(vv.velas, vv.velas[Math.max(0, vv.velas.length - 60)].data, vv.velas[vv.velas.length - 1].data);
+      return;
+    }
     const v = velasPeriodo(c.historico, c.preco), fech = v.velas.map((p) => p.preco);
     const sob = [];
     if (indBolsa.bb) { const b = IND.bollinger(fech, 20, 2); sob.push({ valores: b.sup, cor: "#B0B6C0", largura: 1, traco: [4, 3], rotulo: "Bollinger 20,2" }, { valores: b.inf, cor: "#B0B6C0", largura: 1, traco: [4, 3] }); }
     if (indBolsa.mm9) sob.push({ valores: IND.mme(fech, 9), cor: "#FFD633", rotulo: "MME 9" });
     if (indBolsa.mm21) sob.push({ valores: IND.mms(fech, 21), cor: "#3B82F6", rotulo: "MMA 21" });
     const visiveis = Math.min(v.velas.length, 60);
-    G.renderVelas("graf-bolsa-velas", v.velas, { visiveis, casas: 2, linhaAtual: c.preco, corAtual: "#FFD633", rotuloAtual: "Último", sobreposicoes: sob,
+    G.renderVelas("graf-bolsa-velas", v.velas, { visiveis, casas: 2, linhaAtual: c.preco, corAtual: "#FFD633", rotuloAtual: "Último", sobreposicoes: sob, aoClicar: () => { linhaBolsa = true; montarVelasBolsa(); },
       aoMudarJanela: (d1, d2) => montarOsciladorBolsa(v.velas, d1, d2) });
     montarOsciladorBolsa(v.velas, v.velas[v.velas.length - visiveis].data, v.velas[v.velas.length - 1].data);
   }
