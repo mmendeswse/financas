@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.322";
+  const VERSAO_APP = "3.6.323";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -7133,9 +7133,13 @@
     // (1) Cotação
     // célula da variação pintada de verde (alta) ou vermelho (queda)
     const celPinta = (v) => `<td class="r ${v == null ? "" : v > 0 ? "cel-alta" : v < 0 ? "cel-baixa" : "t-zero"}">${tPct(v)}${v ? ` <i>${setaMov(v)}</i>` : ""}</td>`;
-    // tocar na linha seleciona o ativo e mostra o gráfico diário dele na
-    // janela Gráfico, logo abaixo da tabela
-    const abrirLinha = (sim) => `data-acao="prof-sel" data-id="${esc(sim)}"`;
+    // tocar na linha abre a tela do gráfico diário do ativo, como na guia
+    // Ações (velas; tocar no gráfico alterna para a linha). Ao voltar, o
+    // ativo fica selecionado na área de trabalho
+    const abrirLinha = (sim, x) => {
+      const destino = sim === "USDBRL" ? 'data-acao="ir" data-secao="detalhe-dolar"' : x && x.clique ? x.clique : `data-acao="ir" data-secao="detalhe-mercado" data-id="${esc(sim)}"`;
+      return `${destino} data-sel="${esc(sim)}"`;
+    };
     const linhaCot = ([t, nome, sim, f, x]) => {
       const c = cotDe(sim, x), selo = citadas.has(t) ? ' <span class="term-chip c-acc">ICL</span>' : "";
       // linha em destaque quando a ação está na carteira (guia Ações)
@@ -7148,7 +7152,7 @@
       const antL = ant == null && c.lista && c.variacaoPct > -100 ? c.preco / (1 + (c.variacaoPct || 0) / 100) : ant;
       // ação dos EUA: mesma linha das ações da B3 (bolinha da nota e números
       // sem símbolo de moeda); vinda pelo BDR, o código dele fica na dica
-      return `<tr class="${ativo}" ${abrirLinha(sim, x)} title="Ver o gráfico diário de ${t}${c.bdr ? ` · cotação do BDR ${c.bdr} na B3, em reais` : ""}"><td class="prof-sim">${x ? letraNota(sim) + " " : ""}${t}${selo}</td><td class="prof-desc">${esc(nome)}</td>
+      return `<tr class="${ativo}" ${abrirLinha(sim, x)} title="Abrir o gráfico diário de ${t}${c.bdr ? ` · cotação do BDR ${c.bdr} na B3, em reais` : ""}"><td class="prof-sim">${x ? letraNota(sim) + " " : ""}${t}${selo}</td><td class="prof-desc">${esc(nome)}</td>
         <td class="r t-preco${piscaPreco(sim, c.preco)}">${f(c.preco)}</td>${celPinta(c.variacaoPct)}<td class="r prof-hora">${horaCot}</td>
         <td class="r">${numP(abe, f)}</td><td class="r t-max">${numP(max, f)}</td><td class="r t-min">${numP(min, f)}</td><td class="r t-ant">${numP(antL, f)}</td><td class="r prof-vol">${fmtVolume(ult && ult.volume ? ult.volume : c.volume)}</td>
         ${celPinta(variacaoSerie(h, 30))}${celPinta(variacaoSerie(h, 90))}</tr>`;
