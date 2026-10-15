@@ -2672,3 +2672,6 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
   .rw .cel-banco span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
 .prof-tab tr.prof-pend td { color: #7D828A; font-style: italic; font-family: Inter, system-ui, sans-serif; font-size: 11px; padding: 6px 10px; }
+/* botões MME 9 / MMA 21 / Bollinger na tela do gráfico de uma ação */
+.ind-acao { display: inline-flex; gap: 4px; margin-right: 8px; vertical-align: middle; }
+.ind-acao .prof-bt { padding: 4px 9px; font-size: 11px; border-radius: 6px; }
