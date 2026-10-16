@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.353";
+  const VERSAO_APP = "3.6.354";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -6709,15 +6709,19 @@
     let p = 0; PALAVRAS_POS.forEach((w) => { if (t.includes(w)) p++; }); PALAVRAS_NEG.forEach((w) => { if (t.includes(w)) p--; });
     return p;
   }
-  function triagemAtivos() {
+  // extras: outros ativos (com a cotação em c.cot) para dar nota só a eles,
+  // como as ações da lista completa da guia Bolsa
+  let relCache = { r: undefined, m: null };
+  function triagemAtivos(extras) {
     const q = mercado.cotacoes, r = DADOS.relatorioMercado, res = new Map();
-    const relAcoes = new Map(acoesDoRelatorio(r).map((x) => [x.ticker, x]));
-    const candidatos = [...MERCADO_EUA.map(([t, n]) => ({ t, nome: n, sim: t, moeda: "USD" })), ...MERCADO_BR.map(([t, n]) => ({ t, nome: n, sim: t + ".SA", moeda: "BRL" }))];
-    relAcoes.forEach((x, t) => { if (!candidatos.some((c) => c.t === t)) candidatos.push({ t, nome: "", sim: t + ".SA", moeda: "BRL" }); });
+    if (relCache.r !== r || !relCache.m) relCache = { r, m: new Map(acoesDoRelatorio(r).map((x) => [x.ticker, x])) };
+    const relAcoes = relCache.m;
+    const candidatos = extras || [...MERCADO_EUA.map(([t, n]) => ({ t, nome: n, sim: t, moeda: "USD" })), ...MERCADO_BR.map(([t, n]) => ({ t, nome: n, sim: t + ".SA", moeda: "BRL" }))];
+    if (!extras) relAcoes.forEach((x, t) => { if (!candidatos.some((c) => c.t === t)) candidatos.push({ t, nome: "", sim: t + ".SA", moeda: "BRL" }); });
     const noticias = mercado.noticias || [];
     const media = (xs) => xs.reduce((a, b) => a + b, 0) / (xs.length || 1);
     candidatos.forEach((c) => {
-      const cot = q[c.sim]; if (!cot) return;
+      const cot = c.cot || q[c.sim]; if (!cot) return;
       const nome = c.nome || (cot.nome && cot.nome !== c.t ? cot.nome : c.t);
       const h = (cot.historico || []).map((x) => x.preco).filter((v) => v > 0);
       let nota = 50; const motivos = [];
@@ -6774,8 +6778,16 @@
   const grauDe = (nota) => GRAUS.find((g) => nota >= g.min);
   const notaDe = (sim) => { const x = triagem.get(sim); return x ? x.nota : -1; };
   // bolinha com a cor do grau, na frente do papel (a nota e os motivos ficam na dica)
-  function letraNota(sim) {
-    const x = triagem.get(sim);
+  // nota das ações fora da triagem (lista completa): calculada na hora com a
+  // cotação da linha e guardada até o histórico dela mudar
+  const notasExtra = new Map();
+  function letraNota(sim, cot, t, nome) {
+    let x = triagem.get(sim);
+    if (!x && cot && cot.preco > 0) {
+      const n = (cot.historico || []).length, guardada = notasExtra.get(sim);
+      if (guardada && guardada.n === n) x = guardada.x;
+      else { x = triagemAtivos([{ t: t || sim.replace(/\.SA$/, ""), nome: nome || "", sim, cot }]).get(sim); notasExtra.set(sim, { n, x }); }
+    }
     if (!x) return '<span class="bola-grau g-x" title="Sem nota (sem cotação)"></span>';
     const g = grauDe(x.nota);
     const porque = x.motivos.map((m) => (m.pos ? "+ " : "− ") + m.txt).join("\n") || "sem sinais fortes";
@@ -7288,7 +7300,7 @@
         posicao = `<small class="prof-pos prof-pos-1" title="${un[0].toUpperCase() + un.slice(1)}">${cel(["📈", "📉", "➖"], `Hoje, ${un}`, difer)}${cel(["💰", "💸", "➖"], `No último mês, ${un}`, mes)}</small>`;
       }
       const semHist = x && sim !== "USDBRL" && h.length < 3 ? ' data-semhist="1"' : "";
-      return `<tr class="${ativo}" ${abrirLinha(sim)} ${marcas}${semHist} title="Ver o gráfico diário de ${t}${c.bdr ? ` · cotação do BDR ${c.bdr} na B3, em reais` : ""}">${simbolo(x ? letraNota(sim) : "", posicao)}
+      return `<tr class="${ativo}" ${abrirLinha(sim)} ${marcas}${semHist} title="Ver o gráfico diário de ${t}${c.bdr ? ` · cotação do BDR ${c.bdr} na B3, em reais` : ""}">${simbolo(x ? letraNota(sim, c, t, nome) : "", posicao)}
         <td class="r t-preco${piscaPreco(sim, c.preco)}">${f(c.preco)}</td>${celVarDia}${faixa}<td class="r prof-vol prof-cel-oculta">${fmtVolume(ult && ult.volume ? ult.volume : c.volume)}</td>
         ${celPinta(variacaoSerie(h, 30), "prof-opc prof-opc2")}${celPinta(variacaoSerie(h, 90))}<td class="prof-spark prof-opc prof-opc2">${spark}</td></tr>`;
     };
