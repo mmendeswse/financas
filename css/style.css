@@ -2836,3 +2836,6 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
 .prof-tab .prof-pos .pp-c { justify-content: space-between; width: calc(17px + 9ch); }
 @media (max-width: 1024px) { .prof-tab .prof-pos .pp-c { width: calc(16px + 9ch); } }
 .prof-cot .prof-tab td.prof-sim .prof-pos { gap: 12px; }
+/* ícone encostado no valor (valores continuam alinhados à direita) */
+.prof-tab .prof-pos .pp-c { justify-content: flex-end; }
+.prof-tab .prof-pos .pp-c i { margin-right: 3px; }
