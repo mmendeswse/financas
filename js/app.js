@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.339";
+  const VERSAO_APP = "3.6.340";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -7217,22 +7217,31 @@
         : '<td class="prof-faixa prof-opc"><span class="term-dim">—</span></td>';
       const spark = h.length > 2 ? sparklineSVG(h.slice(-63).map((p) => p.preco), (variacaoSerie(h, 90) || 0) >= 0 ? G.CORES.up : G.CORES.down) : "";
       // ação da carteira: quantidade, quanto rendeu hoje e o resultado total
+      // ícone próprio do resultado: seta para cima (verde) no ganho, para baixo
+      // (vermelha) na perda, traço cinza quando zero; "dia" é redondo e
+      // "acumulado" (total ou mês) é quadrado, para diferenciar as duas colunas
+      const icoRes = (forma, vv) => {
+        const cor = vv > 0 ? "#19E57A" : vv < 0 ? "#FF3B4E" : "#7C828A";
+        const fundo = forma === "dia" ? '<circle cx="6" cy="6" r="5.5"' : '<rect x=".5" y=".5" width="11" height="11" rx="2.5"';
+        const dentro = vv > 0 ? '<path d="M6 3 9 7.5H3z" fill="#000"/>' : vv < 0 ? '<path d="M6 9 9 4.5H3z" fill="#000"/>' : '<rect x="3" y="5.25" width="6" height="1.5" fill="#000"/>';
+        return `<svg class="pp-ic" viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">${fundo} fill="${cor}"/>${dentro}</svg>`;
+      };
       let posicao = "";
       const mo = x && x.eua ? usd : brl;
       // valor curto (sem "R$", mil abreviado) para caber numa coluna fixa
       const curto = (vv) => { const a = Math.abs(vv); return a >= 10000 ? `${(a / 1000).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} mil` : a.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
-      const cel = (ics, rot, vv) => vv == null ? '<span class="pp-c"></span>' : `<span class="pp-c" title="${rot}: ${vv == null ? "—" : `${vv >= 0 ? "+" : "−"}${mo(Math.abs(vv))}`}"><i>${vv > 0 ? ics[0] : vv < 0 ? ics[1] : ics[2]}</i>${vv == null ? '<b class="t-zero">—</b>' : `<b class="${vv > 0 ? "t-up" : vv < 0 ? "t-down" : "t-zero"}">${vv >= 0 ? "+" : "−"}${curto(vv)}</b>`}</span>`;
+      const cel = (ics, rot, vv) => vv == null ? '<span class="pp-c"></span>' : `<span class="pp-c" title="${rot}: ${vv == null ? "—" : `${vv >= 0 ? "+" : "−"}${mo(Math.abs(vv))}`}">${icoRes(ics, vv)}${vv == null ? '<b class="t-zero">—</b>' : `<b class="${vv > 0 ? "t-up" : vv < 0 ? "t-down" : "t-zero"}">${vv >= 0 ? "+" : "−"}${curto(vv)}</b>`}</span>`;
       if (minha && Number(minha.quantidade) > 0) {
         const qtd = Number(minha.quantidade), pm = Number(minha.precoMedio) || 0;
         const hoje = difer != null ? qtd * difer : null, total = pm > 0 ? qtd * (c.preco - pm) : null;
-        // na mesma linha, em colunas fixas: quanto rendeu hoje (📈 ganho, 📉 perda) e o
-        // resultado total desde a compra (💰 ganho, 💸 perda)
+        // na mesma linha, em colunas fixas: quanto rendeu hoje (ícone redondo) e o
+        // resultado total desde a compra (ícone quadrado)
         const dica = `${qtd.toLocaleString("pt-BR", { maximumFractionDigits: 8 })} ações${hoje == null ? "" : ` · hoje ${hoje >= 0 ? "+" : "−"}${mo(Math.abs(hoje))}`}${total == null ? "" : ` · total ${total >= 0 ? "+" : "−"}${mo(Math.abs(total))}`}`;
-        posicao = `<small class="prof-pos" title="${esc(dica)}">${cel(["📈", "📉", "📅"], "Hoje", hoje)}${cel(["💰", "💸", "💰"], "Total desde a compra", total)}</small>`;
+        posicao = `<small class="prof-pos" title="${esc(dica)}">${cel("dia", "Hoje", hoje)}${cel("acum", "Total desde a compra", total)}</small>`;
       } else if (x) {
         // outras ações: quanto 1 ação ganhou ou perdeu hoje e no último mês
         const pm1 = variacaoSerie(h, 30), mes = pm1 != null && pm1 > -100 ? c.preco - c.preco / (1 + pm1 / 100) : null;
-        posicao = `<small class="prof-pos prof-pos-1" title="Por 1 ação">${cel(["📈", "📉", "📅"], "Hoje, por ação", difer)}${cel(["💰", "💸", "💰"], "No último mês, por ação", mes)}</small>`;
+        posicao = `<small class="prof-pos prof-pos-1" title="Por 1 ação">${cel("dia", "Hoje, por ação", difer)}${cel("acum", "No último mês, por ação", mes)}</small>`;
       }
       return `<tr class="${ativo}" ${abrirLinha(sim)} ${marcas} title="Ver o gráfico diário de ${t}${c.bdr ? ` · cotação do BDR ${c.bdr} na B3, em reais` : ""}">${simbolo(x ? letraNota(sim) : "", posicao)}
         <td class="r t-preco${piscaPreco(sim, c.preco)}">${f(c.preco)}</td>${celVarDia}${faixa}<td class="r prof-vol prof-cel-oculta">${fmtVolume(ult && ult.volume ? ult.volume : c.volume)}</td>

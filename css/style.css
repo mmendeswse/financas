@@ -2828,3 +2828,4 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
 /* outras ações (valores por 1 ação): um pouco mais apagados que os da carteira */
 .prof-tab .prof-pos-1 { opacity: .8; }
 .prof-tab .prof-pos-1 .pp-c b { font-weight: 600; }
+.prof-tab .prof-pos .pp-c .pp-ic { flex: none; margin-right: 4px; }
