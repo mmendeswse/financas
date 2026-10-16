@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.349";
+  const VERSAO_APP = "3.6.351";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -6816,9 +6816,23 @@
       tr.hidden = !ok; if (ok) vis++;
     }
     fecha();
+    encurtarNomesCot();
     const aviso = document.getElementById("cotBuscaQtd");
     if (aviso) aviso.textContent = filtrando ? `${corpo.querySelectorAll("tr[data-busca]:not([hidden])").length.toLocaleString("pt-BR")} encontrados` : "";
   }
+  // nome da empresa que não cabe (cortado com "…") fica só com a primeira
+  // palavra (ou some, se nem ela couber); o nome completo continua na dica. Escreve tudo, mede de uma vez
+  // (um só cálculo de layout) e depois encurta só os que não couberam
+  function encurtarNomesCot(soNovos) {
+    const nomes = [...document.querySelectorAll(soNovos ? ".prof-cot .ps-nome:not([data-nome])" : ".prof-cot .ps-nome")];
+    nomes.forEach((el) => { if (!el.dataset.nome) { el.dataset.nome = el.textContent; el.title = el.textContent; } if (el.textContent !== el.dataset.nome) el.textContent = el.dataset.nome; });
+    const cortar = nomes.filter((el) => el.clientWidth > 0 && el.scrollWidth > el.clientWidth + 1);
+    cortar.forEach((el) => { el.textContent = el.dataset.nome.split(/\s+/)[0]; });
+    // nem a primeira palavra coube: some o nome (fica só o código)
+    cortar.filter((el) => el.scrollWidth > el.clientWidth + 1).forEach((el) => { el.textContent = ""; });
+  }
+  let tEncurtar = 0;
+  window.addEventListener("resize", () => { clearTimeout(tEncurtar); tEncurtar = setTimeout(() => { if (ROTA.secao === "nasdaq") encurtarNomesCot(); }, 150); });
   let linhasPendentes = [];      // linhas da Cotação que entram depois, em lotes
   let loteCotacao = 0;           // cancela lotes de um desenho anterior
   function inserirLinhasPendentes() {
@@ -6830,6 +6844,7 @@
       const lote = g.itens.splice(0, 250);
       marca.insertAdjacentHTML("beforebegin", lote.map(g.linha).join(""));
       if (filtroCot) aplicarFiltroCot();
+      encurtarNomesCot(true);
       if (!g.itens.length) { marca.remove(); fila.shift(); }
       else marca.firstElementChild.textContent = `carregando ${g.itens.length} ativos…`;
       setTimeout(passo, 30);
@@ -7219,9 +7234,9 @@
       // ação da carteira: quantidade, quanto rendeu hoje e o resultado total
       let posicao = "";
       const mo = !x ? f : x.eua ? usd : brl;   // índices, dólar e ouro: no formato da própria linha
-      // valor curto (sem "R$"; a partir de 10.000 sem centavos) para caber numa coluna fixa;
-      // zero à esquerda (05,47) para os valores pequenos terem a mesma largura e os ícones alinharem
-      const curto = (vv) => { const a = Math.abs(vv); return a >= 10000 ? a.toLocaleString("pt-BR", { maximumFractionDigits: 0 }) : a.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2, minimumIntegerDigits: 2 }); };
+      // valor sem "R$" e com zeros à esquerda (0.005,47) para todos terem a mesma
+      // largura e os ícones ficarem alinhados entre as linhas
+      const curto = (vv) => Math.abs(vv).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2, minimumIntegerDigits: 4 });
       const cel = (ics, rot, vv) => vv == null ? '<span class="pp-c"></span>' : `<span class="pp-c" title="${rot}: ${vv == null ? "—" : `${vv >= 0 ? "+" : "−"}${mo(Math.abs(vv))}`}"><i>${vv > 0 ? ics[0] : vv < 0 ? ics[1] : ics[2]}</i>${vv == null ? '<b class="t-zero">—</b>' : `<b class="${vv > 0 ? "t-up" : vv < 0 ? "t-down" : "t-zero"}">${vv > 0 ? "+" : vv < 0 ? "−" : ""}${curto(vv)}</b>`}</span>`;
       if (minha && Number(minha.quantidade) > 0) {
         const qtd = Number(minha.quantidade), pm = Number(minha.precoMedio) || 0;
@@ -8250,6 +8265,7 @@
       case "nasdaq": {
         montarGraficoMercado(); inserirLinhasPendentes();
         if (filtroCot || filtroRapido !== "todos") aplicarFiltroCot();
+        encurtarNomesCot();
         const campo = document.getElementById("cotBusca");
         if (campo && buscaCotFocada) { campo.focus(); campo.setSelectionRange(campo.value.length, campo.value.length); }
         break;

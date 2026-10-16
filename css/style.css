@@ -2839,3 +2839,6 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
 /* ícone encostado no valor (valores continuam alinhados à direita) */
 .prof-tab .prof-pos .pp-c { justify-content: flex-end; }
 .prof-tab .prof-pos .pp-c i { margin-right: 3px; }
+/* valores com a mesma quantidade de dígitos: ícone fixo à esquerda, valor à direita */
+.prof-tab .prof-pos .pp-c { justify-content: space-between; width: calc(16px + 11ch); }
+@media (max-width: 1024px) { .prof-tab .prof-pos .pp-c { width: calc(15px + 11ch); } }
