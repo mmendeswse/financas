@@ -2852,3 +2852,8 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
 @media (min-width: 701px) and (max-width: 900px) {
   .prof-cot .prof-tab .prof-faixa, .prof-cot .prof-tab th.prof-opc:not(.prof-opc2) { display: none; }
 }
+/* iPad em pé mais estreito: largura mínima do nome menor, para os códigos de
+   6 letras (MXRF11, BPAC11) não empurrarem os valores para fora do alinhamento */
+@media (min-width: 701px) and (max-width: 820px) { .prof-cot .prof-tab .ps-nome { min-width: 72px; } }
+@media (min-width: 701px) and (max-width: 760px) { .prof-cot .prof-tab .ps-nome { min-width: 56px; } }
+@media (min-width: 701px) and (max-width: 740px) { .prof-cot .prof-tab .ps-nome { min-width: 0; } .prof-cot .prof-tab .prof-cel-oculta, .prof-cot .prof-tab th.prof-cel-oculta { display: none; } }
