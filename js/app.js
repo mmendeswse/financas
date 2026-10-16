@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.354";
+  const VERSAO_APP = "3.6.355";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -7257,7 +7257,7 @@
       const fav = favBolsa.has(sim);
       const ativo = (sim === velaBolsa ? " prof-sel" : "") + (naCarteira ? " prof-cart" : fav ? " prof-favo" : "");
       // índices, dólar e ouro: um símbolo no lugar da estrela e da bolinha
-      const ICONE_IND = { "^BVSP": ["🏦", "Ibovespa · índice da bolsa brasileira"], "^IXIC": ["💻", "Nasdaq · índice das empresas de tecnologia dos EUA"], "^GSPC": ["🗽", "S&P 500 · as 500 maiores empresas dos EUA"], "USDBRL": ["💵", "Moeda"], "GC=F": ["🪙", "Metal precioso"] };
+      const ICONE_IND = { "^BVSP": ["🏦", "Ibovespa · índice da bolsa brasileira"], "^IXIC": ["🗽", "Nasdaq · índice das empresas de tecnologia dos EUA"], "^GSPC": ["💻", "S&P 500 · as 500 maiores empresas dos EUA"], "USDBRL": ["💵", "Moeda"], "GC=F": ["🪙", "Metal precioso"] };
       const icInd = !x && ICONE_IND[sim];
       const estrela = icInd ? `<span class="prof-slot prof-ic" title="${icInd[1]}">${icInd[0]}</span>` : naCarteira ? '<span class="prof-slot prof-ic-cart" title="Está na sua carteira">💼</span>' : !x ? '<span class="prof-slot"></span>' : `<button class="prof-estrela${fav ? " on" : ""}" data-acao="fav-bolsa" data-id="${esc(sim)}" title="${fav ? "Tirar dos favoritos" : "Adicionar aos favoritos (fica no topo da lista)"}">${fav ? "★" : "☆"}</button>`;
       // código, estrela e bolinha numa caixa com larguras fixas: o código
