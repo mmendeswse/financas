@@ -2803,3 +2803,9 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
 .prof-tab .ps .prof-ic + .prof-nota { display: none; }
 /* ações da carteira: maleta no lugar da estrela */
 .prof-tab .ps .prof-slot.prof-ic-cart { font-size: 11px; }
+/* resultado da carteira: ícone + valor em colunas de largura fixa, alinhadas entre as linhas */
+.prof-cot .prof-tab td.prof-sim .prof-pos { display: inline-flex; gap: 10px; padding-left: 10px; overflow: visible; flex: none; }
+.prof-tab .prof-pos .pp-c { display: inline-flex; align-items: center; justify-content: space-between; width: 92px; font-variant-numeric: tabular-nums; }
+.prof-tab .prof-pos .pp-c i { font-style: normal; font-size: 10px; margin-right: 4px; }
+.prof-tab .prof-pos .pp-c b { font-weight: 700; }
+@media (max-width: 1024px) { .prof-tab .prof-pos .pp-c { width: 82px; } .prof-cot .prof-tab td.prof-sim .prof-pos { gap: 6px; } }

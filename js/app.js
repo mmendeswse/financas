@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.333";
+  const VERSAO_APP = "3.6.334";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -7225,10 +7225,12 @@
       if (minha && Number(minha.quantidade) > 0) {
         const qtd = Number(minha.quantidade), pm = Number(minha.precoMedio) || 0, mo = x && x.eua ? usd : brl;
         const hoje = difer != null ? qtd * difer : null, total = pm > 0 ? qtd * (c.preco - pm) : null;
-        const sinal = (vv) => `<b class="${vv >= 0 ? "t-up" : "t-down"}">${vv >= 0 ? "+" : "−"}${mo(Math.abs(vv))}</b>`;
-        // na mesma linha: quanto a posição rendeu hoje e o resultado total (ganho ou perda)
+        // valor curto (sem "R$", mil abreviado) para caber numa coluna fixa
+        const curto = (vv) => { const a = Math.abs(vv); return a >= 10000 ? `${(a / 1000).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} mil` : a.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+        const cel = (ic, rot, vv) => `<span class="pp-c" title="${rot}: ${vv == null ? "—" : `${vv >= 0 ? "+" : "−"}${mo(Math.abs(vv))}`}"><i>${ic}</i>${vv == null ? '<b class="t-zero">—</b>' : `<b class="${vv > 0 ? "t-up" : vv < 0 ? "t-down" : "t-zero"}">${vv >= 0 ? "+" : "−"}${curto(vv)}</b>`}</span>`;
+        // na mesma linha, em colunas fixas: 📅 quanto rendeu hoje e 💰 o resultado total
         const dica = `${qtd.toLocaleString("pt-BR", { maximumFractionDigits: 8 })} ações${hoje == null ? "" : ` · hoje ${hoje >= 0 ? "+" : "−"}${mo(Math.abs(hoje))}`}${total == null ? "" : ` · total ${total >= 0 ? "+" : "−"}${mo(Math.abs(total))}`}`;
-        posicao = `<small class="prof-pos" title="${esc(dica)}">${[hoje != null ? `hoje ${sinal(hoje)}` : "", total != null ? `total ${sinal(total)}` : ""].filter(Boolean).join(" · ")}</small>`;
+        posicao = `<small class="prof-pos" title="${esc(dica)}">${cel("📅", "Hoje", hoje)}${cel("💰", "Total desde a compra", total)}</small>`;
       }
       return `<tr class="${ativo}" ${abrirLinha(sim, x)} ${marcas} title="Abrir o gráfico diário de ${t}${c.bdr ? ` · cotação do BDR ${c.bdr} na B3, em reais` : ""}">${simbolo(x ? letraNota(sim) : "", posicao)}
         <td class="r t-preco${piscaPreco(sim, c.preco)}">${f(c.preco)}</td>${celVarDia}${faixa}<td class="r prof-vol prof-cel-oculta">${fmtVolume(ult && ult.volume ? ult.volume : c.volume)}</td>
