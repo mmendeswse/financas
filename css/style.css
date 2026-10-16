@@ -2832,3 +2832,7 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
 .prof-cot .prof-tab td.prof-spark { width: 96px; min-width: 96px; padding: 0 4px !important; }
 .prof-cot .prof-tab th:last-child { padding-left: 4px; padding-right: 4px; }
 .prof-cot .prof-tab td.prof-spark svg { width: 100%; height: 18px; }
+/* ícones numa coluna fixa (alinhados entre as linhas) e valor encostado à direita */
+.prof-tab .prof-pos .pp-c { justify-content: space-between; width: calc(17px + 9ch); }
+@media (max-width: 1024px) { .prof-tab .prof-pos .pp-c { width: calc(16px + 9ch); } }
+.prof-cot .prof-tab td.prof-sim .prof-pos { gap: 12px; }
