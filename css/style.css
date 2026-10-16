@@ -2828,3 +2828,7 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
 /* outras ações (valores por 1 ação): um pouco mais apagados que os da carteira */
 .prof-tab .prof-pos-1 { opacity: .8; }
 .prof-tab .prof-pos-1 .pp-c b { font-weight: 600; }
+/* Tendência: mini gráfico ocupa a célula inteira, sem sobra dos lados */
+.prof-cot .prof-tab td.prof-spark { width: 96px; min-width: 96px; padding: 0 4px !important; }
+.prof-cot .prof-tab th:last-child { padding-left: 4px; padding-right: 4px; }
+.prof-cot .prof-tab td.prof-spark svg { width: 100%; height: 18px; }
