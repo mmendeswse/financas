@@ -2761,7 +2761,7 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
 /* cada ação numa linha só: código, nome (cortado com "…") e o "hoje" da
    carteira lado a lado; variação em valor e em % na mesma linha */
 .prof-cot .prof-tab td { white-space: nowrap; }
-.prof-cot .prof-tab td.prof-sim { width: 34%; max-width: none; }
+.prof-cot .prof-tab td.prof-sim { width: auto; max-width: none; }
 .prof-tab .ps { display: flex; align-items: center; min-width: 0; max-width: 360px; }
 .prof-tab .ps .ps-tk { flex: none; }
 .prof-tab .ps-nome { display: block; flex: 1 1 auto; min-width: 0; margin: 0 0 0 8px; max-width: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -2789,3 +2789,12 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
 .prof-cot .prof-busca::placeholder { color: #B9BDC4; opacity: 1; }
 .prof-cot .prof-busca:focus { border-color: #FF9F1C; box-shadow: none; }
 .prof-cot .prof-busca::-webkit-search-cancel-button { height: 9px; width: 9px; margin-left: 2px; }
+/* coluna Ativo fica com a sobra da largura: as colunas de números ficam
+   coladas no conteúdo e o resultado da carteira encosta no preço */
+.prof-cot .prof-tab td.prof-sim { width: 100%; }
+.prof-cot .prof-tab .ps { max-width: none; overflow: hidden; }
+.prof-cot .prof-tab td.prof-sim .prof-pos { margin-left: auto; padding-left: 10px; }
+.prof-cot .prof-tab td:not(.prof-sim):not(.prof-semcot) { padding-left: 14px; }
+.prof-cot .prof-tab td.prof-sim { max-width: 0; }
+.prof-cot .prof-tab .ps-nome { flex: 1 1 0; }
+.prof-cot .prof-tab td.prof-sim .prof-pos { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
