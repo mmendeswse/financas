@@ -2693,3 +2693,16 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
 .prof-pos { display: block; font-size: 10.5px; color: #B9BDC4; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
 .prof-pos b.t-up { color: #3DFF9A; } .prof-pos b.t-down { color: #FF6B7A; }
 @media (max-width: 900px) { .prof-busca { width: 150px; } }
+
+/* tabela Cotação: alinhamento — estrela e bolinha com espaço fixo (o código
+   começa sempre na mesma coluna), seta da variação com largura fixa (os
+   números ficam alinhados) e o aviso "sem cotação" logo após a descrição */
+.prof-tab .prof-sim { white-space: nowrap; }
+.prof-tab .prof-slot, .prof-tab .prof-estrela { display: inline-block; width: 16px; padding: 0; text-align: left; vertical-align: -1px; }
+.prof-tab .prof-nota { display: inline-block; width: 16px; vertical-align: 0; }
+.prof-tab .prof-nota .bola-grau { margin: 0; }
+.prof-cot .prof-tab th:first-child { padding-left: 40px; }
+.prof-tab td i.prof-seta { display: inline-block; width: 12px; text-align: right; margin-left: 3px; font-style: normal; font-size: 9px; }
+.prof-tab td.prof-semcot { text-align: left; font-family: Inter, system-ui, sans-serif; font-weight: 500; font-style: italic; color: #7D828A; }
+.prof-tab th { vertical-align: bottom; }
+.prof-tab td { vertical-align: middle; }
