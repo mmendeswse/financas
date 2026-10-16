@@ -2842,3 +2842,13 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
 /* valores com a mesma quantidade de dígitos: ícone fixo à esquerda, valor à direita */
 .prof-tab .prof-pos .pp-c { justify-content: space-between; width: calc(16px + 11ch); }
 @media (max-width: 1024px) { .prof-tab .prof-pos .pp-c { width: calc(15px + 11ch); } }
+/* iPad: coluna do nome com largura mínima travada, para o nome (ou a
+   primeira palavra) aparecer inteiro em vez de sumir */
+@media (min-width: 701px) and (max-width: 1180px) {
+  .prof-cot .prof-tab .ps-nome { flex: 1 1 auto; min-width: 96px; }
+  .prof-cot .prof-tab td.prof-sim .prof-pos { flex: none; }
+}
+/* iPad em pé: sem a Faixa do dia, para sobrar espaço para o nome e os valores */
+@media (min-width: 701px) and (max-width: 900px) {
+  .prof-cot .prof-tab .prof-faixa, .prof-cot .prof-tab th.prof-opc:not(.prof-opc2) { display: none; }
+}
