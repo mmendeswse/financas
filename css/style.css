@@ -2738,3 +2738,24 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
 @media (min-width: 701px) and (max-width: 1024px) { .prof-cot .prof-tab .prof-opc2 { display: none; } }
 @media (max-width: 700px) { .prof-cot .prof-tab td, .prof-cot .prof-tab th { padding-left: 5px; padding-right: 5px; } }
 @media (max-width: 700px) { .prof-busca { width: 130px; } }
+
+/* tabela Cotação compacta (8 colunas, sem arrastar para o lado): nome da
+   empresa embaixo do código, variação em % com o valor embaixo e a faixa do
+   dia com mínima e máxima nas pontas */
+.prof-cot .prof-tab { table-layout: auto; width: 100%; }
+.prof-cot .prof-tab td.prof-sim { max-width: 260px; }
+.prof-tab .ps-nome { display: block; margin: 1px 0 0 34px; font: 500 10.5px Inter, system-ui, sans-serif; color: #8A8F98; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; }
+.prof-tab tr.prof-cart .ps-nome { color: #E0B26A; }
+.prof-tab td.prof-sim .prof-pos { margin-left: 34px; max-width: 240px; }
+.prof-tab td.prof-var b { display: block; font-weight: 800; }
+.prof-tab td.prof-var small { display: block; font-size: 10.5px; font-weight: 700; opacity: .85; margin-right: 15px; }
+.prof-tab .fdx { display: grid; grid-template-columns: auto minmax(50px, 1fr) auto; align-items: center; gap: 6px; }
+.prof-tab .fd-n { font-size: 11px; font-weight: 700; }
+.prof-tab td.prof-faixa { min-width: 170px; }
+@media (max-width: 1024px) { .prof-tab td.prof-faixa { min-width: 140px; } .prof-tab .fd-n { font-size: 10.5px; } }
+@media (max-width: 700px) { .prof-tab .ps-nome { max-width: 130px; } .prof-tab td.prof-sim .prof-pos { max-width: 150px; white-space: normal; } }
+/* a tabela compacta tem o Último na 2ª coluna: ele não some mais em telas menores */
+@media (max-width: 900px) { .prof-cot .prof-tab thead th:nth-child(2) { display: table-cell; } }
+@media (min-width: 701px) and (max-width: 1024px) { .prof-cot .prof-tab .prof-opc2 { display: none; } .prof-tab .ps-nome { max-width: 170px; } .prof-tab td.prof-sim .prof-pos { max-width: 190px; } }
+@media (max-width: 700px) { .prof-cot .prof-tab .prof-cel-oculta { display: none; } .prof-tab td.prof-var small { margin-right: 0; } }
+.prof-tab td.prof-sim .prof-pos { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.35; }
