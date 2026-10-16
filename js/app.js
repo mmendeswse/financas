@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.346";
+  const VERSAO_APP = "3.6.348";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -7219,8 +7219,8 @@
       // ação da carteira: quantidade, quanto rendeu hoje e o resultado total
       let posicao = "";
       const mo = !x ? f : x.eua ? usd : brl;   // índices, dólar e ouro: no formato da própria linha
-      // valor curto (sem "R$", mil abreviado) para caber numa coluna fixa
-      const curto = (vv) => { const a = Math.abs(vv); return a >= 10000 ? `${(a / 1000).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} mil` : a.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+      // valor curto (sem "R$"; a partir de 10.000 sem centavos) para caber numa coluna fixa
+      const curto = (vv) => { const a = Math.abs(vv); return a.toLocaleString("pt-BR", a >= 10000 ? { maximumFractionDigits: 0 } : { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
       const cel = (ics, rot, vv) => vv == null ? '<span class="pp-c"></span>' : `<span class="pp-c" title="${rot}: ${vv == null ? "—" : `${vv >= 0 ? "+" : "−"}${mo(Math.abs(vv))}`}"><i>${vv > 0 ? ics[0] : vv < 0 ? ics[1] : ics[2]}</i>${vv == null ? '<b class="t-zero">—</b>' : `<b class="${vv > 0 ? "t-up" : vv < 0 ? "t-down" : "t-zero"}">${vv > 0 ? "+" : vv < 0 ? "−" : ""}${curto(vv)}</b>`}</span>`;
       if (minha && Number(minha.quantidade) > 0) {
         const qtd = Number(minha.quantidade), pm = Number(minha.precoMedio) || 0;
