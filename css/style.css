@@ -2780,3 +2780,12 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
 .prof-tab td.prof-spark svg { height: 16px; }
 .prof-tab td.prof-spark { padding-top: 0; padding-bottom: 0; }
 .prof-busca::placeholder { text-transform: none; }
+/* busca da Cotação no mesmo modelo dos botões de filtro (Todos, Em queda...) */
+.prof-cot .prof-busca {
+  width: calc(7ch + 30px); max-width: none; height: auto;
+  background: #1C1D20; color: #E6E8EB; border: 1px solid #3A3D42; border-radius: 999px;
+  padding: 2px 9px; font: 700 10.5px Inter, system-ui, sans-serif; font-size: 10.5px !important; line-height: normal;
+}
+.prof-cot .prof-busca::placeholder { color: #B9BDC4; opacity: 1; }
+.prof-cot .prof-busca:focus { border-color: #FF9F1C; box-shadow: none; }
+.prof-cot .prof-busca::-webkit-search-cancel-button { height: 9px; width: 9px; margin-left: 2px; }
