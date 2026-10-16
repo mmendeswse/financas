@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.325";
+  const VERSAO_APP = "3.6.326";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -6795,6 +6795,7 @@
   // tabela Cotação: busca, ordenação por coluna e favoritos (como as listas
   // de acompanhamento dos home brokers)
   let filtroCot = "", buscaCotFocada = false;
+  let filtroRapido = "todos";   // Todos, Carteira, Favoritos, Em alta, Em queda
   let ordemCot = { campo: "", desc: true };
   let favBolsa = new Set();
   try { favBolsa = new Set(JSON.parse(localStorage.getItem("favBolsa1") || "[]")); } catch (e) { /* sem acesso */ }
@@ -6803,16 +6804,20 @@
     const termo = normBusca(filtroCot).trim(), corpo = document.querySelector(".prof-cot tbody");
     if (!corpo) return;
     let grupo = null, vis = 0;
-    const fecha = () => { if (grupo) grupo.hidden = !!termo && !vis; };
+    const filtrando = !!termo || filtroRapido !== "todos";
+    const fecha = () => { if (grupo) grupo.hidden = filtrando && !vis; };
     for (const tr of corpo.rows) {
       if (tr.classList.contains("prof-grupo")) { fecha(); grupo = tr; vis = 0; continue; }
       if (tr.classList.contains("prof-pend")) continue;
-      const ok = !termo || (tr.dataset.busca || "").includes(termo);
+      const d = tr.dataset;
+      const okRapido = filtroRapido === "todos" || (filtroRapido === "cart" && d.cart) || (filtroRapido === "fav" && d.fav)
+        || (filtroRapido === "alta" && d.sinal === "1") || (filtroRapido === "queda" && d.sinal === "-1");
+      const ok = okRapido && (!termo || (d.busca || "").includes(termo));
       tr.hidden = !ok; if (ok) vis++;
     }
     fecha();
     const aviso = document.getElementById("cotBuscaQtd");
-    if (aviso) aviso.textContent = termo ? `${corpo.querySelectorAll("tr[data-busca]:not([hidden])").length} encontrados` : "";
+    if (aviso) aviso.textContent = filtrando ? `${corpo.querySelectorAll("tr[data-busca]:not([hidden])").length.toLocaleString("pt-BR")} encontrados` : "";
   }
   let linhasPendentes = [];      // linhas da Cotação que entram depois, em lotes
   let loteCotacao = 0;           // cancela lotes de um desenho anterior
@@ -7172,7 +7177,7 @@
     const numP = (v, f) => v == null || !(v > 0) ? '<span class="term-dim">—</span>' : f(v);
     // (1) Cotação
     // célula da variação pintada de verde (alta) ou vermelho (queda)
-    const celPinta = (v) => `<td class="r ${v == null ? "" : v > 0 ? "cel-alta" : v < 0 ? "cel-baixa" : "t-zero"}">${tPct(v)}<i class="prof-seta">${v ? setaMov(v) : ""}</i></td>`;
+    const celPinta = (v, extra) => `<td class="r ${extra || ""} ${v == null ? "" : v > 0 ? "cel-alta" : v < 0 ? "cel-baixa" : "t-zero"}">${tPct(v)}<i class="prof-seta">${v ? setaMov(v) : ""}</i></td>`;
     // tocar na linha abre a tela do gráfico diário do ativo, como na guia
     // Ações (velas; tocar no gráfico alterna para a linha). Ao voltar, o
     // ativo fica selecionado na área de trabalho
@@ -7180,33 +7185,50 @@
       const destino = sim === "USDBRL" ? 'data-acao="ir" data-secao="detalhe-dolar"' : x && x.clique ? x.clique : `data-acao="ir" data-secao="detalhe-mercado" data-id="${esc(sim)}"`;
       return `${destino} data-sel="${esc(sim)}"`;
     };
+    // nome da lista completa vem em caixa alta ("PETROBRAS PN N2"): fica só
+    // com a inicial maiúscula, mantendo as siglas de classe (ON, PN, N2…)
+    const SIGLAS = /^(ON|PN|PNA|PNB|PNC|UNT|UNIT|N1|N2|NM|MA|MB|ED|EJ|EX|DRN|DR[1-3]|BDR|ETF|FII|S\/A|SA|S\.A\.|CI|ER|ES)$/;
+    const nomeBonito = (n) => !n || n !== n.toUpperCase() || !/[A-Z]/.test(n) ? n
+      : n.split(/\s+/).map((w) => SIGLAS.test(w) ? w : w.charAt(0) + w.slice(1).toLowerCase()).join(" ");
     const linhaCot = ([t, nome, sim, f, x]) => {
       const c = cotDe(sim, x), selo = citadas.has(t) ? ' <span class="term-chip c-acc">ICL</span>' : "";
+      if (c && c.lista) nome = nomeBonito(nome);   // só os nomes que vieram da lista completa
       // linha em destaque quando a ação está na carteira (guia Ações)
       const minha = (DADOS.acoes || []).find((a) => String(a.ticker).toUpperCase() === t), naCarteira = !!minha;
       const fav = favBolsa.has(sim);
       const ativo = (sim === velaBolsa ? " prof-sel" : "") + (naCarteira ? " prof-cart" : fav ? " prof-favo" : "");
       const estrela = !x || naCarteira ? '<span class="prof-slot"></span>' : `<button class="prof-estrela${fav ? " on" : ""}" data-acao="fav-bolsa" data-id="${esc(sim)}" title="${fav ? "Tirar dos favoritos" : "Adicionar aos favoritos (fica no topo da lista)"}">${fav ? "★" : "☆"}</button>`;
-      const busca = `data-busca="${esc(normBusca(t + " " + nome))}"`;
-      if (!c) return `<tr class="${ativo}" ${abrirLinha(sim, x)} ${busca}><td class="prof-sim">${estrela}<span class="prof-nota"></span>${t}${selo}</td><td class="prof-desc">${esc(nome)}</td><td class="term-dim prof-semcot" colspan="10">${mercado.carregando ? "Buscando cotação…" : "Sem cotação no momento"}</td></tr>`;
+      // código, estrela e bolinha numa caixa com larguras fixas: o código
+      // começa sempre no mesmo lugar, em qualquer aparelho
+      const simbolo = (nota) => `<td class="prof-sim"><span class="ps">${estrela}<span class="prof-nota">${nota}</span><b class="ps-tk">${t}</b>${selo}</span></td>`;
+      const v = c ? c.variacaoPct : null;
+      const marcas = `data-busca="${esc(normBusca(t + " " + nome))}"${naCarteira ? ' data-cart="1"' : ""}${fav ? ' data-fav="1"' : ""} data-sinal="${v > 0 ? "1" : v < 0 ? "-1" : "0"}"`;
+      if (!c) return `<tr class="${ativo}" ${abrirLinha(sim, x)} ${marcas}>${simbolo("")}<td class="prof-desc">${esc(nome)}</td><td class="term-dim prof-semcot" colspan="12">${mercado.carregando ? "Buscando cotação…" : "Sem cotação no momento"}</td></tr>`;
       const h = c.historico || [], ult = h[h.length - 1], ant = h.length > 1 ? h[h.length - 2].preco : null;
       const max = ult && ult.maxima > 0 ? Math.max(ult.maxima, c.preco) : null, min = ult && ult.minima > 0 ? Math.min(ult.minima, c.preco) : null;
       const abe = ult && ult.abertura > 0 ? ult.abertura : null;
       const antL = ant == null && c.lista && c.variacaoPct > -100 ? c.preco / (1 + (c.variacaoPct || 0) / 100) : ant;
-      // ação dos EUA: mesma linha das ações da B3 (bolinha da nota e números
-      // sem símbolo de moeda); vinda pelo BDR, o código dele fica na dica
+      // variação em valor (como a coluna "Oscilação" dos painéis da B3)
+      // (mesma conta da Variação %, para as duas colunas baterem)
+      const difer = v != null && v > -100 ? c.preco - c.preco / (1 + v / 100) : antL > 0 ? c.preco - antL : null;
+      const celDif = difer == null ? '<td class="r prof-opc"><span class="term-dim">—</span></td>'
+        : `<td class="r prof-opc ${difer > 0 ? "t-up" : difer < 0 ? "t-down" : "t-zero"}">${difer > 0 ? "+" : difer < 0 ? "−" : ""}${(f === fmtPontos && Math.abs(difer) < 10 ? n2 : f)(Math.abs(difer))}</td>`;
+      // faixa do dia: barra da mínima à máxima com o preço atual marcado
+      const faixa = max > min ? `<td class="prof-faixa prof-opc" title="Mínima ${f(min)} · Máxima ${f(max)}"><span class="fd"><i style="left:${Math.max(0, Math.min(100, (c.preco - min) / (max - min) * 100)).toFixed(0)}%"></i></span></td>` : '<td class="prof-faixa prof-opc"><span class="term-dim">—</span></td>';
+      // minigráfico dos últimos 3 meses (tendência)
+      const spark = h.length > 2 ? sparklineSVG(h.slice(-63).map((p) => p.preco), (variacaoSerie(h, 90) || 0) >= 0 ? G.CORES.up : G.CORES.down) : "";
       // ação da carteira: quantidade, quanto rendeu hoje e o resultado total
       let posicao = "";
       if (minha && Number(minha.quantidade) > 0) {
         const qtd = Number(minha.quantidade), pm = Number(minha.precoMedio) || 0, mo = x && x.eua ? usd : brl;
-        const hoje = antL > 0 ? qtd * (c.preco - antL) : null, total = pm > 0 ? qtd * (c.preco - pm) : null;
-        const sinal = (v) => `<b class="${v >= 0 ? "t-up" : "t-down"}">${v >= 0 ? "+" : "−"}${mo(Math.abs(v))}</b>`;
+        const hoje = difer != null ? qtd * difer : null, total = pm > 0 ? qtd * (c.preco - pm) : null;
+        const sinal = (vv) => `<b class="${vv >= 0 ? "t-up" : "t-down"}">${vv >= 0 ? "+" : "−"}${mo(Math.abs(vv))}</b>`;
         posicao = `<small class="prof-pos">${qtd.toLocaleString("pt-BR", { maximumFractionDigits: 8 })} ações${hoje == null ? "" : ` · hoje ${sinal(hoje)}`}${total == null ? "" : ` · total ${sinal(total)}`}</small>`;
       }
-      return `<tr class="${ativo}" ${abrirLinha(sim, x)} ${busca} title="Abrir o gráfico diário de ${t}${c.bdr ? ` · cotação do BDR ${c.bdr} na B3, em reais` : ""}"><td class="prof-sim">${estrela}<span class="prof-nota">${x ? letraNota(sim) : ""}</span>${t}${selo}</td><td class="prof-desc">${esc(nome)}${posicao}</td>
-        <td class="r t-preco${piscaPreco(sim, c.preco)}">${f(c.preco)}</td>${celPinta(c.variacaoPct)}<td class="r prof-hora">${horaCot}</td>
-        <td class="r">${numP(abe, f)}</td><td class="r t-max">${numP(max, f)}</td><td class="r t-min">${numP(min, f)}</td><td class="r t-ant">${numP(antL, f)}</td><td class="r prof-vol">${fmtVolume(ult && ult.volume ? ult.volume : c.volume)}</td>
-        ${celPinta(variacaoSerie(h, 30))}${celPinta(variacaoSerie(h, 90))}</tr>`;
+      return `<tr class="${ativo}" ${abrirLinha(sim, x)} ${marcas} title="Abrir o gráfico diário de ${t}${c.bdr ? ` · cotação do BDR ${c.bdr} na B3, em reais` : ""}">${simbolo(x ? letraNota(sim) : "")}<td class="prof-desc">${esc(nome)}${posicao}</td>
+        <td class="r t-preco${piscaPreco(sim, c.preco)}">${f(c.preco)}</td>${celDif}${celPinta(v)}${faixa}
+        <td class="r prof-opc prof-opc2">${numP(abe, f)}</td><td class="r t-max prof-opc">${numP(max, f)}</td><td class="r t-min prof-opc">${numP(min, f)}</td><td class="r t-ant prof-opc prof-opc2">${numP(antL, f)}</td><td class="r prof-vol">${fmtVolume(ult && ult.volume ? ult.volume : c.volume)}</td>
+        ${celPinta(variacaoSerie(h, 30), "prof-opc")}${celPinta(variacaoSerie(h, 90))}<td class="prof-spark prof-opc prof-opc2">${spark}</td></tr>`;
     };
     // as ações que vieram só das listas completas (centenas na B3, milhares
     // na Nasdaq) entram depois do desenho, em lotes, para a tela não travar
@@ -7215,14 +7237,16 @@
       const ativoO = ordemCot.campo === campo;
       return `<th class="${r ? "r " : ""}prof-ord${ativoO ? " on" : ""}" data-acao="ordem-cot" data-id="${campo}" title="Ordenar por ${rot.toLowerCase()}">${rot}${ativoO ? (ordemCot.desc ? " ▼" : " ▲") : ""}</th>`;
     };
-    const buscaCot = `<span class="prof-busca-wrap"><input class="prof-busca" id="cotBusca" type="search" placeholder="Buscar código ou nome" value="${esc(filtroCot)}" autocomplete="off" spellcheck="false"><em id="cotBuscaQtd"></em></span>`;
+    const chipsCot = [["todos", "Todos"], ["cart", "Carteira"], ["fav", "Favoritos"], ["alta", "Em alta"], ["queda", "Em queda"]]
+      .map(([k, rot]) => `<button class="prof-chip${filtroRapido === k ? " on" : ""}" data-acao="filtro-cot" data-id="${k}">${rot}</button>`).join("");
+    const buscaCot = `<span class="prof-busca-wrap"><span class="prof-chips">${chipsCot}</span><input class="prof-busca" id="cotBusca" type="search" placeholder="Buscar código ou nome" value="${esc(filtroCot)}" autocomplete="off" spellcheck="false"><em id="cotBuscaQtd"></em></span>`;
     const jCot = renderSoJanelas ? "" : janela("prof-cot", "Cotação", `<div class="term-rolar"><table class="term-tab prof-tab">
-      <thead><tr>${thOrd("nome", "Símbolo")}<th>Descrição</th>${thOrd("ultimo", "Último", 1)}${thOrd("pct", "Variação", 1)}<th class="r">Hora</th><th class="r">Abertura</th><th class="r">Máxima</th><th class="r">Mínima</th><th class="r" title="Fechamento do pregão anterior">Fechamento anterior</th>${thOrd("volume", "Volume", 1)}${thOrd("m1", "1 mês", 1)}${thOrd("m3", "3 meses", 1)}</tr></thead>
+      <thead><tr>${thOrd("nome", "Símbolo")}<th>Descrição</th>${thOrd("ultimo", "Último", 1)}<th class="r prof-opc" title="Diferença para o fechamento anterior">Variação</th>${thOrd("pct", "Variação %", 1)}<th class="prof-opc" title="Mínima e máxima do dia, com o preço atual marcado">Faixa do dia</th><th class="r prof-opc prof-opc2">Abertura</th><th class="r prof-opc">Máxima</th><th class="r prof-opc">Mínima</th><th class="r prof-opc prof-opc2" title="Fechamento do pregão anterior">Fechamento anterior</th>${thOrd("volume", "Volume", 1)}${thOrd("m1", "1 mês", 1).replace('class="r ', 'class="r prof-opc ')}${thOrd("m3", "3 meses", 1)}<th class="prof-opc prof-opc2" title="Minigráfico dos últimos 3 meses">Tendência</th></tr></thead>
       <tbody>${grupos.map(([g, itens], gi) => {
         // as primeiras 150 linhas na hora (na ordem escolhida); o resto em lotes
         const ja = itens.slice(0, 150), depois = itens.slice(150);
         if (depois.length) linhasPendentes.push({ id: "pend-" + gi, itens: depois, linha: linhaCot });
-        return `<tr class="prof-grupo"><td colspan="12">${g}</td></tr>${ja.map(linhaCot).join("")}${depois.length ? `<tr class="prof-pend" id="pend-${gi}"><td colspan="12">carregando ${depois.length} ativos…</td></tr>` : ""}`;
+        return `<tr class="prof-grupo"><td colspan="14">${g}${gi ? ` <em class="prof-grupo-hora">${horaCot !== "—" ? "atualizado às " + horaCot : ""}</em>` : ""}</td></tr>${ja.map(linhaCot).join("")}${depois.length ? `<tr class="prof-pend" id="pend-${gi}"><td colspan="14">carregando ${depois.length.toLocaleString("pt-BR")} ativos…</td></tr>` : ""}`;
       }).join("")}</tbody></table></div>`, buscaCot);
     // (2) Ativo: faixa de cotação, dias de alta × baixa e preços × dias
     const hs = cs && cs.historico ? cs.historico.filter((p) => p.preco > 0) : [];
@@ -8215,7 +8239,7 @@
       }
       case "nasdaq": {
         montarGraficoMercado(); inserirLinhasPendentes();
-        if (filtroCot) aplicarFiltroCot();
+        if (filtroCot || filtroRapido !== "todos") aplicarFiltroCot();
         const campo = document.getElementById("cotBusca");
         if (campo && buscaCotFocada) { campo.focus(); campo.setSelectionRange(campo.value.length, campo.value.length); }
         break;
@@ -8471,6 +8495,10 @@
           if (favBolsa.has(id)) favBolsa.delete(id); else { favBolsa.add(id); garantirHistorico(id); }
           try { localStorage.setItem("favBolsa1", JSON.stringify([...favBolsa])); } catch (er) { /* sem espaço */ }
           manterRolagemCotacao(renderRota); break;
+        case "filtro-cot":
+          filtroRapido = id;
+          document.querySelectorAll('[data-acao="filtro-cot"]').forEach((x) => x.classList.toggle("on", x.dataset.id === id));
+          aplicarFiltroCot(); break;
         case "ordem-cot":
           if (ordemCot.campo === id) { if (ordemCot.desc === (id !== "nome")) ordemCot.desc = !ordemCot.desc; else ordemCot = { campo: "", desc: true }; }
           else ordemCot = { campo: id, desc: id !== "nome" };

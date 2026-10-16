@@ -2706,3 +2706,35 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
 .prof-tab td.prof-semcot { text-align: left; font-family: Inter, system-ui, sans-serif; font-weight: 500; font-style: italic; color: #7D828A; }
 .prof-tab th { vertical-align: bottom; }
 .prof-tab td { vertical-align: middle; }
+
+/* ===== tabela Cotação no padrão das listas de cotação do mercado =====
+   caixa do símbolo com larguras fixas, variação em valor e em %, faixa do
+   dia (mínima–máxima), minigráfico de tendência e filtros rápidos */
+.prof-cot .prof-tab th:first-child { padding-left: 8px; }
+.prof-tab td.prof-sim { padding-left: 6px; }
+.prof-tab .ps { display: inline-flex; align-items: center; gap: 0; white-space: nowrap; }
+.prof-tab .ps .prof-slot, .prof-tab .ps .prof-estrela { flex: 0 0 18px; width: 18px; height: 16px; padding: 0; margin: 0; display: inline-flex; align-items: center; justify-content: flex-start; font: 13px/1 system-ui, sans-serif; }
+.prof-tab .ps .prof-nota { flex: 0 0 16px; width: 16px; display: inline-flex; align-items: center; }
+.prof-tab .ps .prof-nota .bola-grau { margin: 0; }
+.prof-tab .ps .ps-tk { font-weight: 800; letter-spacing: .01em; }
+.prof-tab .ps .term-chip { margin-left: 6px; }
+.prof-tab td.prof-faixa { min-width: 84px; }
+.prof-tab .fd { position: relative; display: block; height: 4px; border-radius: 2px; background: linear-gradient(90deg, rgba(255, 59, 78, .55), rgba(255, 213, 79, .5), rgba(25, 229, 122, .55)); }
+.prof-tab .fd i { position: absolute; top: 50%; width: 3px; height: 11px; margin: -5.5px 0 0 -1.5px; background: #fff; border-radius: 1px; box-shadow: 0 0 0 1px #000; }
+.prof-tab td.prof-spark { width: 92px; min-width: 92px; padding-top: 2px; padding-bottom: 2px; }
+.prof-tab td.prof-spark svg { width: 88px; height: 22px; display: block; }
+.prof-grupo-hora { font-style: normal; font-weight: 600; color: #7D828A; letter-spacing: .02em; margin-left: 8px; text-transform: none; }
+.prof-chips { display: inline-flex; gap: 3px; }
+.prof-chip { background: #1C1D20; color: #B9BDC4; border: 1px solid #3A3D42; border-radius: 999px; padding: 2px 9px; font: 700 10.5px Inter, system-ui, sans-serif; cursor: pointer; }
+.prof-chip.on { background: #FF9F1C; border-color: #FF9F1C; color: #000; }
+/* celular: só o essencial (símbolo, último, variação %, volume e 3 meses) */
+@media (max-width: 700px) {
+  .prof-cot .prof-tab .prof-opc { display: none; }
+  .prof-chips { display: none; }
+}
+@media (max-width: 1100px) { .prof-chip { padding: 2px 7px; } }
+.prof-cot .prof-tab .prof-desc { min-width: 200px; max-width: 280px; }
+/* iPad em pé: sem Abertura, Fechamento anterior e Tendência (cabem as demais) */
+@media (min-width: 701px) and (max-width: 1024px) { .prof-cot .prof-tab .prof-opc2 { display: none; } }
+@media (max-width: 700px) { .prof-cot .prof-tab td, .prof-cot .prof-tab th { padding-left: 5px; padding-right: 5px; } }
+@media (max-width: 700px) { .prof-busca { width: 130px; } }
