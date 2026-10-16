@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.324";
+  const VERSAO_APP = "3.6.325";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -7159,8 +7159,8 @@
     const grupos = [
       ["ÍNDICES, MOEDAS E OURO", [["IBOV", "Índice Ibovespa", "^BVSP", fmtPontos], ["NASDAQ", "Nasdaq Composite", "^IXIC", fmtPontos], ["S&P 500", "S&P 500", "^GSPC", fmtPontos],
         ["DÓLAR", "Dólar comercial · R$", "USDBRL", fDolar], ["OURO", "Ouro · US$ por onça", "GC=F", n2]]],
-      [`B3 · AÇÕES · R$ · ${ordenados.filter((x) => !x.eua).length} ativos`, ordenados.filter((x) => !x.eua).map((x) => [x.t, x.n, x.sim, n2, x])],
-      [`NASDAQ · AÇÕES · ${ordenados.filter((x) => x.eua).length} ativos`, ordenados.filter((x) => x.eua).map((x) => [x.t, x.n, x.sim, n2, x])],
+      [`B3 · AÇÕES · R$ · ${ordenados.filter((x) => !x.eua).length.toLocaleString("pt-BR")} ativos`, ordenados.filter((x) => !x.eua).map((x) => [x.t, x.n, x.sim, n2, x])],
+      [`NASDAQ · AÇÕES · ${ordenados.filter((x) => x.eua).length.toLocaleString("pt-BR")} ativos`, ordenados.filter((x) => x.eua).map((x) => [x.t, x.n, x.sim, n2, x])],
     ];
     const cotDe = (sim, x) => sim === "USDBRL" ? dolarVivo : q[sim] || (x && x.c) || null;
     const todosSel = grupos.flatMap((g) => g[1]);
@@ -7172,7 +7172,7 @@
     const numP = (v, f) => v == null || !(v > 0) ? '<span class="term-dim">—</span>' : f(v);
     // (1) Cotação
     // célula da variação pintada de verde (alta) ou vermelho (queda)
-    const celPinta = (v) => `<td class="r ${v == null ? "" : v > 0 ? "cel-alta" : v < 0 ? "cel-baixa" : "t-zero"}">${tPct(v)}${v ? ` <i>${setaMov(v)}</i>` : ""}</td>`;
+    const celPinta = (v) => `<td class="r ${v == null ? "" : v > 0 ? "cel-alta" : v < 0 ? "cel-baixa" : "t-zero"}">${tPct(v)}<i class="prof-seta">${v ? setaMov(v) : ""}</i></td>`;
     // tocar na linha abre a tela do gráfico diário do ativo, como na guia
     // Ações (velas; tocar no gráfico alterna para a linha). Ao voltar, o
     // ativo fica selecionado na área de trabalho
@@ -7186,9 +7186,9 @@
       const minha = (DADOS.acoes || []).find((a) => String(a.ticker).toUpperCase() === t), naCarteira = !!minha;
       const fav = favBolsa.has(sim);
       const ativo = (sim === velaBolsa ? " prof-sel" : "") + (naCarteira ? " prof-cart" : fav ? " prof-favo" : "");
-      const estrela = x && !naCarteira ? `<button class="prof-estrela${fav ? " on" : ""}" data-acao="fav-bolsa" data-id="${esc(sim)}" title="${fav ? "Tirar dos favoritos" : "Adicionar aos favoritos (fica no topo da lista)"}">${fav ? "★" : "☆"}</button>` : "";
+      const estrela = !x || naCarteira ? '<span class="prof-slot"></span>' : `<button class="prof-estrela${fav ? " on" : ""}" data-acao="fav-bolsa" data-id="${esc(sim)}" title="${fav ? "Tirar dos favoritos" : "Adicionar aos favoritos (fica no topo da lista)"}">${fav ? "★" : "☆"}</button>`;
       const busca = `data-busca="${esc(normBusca(t + " " + nome))}"`;
-      if (!c) return `<tr class="${ativo}" ${abrirLinha(sim, x)} ${busca}><td class="prof-sim">${estrela}${t}${selo}</td><td class="prof-desc">${esc(nome)}</td><td class="r term-dim" colspan="10">${mercado.carregando ? "buscando…" : "sem cotação"}</td></tr>`;
+      if (!c) return `<tr class="${ativo}" ${abrirLinha(sim, x)} ${busca}><td class="prof-sim">${estrela}<span class="prof-nota"></span>${t}${selo}</td><td class="prof-desc">${esc(nome)}</td><td class="term-dim prof-semcot" colspan="10">${mercado.carregando ? "Buscando cotação…" : "Sem cotação no momento"}</td></tr>`;
       const h = c.historico || [], ult = h[h.length - 1], ant = h.length > 1 ? h[h.length - 2].preco : null;
       const max = ult && ult.maxima > 0 ? Math.max(ult.maxima, c.preco) : null, min = ult && ult.minima > 0 ? Math.min(ult.minima, c.preco) : null;
       const abe = ult && ult.abertura > 0 ? ult.abertura : null;
@@ -7203,7 +7203,7 @@
         const sinal = (v) => `<b class="${v >= 0 ? "t-up" : "t-down"}">${v >= 0 ? "+" : "−"}${mo(Math.abs(v))}</b>`;
         posicao = `<small class="prof-pos">${qtd.toLocaleString("pt-BR", { maximumFractionDigits: 8 })} ações${hoje == null ? "" : ` · hoje ${sinal(hoje)}`}${total == null ? "" : ` · total ${sinal(total)}`}</small>`;
       }
-      return `<tr class="${ativo}" ${abrirLinha(sim, x)} ${busca} title="Abrir o gráfico diário de ${t}${c.bdr ? ` · cotação do BDR ${c.bdr} na B3, em reais` : ""}"><td class="prof-sim">${estrela}${x ? letraNota(sim) + " " : ""}${t}${selo}</td><td class="prof-desc">${esc(nome)}${posicao}</td>
+      return `<tr class="${ativo}" ${abrirLinha(sim, x)} ${busca} title="Abrir o gráfico diário de ${t}${c.bdr ? ` · cotação do BDR ${c.bdr} na B3, em reais` : ""}"><td class="prof-sim">${estrela}<span class="prof-nota">${x ? letraNota(sim) : ""}</span>${t}${selo}</td><td class="prof-desc">${esc(nome)}${posicao}</td>
         <td class="r t-preco${piscaPreco(sim, c.preco)}">${f(c.preco)}</td>${celPinta(c.variacaoPct)}<td class="r prof-hora">${horaCot}</td>
         <td class="r">${numP(abe, f)}</td><td class="r t-max">${numP(max, f)}</td><td class="r t-min">${numP(min, f)}</td><td class="r t-ant">${numP(antL, f)}</td><td class="r prof-vol">${fmtVolume(ult && ult.volume ? ult.volume : c.volume)}</td>
         ${celPinta(variacaoSerie(h, 30))}${celPinta(variacaoSerie(h, 90))}</tr>`;
@@ -7217,7 +7217,7 @@
     };
     const buscaCot = `<span class="prof-busca-wrap"><input class="prof-busca" id="cotBusca" type="search" placeholder="Buscar código ou nome" value="${esc(filtroCot)}" autocomplete="off" spellcheck="false"><em id="cotBuscaQtd"></em></span>`;
     const jCot = renderSoJanelas ? "" : janela("prof-cot", "Cotação", `<div class="term-rolar"><table class="term-tab prof-tab">
-      <thead><tr>${thOrd("nome", "Símbolo")}<th>Descrição</th>${thOrd("ultimo", "Último", 1)}${thOrd("pct", "%", 1)}<th class="r">Hora</th><th class="r">Abertura</th><th class="r">Máxima</th><th class="r">Mínima</th><th class="r">Fechamento</th>${thOrd("volume", "Volume", 1)}${thOrd("m1", "1 mês", 1)}${thOrd("m3", "3 meses", 1)}</tr></thead>
+      <thead><tr>${thOrd("nome", "Símbolo")}<th>Descrição</th>${thOrd("ultimo", "Último", 1)}${thOrd("pct", "Variação", 1)}<th class="r">Hora</th><th class="r">Abertura</th><th class="r">Máxima</th><th class="r">Mínima</th><th class="r" title="Fechamento do pregão anterior">Fechamento anterior</th>${thOrd("volume", "Volume", 1)}${thOrd("m1", "1 mês", 1)}${thOrd("m3", "3 meses", 1)}</tr></thead>
       <tbody>${grupos.map(([g, itens], gi) => {
         // as primeiras 150 linhas na hora (na ordem escolhida); o resto em lotes
         const ja = itens.slice(0, 150), depois = itens.slice(150);
@@ -7238,13 +7238,15 @@
       const maxDias = Math.max(...faixas.map((x) => x.dias)) || 1;
       const kAtual = Math.min(N - 1, Math.max(0, Math.floor((cs.preco - lo) / passo)));
       const dataBR = (d) => d ? d.slice(8, 10) + "/" + d.slice(5, 7) : "—";
-      corpoAtivo = `<table class="term-tab prof-tab prof-resumo"><thead><tr><th>Símbolo</th><th class="r">Último</th><th class="r">%</th><th class="r">Abertura</th><th class="r">Máxima</th><th class="r">Mínima</th><th class="r">Fechamento</th></tr></thead>
+      // faixas estreitas (índices em pontos) ganham casas decimais para não repetir o número
+      const fFaixa = passo < 5 && fs === fmtPontos ? n2 : fs;
+      corpoAtivo = `<table class="term-tab prof-tab prof-resumo"><thead><tr><th>Símbolo</th><th class="r">Último</th><th class="r">Variação</th><th class="r">Abertura</th><th class="r">Máxima</th><th class="r">Mínima</th><th class="r" title="Fechamento do pregão anterior">Fechamento anterior</th></tr></thead>
         <tbody><tr><td class="prof-sim">${sel[0]}</td><td class="r t-preco">${fs(cs.preco)}</td><td class="r ${corMov(cs.variacaoPct)}">${tPct(cs.variacaoPct)}</td>
         <td class="r">${numP(us && us.abertura, fs)}</td><td class="r t-max">${numP(us && us.maxima, fs)}</td><td class="r t-min">${numP(us && us.minima, fs)}</td><td class="r t-ant">${numP(antS, fs)}</td></tr></tbody></table>
-        <div class="prof-forca" title="Pregões em alta × em baixa nos últimos ${hs.length} dias"><span class="pf-alta" style="flex:${altas || 0.0001}">${altas} dias de alta</span><span class="pf-baixa" style="flex:${baixas || 0.0001}">${baixas} de baixa</span></div>
-        <table class="term-tab prof-tab prof-escada"><thead><tr><th class="r">Faixa de preço</th><th class="r">${comVolume ? "Volume" : "Dias"}</th><th>${comVolume ? `Volume at Price · ${hs.length} pregões` : `Fechamentos em ${hs.length} pregões`}</th><th class="r">Último dia</th></tr></thead><tbody>
-        ${faixas.map((x, k) => ({ x, k })).reverse().map(({ x, k }) => `<tr class="${k === kAtual ? "pe-atual" : ""}" style="--pe:${(x.dias / maxDias).toFixed(2)}"><td class="r">${fs(x.de)} – ${fs(x.ate)}</td><td class="r">${comVolume ? fmtVolume(x.dias) : x.dias}</td>
-          <td class="pe-barra"><i style="width:${(x.dias / maxDias * 100).toFixed(0)}%"></i></td><td class="r">${k === kAtual ? "◄ atual" : dataBR(x.ult)}</td></tr>`).join("")}
+        <div class="prof-forca" title="Pregões em alta × em baixa nos últimos ${hs.length} dias"><span class="pf-alta" style="flex:${altas || 0.0001}">${altas} ${altas === 1 ? "dia" : "dias"} de alta</span><span class="pf-baixa" style="flex:${baixas || 0.0001}">${baixas} ${baixas === 1 ? "dia" : "dias"} de baixa</span></div>
+        <table class="term-tab prof-tab prof-escada"><thead><tr><th class="r">Faixa de preço</th><th class="r">${comVolume ? "Volume" : "Dias"}</th><th>${comVolume ? `Volume por faixa de preço · ${hs.length} pregões` : `Fechamentos em ${hs.length} pregões`}</th><th class="r">Último dia</th></tr></thead><tbody>
+        ${faixas.map((x, k) => ({ x, k })).reverse().map(({ x, k }) => `<tr class="${k === kAtual ? "pe-atual" : ""}" style="--pe:${(x.dias / maxDias).toFixed(2)}"><td class="r">${fFaixa(x.de)} – ${fFaixa(x.ate)}</td><td class="r">${comVolume ? fmtVolume(x.dias) : x.dias}</td>
+          <td class="pe-barra"><i style="width:${(x.dias / maxDias * 100).toFixed(0)}%"></i></td><td class="r">${k === kAtual ? "◄ Preço atual" : dataBR(x.ult)}</td></tr>`).join("")}
         </tbody></table>`;
     }
     const abrirAtivo = sel[2] === "USDBRL" ? 'data-acao="ir" data-secao="detalhe-dolar"' : sel[4] && sel[4].clique ? sel[4].clique : cs ? linkAtivo(sel[2]) : "";
@@ -7257,7 +7259,7 @@
       cs ? `<span class="prof-tit-dir ${corMov(cs.variacaoPct)}">${fs(cs.preco)} ${tPct(cs.variacaoPct)}</span>` : "");
     // (4) Fechamentos diários (mais recentes primeiro; azul alta, vermelho baixa)
     const jNeg = janela("prof-neg", `Fechamentos diários · ${sel[0]}`, hs.length > 1 ? `<div class="term-rolar"><table class="term-tab prof-tab prof-negocios">
-      <thead><tr><th>Data</th><th class="r">Fechamento</th><th class="r">%</th><th class="r">Abertura</th><th class="r">Máxima</th><th class="r">Mínima</th><th class="r">Amplitude</th><th class="r">Volume</th></tr></thead><tbody>
+      <thead><tr><th>Data</th><th class="r">Fechamento</th><th class="r">Variação</th><th class="r">Abertura</th><th class="r">Máxima</th><th class="r">Mínima</th><th class="r">Amplitude</th><th class="r">Volume</th></tr></thead><tbody>
       ${hs.map((p, i) => ({ p, v: i ? (p.preco / hs[i - 1].preco - 1) * 100 : null })).reverse().map(({ p, v }) => `<tr class="${v == null ? "" : v >= 0 ? "pn-alta" : "pn-baixa"}"><td>${p.data.slice(8, 10)}/${p.data.slice(5, 7)}/${p.data.slice(2, 4)}</td>
         <td class="r">${fs(p.preco)}</td><td class="r">${v == null ? "—" : tPct(v)}</td><td class="r">${numP(p.abertura, fs)}</td><td class="r">${numP(p.maxima, fs)}</td><td class="r">${numP(p.minima, fs)}</td>
         <td class="r">${p.maxima > 0 && p.minima > 0 ? tPct((p.maxima / p.minima - 1) * 100).replace("+", "") : "—"}</td><td class="r">${fmtVolume(p.volume)}</td></tr>`).join("")}</tbody></table></div>` : '<p class="term-texto term-dim">Sem histórico deste ativo.</p>');
