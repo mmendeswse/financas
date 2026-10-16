@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.332";
+  const VERSAO_APP = "3.6.336";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -7178,13 +7178,9 @@
     // (1) Cotação
     // célula da variação pintada de verde (alta) ou vermelho (queda)
     const celPinta = (v, extra) => `<td class="r ${extra || ""} ${v == null ? "" : v > 0 ? "cel-alta" : v < 0 ? "cel-baixa" : "t-zero"}">${tPct(v)}<i class="prof-seta">${v ? setaMov(v) : ""}</i></td>`;
-    // tocar na linha abre a tela do gráfico diário do ativo, como na guia
-    // Ações (velas; tocar no gráfico alterna para a linha). Ao voltar, o
-    // ativo fica selecionado na área de trabalho
-    const abrirLinha = (sim, x) => {
-      const destino = sim === "USDBRL" ? 'data-acao="ir" data-secao="detalhe-dolar"' : x && x.clique ? x.clique : `data-acao="ir" data-secao="detalhe-mercado" data-id="${esc(sim)}"`;
-      return `${destino} data-sel="${esc(sim)}"`;
-    };
+    // tocar na linha seleciona o ativo e leva a tela até o gráfico diário
+    // da área de trabalho, logo abaixo da tabela
+    const abrirLinha = (sim) => `data-acao="prof-sel" data-id="${esc(sim)}"`;
     // nome da lista completa vem em caixa alta ("PETROBRAS PN N2"): fica só
     // com a inicial maiúscula, mantendo as siglas de classe (ON, PN, N2…)
     const SIGLAS = /^(ON|PN|PNA|PNB|PNC|UNT|UNIT|N1|N2|NM|MA|MB|ED|EJ|EX|DRN|DR[1-3]|BDR|ETF|FII|S\/A|SA|S\.A\.|CI|ER|ES)$/;
@@ -7200,7 +7196,7 @@
       // índices, dólar e ouro: um símbolo no lugar da estrela e da bolinha
       const ICONE_IND = { "^BVSP": ["📈", "Índice da bolsa brasileira"], "^IXIC": ["📈", "Índice da bolsa americana"], "^GSPC": ["📈", "Índice da bolsa americana"], "USDBRL": ["💵", "Moeda"], "GC=F": ["🪙", "Metal precioso"] };
       const icInd = !x && ICONE_IND[sim];
-      const estrela = icInd ? `<span class="prof-slot prof-ic" title="${icInd[1]}">${icInd[0]}</span>` : !x || naCarteira ? '<span class="prof-slot"></span>' : `<button class="prof-estrela${fav ? " on" : ""}" data-acao="fav-bolsa" data-id="${esc(sim)}" title="${fav ? "Tirar dos favoritos" : "Adicionar aos favoritos (fica no topo da lista)"}">${fav ? "★" : "☆"}</button>`;
+      const estrela = icInd ? `<span class="prof-slot prof-ic" title="${icInd[1]}">${icInd[0]}</span>` : naCarteira ? '<span class="prof-slot prof-ic-cart" title="Está na sua carteira">💼</span>' : !x ? '<span class="prof-slot"></span>' : `<button class="prof-estrela${fav ? " on" : ""}" data-acao="fav-bolsa" data-id="${esc(sim)}" title="${fav ? "Tirar dos favoritos" : "Adicionar aos favoritos (fica no topo da lista)"}">${fav ? "★" : "☆"}</button>`;
       // código, estrela e bolinha numa caixa com larguras fixas: o código
       // começa sempre no mesmo lugar, em qualquer aparelho
       // coluna Ativo: estrela, nota e código numa caixa de largura fixa, com
@@ -7208,7 +7204,7 @@
       const simbolo = (nota, extra) => `<td class="prof-sim"><span class="ps">${estrela}<span class="prof-nota">${nota}</span><b class="ps-tk">${t}</b>${selo}<span class="ps-nome">${esc(nome)}</span>${extra || ""}</span></td>`;
       const v = c ? c.variacaoPct : null;
       const marcas = `data-busca="${esc(normBusca(t + " " + nome))}"${naCarteira ? ' data-cart="1"' : ""}${fav ? ' data-fav="1"' : ""} data-sinal="${v > 0 ? "1" : v < 0 ? "-1" : "0"}"`;
-      if (!c) return `<tr class="${ativo}" ${abrirLinha(sim, x)} ${marcas}>${simbolo("")}<td class="term-dim prof-semcot" colspan="7">${mercado.carregando ? "Buscando cotação…" : "Sem cotação no momento"}</td></tr>`;
+      if (!c) return `<tr class="${ativo}" ${abrirLinha(sim)} ${marcas}>${simbolo("")}<td class="term-dim prof-semcot" colspan="7">${mercado.carregando ? "Buscando cotação…" : "Sem cotação no momento"}</td></tr>`;
       const h = c.historico || [], ult = h[h.length - 1], ant = h.length > 1 ? h[h.length - 2].preco : null;
       const max = ult && ult.maxima > 0 ? Math.max(ult.maxima, c.preco) : null, min = ult && ult.minima > 0 ? Math.min(ult.minima, c.preco) : null;
       const antL = ant == null && c.lista && c.variacaoPct > -100 ? c.preco / (1 + (c.variacaoPct || 0) / 100) : ant;
@@ -7225,12 +7221,14 @@
       if (minha && Number(minha.quantidade) > 0) {
         const qtd = Number(minha.quantidade), pm = Number(minha.precoMedio) || 0, mo = x && x.eua ? usd : brl;
         const hoje = difer != null ? qtd * difer : null, total = pm > 0 ? qtd * (c.preco - pm) : null;
-        const sinal = (vv) => `<b class="${vv >= 0 ? "t-up" : "t-down"}">${vv >= 0 ? "+" : "−"}${mo(Math.abs(vv))}</b>`;
-        // na mesma linha: quanto a posição rendeu hoje e o resultado total (ganho ou perda)
+        // valor curto (sem "R$", mil abreviado) para caber numa coluna fixa
+        const curto = (vv) => { const a = Math.abs(vv); return a >= 10000 ? `${(a / 1000).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} mil` : a.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+        const cel = (ic, rot, vv) => `<span class="pp-c" title="${rot}: ${vv == null ? "—" : `${vv >= 0 ? "+" : "−"}${mo(Math.abs(vv))}`}"><i>${ic}</i>${vv == null ? '<b class="t-zero">—</b>' : `<b class="${vv > 0 ? "t-up" : vv < 0 ? "t-down" : "t-zero"}">${vv >= 0 ? "+" : "−"}${curto(vv)}</b>`}</span>`;
+        // na mesma linha, em colunas fixas: 📅 quanto rendeu hoje e 💰 o resultado total
         const dica = `${qtd.toLocaleString("pt-BR", { maximumFractionDigits: 8 })} ações${hoje == null ? "" : ` · hoje ${hoje >= 0 ? "+" : "−"}${mo(Math.abs(hoje))}`}${total == null ? "" : ` · total ${total >= 0 ? "+" : "−"}${mo(Math.abs(total))}`}`;
-        posicao = `<small class="prof-pos" title="${esc(dica)}">${[hoje != null ? `hoje ${sinal(hoje)}` : "", total != null ? `total ${sinal(total)}` : ""].filter(Boolean).join(" · ")}</small>`;
+        posicao = `<small class="prof-pos" title="${esc(dica)}">${cel("📅", "Hoje", hoje)}${cel("💰", "Total desde a compra", total)}</small>`;
       }
-      return `<tr class="${ativo}" ${abrirLinha(sim, x)} ${marcas} title="Abrir o gráfico diário de ${t}${c.bdr ? ` · cotação do BDR ${c.bdr} na B3, em reais` : ""}">${simbolo(x ? letraNota(sim) : "", posicao)}
+      return `<tr class="${ativo}" ${abrirLinha(sim)} ${marcas} title="Ver o gráfico diário de ${t}${c.bdr ? ` · cotação do BDR ${c.bdr} na B3, em reais` : ""}">${simbolo(x ? letraNota(sim) : "", posicao)}
         <td class="r t-preco${piscaPreco(sim, c.preco)}">${f(c.preco)}</td>${celVarDia}${faixa}<td class="r prof-vol prof-cel-oculta">${fmtVolume(ult && ult.volume ? ult.volume : c.volume)}</td>
         ${celPinta(variacaoSerie(h, 30), "prof-opc prof-opc2")}${celPinta(variacaoSerie(h, 90))}<td class="prof-spark prof-opc prof-opc2">${spark}</td></tr>`;
     };

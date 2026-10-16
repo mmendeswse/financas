@@ -2801,3 +2801,22 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
 /* símbolo dos índices, dólar e ouro ocupa o lugar da estrela e da bolinha */
 .prof-tab .ps .prof-slot.prof-ic { flex: 0 0 34px; width: 34px; justify-content: center; font-size: 12px; }
 .prof-tab .ps .prof-ic + .prof-nota { display: none; }
+/* ações da carteira: maleta no lugar da estrela */
+.prof-tab .ps .prof-slot.prof-ic-cart { font-size: 11px; }
+/* resultado da carteira: ícone + valor em colunas de largura fixa, alinhadas entre as linhas */
+.prof-cot .prof-tab td.prof-sim .prof-pos { display: inline-flex; gap: 10px; padding-left: 10px; overflow: visible; flex: none; }
+.prof-tab .prof-pos .pp-c { display: inline-flex; align-items: center; justify-content: space-between; width: 92px; font-variant-numeric: tabular-nums; }
+.prof-tab .prof-pos .pp-c i { font-style: normal; font-size: 10px; margin-right: 4px; }
+.prof-tab .prof-pos .pp-c b { font-weight: 700; }
+@media (max-width: 1024px) { .prof-tab .prof-pos .pp-c { width: 82px; } .prof-cot .prof-tab td.prof-sim .prof-pos { gap: 6px; } }
+/* filtros e busca da Cotação: mesma altura, mesma linha de base e texto centralizado */
+.prof-cot .prof-busca-wrap { align-items: center; }
+.prof-cot .prof-chips { align-items: center; }
+.prof-cot .prof-chip, .prof-cot .prof-busca {
+  box-sizing: border-box; height: 20px; padding: 0 10px; margin: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  font: 700 10.5px/18px Inter, system-ui, sans-serif; font-size: 10.5px !important; vertical-align: middle;
+}
+.prof-cot .prof-busca { display: inline-block; text-align: center; width: 76px; -webkit-appearance: none; appearance: none; }
+.prof-cot .prof-busca::-webkit-search-cancel-button { display: none; }
+.prof-cot .prof-busca-wrap, .prof-cot .prof-chips { gap: 4px; }
