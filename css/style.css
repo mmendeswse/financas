@@ -2820,3 +2820,8 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
 .prof-cot .prof-busca { display: inline-block; text-align: center; width: 76px; -webkit-appearance: none; appearance: none; }
 .prof-cot .prof-busca::-webkit-search-cancel-button { display: none; }
 .prof-cot .prof-busca-wrap, .prof-cot .prof-chips { gap: 4px; }
+/* ícone colado no valor; colunas mais estreitas e próximas */
+.prof-tab .prof-pos .pp-c { justify-content: flex-end; width: 74px; }
+.prof-tab .prof-pos .pp-c i { margin-right: 3px; }
+.prof-cot .prof-tab td.prof-sim .prof-pos { gap: 4px; }
+@media (max-width: 1024px) { .prof-tab .prof-pos .pp-c { width: 70px; } }
