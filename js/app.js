@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.344";
+  const VERSAO_APP = "3.6.345";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -7218,7 +7218,7 @@
       const spark = h.length > 2 ? sparklineSVG(h.slice(-63).map((p) => p.preco), (variacaoSerie(h, 90) || 0) >= 0 ? G.CORES.up : G.CORES.down) : "";
       // ação da carteira: quantidade, quanto rendeu hoje e o resultado total
       let posicao = "";
-      const mo = x && x.eua ? usd : brl;
+      const mo = !x ? f : x.eua ? usd : brl;   // índices, dólar e ouro: no formato da própria linha
       // valor curto (sem "R$", mil abreviado) para caber numa coluna fixa
       const curto = (vv) => { const a = Math.abs(vv); return a >= 10000 ? `${(a / 1000).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} mil` : a.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
       const cel = (ics, rot, vv) => vv == null ? '<span class="pp-c"></span>' : `<span class="pp-c" title="${rot}: ${vv == null ? "—" : `${vv >= 0 ? "+" : "−"}${mo(Math.abs(vv))}`}"><i>${vv > 0 ? ics[0] : vv < 0 ? ics[1] : ics[2]}</i>${vv == null ? '<b class="t-zero">—</b>' : `<b class="${vv > 0 ? "t-up" : vv < 0 ? "t-down" : "t-zero"}">${vv > 0 ? "+" : vv < 0 ? "−" : ""}${curto(vv)}</b>`}</span>`;
@@ -7229,10 +7229,11 @@
         // resultado total desde a compra (💰 ganho, 💸 perda)
         const dica = `${qtd.toLocaleString("pt-BR", { maximumFractionDigits: 8 })} ações${hoje == null ? "" : ` · hoje ${hoje >= 0 ? "+" : "−"}${mo(Math.abs(hoje))}`}${total == null ? "" : ` · total ${total >= 0 ? "+" : "−"}${mo(Math.abs(total))}`}`;
         posicao = `<small class="prof-pos" title="${esc(dica)}">${cel(["📈", "📉", "➖"], "Hoje", hoje)}${cel(["💰", "💸", "➖"], "Total desde a compra", total)}</small>`;
-      } else if (x) {
-        // outras ações: quanto 1 ação ganhou ou perdeu hoje e no último mês
+      } else {
+        // outras ações (e índices, dólar e ouro): quanto 1 ação/unidade ganhou ou perdeu hoje e no último mês
         const pm1 = variacaoSerie(h, 30), mes = pm1 != null && pm1 > -100 ? c.preco - c.preco / (1 + pm1 / 100) : null;
-        posicao = `<small class="prof-pos prof-pos-1" title="Por 1 ação">${cel(["📈", "📉", "➖"], "Hoje, por ação", difer)}${cel(["💰", "💸", "➖"], "No último mês, por ação", mes)}</small>`;
+        const un = x ? "por ação" : sim === "USDBRL" ? "por dólar" : sim === "GC=F" ? "por onça" : "em pontos";
+        posicao = `<small class="prof-pos prof-pos-1" title="${un[0].toUpperCase() + un.slice(1)}">${cel(["📈", "📉", "➖"], `Hoje, ${un}`, difer)}${cel(["💰", "💸", "➖"], `No último mês, ${un}`, mes)}</small>`;
       }
       return `<tr class="${ativo}" ${abrirLinha(sim)} ${marcas} title="Ver o gráfico diário de ${t}${c.bdr ? ` · cotação do BDR ${c.bdr} na B3, em reais` : ""}">${simbolo(x ? letraNota(sim) : "", posicao)}
         <td class="r t-preco${piscaPreco(sim, c.preco)}">${f(c.preco)}</td>${celVarDia}${faixa}<td class="r prof-vol prof-cel-oculta">${fmtVolume(ult && ult.volume ? ult.volume : c.volume)}</td>
