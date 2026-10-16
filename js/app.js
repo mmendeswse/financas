@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.326";
+  const VERSAO_APP = "3.6.327";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -7200,22 +7200,22 @@
       const estrela = !x || naCarteira ? '<span class="prof-slot"></span>' : `<button class="prof-estrela${fav ? " on" : ""}" data-acao="fav-bolsa" data-id="${esc(sim)}" title="${fav ? "Tirar dos favoritos" : "Adicionar aos favoritos (fica no topo da lista)"}">${fav ? "★" : "☆"}</button>`;
       // código, estrela e bolinha numa caixa com larguras fixas: o código
       // começa sempre no mesmo lugar, em qualquer aparelho
-      const simbolo = (nota) => `<td class="prof-sim"><span class="ps">${estrela}<span class="prof-nota">${nota}</span><b class="ps-tk">${t}</b>${selo}</span></td>`;
+      // coluna Ativo: estrela, nota e código numa caixa de largura fixa, com
+      // o nome da empresa (e a posição da carteira) embaixo
+      const simbolo = (nota, extra) => `<td class="prof-sim"><span class="ps">${estrela}<span class="prof-nota">${nota}</span><b class="ps-tk">${t}</b>${selo}</span><small class="ps-nome">${esc(nome)}</small>${extra || ""}</td>`;
       const v = c ? c.variacaoPct : null;
       const marcas = `data-busca="${esc(normBusca(t + " " + nome))}"${naCarteira ? ' data-cart="1"' : ""}${fav ? ' data-fav="1"' : ""} data-sinal="${v > 0 ? "1" : v < 0 ? "-1" : "0"}"`;
-      if (!c) return `<tr class="${ativo}" ${abrirLinha(sim, x)} ${marcas}>${simbolo("")}<td class="prof-desc">${esc(nome)}</td><td class="term-dim prof-semcot" colspan="12">${mercado.carregando ? "Buscando cotação…" : "Sem cotação no momento"}</td></tr>`;
+      if (!c) return `<tr class="${ativo}" ${abrirLinha(sim, x)} ${marcas}>${simbolo("")}<td class="term-dim prof-semcot" colspan="7">${mercado.carregando ? "Buscando cotação…" : "Sem cotação no momento"}</td></tr>`;
       const h = c.historico || [], ult = h[h.length - 1], ant = h.length > 1 ? h[h.length - 2].preco : null;
       const max = ult && ult.maxima > 0 ? Math.max(ult.maxima, c.preco) : null, min = ult && ult.minima > 0 ? Math.min(ult.minima, c.preco) : null;
-      const abe = ult && ult.abertura > 0 ? ult.abertura : null;
       const antL = ant == null && c.lista && c.variacaoPct > -100 ? c.preco / (1 + (c.variacaoPct || 0) / 100) : ant;
-      // variação em valor (como a coluna "Oscilação" dos painéis da B3)
-      // (mesma conta da Variação %, para as duas colunas baterem)
+      // variação do dia em % e, embaixo, em valor (mesma conta nas duas)
       const difer = v != null && v > -100 ? c.preco - c.preco / (1 + v / 100) : antL > 0 ? c.preco - antL : null;
-      const celDif = difer == null ? '<td class="r prof-opc"><span class="term-dim">—</span></td>'
-        : `<td class="r prof-opc ${difer > 0 ? "t-up" : difer < 0 ? "t-down" : "t-zero"}">${difer > 0 ? "+" : difer < 0 ? "−" : ""}${(f === fmtPontos && Math.abs(difer) < 10 ? n2 : f)(Math.abs(difer))}</td>`;
-      // faixa do dia: barra da mínima à máxima com o preço atual marcado
-      const faixa = max > min ? `<td class="prof-faixa prof-opc" title="Mínima ${f(min)} · Máxima ${f(max)}"><span class="fd"><i style="left:${Math.max(0, Math.min(100, (c.preco - min) / (max - min) * 100)).toFixed(0)}%"></i></span></td>` : '<td class="prof-faixa prof-opc"><span class="term-dim">—</span></td>';
-      // minigráfico dos últimos 3 meses (tendência)
+      const fDif = f === fmtPontos && difer != null && Math.abs(difer) < 10 ? n2 : f;
+      const celVarDia = `<td class="r prof-var ${v == null ? "" : v > 0 ? "cel-alta" : v < 0 ? "cel-baixa" : "t-zero"}"><b>${tPct(v)}<i class="prof-seta">${v ? setaMov(v) : ""}</i></b>${difer == null ? "" : `<small>${difer > 0 ? "+" : difer < 0 ? "−" : ""}${fDif(Math.abs(difer))}</small>`}</td>`;
+      // faixa do dia: mínima, barra com o preço atual marcado e máxima
+      const faixa = max > min ? `<td class="prof-faixa prof-opc"><span class="fdx"><span class="fd-n t-min">${f(min)}</span><span class="fd"><i style="left:${Math.max(0, Math.min(100, (c.preco - min) / (max - min) * 100)).toFixed(0)}%"></i></span><span class="fd-n t-max">${f(max)}</span></span></td>`
+        : '<td class="prof-faixa prof-opc"><span class="term-dim">—</span></td>';
       const spark = h.length > 2 ? sparklineSVG(h.slice(-63).map((p) => p.preco), (variacaoSerie(h, 90) || 0) >= 0 ? G.CORES.up : G.CORES.down) : "";
       // ação da carteira: quantidade, quanto rendeu hoje e o resultado total
       let posicao = "";
@@ -7225,10 +7225,9 @@
         const sinal = (vv) => `<b class="${vv >= 0 ? "t-up" : "t-down"}">${vv >= 0 ? "+" : "−"}${mo(Math.abs(vv))}</b>`;
         posicao = `<small class="prof-pos">${qtd.toLocaleString("pt-BR", { maximumFractionDigits: 8 })} ações${hoje == null ? "" : ` · hoje ${sinal(hoje)}`}${total == null ? "" : ` · total ${sinal(total)}`}</small>`;
       }
-      return `<tr class="${ativo}" ${abrirLinha(sim, x)} ${marcas} title="Abrir o gráfico diário de ${t}${c.bdr ? ` · cotação do BDR ${c.bdr} na B3, em reais` : ""}">${simbolo(x ? letraNota(sim) : "")}<td class="prof-desc">${esc(nome)}${posicao}</td>
-        <td class="r t-preco${piscaPreco(sim, c.preco)}">${f(c.preco)}</td>${celDif}${celPinta(v)}${faixa}
-        <td class="r prof-opc prof-opc2">${numP(abe, f)}</td><td class="r t-max prof-opc">${numP(max, f)}</td><td class="r t-min prof-opc">${numP(min, f)}</td><td class="r t-ant prof-opc prof-opc2">${numP(antL, f)}</td><td class="r prof-vol">${fmtVolume(ult && ult.volume ? ult.volume : c.volume)}</td>
-        ${celPinta(variacaoSerie(h, 30), "prof-opc")}${celPinta(variacaoSerie(h, 90))}<td class="prof-spark prof-opc prof-opc2">${spark}</td></tr>`;
+      return `<tr class="${ativo}" ${abrirLinha(sim, x)} ${marcas} title="Abrir o gráfico diário de ${t}${c.bdr ? ` · cotação do BDR ${c.bdr} na B3, em reais` : ""}">${simbolo(x ? letraNota(sim) : "", posicao)}
+        <td class="r t-preco${piscaPreco(sim, c.preco)}">${f(c.preco)}</td>${celVarDia}${faixa}<td class="r prof-vol prof-cel-oculta">${fmtVolume(ult && ult.volume ? ult.volume : c.volume)}</td>
+        ${celPinta(variacaoSerie(h, 30), "prof-opc prof-opc2")}${celPinta(variacaoSerie(h, 90))}<td class="prof-spark prof-opc prof-opc2">${spark}</td></tr>`;
     };
     // as ações que vieram só das listas completas (centenas na B3, milhares
     // na Nasdaq) entram depois do desenho, em lotes, para a tela não travar
@@ -7241,12 +7240,12 @@
       .map(([k, rot]) => `<button class="prof-chip${filtroRapido === k ? " on" : ""}" data-acao="filtro-cot" data-id="${k}">${rot}</button>`).join("");
     const buscaCot = `<span class="prof-busca-wrap"><span class="prof-chips">${chipsCot}</span><input class="prof-busca" id="cotBusca" type="search" placeholder="Buscar código ou nome" value="${esc(filtroCot)}" autocomplete="off" spellcheck="false"><em id="cotBuscaQtd"></em></span>`;
     const jCot = renderSoJanelas ? "" : janela("prof-cot", "Cotação", `<div class="term-rolar"><table class="term-tab prof-tab">
-      <thead><tr>${thOrd("nome", "Símbolo")}<th>Descrição</th>${thOrd("ultimo", "Último", 1)}<th class="r prof-opc" title="Diferença para o fechamento anterior">Variação</th>${thOrd("pct", "Variação %", 1)}<th class="prof-opc" title="Mínima e máxima do dia, com o preço atual marcado">Faixa do dia</th><th class="r prof-opc prof-opc2">Abertura</th><th class="r prof-opc">Máxima</th><th class="r prof-opc">Mínima</th><th class="r prof-opc prof-opc2" title="Fechamento do pregão anterior">Fechamento anterior</th>${thOrd("volume", "Volume", 1)}${thOrd("m1", "1 mês", 1).replace('class="r ', 'class="r prof-opc ')}${thOrd("m3", "3 meses", 1)}<th class="prof-opc prof-opc2" title="Minigráfico dos últimos 3 meses">Tendência</th></tr></thead>
+      <thead><tr>${thOrd("nome", "Ativo")}${thOrd("ultimo", "Último", 1)}${thOrd("pct", "Variação", 1)}<th class="prof-opc" title="Mínima e máxima do dia, com o preço atual marcado">Faixa do dia</th>${thOrd("volume", "Volume", 1).replace('class="r ', 'class="r prof-cel-oculta ')}${thOrd("m1", "1 mês", 1).replace('class="r ', 'class="r prof-opc prof-opc2 ')}${thOrd("m3", "3 meses", 1)}<th class="prof-opc prof-opc2" title="Minigráfico dos últimos 3 meses">Tendência</th></tr></thead>
       <tbody>${grupos.map(([g, itens], gi) => {
         // as primeiras 150 linhas na hora (na ordem escolhida); o resto em lotes
         const ja = itens.slice(0, 150), depois = itens.slice(150);
         if (depois.length) linhasPendentes.push({ id: "pend-" + gi, itens: depois, linha: linhaCot });
-        return `<tr class="prof-grupo"><td colspan="14">${g}${gi ? ` <em class="prof-grupo-hora">${horaCot !== "—" ? "atualizado às " + horaCot : ""}</em>` : ""}</td></tr>${ja.map(linhaCot).join("")}${depois.length ? `<tr class="prof-pend" id="pend-${gi}"><td colspan="14">carregando ${depois.length.toLocaleString("pt-BR")} ativos…</td></tr>` : ""}`;
+        return `<tr class="prof-grupo"><td colspan="8">${g}${gi ? ` <em class="prof-grupo-hora">${horaCot !== "—" ? "atualizado às " + horaCot : ""}</em>` : ""}</td></tr>${ja.map(linhaCot).join("")}${depois.length ? `<tr class="prof-pend" id="pend-${gi}"><td colspan="8">carregando ${depois.length.toLocaleString("pt-BR")} ativos…</td></tr>` : ""}`;
       }).join("")}</tbody></table></div>`, buscaCot);
     // (2) Ativo: faixa de cotação, dias de alta × baixa e preços × dias
     const hs = cs && cs.historico ? cs.historico.filter((p) => p.preco > 0) : [];
