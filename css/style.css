@@ -2675,3 +2675,21 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
 /* botões MME 9 / MMA 21 / Bollinger na tela do gráfico de uma ação */
 .ind-acao { display: inline-flex; gap: 4px; margin-right: 8px; vertical-align: middle; }
 .ind-acao .prof-bt { padding: 4px 9px; font-size: 11px; border-radius: 6px; }
+
+/* tabela Cotação: busca, ordenação por coluna, favoritos e posição da carteira */
+.prof-busca-wrap { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; }
+.prof-busca { width: 220px; max-width: 42vw; background: #0B0C0E; color: #fff; border: 1px solid #4A4D53; border-radius: 4px; padding: 3px 8px; font: 600 11.5px Inter, system-ui, sans-serif; }
+.prof-busca:focus { outline: none; border-color: #3B82F6; box-shadow: 0 0 0 2px rgba(59, 130, 246, .25); }
+.prof-busca-wrap em { font-style: normal; font-size: 10.5px; color: #9EA3AB; white-space: nowrap; }
+.prof-tab tr[hidden] { display: none; }
+.prof-tab th.prof-ord { cursor: pointer; user-select: none; }
+.prof-tab th.prof-ord:hover { color: #fff; }
+.prof-tab th.prof-ord.on { color: #FFB547; }
+.prof-estrela { background: none; border: 0; padding: 0 5px 0 0; cursor: pointer; color: #5B6068; font-size: 13px; line-height: 1; vertical-align: -1px; }
+.prof-estrela:hover { color: #FFD633; }
+.prof-estrela.on { color: #FFD633; }
+.prof-tab tr.prof-favo td:first-child { box-shadow: inset 3px 0 0 #FFD633; }
+.prof-tab .prof-desc { max-width: 260px; }
+.prof-pos { display: block; font-size: 10.5px; color: #B9BDC4; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+.prof-pos b.t-up { color: #3DFF9A; } .prof-pos b.t-down { color: #FF6B7A; }
+@media (max-width: 900px) { .prof-busca { width: 150px; } }
