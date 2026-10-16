@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.328";
+  const VERSAO_APP = "3.6.329";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -7240,7 +7240,7 @@
     };
     const chipsCot = [["todos", "Todos"], ["cart", "Carteira"], ["fav", "Favoritos"], ["alta", "Em alta"], ["queda", "Em queda"]]
       .map(([k, rot]) => `<button class="prof-chip${filtroRapido === k ? " on" : ""}" data-acao="filtro-cot" data-id="${k}">${rot}</button>`).join("");
-    const buscaCot = `<span class="prof-busca-wrap"><span class="prof-chips">${chipsCot}</span><input class="prof-busca" id="cotBusca" type="search" placeholder="Buscar código ou nome" value="${esc(filtroCot)}" autocomplete="off" spellcheck="false"><em id="cotBuscaQtd"></em></span>`;
+    const buscaCot = `<span class="prof-busca-wrap"><span class="prof-chips">${chipsCot}</span><input class="prof-busca" id="cotBusca" type="search" placeholder="Código" title="Buscar por código ou nome" value="${esc(filtroCot)}" autocomplete="off" spellcheck="false"><em id="cotBuscaQtd"></em></span>`;
     const jCot = renderSoJanelas ? "" : janela("prof-cot", "Cotação", `<div class="term-rolar"><table class="term-tab prof-tab">
       <thead><tr>${thOrd("nome", "Ativo")}${thOrd("ultimo", "Último", 1)}${thOrd("pct", "Variação", 1)}<th class="prof-opc" title="Mínima e máxima do dia, com o preço atual marcado">Faixa do dia</th>${thOrd("volume", "Volume", 1).replace('class="r ', 'class="r prof-cel-oculta ')}${thOrd("m1", "1 mês", 1).replace('class="r ', 'class="r prof-opc prof-opc2 ')}${thOrd("m3", "3 meses", 1)}<th class="prof-opc prof-opc2" title="Minigráfico dos últimos 3 meses">Tendência</th></tr></thead>
       <tbody>${grupos.map(([g, itens], gi) => {
