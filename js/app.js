@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.327";
+  const VERSAO_APP = "3.6.328";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -7202,7 +7202,7 @@
       // começa sempre no mesmo lugar, em qualquer aparelho
       // coluna Ativo: estrela, nota e código numa caixa de largura fixa, com
       // o nome da empresa (e a posição da carteira) embaixo
-      const simbolo = (nota, extra) => `<td class="prof-sim"><span class="ps">${estrela}<span class="prof-nota">${nota}</span><b class="ps-tk">${t}</b>${selo}</span><small class="ps-nome">${esc(nome)}</small>${extra || ""}</td>`;
+      const simbolo = (nota, extra) => `<td class="prof-sim"><span class="ps">${estrela}<span class="prof-nota">${nota}</span><b class="ps-tk">${t}</b>${selo}<span class="ps-nome">${esc(nome)}</span>${extra || ""}</span></td>`;
       const v = c ? c.variacaoPct : null;
       const marcas = `data-busca="${esc(normBusca(t + " " + nome))}"${naCarteira ? ' data-cart="1"' : ""}${fav ? ' data-fav="1"' : ""} data-sinal="${v > 0 ? "1" : v < 0 ? "-1" : "0"}"`;
       if (!c) return `<tr class="${ativo}" ${abrirLinha(sim, x)} ${marcas}>${simbolo("")}<td class="term-dim prof-semcot" colspan="7">${mercado.carregando ? "Buscando cotação…" : "Sem cotação no momento"}</td></tr>`;
@@ -7212,7 +7212,7 @@
       // variação do dia em % e, embaixo, em valor (mesma conta nas duas)
       const difer = v != null && v > -100 ? c.preco - c.preco / (1 + v / 100) : antL > 0 ? c.preco - antL : null;
       const fDif = f === fmtPontos && difer != null && Math.abs(difer) < 10 ? n2 : f;
-      const celVarDia = `<td class="r prof-var ${v == null ? "" : v > 0 ? "cel-alta" : v < 0 ? "cel-baixa" : "t-zero"}"><b>${tPct(v)}<i class="prof-seta">${v ? setaMov(v) : ""}</i></b>${difer == null ? "" : `<small>${difer > 0 ? "+" : difer < 0 ? "−" : ""}${fDif(Math.abs(difer))}</small>`}</td>`;
+      const celVarDia = `<td class="r prof-var ${v == null ? "" : v > 0 ? "cel-alta" : v < 0 ? "cel-baixa" : "t-zero"}">${difer == null ? "" : `<small>${difer > 0 ? "+" : difer < 0 ? "−" : ""}${fDif(Math.abs(difer))}</small>`}<b>${tPct(v)}<i class="prof-seta">${v ? setaMov(v) : ""}</i></b></td>`;
       // faixa do dia: mínima, barra com o preço atual marcado e máxima
       const faixa = max > min ? `<td class="prof-faixa prof-opc"><span class="fdx"><span class="fd-n t-min">${f(min)}</span><span class="fd"><i style="left:${Math.max(0, Math.min(100, (c.preco - min) / (max - min) * 100)).toFixed(0)}%"></i></span><span class="fd-n t-max">${f(max)}</span></span></td>`
         : '<td class="prof-faixa prof-opc"><span class="term-dim">—</span></td>';
@@ -7223,7 +7223,9 @@
         const qtd = Number(minha.quantidade), pm = Number(minha.precoMedio) || 0, mo = x && x.eua ? usd : brl;
         const hoje = difer != null ? qtd * difer : null, total = pm > 0 ? qtd * (c.preco - pm) : null;
         const sinal = (vv) => `<b class="${vv >= 0 ? "t-up" : "t-down"}">${vv >= 0 ? "+" : "−"}${mo(Math.abs(vv))}</b>`;
-        posicao = `<small class="prof-pos">${qtd.toLocaleString("pt-BR", { maximumFractionDigits: 8 })} ações${hoje == null ? "" : ` · hoje ${sinal(hoje)}`}${total == null ? "" : ` · total ${sinal(total)}`}</small>`;
+        // na mesma linha: quanto a posição rendeu hoje (quantidade e total na dica)
+        const dica = `${qtd.toLocaleString("pt-BR", { maximumFractionDigits: 8 })} ações${hoje == null ? "" : ` · hoje ${hoje >= 0 ? "+" : "−"}${mo(Math.abs(hoje))}`}${total == null ? "" : ` · total ${total >= 0 ? "+" : "−"}${mo(Math.abs(total))}`}`;
+        posicao = `<small class="prof-pos" title="${esc(dica)}">${hoje != null ? `hoje ${sinal(hoje)}` : total != null ? `total ${sinal(total)}` : ""}</small>`;
       }
       return `<tr class="${ativo}" ${abrirLinha(sim, x)} ${marcas} title="Abrir o gráfico diário de ${t}${c.bdr ? ` · cotação do BDR ${c.bdr} na B3, em reais` : ""}">${simbolo(x ? letraNota(sim) : "", posicao)}
         <td class="r t-preco${piscaPreco(sim, c.preco)}">${f(c.preco)}</td>${celVarDia}${faixa}<td class="r prof-vol prof-cel-oculta">${fmtVolume(ult && ult.volume ? ult.volume : c.volume)}</td>

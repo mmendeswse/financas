@@ -2759,3 +2759,25 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
 @media (min-width: 701px) and (max-width: 1024px) { .prof-cot .prof-tab .prof-opc2 { display: none; } .prof-tab .ps-nome { max-width: 170px; } .prof-tab td.prof-sim .prof-pos { max-width: 190px; } }
 @media (max-width: 700px) { .prof-cot .prof-tab .prof-cel-oculta { display: none; } .prof-tab td.prof-var small { margin-right: 0; } }
 .prof-tab td.prof-sim .prof-pos { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.35; }
+
+/* cada ação numa linha só: código, nome (cortado com "…") e o "hoje" da
+   carteira lado a lado; variação em valor e em % na mesma linha */
+.prof-cot .prof-tab td { white-space: nowrap; }
+.prof-cot .prof-tab td.prof-sim { width: 34%; max-width: none; }
+.prof-tab .ps { display: flex; align-items: center; min-width: 0; max-width: 360px; }
+.prof-tab .ps .ps-tk { flex: none; }
+.prof-tab .ps-nome { display: block; flex: 1 1 auto; min-width: 0; margin: 0 0 0 8px; max-width: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.prof-tab td.prof-sim .prof-pos { display: inline; flex: none; margin: 0 0 0 8px; max-width: none; white-space: nowrap; font-size: 10.5px; line-height: inherit; }
+.prof-tab td.prof-var b { display: inline; }
+.prof-tab td.prof-var small { display: inline; margin: 0 6px 0 0; font-size: 10.5px; }
+@media (max-width: 1024px) { .prof-tab .ps { max-width: 260px; } }
+@media (max-width: 700px) {
+  .prof-cot .prof-tab td.prof-sim { width: auto; }
+  .prof-tab .ps { max-width: 150px; }
+  .prof-tab .ps-nome { display: none; }
+  .prof-tab td.prof-sim .prof-pos { display: none; }
+  .prof-tab .ps { overflow: hidden; }
+  .prof-tab td.prof-var small { display: none; }
+}
+.prof-tab td.prof-spark svg { height: 16px; }
+.prof-tab td.prof-spark { padding-top: 0; padding-bottom: 0; }
