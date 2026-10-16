@@ -2857,3 +2857,13 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
 @media (min-width: 701px) and (max-width: 820px) { .prof-cot .prof-tab .ps-nome { min-width: 72px; } }
 @media (min-width: 701px) and (max-width: 760px) { .prof-cot .prof-tab .ps-nome { min-width: 56px; } }
 @media (min-width: 701px) and (max-width: 740px) { .prof-cot .prof-tab .ps-nome { min-width: 0; } .prof-cot .prof-tab .prof-cel-oculta, .prof-cot .prof-tab th.prof-cel-oculta { display: none; } }
+/* resultado (📈/💰) numa coluna própria da tabela: alinha em todas as linhas
+   e nunca é cortado pelo nome */
+.prof-cot .prof-tab td.prof-posc, .prof-cot .prof-tab th.prof-posc { white-space: nowrap; padding-left: 6px; padding-right: 10px; text-align: right; }
+.prof-cot .prof-tab td.prof-posc .prof-pos { display: inline-flex; gap: 12px; margin: 0; padding: 0; font-size: 10.5px; overflow: visible; }
+.prof-cot .prof-tab td.prof-posc .prof-pos-1 { opacity: .8; }
+@media (min-width: 701px) and (max-width: 1024px) { .prof-cot .prof-tab td.prof-posc .prof-pos { gap: 8px; } }
+@media (max-width: 700px) { .prof-cot .prof-tab td.prof-posc, .prof-cot .prof-tab th.prof-posc { display: none; } }
+@media (max-width: 700px) { .prof-cot .prof-tab thead th.prof-posc:nth-child(2) { display: none; } }
+.prof-cot .prof-tab td.prof-posc { line-height: 1; }
+.prof-cot .prof-tab td.prof-posc .prof-pos { vertical-align: middle; line-height: 1; }

@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.358";
+  const VERSAO_APP = "3.6.359";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -7267,7 +7267,7 @@
       const simbolo = (nota, extra) => `<td class="prof-sim"><span class="ps">${estrela}<span class="prof-nota">${nota}</span><b class="ps-tk">${t}</b>${selo}<span class="ps-nome">${esc(nome)}</span>${extra || ""}</span></td>`;
       const v = c ? c.variacaoPct : null;
       const marcas = `data-busca="${esc(normBusca(t + " " + nome))}"${naCarteira ? ' data-cart="1"' : ""}${fav ? ' data-fav="1"' : ""} data-sinal="${v > 0 ? "1" : v < 0 ? "-1" : "0"}"`;
-      if (!c) return `<tr class="${ativo}" ${abrirLinha(sim)} ${marcas}>${simbolo("")}<td class="term-dim prof-semcot" colspan="7">${mercado.carregando ? "Buscando cotação…" : "Sem cotação no momento"}</td></tr>`;
+      if (!c) return `<tr class="${ativo}" ${abrirLinha(sim)} ${marcas}>${simbolo("")}<td class="prof-posc"></td><td class="term-dim prof-semcot" colspan="7">${mercado.carregando ? "Buscando cotação…" : "Sem cotação no momento"}</td></tr>`;
       const h = c.historico || [], ult = h[h.length - 1], ant = h.length > 1 ? h[h.length - 2].preco : null;
       const max = ult && ult.maxima > 0 ? Math.max(ult.maxima, c.preco) : null, min = ult && ult.minima > 0 ? Math.min(ult.minima, c.preco) : null;
       const antL = ant == null && c.lista && c.variacaoPct > -100 ? c.preco / (1 + (c.variacaoPct || 0) / 100) : ant;
@@ -7300,7 +7300,7 @@
         posicao = `<small class="prof-pos prof-pos-1" title="${un[0].toUpperCase() + un.slice(1)}">${cel(["📈", "📉", "➖"], `Hoje, ${un}`, difer)}${cel(["💰", "💸", "➖"], `No último mês, ${un}`, mes)}</small>`;
       }
       const semHist = x && sim !== "USDBRL" && h.length < 3 ? ' data-semhist="1"' : "";
-      return `<tr class="${ativo}" ${abrirLinha(sim)} ${marcas}${semHist} title="Ver o gráfico diário de ${t}${c.bdr ? ` · cotação do BDR ${c.bdr} na B3, em reais` : ""}">${simbolo(x ? letraNota(sim, c, t, nome) : "", posicao)}
+      return `<tr class="${ativo}" ${abrirLinha(sim)} ${marcas}${semHist} title="Ver o gráfico diário de ${t}${c.bdr ? ` · cotação do BDR ${c.bdr} na B3, em reais` : ""}">${simbolo(x ? letraNota(sim, c, t, nome) : "")}<td class="prof-posc">${posicao}</td>
         <td class="r t-preco${piscaPreco(sim, c.preco)}">${f(c.preco)}</td>${celVarDia}${faixa}<td class="r prof-vol prof-cel-oculta">${fmtVolume(ult && ult.volume ? ult.volume : c.volume)}</td>
         ${celPinta(variacaoSerie(h, 30), "prof-opc prof-opc2")}${celPinta(variacaoSerie(h, 90))}<td class="prof-spark prof-opc prof-opc2">${spark}</td></tr>`;
     };
@@ -7317,12 +7317,12 @@
       .map(([k, rot]) => `<button class="prof-chip${filtroRapido === k ? " on" : ""}" data-acao="filtro-cot" data-id="${k}">${rot}</button>`).join("");
     const buscaCot = `<span class="prof-busca-wrap"><span class="prof-chips">${chipsCot}</span><input class="prof-busca" id="cotBusca" type="search" placeholder="Código" title="Buscar por código ou nome" value="${esc(filtroCot)}" autocomplete="off" spellcheck="false"><em id="cotBuscaQtd"></em></span>`;
     const jCot = renderSoJanelas ? "" : janela("prof-cot", "Cotação", `<div class="term-rolar"><table class="term-tab prof-tab">
-      <thead><tr>${thOrd("nome", "Ativo")}${thOrd("ultimo", "Último", 1)}${thOrd("pct", "Variação", 1)}<th class="prof-opc" title="Mínima e máxima do dia, com o preço atual marcado">Faixa do dia</th>${thOrd("volume", "Volume", 1).replace('class="r ', 'class="r prof-cel-oculta ')}${thOrd("m1", "1 mês", 1).replace('class="r ', 'class="r prof-opc prof-opc2 ')}${thOrd("m3", "3 meses", 1)}<th class="prof-opc prof-opc2" title="Minigráfico dos últimos 3 meses">Tendência</th></tr></thead>
+      <thead><tr>${thOrd("nome", "Ativo")}<th class="prof-posc" title="Ganho ou perda de hoje e total (carteira) ou do último mês (por ação)">Resultado</th>${thOrd("ultimo", "Último", 1)}${thOrd("pct", "Variação", 1)}<th class="prof-opc" title="Mínima e máxima do dia, com o preço atual marcado">Faixa do dia</th>${thOrd("volume", "Volume", 1).replace('class="r ', 'class="r prof-cel-oculta ')}${thOrd("m1", "1 mês", 1).replace('class="r ', 'class="r prof-opc prof-opc2 ')}${thOrd("m3", "3 meses", 1)}<th class="prof-opc prof-opc2" title="Minigráfico dos últimos 3 meses">Tendência</th></tr></thead>
       <tbody>${grupos.map(([g, itens], gi) => {
         // as primeiras 150 linhas na hora (na ordem escolhida); o resto em lotes
         const ja = itens.slice(0, 150), depois = itens.slice(150);
         if (depois.length) linhasPendentes.push({ id: "pend-" + gi, itens: depois, linha: linhaCot });
-        return `<tr class="prof-grupo"><td colspan="8">${g}${gi ? ` <em class="prof-grupo-hora">${horaCot !== "—" ? "atualizado às " + horaCot : ""}</em>` : ""}</td></tr>${ja.map(linhaCot).join("")}${depois.length ? `<tr class="prof-pend" id="pend-${gi}"><td colspan="8">carregando ${depois.length.toLocaleString("pt-BR")} ativos…</td></tr>` : ""}`;
+        return `<tr class="prof-grupo"><td colspan="9">${g}${gi ? ` <em class="prof-grupo-hora">${horaCot !== "—" ? "atualizado às " + horaCot : ""}</em>` : ""}</td></tr>${ja.map(linhaCot).join("")}${depois.length ? `<tr class="prof-pend" id="pend-${gi}"><td colspan="9">carregando ${depois.length.toLocaleString("pt-BR")} ativos…</td></tr>` : ""}`;
       }).join("")}</tbody></table></div>`, buscaCot);
     // (2) Ativo: faixa de cotação, dias de alta × baixa e preços × dias
     const hs = cs && cs.historico ? cs.historico.filter((p) => p.preco > 0) : [];
