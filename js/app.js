@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.351";
+  const VERSAO_APP = "3.6.353";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -6833,6 +6833,42 @@
   }
   let tEncurtar = 0;
   window.addEventListener("resize", () => { clearTimeout(tEncurtar); tEncurtar = setTimeout(() => { if (ROTA.secao === "nasdaq") encurtarNomesCot(); }, 150); });
+  // ações da lista completa chegam sem histórico (sem faixa do dia, 1 e 3
+  // meses e tendência): quando a linha aparece na tela, busca o histórico
+  // dela (poucas por vez) e redesenha só aquela linha
+  let linhaCotAtual = null, itensCot = new Map(), obsHist = null, tFilaHist = 0;
+  const histPedido = new Set(), filaHist = [];
+  function observarSemHistorico() {
+    if (!("IntersectionObserver" in window)) return;
+    if (!obsHist) obsHist = new IntersectionObserver((ents) => {
+      ents.forEach((en) => {
+        if (!en.isIntersecting) return;
+        obsHist.unobserve(en.target);
+        const sim = en.target.dataset.id;
+        if (sim && !histPedido.has(sim) && !filaHist.includes(sim)) filaHist.push(sim);
+      });
+      clearTimeout(tFilaHist); tFilaHist = setTimeout(buscarFilaHist, 300);
+    }, { rootMargin: "200px 0px" });
+    document.querySelectorAll('.prof-cot tr[data-semhist]:not([data-obs])').forEach((tr) => { tr.dataset.obs = "1"; obsHist.observe(tr); });
+  }
+  function buscarFilaHist() {
+    const lote = filaHist.splice(0, 12).filter((s) => !histPedido.has(s));
+    if (!lote.length) return;
+    lote.forEach((s) => histPedido.add(s));
+    C.buscarMercado(lote, configCotacoes().token, (s, cot) => {
+      if (!cot || !cot.historico || cot.historico.length < 2) return;
+      const item = itensCot.get(s), antiga = item && item[4] && item[4].c;
+      const nova = { ...(antiga || {}), ...cot, lista: !!(antiga && antiga.lista), nome: cot.nome || (antiga && antiga.nome) };
+      mercado.cotacoes[s] = nova;   // próximos desenhos já vêm com o histórico
+      const tr = [...document.querySelectorAll(".prof-cot tr[data-id]")].find((l) => l.dataset.id === s);
+      if (!tr || !item || !linhaCotAtual || ROTA.secao !== "nasdaq") return;
+      const escondida = tr.hidden;
+      tr.insertAdjacentHTML("afterend", linhaCotAtual([item[0], item[1], item[2], item[3], { ...item[4], c: nova }]));
+      const nv = tr.nextElementSibling; tr.remove();
+      if (nv) nv.hidden = escondida;
+      encurtarNomesCot(true);
+    }).then(() => { if (filaHist.length) setTimeout(buscarFilaHist, 200); });
+  }
   let linhasPendentes = [];      // linhas da Cotação que entram depois, em lotes
   let loteCotacao = 0;           // cancela lotes de um desenho anterior
   function inserirLinhasPendentes() {
@@ -6844,7 +6880,7 @@
       const lote = g.itens.splice(0, 250);
       marca.insertAdjacentHTML("beforebegin", lote.map(g.linha).join(""));
       if (filtroCot) aplicarFiltroCot();
-      encurtarNomesCot(true);
+      encurtarNomesCot(true); observarSemHistorico();
       if (!g.itens.length) { marca.remove(); fila.shift(); }
       else marca.firstElementChild.textContent = `carregando ${g.itens.length} ativos…`;
       setTimeout(passo, 30);
@@ -7209,7 +7245,7 @@
       const fav = favBolsa.has(sim);
       const ativo = (sim === velaBolsa ? " prof-sel" : "") + (naCarteira ? " prof-cart" : fav ? " prof-favo" : "");
       // índices, dólar e ouro: um símbolo no lugar da estrela e da bolinha
-      const ICONE_IND = { "^BVSP": ["📈", "Índice da bolsa brasileira"], "^IXIC": ["📈", "Índice da bolsa americana"], "^GSPC": ["📈", "Índice da bolsa americana"], "USDBRL": ["💵", "Moeda"], "GC=F": ["🪙", "Metal precioso"] };
+      const ICONE_IND = { "^BVSP": ["🏦", "Ibovespa · índice da bolsa brasileira"], "^IXIC": ["💻", "Nasdaq · índice das empresas de tecnologia dos EUA"], "^GSPC": ["🗽", "S&P 500 · as 500 maiores empresas dos EUA"], "USDBRL": ["💵", "Moeda"], "GC=F": ["🪙", "Metal precioso"] };
       const icInd = !x && ICONE_IND[sim];
       const estrela = icInd ? `<span class="prof-slot prof-ic" title="${icInd[1]}">${icInd[0]}</span>` : naCarteira ? '<span class="prof-slot prof-ic-cart" title="Está na sua carteira">💼</span>' : !x ? '<span class="prof-slot"></span>' : `<button class="prof-estrela${fav ? " on" : ""}" data-acao="fav-bolsa" data-id="${esc(sim)}" title="${fav ? "Tirar dos favoritos" : "Adicionar aos favoritos (fica no topo da lista)"}">${fav ? "★" : "☆"}</button>`;
       // código, estrela e bolinha numa caixa com larguras fixas: o código
@@ -7251,10 +7287,13 @@
         const un = x ? "por ação" : sim === "USDBRL" ? "por dólar" : sim === "GC=F" ? "por onça" : "em pontos";
         posicao = `<small class="prof-pos prof-pos-1" title="${un[0].toUpperCase() + un.slice(1)}">${cel(["📈", "📉", "➖"], `Hoje, ${un}`, difer)}${cel(["💰", "💸", "➖"], `No último mês, ${un}`, mes)}</small>`;
       }
-      return `<tr class="${ativo}" ${abrirLinha(sim)} ${marcas} title="Ver o gráfico diário de ${t}${c.bdr ? ` · cotação do BDR ${c.bdr} na B3, em reais` : ""}">${simbolo(x ? letraNota(sim) : "", posicao)}
+      const semHist = x && sim !== "USDBRL" && h.length < 3 ? ' data-semhist="1"' : "";
+      return `<tr class="${ativo}" ${abrirLinha(sim)} ${marcas}${semHist} title="Ver o gráfico diário de ${t}${c.bdr ? ` · cotação do BDR ${c.bdr} na B3, em reais` : ""}">${simbolo(x ? letraNota(sim) : "", posicao)}
         <td class="r t-preco${piscaPreco(sim, c.preco)}">${f(c.preco)}</td>${celVarDia}${faixa}<td class="r prof-vol prof-cel-oculta">${fmtVolume(ult && ult.volume ? ult.volume : c.volume)}</td>
         ${celPinta(variacaoSerie(h, 30), "prof-opc prof-opc2")}${celPinta(variacaoSerie(h, 90))}<td class="prof-spark prof-opc prof-opc2">${spark}</td></tr>`;
     };
+    linhaCotAtual = linhaCot;
+    itensCot = new Map(grupos.flatMap((g) => g[1]).map((i) => [i[2], i]));
     // as ações que vieram só das listas completas (centenas na B3, milhares
     // na Nasdaq) entram depois do desenho, em lotes, para a tela não travar
     linhasPendentes = [];
@@ -8265,7 +8304,7 @@
       case "nasdaq": {
         montarGraficoMercado(); inserirLinhasPendentes();
         if (filtroCot || filtroRapido !== "todos") aplicarFiltroCot();
-        encurtarNomesCot();
+        encurtarNomesCot(); observarSemHistorico();
         const campo = document.getElementById("cotBusca");
         if (campo && buscaCotFocada) { campo.focus(); campo.setSelectionRange(campo.value.length, campo.value.length); }
         break;
