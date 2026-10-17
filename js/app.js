@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.376";
+  const VERSAO_APP = "3.6.377";
   // nome do programa (título, logotipo, rodapé e tela da senha), escolhido em
   // Configurações › Senha Acesso; vale só para este aparelho
   const NOMES_APP = ["Muller Mendes", "Mateus Mendes", "Michel Mendes"];
@@ -7368,8 +7368,7 @@
           <td class="pe-barra"><i style="width:${(x.dias / maxDias * 100).toFixed(0)}%"></i></td><td class="r">${k === kAtual ? "◄ Preço atual" : dataBR(x.ult)}</td></tr>`).join("")}
         </tbody></table>`;
     }
-    const abrirAtivo = sel[2] === "USDBRL" ? 'data-acao="ir" data-secao="detalhe-dolar"' : sel[4] && sel[4].clique ? sel[4].clique : cs ? linkAtivo(sel[2]) : "";
-    const jAtivo = janela("prof-ativo", `Ativo · ${sel[0]} <small>${esc(sel[1])}</small>`, corpoAtivo, abrirAtivo ? `<button class="prof-abrir" ${abrirAtivo}>abrir ↗</button>` : "");
+    const jAtivo = janela("prof-ativo", `Ativo · ${sel[0]} <small>${esc(sel[1])}</small>`, corpoAtivo);
     // (3) Gráfico de velas do ativo selecionado
     const botInd = [["mm9", "MME 9"], ["mm21", "MMA 21"], ["bb", "Bollinger"]].map(([k, rot]) => `<button class="prof-bt${indBolsa[k] ? " ativo" : ""}" data-acao="ind-bolsa" data-id="${k}">${rot}</button>`).join("");
     const botOsc = [["ifr", "IFR"], ["macd", "MACD"], ["vol", "Volume"]].map(([k, rot]) => `<button class="prof-bt${oscBolsa === k ? " ativo" : ""}" data-acao="osc-bolsa" data-id="${k}">${rot}</button>`).join("");
