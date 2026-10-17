@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.371";
+  const VERSAO_APP = "3.6.372";
   // nome do programa (título, logotipo, rodapé e tela da senha), escolhido em
   // Configurações › Senha Acesso; vale só para este aparelho
   const NOMES_APP = ["Muller Mendes", "Mateus Mendes", "Michel Mendes"];
@@ -8163,7 +8163,7 @@
               <button class="btn btn-pdf" data-acao="importar-pdf">Importar Nubank</button>
               <button class="btn btn-icl" data-acao="importar-relatorio">Importar ICL</button>`)}
           </div>`)}</div>
-        <div class="cfg-senha">${card("", "Senha Acesso", "protege o sistema neste aparelho", "", `
+        <div class="cfg-senha">${card("", "Senha Acesso", "protege sistema neste aparelho", "", `
           <div class="body pad">
             <div class="campo cfg-nome-app"><label for="cfgNomeApp">Nome</label>
               <select id="cfgNomeApp">${NOMES_APP.map((n) => `<option value="${esc(n)}"${n === nomeApp() ? " selected" : ""}>${esc(n)}</option>`).join("")}</select></div>
