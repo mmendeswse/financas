@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.365";
+  const VERSAO_APP = "3.6.366";
   // nome do programa (título, logotipo, rodapé e tela da senha), escolhido em
   // Configurações › Senha Acesso; vale só para este aparelho
   const NOMES_APP = ["Muller Mendes", "Mateus Mendes", "Michel Mendes"];
@@ -8302,11 +8302,15 @@
   function ajustarZonaResumo() {
     const z = document.querySelector("#conteudo .zona-resumo");
     if (!z) return;
-    z.classList.remove("zona-sem-backup", "zona-compacta", "zona-oculta");
+    z.classList.remove("zona-sem-backup", "zona-sem-icone", "zona-linha", "zona-compacta", "zona-oculta");
     if (window.innerWidth < 700) return;
     const naoCabe = () => z.clientHeight < z.scrollHeight - 2;
+    // sem espaço: tira o último backup, depois o ícone, depois põe as
+    // caixinhas numa linha só (menores); só sem espaço nem para isso fica o ícone
     if (naoCabe()) z.classList.add("zona-sem-backup");
-    if (naoCabe()) z.classList.add("zona-compacta");
+    if (naoCabe()) z.classList.add("zona-sem-icone");
+    if (naoCabe()) z.classList.add("zona-linha");
+    if (naoCabe()) { z.classList.remove("zona-sem-icone", "zona-linha"); z.classList.add("zona-compacta"); }
     if (z.clientHeight < 70) z.classList.add("zona-oculta");
   }
   // quadro Metas do Dashboard: a altura da lista é a das 3 primeiras metas;

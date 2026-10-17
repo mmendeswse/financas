@@ -2879,3 +2879,12 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
 /* Senha Acesso: escolha do nome do programa */
 .cfg-nome-app { margin: 0 0 12px; }
 .cfg-nome-app select { width: 100%; }
+/* Zona Risco com pouco espaço: as caixinhas com as contagens continuam
+   aparecendo (sem o ícone e, se preciso, todas numa linha e menores) */
+.zona-resumo.zona-sem-icone .zona-icone { display: none; }
+.zona-resumo.zona-linha { padding-top: 6px; padding-bottom: 6px; }
+.zona-resumo.zona-linha .zona-contagem { gap: 4px; }
+.zona-resumo.zona-linha .zona-contagem div { padding: 2px 2px; flex-direction: row; justify-content: center; gap: 5px; align-items: baseline; }
+.zona-resumo.zona-linha .zona-contagem b { font-size: 13px; }
+.zona-resumo.zona-linha .zona-contagem span { font-size: 8px; letter-spacing: .02em; }
+.zona-resumo.zona-linha .zona-contagem span { text-transform: none; letter-spacing: 0; font-size: 8.5px; max-width: 100%; overflow: hidden; text-overflow: clip; white-space: nowrap; }
