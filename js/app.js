@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.372";
+  const VERSAO_APP = "3.6.373";
   // nome do programa (título, logotipo, rodapé e tela da senha), escolhido em
   // Configurações › Senha Acesso; vale só para este aparelho
   const NOMES_APP = ["Muller Mendes", "Mateus Mendes", "Michel Mendes"];
@@ -8218,7 +8218,7 @@
             ${acoes(`<button class="btn primario" data-acao="salvar-cotacoes">Salvar</button>`)}
           </div>`)}</div>
         <div class="cfg-zona"><div class="card" style="border-color:rgba(255,84,104,.3)">
-          <header><div><h2 class="down">Zona Risco</h2><div class="sub">esta ação não pode ser desfeita</div></div></header>
+          <header><div><h2 class="down">Zona Risco</h2><div class="sub">Atenção: esta ação é permanente e não pode ser desfeita</div></div></header>
           <div class="body"><div class="body pad">
             <p class="cfg-texto">Apaga todos os dados deste aparelho de uma vez.</p>
             ${lista([
