@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.362";
+  const VERSAO_APP = "3.6.363";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -7433,8 +7433,12 @@
     const c = cotSelecionada;
     if (!c || !c.historico || c.historico.length < 2 || !document.getElementById("graf-bolsa-velas")) return;
     const alternar = () => { linhaBolsa = !linhaBolsa; montarVelasBolsa(); };
+    // ação da carteira (B3): linha laranja "Compra R$ x" no preço médio, como na guia Ações
+    const tk = /\.SA$/.test(velaBolsa) ? velaBolsa.replace(/\.SA$/, "") : null;
+    const minha = tk && (DADOS.acoes || []).find((a) => String(a.ticker).toUpperCase() === tk && Number(a.quantidade) > 0 && Number(a.precoMedio) > 0);
+    const compra = minha ? Number(minha.precoMedio) : 0, qtdCompra = minha ? Number(minha.quantidade) : 0;
     if (linhaBolsa) {
-      G.renderPrecoAcao("graf-bolsa-velas", c.historico.slice(-60), 0, c.preco, { quantidade: 0, aoClicar: alternar });
+      G.renderPrecoAcao("graf-bolsa-velas", c.historico.slice(-60), compra, c.preco, { quantidade: qtdCompra, aoClicar: alternar });
       const vv = velasPeriodo(c.historico, c.preco);
       montarOsciladorBolsa(vv.velas, vv.velas[Math.max(0, vv.velas.length - 60)].data, vv.velas[vv.velas.length - 1].data);
       return;
@@ -7445,7 +7449,7 @@
     if (indBolsa.mm9) sob.push({ valores: IND.mme(fech, 9), cor: "#FFD633", rotulo: "MME 9" });
     if (indBolsa.mm21) sob.push({ valores: IND.mms(fech, 21), cor: "#3B82F6", rotulo: "MMA 21" });
     const visiveis = Math.min(v.velas.length, 60);
-    G.renderVelas("graf-bolsa-velas", v.velas, { visiveis, casas: 2, linhaAtual: c.preco, corAtual: "#FFD633", rotuloAtual: "Último", sobreposicoes: sob, aoClicar: () => { linhaBolsa = true; montarVelasBolsa(); },
+    G.renderVelas("graf-bolsa-velas", v.velas, { visiveis, casas: 2, linhaAtual: c.preco, corAtual: "#FFD633", rotuloAtual: "Último", linhaCompra: compra, quantidade: qtdCompra, sobreposicoes: sob, aoClicar: () => { linhaBolsa = true; montarVelasBolsa(); },
       aoMudarJanela: (d1, d2) => montarOsciladorBolsa(v.velas, d1, d2) });
     montarOsciladorBolsa(v.velas, v.velas[v.velas.length - visiveis].data, v.velas[v.velas.length - 1].data);
   }
