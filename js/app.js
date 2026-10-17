@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.366";
+  const VERSAO_APP = "3.6.367";
   // nome do programa (título, logotipo, rodapé e tela da senha), escolhido em
   // Configurações › Senha Acesso; vale só para este aparelho
   const NOMES_APP = ["Muller Mendes", "Mateus Mendes", "Michel Mendes"];
@@ -8165,7 +8165,7 @@
           </div>`)}</div>
         <div class="cfg-senha">${card("", "Senha Acesso", "protege o sistema neste aparelho", "", `
           <div class="body pad">
-            <div class="campo cfg-nome-app"><label for="cfgNomeApp">Nome do programa</label>
+            <div class="campo cfg-nome-app"><label for="cfgNomeApp">Nome</label>
               <select id="cfgNomeApp">${NOMES_APP.map((n) => `<option value="${esc(n)}"${n === nomeApp() ? " selected" : ""}>${esc(n)}</option>`).join("")}</select></div>
             <p class="cfg-texto">${comSenha ? "A senha está <b>ativa</b>: o sistema pede a senha sempre que é aberto neste aparelho." : "Sem senha: qualquer pessoa com acesso a este aparelho consegue abrir o sistema."}</p>
             ${comSenha ? `<div id="areaBiometria" class="cfg-biometria"></div>` : ""}
@@ -8728,7 +8728,7 @@
       const id = e.target.id;
       if (id === "cfgNomeApp") {
         try { localStorage.setItem("nomeApp1", e.target.value); } catch (err) { /* sem acesso */ }
-        aplicarNomeApp(); toast(`Nome do programa: ${nomeApp()}`); return;
+        aplicarNomeApp(); toast(`Nome: ${nomeApp()}`); return;
       }
       if (id === "anoRelA") { anoRelA = e.target.value; renderRota(); return; }
       if (id === "anoRelB") { anoRelB = e.target.value; renderRota(); return; }
