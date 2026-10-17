@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.373";
+  const VERSAO_APP = "3.6.374";
   // nome do programa (título, logotipo, rodapé e tela da senha), escolhido em
   // Configurações › Senha Acesso; vale só para este aparelho
   const NOMES_APP = ["Muller Mendes", "Mateus Mendes", "Michel Mendes"];
@@ -7125,7 +7125,7 @@
 
   // janela da área de trabalho da guia Bolsa (barra de título cinza e corpo preto)
   function janelaBolsa(cls, titulo, corpo, extra) {
-    return `<div class="prof-jan ${cls}"><div class="prof-tit"><span class="prof-ico"></span>${titulo}${extra || ""}</div><div class="prof-corpo">${corpo}</div></div>`;
+    return `<div class="prof-jan ${cls}"><div class="prof-tit"><span class="prof-ico"></span><span class="prof-tit-txt">${titulo}</span>${extra || ""}</div><div class="prof-corpo">${corpo}</div></div>`;
   }
   function renderNasdaq() {
     const q = mercado.cotacoes, tem = Object.keys(q).length, r = DADOS.relatorioMercado;

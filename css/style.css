@@ -2888,3 +2888,8 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
 .zona-resumo.zona-linha .zona-contagem b { font-size: 13px; }
 .zona-resumo.zona-linha .zona-contagem span { font-size: 8px; letter-spacing: .02em; }
 .zona-resumo.zona-linha .zona-contagem span { text-transform: none; letter-spacing: 0; font-size: 8.5px; max-width: 100%; overflow: hidden; text-overflow: clip; white-space: nowrap; }
+/* título das janelas da guia Bolsa: o texto da direita (quantidade, hora)
+   nunca é cortado; se faltar espaço, o título da esquerda encurta com "…" */
+.prof-tit .prof-tit-txt { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.prof-tit .prof-ico, .prof-tit .prof-tit-dir, .prof-tit .prof-btns { flex: none; }
+.prof-tit .prof-tit-dir { padding-right: 2px; }
