@@ -258,6 +258,14 @@
     return lerRssGoogle(termos.google + " after:" + diaAnterior(inicio) + " before:" + diaSeguinte(fim), fim, true)
       .catch(function () { return noticiasGdelt(termos.gdelt, diaAnterior(inicio), fim); });
   }
+  // Notícias das últimas 24 horas (when:1d), as mais novas do Google Notícias:
+  // a busca por período ordena por relevância e, quando só o rss2json responde
+  // (10 itens), podia trazer só notícias de dias anteriores
+  function buscarNoticiasRecentes(termos) {
+    var hoje = new Date(), iso = hoje.getFullYear() + "-" + String(hoje.getMonth() + 1).padStart(2, "0") + "-" + String(hoje.getDate()).padStart(2, "0");
+    return lerRssGoogle(termos.google + " when:1d", iso, true)
+      .catch(function () { return noticiasGdelt(termos.gdelt, diaAnterior(iso), iso); });
+  }
   // GDELT de um dia (ou de um período, com "ate"): reserva quando o Google falha
   function noticiasGdelt(termo, dia, ate) {
     var d = dia.replace(/-/g, ""), f = (ate || dia).replace(/-/g, "");
@@ -476,5 +484,5 @@
     }), 8000);
   }
 
-  global.Cotacoes = { buscarDolar: buscarDolar, buscarCripto: buscarCripto, buscarSerieDolar: buscarSerieDolar, buscarSerieMoeda: buscarSerieMoeda, buscarCotacoes: buscarCotacoes, buscarSerieBCB: buscarSerieBCB, buscarNoticiasDia: buscarNoticiasDia, buscarNoticiasPeriodo: buscarNoticiasPeriodo, buscarMercado: buscarMercado, buscarOuro: buscarOuro, buscarListaB3: buscarListaB3, buscarListaNasdaq: buscarListaNasdaq };
+  global.Cotacoes = { buscarDolar: buscarDolar, buscarCripto: buscarCripto, buscarSerieDolar: buscarSerieDolar, buscarSerieMoeda: buscarSerieMoeda, buscarCotacoes: buscarCotacoes, buscarSerieBCB: buscarSerieBCB, buscarNoticiasDia: buscarNoticiasDia, buscarNoticiasPeriodo: buscarNoticiasPeriodo, buscarNoticiasRecentes: buscarNoticiasRecentes, buscarMercado: buscarMercado, buscarOuro: buscarOuro, buscarListaB3: buscarListaB3, buscarListaNasdaq: buscarListaNasdaq };
 })(window);

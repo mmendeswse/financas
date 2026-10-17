@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.363";
+  const VERSAO_APP = "3.6.364";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -6428,7 +6428,10 @@
     const isoDia = (dt) => `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
     const hoje = new Date(), ontem = new Date(), inicio = new Date();
     ontem.setDate(ontem.getDate() - 1); inicio.setDate(inicio.getDate() - 3);
-    C.buscarNoticiasPeriodo(TERMOS_MERCADO, isoDia(inicio), isoDia(hoje)).catch(() => [])
+    // primeiro as das últimas 24 horas (as do dia), depois as do período,
+    // uma busca de cada vez (os repassadores gratuitos limitam pedidos)
+    const recentes = C.buscarNoticiasRecentes ? C.buscarNoticiasRecentes(TERMOS_MERCADO).catch(() => []) : Promise.resolve([]);
+    recentes.then((novas) => C.buscarNoticiasPeriodo(TERMOS_MERCADO, isoDia(inicio), isoDia(hoje)).catch(() => []).then((periodo) => [...(novas || []), ...(periodo || [])]))
       .then((lista) => lista && lista.length ? lista
         : Promise.all([C.buscarNoticiasDia(TERMOS_MERCADO, isoDia(hoje)).catch(() => []), C.buscarNoticiasDia(TERMOS_MERCADO, isoDia(ontem)).catch(() => [])]).then(([a, b]) => [...a, ...b]))
       .then((lista) => {
@@ -6604,8 +6607,10 @@
       const achou = Object.keys(r.cotacoes).length;
       // cotação sem histórico (fonte de reserva) mantém o histórico que já havia
       Object.keys(r.cotacoes).forEach((k) => { const ant = mercado.cotacoes[k]; if (ant && !r.cotacoes[k].historico.length) r.cotacoes[k].historico = ant.historico || []; });
+      // junta com as que já estavam (as das últimas 24 h vêm de atualizarNoticiasMercado):
+      // a busca por período sozinha podia trocar as notícias do dia por outras mais antigas
       const nts = noticias && noticias.length
-        ? [...new Map(noticias.map((n) => [n.titulo, n])).values()].sort((a, b) => (a.quando < b.quando ? 1 : -1)).slice(0, 20) : mercado.noticias;
+        ? [...new Map([...(mercado.noticias || []), ...noticias].map((n) => [n.titulo, n])).values()].sort((a, b) => (a.quando < b.quando ? 1 : -1)).slice(0, 20) : mercado.noticias;
       // uma busca que falhou inteira (sem internet) não apaga o último retrato
       // ...mercado mantém os números do Banco Central e a hora das notícias (antes eram apagados aqui)
       if (achou) mercado = { ...mercado, cotacoes: { ...mercado.cotacoes, ...r.cotacoes }, erros: r.erros, dolar: dolar || mercado.dolar, noticias: nts, em: Date.now(), carregando: false };
@@ -7384,7 +7389,7 @@
     // os quadros do relatório ICL (Índices, Moedas e Ouro, Renda Fixa…) vêm no início da guia
     return `${painelRelatorio("inicio")}<section class="term term-nasdaq term-board-sec">${boardDuas}</section>
     ${areaTrabalho}${r ? `<section class="term term-nasdaq"><div class="term-grade term-grade-um term-grade-meio">${tabelaRelatorioB3(r)}</div></section>` : ""}${painelRelatorio("meio")}<section class="term term-nasdaq prof prof-sec2"><div class="prof-grade prof-grade-2">
-      ${janelaBolsa("prof-comp", "Gráfico · Nasdaq × Ibovespa · variação em 3 meses", graficoCorpo)}${janelaBolsa("prof-not", "Notícias do mercado · Nasdaq e B3", noticiasCorpo, lista.length ? `<span class="prof-tit-dir">${lista.length} notícias</span>` : "")}
+      ${janelaBolsa("prof-comp", "Gráfico · Nasdaq × Ibovespa · variação em 3 meses", graficoCorpo)}${janelaBolsa("prof-not", "Notícias do mercado · Nasdaq e B3", noticiasCorpo, lista.length ? `<span class="prof-tit-dir">${lista.length} notícias${mercado.noticiasEm ? ` · atualizado às ${new Date(mercado.noticiasEm).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}` : ""}</span>` : "")}
     </div></section>`;
   }
   // gráfico: variação acumulada desde o início dos 3 meses, nos dias da
