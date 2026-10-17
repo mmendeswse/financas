@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.366";
+  const VERSAO_APP = "3.6.369";
   // nome do programa (título, logotipo, rodapé e tela da senha), escolhido em
   // Configurações › Senha Acesso; vale só para este aparelho
   const NOMES_APP = ["Muller Mendes", "Mateus Mendes", "Michel Mendes"];
@@ -8165,7 +8165,7 @@
           </div>`)}</div>
         <div class="cfg-senha">${card("", "Senha Acesso", "protege o sistema neste aparelho", "", `
           <div class="body pad">
-            <div class="campo cfg-nome-app"><label for="cfgNomeApp">Nome do programa</label>
+            <div class="campo cfg-nome-app"><label for="cfgNomeApp">Nome</label>
               <select id="cfgNomeApp">${NOMES_APP.map((n) => `<option value="${esc(n)}"${n === nomeApp() ? " selected" : ""}>${esc(n)}</option>`).join("")}</select></div>
             <p class="cfg-texto">${comSenha ? "A senha está <b>ativa</b>: o sistema pede a senha sempre que é aberto neste aparelho." : "Sem senha: qualquer pessoa com acesso a este aparelho consegue abrir o sistema."}</p>
             ${comSenha ? `<div id="areaBiometria" class="cfg-biometria"></div>` : ""}
@@ -8182,7 +8182,7 @@
           <div class="body pad">
             <div class="sync-estado"><span class="sync-ponto ligado"></span><b>Ligado</b>
               <span class="dim" id="statusSync">${esc(statusSync || descreverAlteracao(DADOS) || "última sincronização: " + ultimaSync)}</span></div>
-            <div class="campo"><label>Código do cofre</label>
+            <div class="campo"><label>Cofre</label>
               <div class="sync-codigo"><code>${esc(sc.cofre || "sendo criado…")}</code></div></div>
             ${lista([
               "Cada alteração é enviada para o cofre em poucos segundos.",
@@ -8208,7 +8208,7 @@
         <div class="cfg-cotacoes">${card("", "Cotações automáticas", "dólar e ações · AwesomeAPI e brapi", "", `
           <div class="body pad">
             <label class="chk-linha"><input type="checkbox" id="cfgCotacoesAuto" ${configCotacoes().auto ? "checked" : ""}> Atualizar cotações a cada 5 min</label>
-            <div class="campo"><label for="cfgBrapiToken">Token da brapi.dev</label>
+            <div class="campo"><label for="cfgBrapiToken">Token</label>
               <input id="cfgBrapiToken" value="${esc(configCotacoes().token)}" placeholder="cole aqui outro token, se quiser"></div>
             ${lista([
               ["Já vem com um token configurado — não precisa mexer.", 2],
@@ -8728,7 +8728,7 @@
       const id = e.target.id;
       if (id === "cfgNomeApp") {
         try { localStorage.setItem("nomeApp1", e.target.value); } catch (err) { /* sem acesso */ }
-        aplicarNomeApp(); toast(`Nome do programa: ${nomeApp()}`); return;
+        aplicarNomeApp(); toast(`Nome: ${nomeApp()}`); return;
       }
       if (id === "anoRelA") { anoRelA = e.target.value; renderRota(); return; }
       if (id === "anoRelB") { anoRelB = e.target.value; renderRota(); return; }
