@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.370";
+  const VERSAO_APP = "3.6.371";
   // nome do programa (título, logotipo, rodapé e tela da senha), escolhido em
   // Configurações › Senha Acesso; vale só para este aparelho
   const NOMES_APP = ["Muller Mendes", "Mateus Mendes", "Michel Mendes"];
@@ -8146,7 +8146,7 @@
     const ultimaSync = sc.ultima ? new Date(sc.ultima).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
     return `
       <div class="grid g-top cfg-grid">
-        <div class="cfg-backup">${card("", "Backup Dados", A.ehDesktop ? "arquivo do programa, com cópia automática (dados.bak.json)" : "tudo fica salvo só neste navegador", "", `
+        <div class="cfg-backup">${card("", "Backup Dados", A.ehDesktop ? "arquivo do programa, com cópia automática (dados.bak.json)" : "Todas informações são armazenadas exclusivamente neste navegador", "", `
           <div class="body pad">
             ${A.ehDesktop ? `<p class="cfg-texto" id="caminhoBanco">Local do banco: carregando…</p>` : ""}
             <p class="cfg-texto"${opc(4)}>Guarde uma cópia dos seus dados de vez em quando. O arquivo de backup leva bancos, lançamentos, investimentos, ações e metas (sem o token da sincronização).</p>
