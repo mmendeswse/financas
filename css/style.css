@@ -2867,3 +2867,12 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
 @media (max-width: 700px) { .prof-cot .prof-tab thead th.prof-posc:nth-child(2) { display: none; } }
 .prof-cot .prof-tab td.prof-posc { line-height: 1; }
 .prof-cot .prof-tab td.prof-posc .prof-pos { vertical-align: middle; line-height: 1; }
+/* um pouco mais de espaço para o nome da empresa (subtítulo cinza): colunas
+   de números mais justas */
+.prof-tab .prof-pos .pp-c { width: calc(18px + 10ch); }
+.prof-cot .prof-tab td.prof-posc .prof-pos { gap: 8px; }
+.prof-cot .prof-tab td.prof-posc, .prof-cot .prof-tab th.prof-posc { padding-left: 4px; padding-right: 8px; }
+@media (min-width: 701px) and (max-width: 1180px) {
+  .prof-cot .prof-tab td:not(.prof-sim):not(.prof-semcot):not(.prof-posc) { padding-left: 8px; }
+  .prof-cot .prof-tab td.prof-posc .prof-pos { gap: 6px; }
+}
