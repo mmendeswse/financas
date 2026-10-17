@@ -2918,4 +2918,4 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
    faixas ficam mais altas), sem deixar uma parte preta embaixo */
 .prof-ativo .prof-corpo { display: flex; flex-direction: column; }
 .prof-ativo .prof-corpo > .prof-resumo, .prof-ativo .prof-corpo > .prof-forca { flex: none; }
-.prof-ativo .prof-corpo > .prof-escada { flex: 1 0 auto; }
+.prof-ativo .prof-corpo > .prof-escada { flex: none; }

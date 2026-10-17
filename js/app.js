@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.377";
+  const VERSAO_APP = "3.6.378";
   // nome do programa (título, logotipo, rodapé e tela da senha), escolhido em
   // Configurações › Senha Acesso; vale só para este aparelho
   const NOMES_APP = ["Muller Mendes", "Mateus Mendes", "Michel Mendes"];
@@ -7409,6 +7409,25 @@
   // Nasdaq; o Ibovespa e o dólar usam o último fechamento até cada dia
   // refaz só as janelas Ativo, Gráfico e Fechamentos (a tabela Cotação, com
   // milhares de linhas, fica como está; só a linha selecionada muda)
+  // quadro Ativo: a tabela amarela das faixas de preço estica até o fim do
+  // quadro (como os Fechamentos ao lado), sem sobrar parte preta embaixo.
+  // A altura vai direto na tabela (vale também no Safari do iPad)
+  function esticarEscadaAtivo() {
+    const corpo = document.querySelector(".prof-ativo .prof-corpo"), t = corpo && corpo.querySelector(".prof-escada");
+    if (!t) return;
+    t.style.height = "";
+    const sobra = Math.floor(corpo.getBoundingClientRect().bottom - t.getBoundingClientRect().bottom);
+    if (sobra > 1) t.style.height = (t.offsetHeight + sobra) + "px";
+  }
+  window.addEventListener("resize", () => { if (ROTA.secao === "nasdaq") esticarEscadaAtivo(); });
+  // a altura do quadro muda depois do desenho (gráfico, cotações): ajusta de novo
+  const obsEscada = "ResizeObserver" in window ? new ResizeObserver(() => esticarEscadaAtivo()) : null;
+  function vigiarEscadaAtivo() {
+    const corpo = document.querySelector(".prof-ativo .prof-corpo");
+    if (!corpo) return;
+    esticarEscadaAtivo();
+    if (obsEscada && !corpo.dataset.vigiado) { corpo.dataset.vigiado = "1"; obsEscada.observe(corpo); }
+  }
   function atualizarJanelasAtivo() {
     if (ROTA.secao !== "nasdaq" || !document.querySelector(".prof-sec1")) return manterRolagemCotacao(renderRota);
     renderSoJanelas = true;
@@ -7420,6 +7439,7 @@
     const linha = [...document.querySelectorAll(".prof-cot tr[data-id]")].find((tr) => tr.dataset.id === velaBolsa);
     if (linha) linha.classList.add("prof-sel");
     montarVelasBolsa();
+    vigiarEscadaAtivo();
   }
   // troca o ativo da área de trabalho sem perder a rolagem da página e da lista
   function selecionarAtivoBolsa(sim) {
@@ -8344,7 +8364,7 @@
       case "nasdaq": {
         montarGraficoMercado(); inserirLinhasPendentes();
         if (filtroCot || filtroRapido !== "todos") aplicarFiltroCot();
-        encurtarNomesCot(); observarSemHistorico();
+        encurtarNomesCot(); observarSemHistorico(); vigiarEscadaAtivo();
         const campo = document.getElementById("cotBusca");
         if (campo && buscaCotFocada) { campo.focus(); campo.setSelectionRange(campo.value.length, campo.value.length); }
         break;
