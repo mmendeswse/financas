@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.361";
+  const VERSAO_APP = "3.6.362";
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -7226,7 +7226,7 @@
     const ordenados = [...papeis.filter((x) => tickersCarteira.has(x.t)), ...papeis.filter((x) => !tickersCarteira.has(x.t) && favBolsa.has(x.sim)), ...resto];
     const grupos = [
       ["ÍNDICES, MOEDAS E OURO", [["IBOV", "Ibovespa", "^BVSP", fmtPontos], ["NASDAQ", "Nasdaq", "^IXIC", fmtPontos], ["S&P 500", "S&P 500", "^GSPC", fmtPontos],
-        ["DÓLAR", "Dólar comercial · R$", "USDBRL", fDolar], ["OURO", "Ouro · US$ por onça", "GC=F", n2]]],
+        ["DÓLAR", "Dólar comercial · R$", "USDBRL", fDolar], ["OURO", "Ouro", "GC=F", n2]]],
       [`B3 · AÇÕES · R$ · ${ordenados.filter((x) => !x.eua).length.toLocaleString("pt-BR")} ativos`, ordenados.filter((x) => !x.eua).map((x) => [x.t, x.n, x.sim, n2, x])],
       [`NASDAQ · AÇÕES · ${ordenados.filter((x) => x.eua).length.toLocaleString("pt-BR")} ativos`, ordenados.filter((x) => x.eua).map((x) => [x.t, x.n, x.sim, n2, x])],
     ];
