@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.369";
+  const VERSAO_APP = "3.6.370";
   // nome do programa (título, logotipo, rodapé e tela da senha), escolhido em
   // Configurações › Senha Acesso; vale só para este aparelho
   const NOMES_APP = ["Muller Mendes", "Mateus Mendes", "Michel Mendes"];
@@ -8214,7 +8214,7 @@
               ["Já vem com um token configurado — não precisa mexer.", 2],
               ["Se a internet cair, o sistema mantém os últimos preços e continua funcionando.", 3]
             ])}
-            <p class="cfg-info"${opc(1)}>Dólar agora: <b class="acc-laranja">${dolar ? "R$ " + dolar.valor.toFixed(2).replace(".", ",") : "—"}</b></p>
+            <p class="cfg-info"${opc(1)}>Dólar: <b class="acc-laranja">${dolar ? "R$ " + dolar.valor.toFixed(2).replace(".", ",") : "—"}</b></p>
             ${acoes(`<button class="btn primario" data-acao="salvar-cotacoes">Salvar</button>`)}
           </div>`)}</div>
         <div class="cfg-zona"><div class="card" style="border-color:rgba(255,84,104,.3)">
