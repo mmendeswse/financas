@@ -2893,3 +2893,24 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
 .prof-tit .prof-tit-txt { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .prof-tit .prof-ico, .prof-tit .prof-tit-dir, .prof-tit .prof-btns { flex: none; }
 .prof-tit .prof-tit-dir { padding-right: 2px; }
+/* Ativo e Fechamentos diários: todas as colunas cabem na janela, sem rolar
+   para o lado — a fonte e os espaços diminuem conforme a largura da janela */
+.prof-ativo .prof-corpo, .prof-neg .prof-corpo { container-type: inline-size; }
+@container (max-width: 640px) {
+  .prof-tab th, .prof-tab td { padding-left: 5px; padding-right: 5px; }
+  .prof-tab td, .prof-resumo td { font-size: 11px; }
+  .prof-tab th { font-size: 9.5px; letter-spacing: 0; }
+  .prof-escada .pe-barra { width: 30%; }
+}
+@container (max-width: 520px) {
+  .prof-tab th, .prof-tab td { padding-left: 3px; padding-right: 3px; }
+  .prof-tab td, .prof-resumo td { font-size: 10px; }
+  .prof-tab th { font-size: 8.5px; white-space: normal; }
+  .prof-escada .pe-barra { width: 22%; }
+}
+@container (max-width: 400px) {
+  .prof-tab th, .prof-tab td { padding-left: 2px; padding-right: 2px; }
+  .prof-tab td, .prof-resumo td { font-size: 8.5px; letter-spacing: -.02em; }
+  .prof-tab th { font-size: 7.5px; }
+  .prof-escada .pe-barra { width: 16%; }
+}
