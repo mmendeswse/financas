@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.367";
+  const VERSAO_APP = "3.6.368";
   // nome do programa (título, logotipo, rodapé e tela da senha), escolhido em
   // Configurações › Senha Acesso; vale só para este aparelho
   const NOMES_APP = ["Muller Mendes", "Mateus Mendes", "Michel Mendes"];
@@ -8182,7 +8182,7 @@
           <div class="body pad">
             <div class="sync-estado"><span class="sync-ponto ligado"></span><b>Ligado</b>
               <span class="dim" id="statusSync">${esc(statusSync || descreverAlteracao(DADOS) || "última sincronização: " + ultimaSync)}</span></div>
-            <div class="campo"><label>Código do cofre</label>
+            <div class="campo"><label>Cofre</label>
               <div class="sync-codigo"><code>${esc(sc.cofre || "sendo criado…")}</code></div></div>
             ${lista([
               "Cada alteração é enviada para o cofre em poucos segundos.",
