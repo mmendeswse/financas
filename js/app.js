@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.368";
+  const VERSAO_APP = "3.6.369";
   // nome do programa (título, logotipo, rodapé e tela da senha), escolhido em
   // Configurações › Senha Acesso; vale só para este aparelho
   const NOMES_APP = ["Muller Mendes", "Mateus Mendes", "Michel Mendes"];
@@ -8208,7 +8208,7 @@
         <div class="cfg-cotacoes">${card("", "Cotações automáticas", "dólar e ações · AwesomeAPI e brapi", "", `
           <div class="body pad">
             <label class="chk-linha"><input type="checkbox" id="cfgCotacoesAuto" ${configCotacoes().auto ? "checked" : ""}> Atualizar cotações a cada 5 min</label>
-            <div class="campo"><label for="cfgBrapiToken">Token da brapi.dev</label>
+            <div class="campo"><label for="cfgBrapiToken">Token</label>
               <input id="cfgBrapiToken" value="${esc(configCotacoes().token)}" placeholder="cole aqui outro token, se quiser"></div>
             ${lista([
               ["Já vem com um token configurado — não precisa mexer.", 2],
