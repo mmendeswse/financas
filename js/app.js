@@ -23,7 +23,20 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.364";
+  const VERSAO_APP = "3.6.365";
+  // nome do programa (título, logotipo, rodapé e tela da senha), escolhido em
+  // Configurações › Senha Acesso; vale só para este aparelho
+  const NOMES_APP = ["Muller Mendes", "Mateus Mendes", "Michel Mendes"];
+  function nomeApp() {
+    try { const n = localStorage.getItem("nomeApp1"); if (NOMES_APP.includes(n)) return n; } catch (e) { /* sem acesso */ }
+    return NOMES_APP[0];
+  }
+  function aplicarNomeApp() {
+    const n = nomeApp();
+    document.title = `${n} — Gerenciamento de Finanças Pessoais`;
+    document.querySelectorAll(".logo-txt b").forEach((b) => { b.textContent = n; });
+    const rod = document.getElementById("rodapeNome"); if (rod) rod.textContent = `${n} v1.0`;
+  }
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
   const CATS_DESPESA = ["Alimentação", "Supermercado", "Restaurante", "Delivery", "Moradia", "Aluguel", "Condomínio", "Energia", "Água", "Gás",
@@ -1068,6 +1081,7 @@
   // CICLO DE VIDA
   // =========================================================================
   function iniciar() {
+    aplicarNomeApp();
     if (A.definirAparelho) A.definirAparelho(rotuloAparelho());
     DADOS = A.carregarDados();
     migrarRecorrenciasAntigas();
@@ -8151,6 +8165,8 @@
           </div>`)}</div>
         <div class="cfg-senha">${card("", "Senha Acesso", "protege o sistema neste aparelho", "", `
           <div class="body pad">
+            <div class="campo cfg-nome-app"><label for="cfgNomeApp">Nome do programa</label>
+              <select id="cfgNomeApp">${NOMES_APP.map((n) => `<option value="${esc(n)}"${n === nomeApp() ? " selected" : ""}>${esc(n)}</option>`).join("")}</select></div>
             <p class="cfg-texto">${comSenha ? "A senha está <b>ativa</b>: o sistema pede a senha sempre que é aberto neste aparelho." : "Sem senha: qualquer pessoa com acesso a este aparelho consegue abrir o sistema."}</p>
             ${comSenha ? `<div id="areaBiometria" class="cfg-biometria"></div>` : ""}
             ${lista([
@@ -8706,6 +8722,10 @@
 
     cont.addEventListener("change", (e) => {
       const id = e.target.id;
+      if (id === "cfgNomeApp") {
+        try { localStorage.setItem("nomeApp1", e.target.value); } catch (err) { /* sem acesso */ }
+        aplicarNomeApp(); toast(`Nome do programa: ${nomeApp()}`); return;
+      }
       if (id === "anoRelA") { anoRelA = e.target.value; renderRota(); return; }
       if (id === "anoRelB") { anoRelB = e.target.value; renderRota(); return; }
       if (id === "anoBancos") { anoBancos = e.target.value; renderRota(); return; }

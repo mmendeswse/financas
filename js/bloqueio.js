@@ -98,6 +98,11 @@
     return PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().catch(function () { return false; });
   }
 
+  // nome do programa escolhido em Configurações (o mesmo do título)
+  function nomeProgramaBloqueio() {
+    try { var n = localStorage.getItem("nomeApp1"); if (n === "Mateus Mendes" || n === "Michel Mendes") return n; } catch (e) { /* sem acesso */ }
+    return "Muller Mendes";
+  }
   function aleatorio(n) {
     var a = new Uint8Array(n);
     (global.crypto && global.crypto.getRandomValues) ? global.crypto.getRandomValues(a) : a.forEach(function (_, i) { a[i] = Math.floor(Math.random() * 256); });
@@ -147,7 +152,7 @@
     }).join("");
     return '<div class="bloqueio-caixa">' +
       '<div class="bloqueio-logo"><svg viewBox="0 0 48 48"><rect x="9" y="27" width="6" height="13" rx="1.5" fill="currentColor"/><rect x="18" y="21" width="6" height="19" rx="1.5" fill="currentColor"/><rect x="27" y="17" width="6" height="23" rx="1.5" fill="currentColor"/><rect x="36" y="11" width="6" height="29" rx="1.5" fill="currentColor"/></svg></div>' +
-      '<h2>Muller Mendes</h2>' +
+      '<h2>' + nomeProgramaBloqueio() + '</h2>' +
       '<p id="bloqueioTexto">Digite sua senha</p>' +
       '<div class="bolinhas" id="bloqueioBolinhas"></div>' +
       '<div class="teclado">' + teclas + '</div>' +

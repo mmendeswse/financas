@@ -2876,3 +2876,6 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
   .prof-cot .prof-tab td:not(.prof-sim):not(.prof-semcot):not(.prof-posc) { padding-left: 8px; }
   .prof-cot .prof-tab td.prof-posc .prof-pos { gap: 6px; }
 }
+/* Senha Acesso: escolha do nome do programa */
+.cfg-nome-app { margin: 0 0 12px; }
+.cfg-nome-app select { width: 100%; }
