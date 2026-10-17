@@ -2914,3 +2914,8 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
   .prof-tab th { font-size: 7.5px; }
   .prof-escada .pe-barra { width: 16%; }
 }
+/* Ativo: a escada de preços ocupa toda a altura que sobra no quadro (as
+   faixas ficam mais altas), sem deixar uma parte preta embaixo */
+.prof-ativo .prof-corpo { display: flex; flex-direction: column; }
+.prof-ativo .prof-corpo > .prof-resumo, .prof-ativo .prof-corpo > .prof-forca { flex: none; }
+.prof-ativo .prof-corpo > .prof-escada { flex: none; }

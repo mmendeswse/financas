@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.375";
+  const VERSAO_APP = "3.6.382";
   // nome do programa (título, logotipo, rodapé e tela da senha), escolhido em
   // Configurações › Senha Acesso; vale só para este aparelho
   const NOMES_APP = ["Muller Mendes", "Mateus Mendes", "Michel Mendes"];
@@ -3409,10 +3409,10 @@
       ${faixaDemo(d)}
       <div class="kpi-row">
         ${kpiCard("Patrimônio líquido", brlSinal(p.bancos + I.totalLiquidoOutros(d) + p.acoes + p.cripto - p.dividas), pctLivre, "var(--cy)", delta(F.variacaoPercentual(p.liquido, patrimonioAnt), "vs mês anterior"), `Dívidas: ${brl(p.dividas)}`, "patrimonio")}
-        ${kpiCard("Saldo bancário", brlSinal(p.bancos), pctBancos, "var(--cy)", delta(pctBancos, "do patrimônio"), `${bancos.length} ${bancos.length === 1 ? "Conta Cadastrada" : "Contas Cadastradas"}`, "bancos")}
-        ${kpiCard("Bolsa Líquido", brlSinal(I.totalLiquidoOutros(d) + p.acoes + p.cripto), pctInvestido, "var(--cy)", delta(rentCarteira, "rent. carteira"), `${pctInvestido.toFixed(0)}% do patrimônio investido`, "investido")}
-        ${kpiCard("Receitas mês", "+" + brl(entradasMes), entradasMes + despesasMes > 0 ? (entradasMes / (entradasMes + despesasMes)) * 100 : 0, "var(--cy)", delta(F.variacaoPercentual(entradasMes, entradasAnt), "vs mês anterior"), `Mês anterior: ${brl(entradasAnt)}`, "receitas")}
-        ${kpiCard("Despesas mês", "−" + brl(despesasMes), pctDespesas, "var(--cy)", delta(F.variacaoPercentual(despesasMes, despesasAnt), "vs mês anterior", true), `${pctDespesas.toFixed(0)}% das receitas`, "despesas")}
+        ${kpiCard("Saldo bancário", brlSinal(p.bancos), pctBancos, "var(--cy)", delta(pctBancos, "do patrimônio"), `${bancos.length} ${bancos.length === 1 ? "Conta" : "Contas"}`, "bancos")}
+        ${kpiCard("Bolsa Líquido", brlSinal(I.totalLiquidoOutros(d) + p.acoes + p.cripto), pctInvestido, "var(--cy)", delta(rentCarteira, "rent. carteira"), `${pctInvestido.toFixed(0)}% Investido`, "investido")}
+        ${kpiCard("Receitas mês", "+" + brl(entradasMes), entradasMes + despesasMes > 0 ? (entradasMes / (entradasMes + despesasMes)) * 100 : 0, "var(--cy)", delta(F.variacaoPercentual(entradasMes, entradasAnt), "vs mês anterior"), `Anterior: ${brl(entradasAnt)}`, "receitas")}
+        ${kpiCard("Despesas mês", "−" + brl(despesasMes), pctDespesas, "var(--cy)", delta(F.variacaoPercentual(despesasMes, despesasAnt), "vs mês anterior", true), `${pctDespesas.toFixed(0)}% Receitas`, "despesas")}
       </div>
 
       <div class="grid">
@@ -3656,7 +3656,7 @@
     return `
       ${faixaDemo(d)}
       <div class="grid g-top">
-        <div class="c12">${card("c12", "Meus bancos", `${bancos.length} ${bancos.length === 1 ? "Conta Cadastrada" : "Contas Cadastradas"}`, `${bancos.length ? `<span class="pill-periodo ${corSinal(total)}" title="Soma de todas as contas">TOTAL ${brlSinal(total)}</span>` : ""}${d.bancos.length > 1 ? `<button class="btn" data-acao="nova-transferencia" title="Passar dinheiro de um banco para outro">⇄ TRANSFERIR</button>` : ""}<button class="btn primario" data-acao="nova-banco"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`, listaHtml)}</div>
+        <div class="c12">${card("c12", "Meus bancos", `${bancos.length} ${bancos.length === 1 ? "Conta" : "Contas"}`, `${bancos.length ? `<span class="pill-periodo ${corSinal(total)}" title="Soma de todas as contas">TOTAL ${brlSinal(total)}</span>` : ""}${d.bancos.length > 1 ? `<button class="btn" data-acao="nova-transferencia" title="Passar dinheiro de um banco para outro">⇄ TRANSFERIR</button>` : ""}<button class="btn primario" data-acao="nova-banco"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`, listaHtml)}</div>
       </div>
       <div class="grid">
         <div class="c12">${card("", "Saldo bancos", mesesBancos ? `Movimentação · ${mesesBancos} ${mesesBancos === 1 ? "mês" : "meses"} de ${anoBancos}` : "comparação entre contas",
@@ -7368,8 +7368,7 @@
           <td class="pe-barra"><i style="width:${(x.dias / maxDias * 100).toFixed(0)}%"></i></td><td class="r">${k === kAtual ? "◄ Preço atual" : dataBR(x.ult)}</td></tr>`).join("")}
         </tbody></table>`;
     }
-    const abrirAtivo = sel[2] === "USDBRL" ? 'data-acao="ir" data-secao="detalhe-dolar"' : sel[4] && sel[4].clique ? sel[4].clique : cs ? linkAtivo(sel[2]) : "";
-    const jAtivo = janela("prof-ativo", `Ativo · ${sel[0]} <small>${esc(sel[1])}</small>`, corpoAtivo, abrirAtivo ? `<button class="prof-abrir" ${abrirAtivo}>abrir ↗</button>` : "");
+    const jAtivo = janela("prof-ativo", `Ativo · ${sel[0]} <small>${esc(sel[1])}</small>`, corpoAtivo);
     // (3) Gráfico de velas do ativo selecionado
     const botInd = [["mm9", "MME 9"], ["mm21", "MMA 21"], ["bb", "Bollinger"]].map(([k, rot]) => `<button class="prof-bt${indBolsa[k] ? " ativo" : ""}" data-acao="ind-bolsa" data-id="${k}">${rot}</button>`).join("");
     const botOsc = [["ifr", "IFR"], ["macd", "MACD"], ["vol", "Volume"]].map(([k, rot]) => `<button class="prof-bt${oscBolsa === k ? " ativo" : ""}" data-acao="osc-bolsa" data-id="${k}">${rot}</button>`).join("");
@@ -7410,6 +7409,25 @@
   // Nasdaq; o Ibovespa e o dólar usam o último fechamento até cada dia
   // refaz só as janelas Ativo, Gráfico e Fechamentos (a tabela Cotação, com
   // milhares de linhas, fica como está; só a linha selecionada muda)
+  // quadro Ativo: a tabela amarela das faixas de preço estica até o fim do
+  // quadro (como os Fechamentos ao lado), sem sobrar parte preta embaixo.
+  // A altura vai direto na tabela (vale também no Safari do iPad)
+  function esticarEscadaAtivo() {
+    const corpo = document.querySelector(".prof-ativo .prof-corpo"), t = corpo && corpo.querySelector(".prof-escada");
+    if (!t) return;
+    t.style.height = "";
+    const sobra = Math.floor(corpo.getBoundingClientRect().bottom - t.getBoundingClientRect().bottom);
+    if (sobra > 1) t.style.height = (t.offsetHeight + sobra) + "px";
+  }
+  window.addEventListener("resize", () => { if (ROTA.secao === "nasdaq") esticarEscadaAtivo(); });
+  // a altura do quadro muda depois do desenho (gráfico, cotações): ajusta de novo
+  const obsEscada = "ResizeObserver" in window ? new ResizeObserver(() => esticarEscadaAtivo()) : null;
+  function vigiarEscadaAtivo() {
+    const corpo = document.querySelector(".prof-ativo .prof-corpo");
+    if (!corpo) return;
+    esticarEscadaAtivo();
+    if (obsEscada && !corpo.dataset.vigiado) { corpo.dataset.vigiado = "1"; obsEscada.observe(corpo); }
+  }
   function atualizarJanelasAtivo() {
     if (ROTA.secao !== "nasdaq" || !document.querySelector(".prof-sec1")) return manterRolagemCotacao(renderRota);
     renderSoJanelas = true;
@@ -7421,6 +7439,7 @@
     const linha = [...document.querySelectorAll(".prof-cot tr[data-id]")].find((tr) => tr.dataset.id === velaBolsa);
     if (linha) linha.classList.add("prof-sel");
     montarVelasBolsa();
+    vigiarEscadaAtivo();
   }
   // troca o ativo da área de trabalho sem perder a rolagem da página e da lista
   function selecionarAtivoBolsa(sim) {
@@ -8345,7 +8364,7 @@
       case "nasdaq": {
         montarGraficoMercado(); inserirLinhasPendentes();
         if (filtroCot || filtroRapido !== "todos") aplicarFiltroCot();
-        encurtarNomesCot(); observarSemHistorico();
+        encurtarNomesCot(); observarSemHistorico(); vigiarEscadaAtivo();
         const campo = document.getElementById("cotBusca");
         if (campo && buscaCotFocada) { campo.focus(); campo.setSelectionRange(campo.value.length, campo.value.length); }
         break;
