@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.386";
+  const VERSAO_APP = "3.6.387";
   // nome do programa (título, logotipo, rodapé e tela da senha), escolhido em
   // Configurações › Senha Acesso; vale só para este aparelho
   const NOMES_APP = ["Muller Mendes", "Mateus Mendes", "Michel Mendes"];
@@ -33,7 +33,7 @@
   }
   function aplicarNomeApp() {
     const n = nomeApp();
-    document.title = `${n} — Gerenciamento de Finanças Pessoais`;
+    document.title = n;   // aba do navegador: só o nome escolhido em Configurações
     document.querySelectorAll(".logo-txt b").forEach((b) => { b.textContent = n; });
     const rod = document.getElementById("rodapeNome"); if (rod) rod.textContent = `${n} v1.0`;
   }
