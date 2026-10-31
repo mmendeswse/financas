@@ -22,11 +22,11 @@
   // helpers de data
   // ---------------------------------------------------------------------
   function mesDe(dataStr) { return dataStr ? dataStr.slice(0, 7) : ""; } // "AAAA-MM"
-  function mesAtual() { return new Date().toISOString().slice(0, 7); }
+  function mesAtual() { return isoLocal(new Date()).slice(0, 7); }
   function mesAnterior() {
-    var d = new Date();
-    d.setMonth(d.getMonth() - 1);
-    return d.toISOString().slice(0, 7);
+    // dia 1 primeiro: em 31/03, "setMonth(-1)" cairia em 03/03 (fev. não tem dia 31)
+    var h = new Date();
+    return isoLocal(new Date(h.getFullYear(), h.getMonth() - 1, 1)).slice(0, 7);
   }
   function diasEntre(dataStr) {
     var alvo = new Date(dataStr + "T00:00:00");
@@ -232,7 +232,7 @@
       var dt = new Date();
       dt.setDate(1);
       dt.setMonth(dt.getMonth() - i);
-      var chave = dt.toISOString().slice(0, 7);
+      var chave = isoLocal(dt).slice(0, 7);
       out.push({
         mes: chave,
         rotulo: dt.toLocaleDateString("pt-BR", { month: "short" }).replace(".", ""),
@@ -251,8 +251,13 @@
   function inicioFaturaAtual(cartao) {
     var hoje = new Date();
     var fech = Number(cartao.diaFechamento) || 1;
-    var ref = new Date(hoje.getFullYear(), hoje.getMonth(), fech);
-    if (hoje.getDate() <= fech) ref.setMonth(ref.getMonth() - 1);
+    // fechamento no dia 29–31 em mês mais curto: fecha no último dia do mês
+    // (new Date(2026, 1, 31) viraria 3 de março e o ciclo sairia errado)
+    var fechamentoEm = function (ano, mes) {
+      return new Date(ano, mes, Math.min(fech, new Date(ano, mes + 1, 0).getDate()));
+    };
+    var ref = fechamentoEm(hoje.getFullYear(), hoje.getMonth());
+    if (hoje.getDate() <= ref.getDate()) ref = fechamentoEm(hoje.getFullYear(), hoje.getMonth() - 1);
     return ref;
   }
 

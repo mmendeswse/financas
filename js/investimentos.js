@@ -16,6 +16,9 @@
 (function (global) {
   "use strict";
 
+  // "AAAA-MM-DD" no fuso do aparelho (toISOString usaria UTC)
+  function isoLocal(d) { return global.Armazenamento.isoLocal(d); }
+
   // ---------------------------------------------------------------------
   // INVESTIMENTOS "tradicionais" (renda fixa, tesouro, fundos, cripto...)
   // ---------------------------------------------------------------------
@@ -273,7 +276,7 @@
     var hist = acao.historicoPrecos || [];
     if (!hist.length) return null;
     var alvo = new Date(); alvo.setDate(alvo.getDate() - dias);
-    var alvoStr = alvo.toISOString().slice(0, 10);
+    var alvoStr = isoLocal(alvo);
     var ref = null;
     for (var i = 0; i < hist.length; i++) { if (hist[i].data <= alvoStr) ref = hist[i]; }
     if (!ref) ref = hist[0];
@@ -339,7 +342,7 @@
   // patrimônio guardado nos dados — chamado sempre que a página é aberta
   // ou algo muda, para o gráfico de evolução crescer sozinho com o uso.
   function registrarPontoPatrimonio(d) {
-    var hj = new Date().toISOString().slice(0, 10);
+    var hj = isoLocal(new Date());
     var p = patrimonio(d);
     var hist = d.historicoPatrimonio;
     var ultimo = hist[hist.length - 1];

@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.382";
+  const VERSAO_APP = "3.6.383";
   // nome do programa (título, logotipo, rodapé e tela da senha), escolhido em
   // Configurações › Senha Acesso; vale só para este aparelho
   const NOMES_APP = ["Muller Mendes", "Mateus Mendes", "Michel Mendes"];
@@ -361,7 +361,7 @@
 
   // intervalo correspondente ao período escolhido; 0 = todo histórico
   function intervaloRel(meses, ano) {
-    const fim = new Date().toISOString().slice(0, 10);
+    const fim = isoLocal(new Date());
     if (!meses) return { ini: "0000-01-01", fim };   // "Tudo"
     return intervaloAnoMeses(ano || String(new Date().getFullYear()), meses);
   }
@@ -389,7 +389,10 @@
     return isFinite(n) ? n : 0;
   }
   const achar = (lista, id) => lista.find((x) => x.id === id) || null;
-  const hojeISO = () => new Date().toISOString().slice(0, 10);
+  // data "AAAA-MM-DD" no fuso do aparelho (toISOString usaria UTC: no Brasil,
+  // depois das 21h já seria o dia seguinte)
+  const isoLocal = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const hojeISO = () => isoLocal(new Date());
 
   // sparkline embutida (SVG leve, sem depender do Chart.js)
   function sparklineSVG(valores, cor) {
@@ -536,7 +539,8 @@
 
   function sincronizar(silencioso) {
     const cfg = cfgSync();
-    if (!S || !cfg.token || sincronizando || typeof fetch !== "function") return Promise.resolve();
+    if (sincronizando) { syncPendente = true; return Promise.resolve(); }
+    if (!S || !cfg.token || typeof fetch !== "function") return Promise.resolve();
     sincronizando = true;
     mostrarStatusSync("sincronizando…");
 
@@ -566,10 +570,15 @@
     })).catch((e) => {
       mostrarStatusSync("não sincronizado: " + e.message);
       if (!silencioso) toast("Sincronização: " + e.message);
-    }).then(() => { sincronizando = false; });
+    }).then(() => {
+      sincronizando = false;
+      // algo mudou enquanto sincronizava: envia de novo, senão a alteração
+      // só subiria na próxima conferência (até 2 minutos depois)
+      if (syncPendente) { syncPendente = false; agendarEnvioSync(); }
+    });
   }
 
-  let syncBaixado = false;
+  let syncBaixado = false, syncPendente = false;
 
   function agendarEnvioSync() {                       // chamado após cada alteração
     if (!cfgSync().token) return;
@@ -1582,7 +1591,7 @@
     if (atrasadas.length) {
       const total = atrasadas.reduce((s, c) => s + Number(c.valor || 0), 0);
       alertas.push({ tipo: "perigo", rota: "despesas", texto: atrasadas.length === 1
-        ? `A conta "${atrasadas[0].descricao}" está atrasada (${brl(atrasadas[0].valor)}).`
+        ? `A conta "${esc(atrasadas[0].descricao)}" está atrasada (${brl(atrasadas[0].valor)}).`
         : `${atrasadas.length} contas estão atrasadas, somando ${brl(total)}.` });
     }
 
@@ -1598,8 +1607,8 @@
       if (avisosCategorias >= 2) break;
       let soma = 0, meses = 0;
       for (let i = 1; i <= 3; i++) {
-        const dt = new Date(); dt.setMonth(dt.getMonth() - i);
-        const chave = dt.toISOString().slice(0, 7);
+        const h0 = new Date(), dt = new Date(h0.getFullYear(), h0.getMonth() - i, 1);
+        const chave = isoLocal(dt).slice(0, 7);
         const v = (despesasPorCategoriaPagas(d, chave).find((x) => x.categoria === c.categoria) || {}).valor || 0;
         if (v > 0) { soma += v; meses++; }
       }
@@ -1607,7 +1616,7 @@
         const media = soma / meses;
         const variacao = ((c.valor - media) / media) * 100;
         if (variacao > 15) {
-          alertas.push({ tipo: "aviso", rota: "despesas", texto: `Você gastou ${variacao.toFixed(0)}% a mais com ${c.categoria} este mês, comparado à sua média.` });
+          alertas.push({ tipo: "aviso", rota: "despesas", texto: `Você gastou ${variacao.toFixed(0)}% a mais com ${esc(c.categoria)} este mês, comparado à sua média.` });
           avisosCategorias++;
         }
       }
@@ -1616,7 +1625,7 @@
     // cartões perto do limite
     F.listaCartoesComUso(d).forEach((c) => {
       if (c.limite > 0 && c.percentualUso >= 80) {
-        alertas.push({ tipo: c.percentualUso >= 100 ? "perigo" : "aviso", rota: "cartoes", texto: `O cartão ${c.nome} já usou ${c.percentualUso.toFixed(0)}% do limite.` });
+        alertas.push({ tipo: c.percentualUso >= 100 ? "perigo" : "aviso", rota: "cartoes", texto: `O cartão ${esc(c.nome)} já usou ${c.percentualUso.toFixed(0)}% do limite.` });
       }
     });
 
@@ -1627,8 +1636,8 @@
     const gastoAtual = totalDespesasPagasMes(d, F.mesAtual());
     let somaAnt = 0, mesesAnt = 0;
     for (let i = 1; i <= 3; i++) {
-      const dt = new Date(); dt.setMonth(dt.getMonth() - i);
-      const total = totalDespesasPagasMes(d, dt.toISOString().slice(0, 7));
+      const h0 = new Date(), dt = new Date(h0.getFullYear(), h0.getMonth() - i, 1);
+      const total = totalDespesasPagasMes(d, isoLocal(dt).slice(0, 7));
       if (total > 0) { somaAnt += total; mesesAnt++; }
     }
     if (mesesAnt > 0 && diaAtual >= 5) {
@@ -2048,7 +2057,6 @@
 
   // situação da meta: concluída, prazo vencido, ou se o "Guardar Mês" dá
   // conta do que falta até o prazo (sem prazo, basta ter um valor por mês)
-  const isoLocal = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   // quanto entrou na meta no mês corrente: soma dos depósitos feitos com "Depositar"
   // (metas sem nenhum depósito registrado usam a diferença do histórico de valores)
   function guardadoNoMes(m) {
@@ -2143,7 +2151,7 @@
   function dataInicioPeriodoMetas(m) {
     if (periodoMetas === -1) return (Array.isArray(m.historico) && m.historico.length) ? m.historico[0].data : hojeISO();
     const d = new Date(dataRefAnoMetas() + "T12:00:00"); d.setMonth(d.getMonth() - periodoMetas);
-    return d.toISOString().slice(0, 10);
+    return isoLocal(d);
   }
 
   function metasMini(d) {
@@ -3367,7 +3375,7 @@
     const patrimonioAnt = (() => {
       const hist = histPatrimonio(d);
       const alvo = new Date(); alvo.setMonth(alvo.getMonth() - 1);
-      const alvoStr = alvo.toISOString().slice(0, 10);
+      const alvoStr = isoLocal(alvo);
       let ref = hist[0];
       for (const h of hist) if (h.data <= alvoStr) ref = h;
       return ref ? ref.valor : p.liquido;
@@ -4284,7 +4292,7 @@
         const diffD = (ano - dAno) * 12 + (m - dMes);
         if (diffD < 0 || diffD % passoMeses !== 0) return [];
         const dia = Math.min(inicio.getDate(), ultimo.getDate());
-        return [new Date(ano, m - 1, dia).toISOString().slice(0, 10)];
+        return [isoLocal(new Date(ano, m - 1, dia))];
       }
       const diff = (ano - inicio.getFullYear()) * 12 + (m - 1 - inicio.getMonth());
       if (diff <= 0 || diff % passoMeses !== 0) return [];
@@ -4303,7 +4311,7 @@
         dt.setDate(dt.getDate() + passo);
       }
     }
-    return datas.map((dt) => dt.toISOString().slice(0, 10));
+    return datas.map((dt) => isoLocal(dt));
   }
 
 
@@ -4541,7 +4549,7 @@
   function despesasProximos30Dias(d) {
     const hoje = hojeISO();
     const lim = new Date(hoje + "T00:00:00"); lim.setDate(lim.getDate() + 30);
-    const fim = lim.toISOString().slice(0, 10);
+    const fim = isoLocal(lim);
     const meses = [...new Set([hoje.slice(0, 7), fim.slice(0, 7)])];
     return meses.flatMap((m) => listaDespesasTodasMes(d, m))
       .filter((x) => (x.data || "") >= hoje && (x.data || "") <= fim)
@@ -5597,7 +5605,7 @@
     else if (chave === "6m") { inicio = new Date(hoje.getFullYear(), hoje.getMonth() - 5, 1); }
     else if (chave === "ano") { inicio = new Date(hoje.getFullYear(), 0, 1); }
     else { inicio = new Date(2000, 0, 1); }
-    return { inicio: inicio.toISOString().slice(0, 10), fim: hoje.toISOString().slice(0, 10) };
+    return { inicio: isoLocal(inicio), fim: isoLocal(hoje) };
   }
 
   function movimentacoesFiltradas(d) {
@@ -5693,7 +5701,7 @@
       case "Prefixado": return anual(taxa);
       case "IPCA +": {
         // IPCA dos meses que já terminaram dentro do período + taxa real
-        const meses = ipca.filter((x) => x.data.slice(0, 7) >= desde.slice(0, 7) && x.data.slice(0, 7) < new Date().toISOString().slice(0, 7));
+        const meses = ipca.filter((x) => x.data.slice(0, 7) >= desde.slice(0, 7) && x.data.slice(0, 7) < isoLocal(new Date()).slice(0, 7));
         return meses.reduce((f, x) => f * (1 + x.valor / 100), 1) * anual(taxa);
       }
       default: return 1;
@@ -6069,7 +6077,7 @@
     if (op && op.dias) {
       const limite = new Date();
       limite.setDate(limite.getDate() - op.dias);
-      const corte = limite.toISOString().slice(0, 10);
+      const corte = isoLocal(limite);
       visiveis = velas.filter((p) => p.data >= corte).length;
       if (visiveis < 2) visiveis = velas.length;
     }
@@ -6166,7 +6174,7 @@
     const salvar = (dia, itens) => gravarNoticiasDia(chave, dia, guardar(dia, itens).slice(0, 8));
     // primeiro o que já está guardado no aparelho (aparece na hora); os dias
     // dos últimos 3 dias são consultados de novo mesmo assim (notícias novas)
-    const limiteRecente = (() => { const d = new Date(); d.setDate(d.getDate() - 3); return d.toISOString().slice(0, 10); })();
+    const limiteRecente = (() => { const d = new Date(); d.setDate(d.getDate() - 3); return isoLocal(d); })();
     const faltam = [];
     ordem.forEach((i) => {
       const dia = velas[i].data, salvo = lerNoticiasDia(chave, dia);
@@ -6507,7 +6515,7 @@
       let serie = x.serie;
       if (per[2]) {
         if (ind === "ipca") serie = serie.slice(-per[2]);
-        else { const lim = new Date(); lim.setDate(lim.getDate() - per[2]); const iso = lim.toISOString().slice(0, 10); serie = serie.filter((p) => p[0] >= iso); }
+        else { const lim = new Date(); lim.setDate(lim.getDate() - per[2]); const iso = isoLocal(lim); serie = serie.filter((p) => p[0] >= iso); }
       }
       const rot = serie.map((p) => ind === "ipca" ? dataBR(p[0]) : p[0].slice(8, 10) + "/" + p[0].slice(5, 7));
       const series = ind === "ipca"
@@ -6640,7 +6648,7 @@
     if (!hist || hist.length < 2) return null;
     const ult = hist[hist.length - 1];
     const lim = new Date(ult.data + "T00:00:00"); lim.setDate(lim.getDate() - dias);
-    const limIso = lim.toISOString().slice(0, 10);
+    const limIso = isoLocal(lim);
     const base = [...hist].reverse().find((h) => h.data <= limIso) || hist[0];
     return base.preco > 0 ? (ult.preco / base.preco - 1) * 100 : null;
   }
@@ -6978,7 +6986,7 @@
       const nome = c && c.nome && c.nome !== x.ticker ? `<small>${esc(c.nome)}</small>` : nomes.has(x.ticker) ? `<small>${esc(nomes.get(x.ticker))}</small>` : "";
       const spark = c && c.historico && c.historico.length > 1 ? sparklineSVG(c.historico.map((h) => h.preco), (c.variacaoPct || 0) >= 0 ? G.CORES.up : G.CORES.down) : "";
       const vazio = `<td class="r term-dim">${mercado.carregando ? "buscando…" : "—"}</td>`;
-      return `<tr ${c ? linkAtivo(x.ticker + ".SA") : ""}><td class="term-ativo">${letraNota(x.ticker + ".SA")} ${x.ticker} ${chips}${nome}</td>
+      return `<tr ${c ? linkAtivo(x.ticker + ".SA") : ""}><td class="term-ativo">${letraNota(x.ticker + ".SA")} ${esc(x.ticker)} ${chips}${nome}</td>
         ${x.pct == null ? '<td class="r term-dim">—</td>' : celVar(x.pct, 3)}
         ${c ? `<td class="r t-preco${piscaPreco(x.ticker + ".SA", c.preco)}">${brl(c.preco)}</td>` : vazio}${c ? celVar(c.variacaoPct, 2) : vazio}${desde == null ? vazio : celVar(desde, 5)}<td class="term-spark">${spark}</td></tr>`;
     }).join("");
@@ -7772,7 +7780,7 @@
     if (!op || !op.dias) return historico || [];
     const limite = new Date();
     limite.setDate(limite.getDate() - op.dias);
-    const corte = limite.toISOString().slice(0, 10);
+    const corte = isoLocal(limite);
     const lista = (historico || []).slice().sort((a, b) => (a.data < b.data ? -1 : 1));
     const filtrado = lista.filter((p) => p.data >= corte);
     // o último valor antes do corte vale no início da janela: a linha cobre o período inteiro
@@ -7891,7 +7899,7 @@
     const ehAnoAtual = Number(ano) === hoje.getFullYear();
     const ultimo = ehAnoAtual ? Math.min(meses, hoje.getMonth() + 1) : meses;
     const fimMes = new Date(Number(ano), ultimo, 0);
-    return { ini: `${ano}-01-01`, fim: fimMes.toISOString().slice(0, 10) };
+    return { ini: `${ano}-01-01`, fim: isoLocal(fimMes) };
   }
 
   function seletorAnoDash(id, ano, anos) {
@@ -8082,7 +8090,7 @@
     const cursor = new Date(inicioISO + "T00:00:00"); cursor.setDate(1);
     const fim = new Date(fimISO + "T00:00:00");
     while (cursor <= fim) {
-      const chave = cursor.toISOString().slice(0, 7);
+      const chave = isoLocal(cursor).slice(0, 7);
       out.push({ mes: chave, rotulo: cursor.toLocaleDateString("pt-BR", { month: "short" }).replace(".", ""), entradas: totalEntradasEfetivas(d, chave), despesas: totalDespesasPagasMes(d, chave) });
       cursor.setMonth(cursor.getMonth() + 1);
       if (out.length > 24) break;
@@ -8803,7 +8811,7 @@
       if (!arquivo) return;
       if (!window.confirm("Importar este backup vai substituir TODOS os dados atuais por completo. Deseja continuar?")) return;
       A.importarDados(arquivo)
-        .then(() => toast("Backup importado com sucesso."))
+        .then(() => { toast("Backup importado com sucesso."); agendarEnvioSync(); })
         .catch((err) => toast(err.message));
     });
 

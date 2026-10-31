@@ -2,7 +2,7 @@
 
 Sistema de gerenciamento de finanças pessoais — 100% local, sem servidor,
 sem cadastro e sem mensalidade. Feito com HTML5, CSS3 e JavaScript puro
-(mais Chart.js e SheetJS, incluídos no projeto para funcionar offline).
+(mais Chart.js e PDF.js, incluídos no projeto para funcionar offline).
 
 ## Como usar
 
@@ -38,45 +38,53 @@ um servidor. Isso também quer dizer que:
 - Contas a pagar com status automático (pendente/pago/atrasado)
 - Histórico completo com busca, filtros e ordenação
 - Investimentos (renda fixa, tesouro, fundos, cripto)
-- Carteira de ações, FIIs e ETFs, com preço **atualizado manualmente**
-  (não há cotação automática nesta versão — veja "Limitações" abaixo)
+- Carteira de ações, FIIs e ETFs, com cotações buscadas da internet
+  (e preço manual quando não há conexão)
+- Guia Bolsa com índices, dólar, criptomoedas e notícias do mercado
 - Metas financeiras com barra de progresso
 - Relatórios por período com gráficos
-- Importação de lançamentos a partir de uma planilha Excel (.xlsx)
+- Importação de investimentos a partir do extrato/relatório em PDF
 - Backup e restauração completos via arquivo `.json`
+- Sincronização opcional entre aparelhos (Gist privado do GitHub)
+- Senha numérica e Face ID / Touch ID para abrir o app
 
-## Limitações desta versão (de propósito)
+## Cuidados
 
-- **Sem cotações automáticas.** Os preços de ações, FIIs e ETFs são
-  digitados por você. O sistema deixa isso claro na tela ("preço
-  atualizado manualmente") para nunca fingir uma informação em tempo
-  real que não existe.
-- **Sem sincronização entre dispositivos.** Os dados moram no navegador.
-  Use o backup para mover dados entre computadores.
-- **Sem senha ou login.** É um arquivo local, não um serviço — qualquer
-  pessoa com acesso ao computador e ao navegador vê os dados. Nunca
-  digite senhas de banco, cartão ou tokens de acesso em lugar nenhum do
-  sistema; ele nunca pede isso.
+- **Cotações dependem da internet.** Sem conexão, o app mostra o último
+  preço guardado, com a data em que foi atualizado.
+- **Sincronização usa o seu GitHub.** Os dados vão para um Gist privado na
+  sua conta, com um token que fica só no aparelho (não vai no backup nem
+  no cofre). A versão mais recente vence: evite editar em dois aparelhos
+  ao mesmo tempo sem conexão.
+- **A senha impede o acesso casual, não criptografa os dados.** Quem abrir
+  as ferramentas do navegador ainda consegue ver o que está guardado.
+  Nunca digite senhas de banco ou de cartão no sistema; ele nunca pede isso.
 
 ## Estrutura do projeto
 
 ```
-investidor-mestre/
+financas/
 ├── index.html              # estrutura da página (sidebar, topbar, modal)
+├── sw.js                   # service worker (abre sem internet no iPad)
 ├── css/
 │   └── style.css           # tema visual (escuro, estilo terminal financeiro)
 ├── js/
+│   ├── bloqueio.js         # senha numérica e Face ID / Touch ID
 │   ├── armazenamento.js    # salvar/carregar/exportar/importar dados
 │   ├── financeiro.js       # cálculos de bancos, entradas, despesas, cartões
 │   ├── investimentos.js    # cálculos de investimentos, ações e patrimônio
-│   ├── graficos.js         # todos os gráficos (Chart.js)
+│   ├── graficos.js         # todos os gráficos
+│   ├── extrato.js          # leitura do extrato de investimentos em PDF
+│   ├── relatorio.js        # leitura do relatório em PDF
+│   ├── cotacoes.js         # cotações, indicadores e notícias (internet)
+│   ├── sincronizacao.js    # sincronização entre aparelhos (Gist do GitHub)
+│   ├── emojis.js           # emojis das categorias
 │   ├── app.js              # interface: navegação, telas, modais, eventos
-│   └── vendor/              # bibliotecas de terceiros incluídas offline
+│   └── vendor/             # bibliotecas de terceiros incluídas offline
 │       ├── chart.umd.min.js
-│       └── xlsx.full.min.js
-└── assets/
-    ├── icons/               # reservada (ícones atuais são SVG embutido)
-    └── images/              # reservada (sem imagens nesta versão)
+│       ├── pdf.min.js
+│       └── pdf.worker.min.js
+└── assets/icons/           # ícones do app e dos bancos
 ```
 
 Cada arquivo JavaScript tem uma responsabilidade única: `armazenamento.js`
@@ -86,8 +94,5 @@ o único arquivo que toca no HTML.
 
 ## Próximos passos possíveis
 
-A arquitetura já foi pensada para receber, no futuro: integração com Open
-Finance, cotações automáticas de ações, importação automática de
-extratos bancários, análises mais inteligentes, e um aplicativo desktop.
-Nenhuma dessas coisas está implementada agora — são só o caminho natural
-de evolução do projeto.
+Integração com Open Finance, importação automática de extratos bancários e
+análises mais inteligentes são o caminho natural de evolução do projeto.
