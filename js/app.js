@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.383";
+  const VERSAO_APP = "3.6.384";
   // nome do programa (título, logotipo, rodapé e tela da senha), escolhido em
   // Configurações › Senha Acesso; vale só para este aparelho
   const NOMES_APP = ["Muller Mendes", "Mateus Mendes", "Michel Mendes"];
@@ -180,6 +180,16 @@
     ["entradas", "despesas", "contasPagar"].forEach((col) => (DADOS[col] || []).forEach((x) => {
       if (x.recorrencia === FREQ_4DU_ANTIGA) { x.recorrencia = FREQ_PERS; x.regraRep = { ...REGRA_PADRAO }; mudou = true; }
     }));
+    // nomes salvos por importações antigas do extrato: "Banco Do Brasil" →
+    // "Banco do Brasil" (do, da, de, dos, das, e minúsculos fora do início)
+    const minusc = (t) => String(t).replace(/(\s)(Do|Da|De|Dos|Das|E)(?=\s)/g, (_, esp, p) => esp + p.toLowerCase());
+    const corrigir = (obj, campo) => {
+      if (!obj || typeof obj[campo] !== "string") return;
+      const novo = minusc(obj[campo]);
+      if (novo !== obj[campo]) { obj[campo] = novo; mudou = true; }
+    };
+    (DADOS.investimentos || []).forEach((i) => { corrigir(i, "emissor"); corrigir(i, "banco"); });
+    (DADOS.bancos || []).forEach((b) => corrigir(b, "nome"));
     if (mudou) A.salvarDados(DADOS, true, true);
   }
 
