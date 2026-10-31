@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.385";
+  const VERSAO_APP = "3.6.386";
   // nome do programa (título, logotipo, rodapé e tela da senha), escolhido em
   // Configurações › Senha Acesso; vale só para este aparelho
   const NOMES_APP = ["Muller Mendes", "Mateus Mendes", "Michel Mendes"];
@@ -2644,6 +2644,8 @@
     return String(texto).split(" ").map((p) => {
       if (!/^[\p{L}]/u.test(p)) return p;            // símbolos (+, −, parênteses) não contam
       if (/^[\p{L}]$/u.test(p)) return p;            // conectivos de uma letra ("e") ficam em minúsculo
+      // conectivos ("Banco do Brasil", "Saldo da conta") não contam nem viram maiúscula
+      if (/^(do|da|de|dos|das|em|no|na|nos|nas|ao|aos|com|por|para)$/.test(p)) return p;
       palavras++;
       return palavras === 2 ? p.charAt(0).toUpperCase() + p.slice(1) : p;
     }).join(" ");
