@@ -184,6 +184,9 @@
     var d = new Date(iso + "T12:00:00"); d.setDate(d.getDate() - 1);
     return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
   }
+  // só aceita links http(s): um "javascript:..." vindo de um feed externo
+  // rodaria código ao tocar na notícia
+  function linkSeguro(u) { u = String(u || "").trim(); return /^https?:\/\//i.test(u) ? u : ""; }
   // item do Google Notícias → { quando, titulo, url, fonte }
   // (o título termina com " - Nome do site")
   function itemGoogle(tituloBruto, pubDate, link, fonteBruta, dia) {
@@ -191,7 +194,7 @@
     var k = titulo.lastIndexOf(" - ");
     if (k > 20) { fonte = fonte || titulo.slice(k + 3).trim(); titulo = titulo.slice(0, k).trim(); }
     var quando = pubDate ? new Date(pubDate) : null;
-    return { quando: quando && !isNaN(quando) ? quando.toISOString() : dia + "T12:00:00.000Z", titulo: titulo, url: String(link || ""), fonte: fonte };
+    return { quando: quando && !isNaN(quando) ? quando.toISOString() : dia + "T12:00:00.000Z", titulo: titulo, url: linkSeguro(link), fonte: fonte };
   }
   // Lê uma busca do Google Notícias (RSS) pelos caminhos com CORS:
   // rss2json (JSON, até 10 itens), allorigins ou codetabs (XML inteiro, até
@@ -280,7 +283,7 @@
       return (j.articles || []).map(function (a) {
         var m = /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z$/.exec(a.seendate || "");
         var quando = m ? new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6])).toISOString() : dia + "T12:00:00.000Z";
-        return { quando: quando, titulo: String(a.title || ""), url: String(a.url || ""), fonte: String(a.domain || "") };
+        return { quando: quando, titulo: String(a.title || ""), url: linkSeguro(a.url), fonte: String(a.domain || "") };
       }).filter(function (n) { return n.titulo && n.url; });
     }), 8000);
   }

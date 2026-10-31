@@ -48,10 +48,16 @@
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   }
 
+  // "AAAA-MM-DD" no fuso do aparelho (toISOString usa UTC: no Brasil, depois
+  // das 21h já devolveria o dia seguinte)
+  function isoLocal(d) {
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+
   function hoje(offsetDias) {
     var d = new Date();
     if (offsetDias) d.setDate(d.getDate() + offsetDias);
-    return d.toISOString().slice(0, 10);
+    return isoLocal(d);
   }
 
   function aoMudar(fn) {
@@ -184,7 +190,7 @@
       var t = 1 - m / meses;
       var dt = new Date();
       dt.setMonth(dt.getMonth() - m);
-      pontos.push({ data: dt.toISOString().slice(0, 10), valor: Number((valorAplicado + (valorAtual - valorAplicado) * t).toFixed(2)) });
+      pontos.push({ data: isoLocal(dt), valor: Number((valorAplicado + (valorAtual - valorAplicado) * t).toFixed(2)) });
     }
     pontos[pontos.length - 1].valor = valorAtual;
     return pontos;
@@ -203,7 +209,7 @@
       var valor = base + (alvo - base) * t + ruido;
       var d = new Date();
       d.setDate(d.getDate() - i);
-      pontos.push({ data: d.toISOString().slice(0, 10), preco: Math.max(0.01, Number(valor.toFixed(2))) });
+      pontos.push({ data: isoLocal(d), preco: Math.max(0.01, Number(valor.toFixed(2))) });
     }
     pontos[pontos.length - 1].preco = precoAtual;
     return pontos;
@@ -225,7 +231,7 @@
       var fator = 0.82 + (5 - m) * 0.036;
       var dt = new Date();
       dt.setMonth(dt.getMonth() - m);
-      pontos.push({ data: dt.toISOString().slice(0, 10), valor: Math.round(alvo * fator) });
+      pontos.push({ data: isoLocal(dt), valor: Math.round(alvo * fator) });
     }
     pontos[pontos.length - 1].valor = Math.round(alvo);
     return pontos;
@@ -237,8 +243,11 @@
   function migrar(d) {
     var base = esquemaVazio();
     Object.keys(base).forEach(function (k) {
-      if (d[k] === undefined) d[k] = base[k];
+      // ausente ou com o tipo errado (backup editado/antigo): usa o vazio,
+      // para as telas não quebrarem ao percorrer uma lista que não é lista
+      if (d[k] === undefined || (Array.isArray(base[k]) && !Array.isArray(d[k]))) d[k] = base[k];
     });
+    if (!d.config || typeof d.config !== "object" || Array.isArray(d.config)) d.config = base.config;
     return d;
   }
 
@@ -296,7 +305,7 @@
     var dados = carregarDados();
     dados.config.ultimoBackup = new Date().toISOString();
     salvarDados(dados);
-    var carimboArq = new Date().toISOString().slice(0, 10);
+    var carimboArq = isoLocal(new Date());
     // o arquivo de backup não leva o token de sincronização deste aparelho
     var copia = JSON.parse(JSON.stringify(dados));
     if (copia.config) delete copia.config.sync;
@@ -305,7 +314,7 @@
     var blob = new Blob([texto], { type: "application/json" });
     var url = URL.createObjectURL(blob);
     var a = document.createElement("a");
-    var carimbo = new Date().toISOString().slice(0, 10);
+    var carimbo = isoLocal(new Date());
     a.href = url;
     a.download = "muller-mendes-backup-" + carimbo + ".json";
     document.body.appendChild(a);
@@ -320,12 +329,18 @@
       leitor.onload = function () {
         try {
           var obj = JSON.parse(leitor.result);
-          if (!obj || !Array.isArray(obj.bancos)) {
+          if (!obj || typeof obj !== "object" || !Array.isArray(obj.bancos)) {
             reject(new Error("Esse arquivo não parece ser um backup do Muller Mendes."));
             return;
           }
-          salvarDados(migrar(obj));
-          resolve(obj);
+          // o backup não leva o token de sincronização (de propósito): mantém o
+          // deste aparelho, senão importar um backup desligava a sincronização
+          var atual = null;
+          try { atual = JSON.parse(lerBruto() || "null"); } catch (e2) {}
+          var dados = migrar(obj);
+          if (atual && atual.config && atual.config.sync) dados.config.sync = atual.config.sync;
+          salvarDados(dados);
+          resolve(dados);
         } catch (e) {
           reject(new Error("Não consegui ler esse arquivo. Verifique se é o JSON exportado pelo próprio sistema."));
         }
@@ -345,6 +360,7 @@
     importarDados: importarDados,
     novoId: novoId,
     hoje: hoje,
+    isoLocal: isoLocal,
     aoMudar: aoMudar,
     ehDesktop: !!BD,
     caminhoBanco: function () { return BD ? BD.caminho() : Promise.resolve("localStorage do navegador"); },
