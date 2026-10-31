@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.384";
+  const VERSAO_APP = "3.6.385";
   // nome do programa (título, logotipo, rodapé e tela da senha), escolhido em
   // Configurações › Senha Acesso; vale só para este aparelho
   const NOMES_APP = ["Muller Mendes", "Mateus Mendes", "Michel Mendes"];
@@ -180,17 +180,25 @@
     ["entradas", "despesas", "contasPagar"].forEach((col) => (DADOS[col] || []).forEach((x) => {
       if (x.recorrencia === FREQ_4DU_ANTIGA) { x.recorrencia = FREQ_PERS; x.regraRep = { ...REGRA_PADRAO }; mudou = true; }
     }));
-    // nomes salvos por importações antigas do extrato: "Banco Do Brasil" →
-    // "Banco do Brasil" (do, da, de, dos, das, e minúsculos fora do início)
+    if (corrigirNomesBancos(DADOS)) mudou = true;
+    if (mudou) A.salvarDados(DADOS, true, true);
+  }
+
+  // nomes salvos por importações antigas do extrato (ou vindos do cofre de
+  // outro aparelho): "Banco Do Brasil" → "Banco do Brasil" (do, da, de, dos,
+  // das, e minúsculos fora do início). Devolve true se mudou algo.
+  function corrigirNomesBancos(d) {
+    let mudou = false;
     const minusc = (t) => String(t).replace(/(\s)(Do|Da|De|Dos|Das|E)(?=\s)/g, (_, esp, p) => esp + p.toLowerCase());
     const corrigir = (obj, campo) => {
       if (!obj || typeof obj[campo] !== "string") return;
       const novo = minusc(obj[campo]);
       if (novo !== obj[campo]) { obj[campo] = novo; mudou = true; }
     };
-    (DADOS.investimentos || []).forEach((i) => { corrigir(i, "emissor"); corrigir(i, "banco"); });
-    (DADOS.bancos || []).forEach((b) => corrigir(b, "nome"));
-    if (mudou) A.salvarDados(DADOS, true, true);
+    (d.investimentos || []).forEach((i) => { corrigir(i, "emissor"); corrigir(i, "banco"); });
+    (d.acoes || []).forEach((a) => corrigir(a, "banco"));
+    (d.bancos || []).forEach((b) => corrigir(b, "nome"));
+    return mudou;
   }
 
   // Correção única: VR e VT eram despesas mensais, mas são só dinheiro do
@@ -542,6 +550,7 @@
   function aplicarRemoto(remoto) {
     const meuSync = (DADOS.config && DADOS.config.sync) || {};
     remoto.config = Object.assign({}, remoto.config || {}, { sync: meuSync });
+    corrigirNomesBancos(remoto);
     A.salvarDados(remoto, true, true);
     DADOS = A.carregarDados();
     renderRota();
@@ -728,7 +737,9 @@
   const BANCOS_SUGERIDOS = ["Banco do Brasil", "Nubank", "Itaú", "Mercado Pago", "Caixa", "Banco Inter"];
 
   function campoBanco(id, valorAtual, rotuloVazio) {
-    const atual = (valorAtual || "").trim();
+    // "Banco Do Brasil" (maiúsculas diferentes) seleciona "Banco do Brasil" da lista
+    const bruto = (valorAtual || "").trim();
+    const atual = BANCOS_SUGERIDOS.find((b) => b.toLowerCase() === bruto.toLowerCase()) || bruto;
     const naLista = BANCOS_SUGERIDOS.indexOf(atual) > -1;
     const ehOutro = !!atual && !naLista;
     const opcoesHtml = `<option value="">${rotuloVazio || "Selecione…"}</option>` +
