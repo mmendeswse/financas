@@ -23,9 +23,13 @@
     var m = /(\d{2})\/(\d{2})\/(\d{4})/.exec(txt || "");
     return m ? m[3] + "-" + m[2] + "-" + m[1] : "";
   }
-  // "BANCO DIGIMAIS" → "Banco Digimais"
+  // "BANCO DIGIMAIS" → "Banco Digimais"; "BANCO DO BRASIL" → "Banco do Brasil"
+  // (preposições e conjunções ficam minúsculas, exceto na primeira palavra)
+  var MINUSCULAS = { "da": 1, "das": 1, "de": 1, "do": 1, "dos": 1, "e": 1 };
   function titulo(txt) {
-    return String(txt || "").toLowerCase().replace(/(^|\s)(\S)/g, function (t, a, b) { return a + b.toUpperCase(); });
+    return String(txt || "").toLowerCase().replace(/(^|\s)(\S+)/g, function (t, a, p) {
+      return a + (a && MINUSCULAS[p] ? p : p.charAt(0).toUpperCase() + p.slice(1));
+    });
   }
 
   // ---- 1 e 2: PDF → páginas → linhas de texto ----
