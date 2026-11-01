@@ -8,12 +8,17 @@ CIANO = (0, 229, 255, 255)     # #00E5FF (--cy do app)
 OURO = (255, 198, 74, 255)     # dourado da linha
 SS = 4                          # desenha 4x maior e reduz (bordas lisas)
 
-def desenhar(S, margem, raio, borda, fundo_total=False, escala_conteudo=1.0):
+# proporções do desenho (frações do lado do cartão)
+PADRAO = dict(w=0.09, g=0.056, base=0.74, topos=[0.53, 0.45, 0.38, 0.29], linha=0.026, ponto=0.03, raio_barra=0.018)
+# favicon: barras e linha bem maiores, ocupando o quadrado (como os outros ícones da barra do navegador)
+COMPACTO = dict(w=0.155, g=0.05, base=0.86, topos=[0.6, 0.47, 0.36, 0.22], linha=0.075, ponto=0.085, raio_barra=0.03)
+
+def desenhar(S, margem, raio, borda, fundo_total=False, escala_conteudo=1.0, layout=PADRAO, cor_fundo=FUNDO):
     """S: tamanho final; margem/raio/borda: frações de S.
     fundo_total: pinta o quadrado inteiro de escuro (iPhone/iPad e maskable).
     escala_conteudo: encolhe o desenho todo (para a área segura do maskable)."""
     T = S * SS
-    im = Image.new("RGBA", (T, T), FUNDO if fundo_total else (0, 0, 0, 0))
+    im = Image.new("RGBA", (T, T), cor_fundo if fundo_total else (0, 0, 0, 0))
     d = ImageDraw.Draw(im)
     # o "cartão" com borda, centrado
     lado = T * (1 - 2 * margem) * escala_conteudo
@@ -29,17 +34,17 @@ def desenhar(S, margem, raio, borda, fundo_total=False, escala_conteudo=1.0):
     d.rounded_rectangle([x0 + b, y0 + b, x0 + lado - b, y0 + lado - b], radius=max(1, r - b), fill=FUNDO)
     # barras e linha (frações do lado do cartão)
     P = lambda fx, fy: (x0 + fx * lado, y0 + fy * lado)
-    w, g = 0.09, 0.056
+    w, g = layout["w"], layout["g"]
     inicio = (1 - (4 * w + 3 * g)) / 2
-    base, topos = 0.74, [0.53, 0.45, 0.38, 0.29]
+    base, topos = layout["base"], layout["topos"]
     pontos = []
     for i, topo in enumerate(topos):
         bx = inicio + i * (w + g)
         (ax, ay), (cx, cy) = P(bx, topo), P(bx + w, base)
-        d.rounded_rectangle([ax, ay, cx, cy], radius=lado * 0.018, fill=CIANO)
+        d.rounded_rectangle([ax, ay, cx, cy], radius=lado * layout["raio_barra"], fill=CIANO)
         pontos.append(P(bx + w / 2, topo))   # pontos em cima das barras
-    d.line(pontos, fill=OURO, width=int(lado * 0.026), joint="curve")
-    rp = lado * 0.03
+    d.line(pontos, fill=OURO, width=max(1, int(lado * layout["linha"])), joint="curve")
+    rp = lado * layout["ponto"]
     for (px, py) in pontos:
         d.ellipse([px - rp, py - rp, px + rp, py + rp], fill=OURO)
     return im.resize((S, S), Image.LANCZOS)
@@ -47,8 +52,11 @@ def desenhar(S, margem, raio, borda, fundo_total=False, escala_conteudo=1.0):
 raiz, desk = sys.argv[1], sys.argv[2]
 # programa (Windows) e ícones do navegador: cartão com cantos transparentes
 normal = lambda S: desenhar(S, margem=0.05, raio=0.21, borda=0.03)
-# iPhone/iPad: o iOS arredonda sozinho e não aceita transparência → fundo inteiro
-ios = lambda S: desenhar(S, margem=0.035, raio=0.2, borda=0.03, fundo_total=True)
+# iPhone/iPad: o iOS recorta o ícone com os cantos dele (≈22,4% do lado) e não
+# aceita transparência. A imagem inteira é ciano e o recorte do iOS vira a
+# borda de fora; por dentro, o fundo escuro acompanha a mesma curva.
+# (Antes havia uma faixa escura fora da borda, que virava um contorno escuro.)
+ios = lambda S: desenhar(S, margem=0.0, raio=0.2237, borda=0.04, fundo_total=True, cor_fundo=CIANO)
 # maskable (Android): o desenho dentro da área segura (círculo de 80%)
 mask = lambda S: desenhar(S, margem=0.0, raio=0.21, borda=0.03, fundo_total=True, escala_conteudo=0.74)
 
@@ -67,21 +75,22 @@ tamanhos = [16, 24, 32, 48, 64, 128, 256]
 normal(256).save(f"{desk}/build/icon.ico", sizes=[(s, s) for s in tamanhos],
                  append_images=[normal(s) for s in tamanhos[:-1]])
 # favicon (aba do navegador): borda mais grossa para aparecer em 16–48 px
-fav = lambda S: desenhar(S, margem=0.0, raio=0.22, borda=0.09 if S <= 16 else 0.08)
+fav = lambda S: desenhar(S, margem=0.0, raio=0.2, borda=0.07, layout=COMPACTO)
 fav(48).save(f"{raiz}/favicon.ico", sizes=[(16, 16), (32, 32), (48, 48)], append_images=[fav(16), fav(32)])
 fav(32).save(f"{raiz}/favicon-32.png")
 # mesmo desenho em SVG (nítido em qualquer tamanho)
-w, g = 9, 5.6
+L = COMPACTO
+w, g = L["w"] * 100, L["g"] * 100
 x0 = (100 - (4 * w + 3 * g)) / 2
-topos, base = [53, 45, 38, 29], 74
-barras = "".join(f'<rect x="{x0 + i * (w + g):.1f}" y="{t}" width="{w}" height="{base - t}" rx="1.8" fill="#00E5FF"/>' for i, t in enumerate(topos))
+topos, base = [t * 100 for t in L["topos"]], L["base"] * 100
+barras = "".join(f'<rect x="{x0 + i * (w + g):.1f}" y="{t:.1f}" width="{w:.1f}" height="{base - t:.1f}" rx="{L['raio_barra'] * 100:.1f}" fill="#00E5FF"/>' for i, t in enumerate(topos))
 pts = [(x0 + i * (w + g) + w / 2, t) for i, t in enumerate(topos)]
-linha = " ".join(f"{px:.1f},{py}" for px, py in pts)
-pontos = "".join(f'<circle cx="{px:.1f}" cy="{py}" r="3" fill="#FFC64A"/>' for px, py in pts)
+linha = " ".join(f"{px:.1f},{py:.1f}" for px, py in pts)
+pontos = "".join(f'<circle cx="{px:.1f}" cy="{py:.1f}" r="{L['ponto'] * 100:.1f}" fill="#FFC64A"/>' for px, py in pts)
 open(f"{raiz}/favicon.svg", "w").write(
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">'
-    '<rect width="100" height="100" rx="22" fill="#00E5FF"/>'
-    '<rect x="7" y="7" width="86" height="86" rx="16" fill="#0A141E"/>'
-    + barras + f'<polyline points="{linha}" fill="none" stroke="#FFC64A" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>'
+    '<rect width="100" height="100" rx="20" fill="#00E5FF"/>'
+    '<rect x="7" y="7" width="86" height="86" rx="13" fill="#0A141E"/>'
+    + barras + f'<polyline points="{linha}" fill="none" stroke="#FFC64A" stroke-width="{L['linha'] * 100:.1f}" stroke-linejoin="round" stroke-linecap="round"/>'
     + pontos + '</svg>\n')
 print("ícones gerados")
