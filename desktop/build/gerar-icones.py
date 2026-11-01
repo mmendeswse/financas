@@ -13,7 +13,7 @@ PADRAO = dict(w=0.09, g=0.056, base=0.74, topos=[0.53, 0.45, 0.38, 0.29], linha=
 # favicon: barras e linha bem maiores, ocupando o quadrado (como os outros ícones da barra do navegador)
 COMPACTO = dict(w=0.155, g=0.05, base=0.86, topos=[0.6, 0.47, 0.36, 0.22], linha=0.075, ponto=0.085, raio_barra=0.03)
 
-def desenhar(S, margem, raio, borda, fundo_total=False, escala_conteudo=1.0, layout=PADRAO, cor_fundo=FUNDO):
+def desenhar(S, margem, raio, borda, fundo_total=False, escala_conteudo=1.0, layout=PADRAO, cor_fundo=FUNDO, cor_borda=CIANO):
     """S: tamanho final; margem/raio/borda: frações de S.
     fundo_total: pinta o quadrado inteiro de escuro (iPhone/iPad e maskable).
     escala_conteudo: encolhe o desenho todo (para a área segura do maskable)."""
@@ -30,7 +30,7 @@ def desenhar(S, margem, raio, borda, fundo_total=False, escala_conteudo=1.0, lay
         ImageDraw.Draw(brilho).rounded_rectangle([x0, y0, x0 + lado, y0 + lado], radius=r, outline=(0, 229, 255, 150), width=int(b * 1.6))
         im.alpha_composite(brilho.filter(ImageFilter.GaussianBlur(T * 0.012)))
         d = ImageDraw.Draw(im)
-    d.rounded_rectangle([x0, y0, x0 + lado, y0 + lado], radius=r, fill=CIANO)
+    d.rounded_rectangle([x0, y0, x0 + lado, y0 + lado], radius=r, fill=cor_borda)
     d.rounded_rectangle([x0 + b, y0 + b, x0 + lado - b, y0 + lado - b], radius=max(1, r - b), fill=FUNDO)
     # barras e linha (frações do lado do cartão)
     P = lambda fx, fy: (x0 + fx * lado, y0 + fy * lado)
@@ -57,12 +57,16 @@ normal = lambda S: desenhar(S, margem=0.05, raio=0.21, borda=0.03)
 # borda de fora; por dentro, o fundo escuro acompanha a mesma curva.
 # (Antes havia uma faixa escura fora da borda, que virava um contorno escuro.)
 ios = lambda S: desenhar(S, margem=0.0, raio=0.2237, borda=0.04, fundo_total=True, cor_fundo=CIANO)
-# maskable (Android): o desenho dentro da área segura (círculo de 80%)
-mask = lambda S: desenhar(S, margem=0.0, raio=0.21, borda=0.03, fundo_total=True, escala_conteudo=0.74)
+# maskable (Android): fundo escuro até as bordas (o Android recorta no formato
+# do aparelho: círculo, gota, quadrado...) e só as barras/linha, dentro da área
+# segura (círculo de 80%). Sem a borda ciano interna: ela ficava cortada ou
+# parecia um ícone pequeno dentro de outro.
+mask = lambda S: desenhar(S, margem=0.0, raio=0.21, borda=0.0, fundo_total=True, cor_borda=FUNDO)
 
 normal(512).save(f"{raiz}/assets/icons/icon-512.png")
 normal(192).save(f"{raiz}/assets/icons/icon-192.png")
 mask(512).save(f"{raiz}/assets/icons/icon-maskable-512.png")
+mask(192).save(f"{raiz}/assets/icons/icon-maskable-192.png")
 for nome, S in [("apple-touch-icon", 180), ("apple-touch-icon-180", 180), ("apple-touch-icon-167", 167),
                 ("apple-touch-icon-152", 152), ("apple-touch-icon-precomposed", 180)]:
     im = ios(S).convert("RGB")

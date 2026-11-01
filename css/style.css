@@ -147,6 +147,11 @@ svg { display: block; }
 .c9 { grid-column: span 9; } .c12 { grid-column: span 12; }
 @media (max-width: 1280px) { .c3, .c4, .c5 { grid-column: span 6; } .c7, .c8, .c9 { grid-column: span 12; } }
 @media (max-width: 860px) { .c3, .c4, .c5, .c6 { grid-column: span 12; } }
+/* tablets de toque (Android, iPad grande): mesma grade do iPad — quadros 2 a 2,
+   largos e baixos, em vez de 4 colunas estreitas e compridas na vertical */
+@media (hover: none) and (pointer: coarse) and (min-width: 861px) and (max-width: 1800px) {
+  .c3, .c4, .c5 { grid-column: span 6; } .c7, .c8, .c9 { grid-column: span 12; }
+}
 
 .card { background: var(--painel); border: 1px solid var(--linha); border-radius: var(--raio); overflow: hidden; height: 100%; display: flex; flex-direction: column; }
 .card > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px 14px; padding: 15px 18px 12px; flex: none; flex-wrap: wrap; }
