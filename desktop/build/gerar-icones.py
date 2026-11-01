@@ -52,11 +52,9 @@ def desenhar(S, margem, raio, borda, fundo_total=False, escala_conteudo=1.0, lay
 raiz, desk = sys.argv[1], sys.argv[2]
 # programa (Windows) e ícones do navegador: cartão com cantos transparentes
 normal = lambda S: desenhar(S, margem=0.05, raio=0.21, borda=0.03)
-# iPhone/iPad: o iOS recorta o ícone com os cantos dele (≈22,4% do lado) e não
-# aceita transparência. A imagem inteira é ciano e o recorte do iOS vira a
-# borda de fora; por dentro, o fundo escuro acompanha a mesma curva.
-# (Antes havia uma faixa escura fora da borda, que virava um contorno escuro.)
-ios = lambda S: desenhar(S, margem=0.0, raio=0.2237, borda=0.04, fundo_total=True, cor_fundo=CIANO)
+# iPhone/iPad: o mesmo desenho do Android — fundo escuro até a borda (o iOS
+# recorta os cantos sozinho e não aceita transparência) e só as barras/linha.
+ios = lambda S: desenhar(S, margem=0.0, raio=0.21, borda=0.0, fundo_total=True, cor_borda=FUNDO)
 # maskable (Android): fundo escuro até as bordas (o Android recorta no formato
 # do aparelho: círculo, gota, quadrado...) e só as barras/linha, dentro da área
 # segura (círculo de 80%). Sem a borda ciano interna: ela ficava cortada ou
