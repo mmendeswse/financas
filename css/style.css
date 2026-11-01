@@ -445,7 +445,7 @@ table.terminal .campo-preco { width: 88px; text-align: right; background: var(--
 .shell { flex-direction: column; min-height: 100vh; }
 .sidebar { width: 100%; height: auto; position: static; flex-direction: row; align-items: center; gap: 18px; padding: 10px 26px; border-right: none; border-bottom: 1px solid var(--linha); overflow: visible; transform: none !important; box-shadow: none !important; }
 .logo { border-bottom: none; margin: 0; padding: 0 18px 0 0; border-right: 1px solid var(--linha); }
-/* logo = mesmo desenho do ícone do programa (quadrado com borda ciano, barras e linha dourada) */
+/* logo: círculo com borda ciano, barras ciano e linha dourada (cores do ícone do programa) */
 .logo-mark { width: 26px; height: 26px; border-radius: 0; background: transparent; border: none; box-shadow: none; }
 .logo-mark svg { width: 100%; height: 100%; display: block; }
 .logo-txt b { color: var(--cy); font-size: 15px; letter-spacing: .12em; }
