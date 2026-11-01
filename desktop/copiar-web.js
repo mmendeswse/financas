@@ -8,7 +8,7 @@ const path = require("path");
 const RAIZ = path.join(__dirname, "..");
 const DESTINO = path.join(__dirname, "web");
 
-const ITENS = ["index.html", "manifest.json", "manifest.webmanifest", "css", "js", "assets"];
+const ITENS = ["index.html", "manifest.json", "manifest.webmanifest", "favicon.ico", "favicon.svg", "favicon-32.png", "css", "js", "assets"];
 
 fs.rmSync(DESTINO, { recursive: true, force: true });
 fs.mkdirSync(DESTINO, { recursive: true });
