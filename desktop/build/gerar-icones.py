@@ -66,4 +66,22 @@ grande.resize((512, 512), Image.LANCZOS).save(f"{desk}/build/icon.png")
 tamanhos = [16, 24, 32, 48, 64, 128, 256]
 normal(256).save(f"{desk}/build/icon.ico", sizes=[(s, s) for s in tamanhos],
                  append_images=[normal(s) for s in tamanhos[:-1]])
+# favicon (aba do navegador): borda mais grossa para aparecer em 16–48 px
+fav = lambda S: desenhar(S, margem=0.0, raio=0.22, borda=0.09 if S <= 16 else 0.08)
+fav(48).save(f"{raiz}/favicon.ico", sizes=[(16, 16), (32, 32), (48, 48)], append_images=[fav(16), fav(32)])
+fav(32).save(f"{raiz}/favicon-32.png")
+# mesmo desenho em SVG (nítido em qualquer tamanho)
+w, g = 9, 5.6
+x0 = (100 - (4 * w + 3 * g)) / 2
+topos, base = [53, 45, 38, 29], 74
+barras = "".join(f'<rect x="{x0 + i * (w + g):.1f}" y="{t}" width="{w}" height="{base - t}" rx="1.8" fill="#00E5FF"/>' for i, t in enumerate(topos))
+pts = [(x0 + i * (w + g) + w / 2, t) for i, t in enumerate(topos)]
+linha = " ".join(f"{px:.1f},{py}" for px, py in pts)
+pontos = "".join(f'<circle cx="{px:.1f}" cy="{py}" r="3" fill="#FFC64A"/>' for px, py in pts)
+open(f"{raiz}/favicon.svg", "w").write(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">'
+    '<rect width="100" height="100" rx="22" fill="#00E5FF"/>'
+    '<rect x="7" y="7" width="86" height="86" rx="16" fill="#0A141E"/>'
+    + barras + f'<polyline points="{linha}" fill="none" stroke="#FFC64A" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>'
+    + pontos + '</svg>\n')
 print("ícones gerados")
