@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.392";
+  const VERSAO_APP = "3.6.393";
   // nome do programa (título, logotipo, rodapé e tela da senha), escolhido em
   // Configurações › Senha Acesso; vale só para este aparelho
   const NOMES_APP = ["Muller Mendes", "Mateus Mendes", "Michel Mendes"];
@@ -8232,8 +8232,9 @@
           <div class="body pad">
             <div class="sync-estado"><span class="sync-ponto ligado"></span><b>Ligado</b>
               <span class="dim" id="statusSync">${esc(statusSync || descreverAlteracao(DADOS) || "última sincronização: " + ultimaSync)}</span></div>
-            <div class="campo"><label>Cofre</label>
-              <div class="sync-codigo"><code>${esc(sc.cofre || "sendo criado…")}</code></div></div>
+            <div class="campo"><label for="cfgSyncCofre">Cofre</label>
+              ${sc.cofre ? `<input id="cfgSyncCofre" type="password" readonly value="${esc(sc.cofre)}" autocomplete="off" spellcheck="false">`
+                : `<input id="cfgSyncCofre" type="text" readonly value="sendo criado…">`}</div>
             ${lista([
               "Cada alteração é enviada para o cofre em poucos segundos.",
               ["A cada 2 minutos o sistema confere se outro aparelho mandou algo novo.", 3],
@@ -8259,7 +8260,7 @@
           <div class="body pad">
             <label class="chk-linha"><input type="checkbox" id="cfgCotacoesAuto" ${configCotacoes().auto ? "checked" : ""}> Atualizar cotações a cada 5 min</label>
             <div class="campo"><label for="cfgBrapiToken">Token</label>
-              <input id="cfgBrapiToken" value="${esc(configCotacoes().token)}" placeholder="cole aqui outro token, se quiser"></div>
+              <input id="cfgBrapiToken" type="password" autocomplete="off" spellcheck="false" value="${esc(configCotacoes().token)}" placeholder="cole aqui outro token, se quiser"></div>
             ${lista([
               ["Já vem com um token configurado — não precisa mexer.", 2],
               ["Se a internet cair, o sistema mantém os últimos preços e continua funcionando.", 3]
