@@ -13,12 +13,12 @@ PADRAO = dict(w=0.09, g=0.056, base=0.74, topos=[0.53, 0.45, 0.38, 0.29], linha=
 # favicon: barras e linha bem maiores, ocupando o quadrado (como os outros ícones da barra do navegador)
 COMPACTO = dict(w=0.155, g=0.05, base=0.86, topos=[0.6, 0.47, 0.36, 0.22], linha=0.075, ponto=0.085, raio_barra=0.03)
 
-def desenhar(S, margem, raio, borda, fundo_total=False, escala_conteudo=1.0, layout=PADRAO):
+def desenhar(S, margem, raio, borda, fundo_total=False, escala_conteudo=1.0, layout=PADRAO, cor_fundo=FUNDO):
     """S: tamanho final; margem/raio/borda: frações de S.
     fundo_total: pinta o quadrado inteiro de escuro (iPhone/iPad e maskable).
     escala_conteudo: encolhe o desenho todo (para a área segura do maskable)."""
     T = S * SS
-    im = Image.new("RGBA", (T, T), FUNDO if fundo_total else (0, 0, 0, 0))
+    im = Image.new("RGBA", (T, T), cor_fundo if fundo_total else (0, 0, 0, 0))
     d = ImageDraw.Draw(im)
     # o "cartão" com borda, centrado
     lado = T * (1 - 2 * margem) * escala_conteudo
@@ -52,8 +52,11 @@ def desenhar(S, margem, raio, borda, fundo_total=False, escala_conteudo=1.0, lay
 raiz, desk = sys.argv[1], sys.argv[2]
 # programa (Windows) e ícones do navegador: cartão com cantos transparentes
 normal = lambda S: desenhar(S, margem=0.05, raio=0.21, borda=0.03)
-# iPhone/iPad: o iOS arredonda sozinho e não aceita transparência → fundo inteiro
-ios = lambda S: desenhar(S, margem=0.035, raio=0.2, borda=0.03, fundo_total=True)
+# iPhone/iPad: o iOS recorta o ícone com os cantos dele (≈22,4% do lado) e não
+# aceita transparência. A imagem inteira é ciano e o recorte do iOS vira a
+# borda de fora; por dentro, o fundo escuro acompanha a mesma curva.
+# (Antes havia uma faixa escura fora da borda, que virava um contorno escuro.)
+ios = lambda S: desenhar(S, margem=0.0, raio=0.2237, borda=0.04, fundo_total=True, cor_fundo=CIANO)
 # maskable (Android): o desenho dentro da área segura (círculo de 80%)
 mask = lambda S: desenhar(S, margem=0.0, raio=0.21, borda=0.03, fundo_total=True, escala_conteudo=0.74)
 
