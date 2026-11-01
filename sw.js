@@ -1,12 +1,12 @@
 /* Service worker — deixa o app abrir sem internet no iPad/iPhone.
    Arquivos do app: cache primeiro. Cotações (APIs): sempre rede. */
-const CACHE = "muller-mendes-v616";
+const CACHE = "muller-mendes-v617";
 const ARQUIVOS = [
-  "./", "./index.html", "./css/style.css?v=3.6.397", "./manifest.json", "./manifest.webmanifest",
+  "./", "./index.html", "./css/style.css?v=3.6.398", "./manifest.json", "./manifest.webmanifest",
   "./js/vendor/chart.umd.min.js",
-  "./js/bloqueio.js?v=3.6.397", "./js/armazenamento.js?v=3.6.397", "./js/financeiro.js?v=3.6.397", "./js/investimentos.js?v=3.6.397",
-  "./js/graficos.js?v=3.6.397", "./js/extrato.js?v=3.6.397", "./js/relatorio.js?v=3.6.397", "./js/vendor/pdf.min.js", "./js/vendor/pdf.worker.min.js", "./js/cotacoes.js?v=3.6.397", "./js/sincronizacao.js?v=3.6.397", "./js/emojis.js?v=3.6.397", "./js/app.js?v=3.6.397",
-  "./assets/icons/bancos/nubank.svg?v=3.6.397", "./assets/icons/bancos/itau.svg?v=3.6.397", "./assets/icons/bancos/inter.svg?v=3.6.397", "./assets/icons/bancos/banco-do-brasil.svg?v=3.6.397", "./assets/icons/bancos/caixa.svg?v=3.6.397", "./assets/icons/bancos/mercado-pago.svg?v=3.6.397",
+  "./js/bloqueio.js?v=3.6.398", "./js/armazenamento.js?v=3.6.398", "./js/financeiro.js?v=3.6.398", "./js/investimentos.js?v=3.6.398",
+  "./js/graficos.js?v=3.6.398", "./js/extrato.js?v=3.6.398", "./js/relatorio.js?v=3.6.398", "./js/vendor/pdf.min.js", "./js/vendor/pdf.worker.min.js", "./js/cotacoes.js?v=3.6.398", "./js/sincronizacao.js?v=3.6.398", "./js/emojis.js?v=3.6.398", "./js/app.js?v=3.6.398",
+  "./assets/icons/bancos/nubank.svg?v=3.6.398", "./assets/icons/bancos/itau.svg?v=3.6.398", "./assets/icons/bancos/inter.svg?v=3.6.398", "./assets/icons/bancos/banco-do-brasil.svg?v=3.6.398", "./assets/icons/bancos/caixa.svg?v=3.6.398", "./assets/icons/bancos/mercado-pago.svg?v=3.6.398", "./assets/icons/bancos/alelo.svg?v=3.6.398",
   "./assets/icons/icon-192.png", "./assets/icons/icon-512.png", "./assets/icons/icon-maskable-192.png", "./assets/icons/icon-maskable-512.png",
   "./favicon.ico", "./favicon.svg", "./favicon-32.png", "./apple-touch-icon.png", "./apple-touch-icon-180.png", "./apple-touch-icon-167.png", "./apple-touch-icon-152.png", "./apple-touch-icon-precomposed.png"
 ];
