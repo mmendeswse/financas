@@ -1,0 +1,66 @@
+{
+  "name": "muller-mendes-financas",
+  "productName": "Muller Mendes Finanças",
+  "version": "0.0.0",
+  "description": "Gerenciamento de finanças pessoais",
+  "author": "Muller Mendes",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "start": "node copiar-web.js && electron .",
+    "dist": "node construir.js"
+  },
+  "devDependencies": {
+    "electron": "44.7.2",
+    "electron-builder": "26.17.0",
+    "resedit": "3.1.0"
+  },
+  "build": {
+    "appId": "com.mullermendes.financas",
+    "productName": "Muller Mendes Finanças",
+    "copyright": "Muller Mendes",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "package.json",
+      "web/**/*"
+    ],
+    "afterPack": "./icone-exe.js",
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": "always",
+      "createStartMenuShortcut": true,
+      "shortcutName": "Muller Mendes Finanças",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico",
+      "uninstallDisplayName": "Muller Mendes Finanças",
+      "installerLanguages": [
+        "pt_BR"
+      ],
+      "language": "1046",
+      "deleteAppDataOnUninstall": false,
+      "artifactName": "Muller-Mendes-Financas-Instalador-${version}.exe",
+      "differentialPackage": false
+    },
+    "publish": null
+  }
+}
