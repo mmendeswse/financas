@@ -85,6 +85,8 @@ financas/
 │       ├── pdf.min.js
 │       └── pdf.worker.min.js
 └── assets/icons/           # ícones do app e dos bancos
+
+desktop/                    # programa para Windows (Electron) — veja INSTALAR-NO-COMPUTADOR.md
 ```
 
 Cada arquivo JavaScript tem uma responsabilidade única: `armazenamento.js`
