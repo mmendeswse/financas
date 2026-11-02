@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.404";
+  const VERSAO_APP = "3.6.407";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -36,20 +36,11 @@
     const p = DADOS && DADOS.config && DADOS.config.perfil;
     return (p && String(p.nome || "").trim()) || nomeAntigoAparelho() || NOME_PADRAO;
   }
-  let logoOriginal = null;
   function aplicarNomeApp() {
     const n = nomeApp();
     document.title = n;   // aba do navegador: o nome do perfil
     document.querySelectorAll(".logo-txt b").forEach((b) => { b.textContent = n; });
     const rod = document.getElementById("rodapeNome"); if (rod) rod.textContent = `${n} v1.0`;
-    // logotipo: o avatar do perfil (foto, personagem ou emoji); sem avatar, o ícone do programa
-    const marca = document.querySelector(".logo .logo-mark");
-    if (!marca) return;
-    if (logoOriginal == null) logoOriginal = marca.innerHTML;
-    const p = (DADOS && DADOS.config && DADOS.config.perfil) || {}, av = p.avatar || {};
-    const comAvatar = window.Avatar && ((av.img && av.img.src) || av.emoji);
-    marca.classList.toggle("com-avatar", !!comAvatar);
-    marca.innerHTML = comAvatar ? Avatar.circuloHTML("logo-avatar", p) : logoOriginal;
   }
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
@@ -589,7 +580,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.404 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.407 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -670,7 +661,7 @@
   }
   function atualizarCartaoSync() {
     const c = document.getElementById("syncCorpo");
-    if (c && !document.getElementById("modal").classList.contains("on")) c.innerHTML = corpoCartaoSync();
+    if (c && !document.getElementById("modal").classList.contains("on")) { c.innerHTML = corpoCartaoSync(); ajustarAlturaConfig(); }
   }
 
   // ---------------------------------------------------------------------
@@ -869,7 +860,7 @@
     btn.dataset.sync = sit.cls;
     if (ass === assinaturaPerfil) return;
     assinaturaPerfil = ass;
-    aplicarNomeApp();   // logotipo com o avatar e o nome do perfil
+    aplicarNomeApp();   // nome do perfil ao lado do logotipo
     btn.innerHTML = Avatar.circuloHTML("avatar-barra", p) + `<span class="perfil-ponto" aria-hidden="true"></span>`;
     btn.title = (p.nome || "Seu perfil") + " · " + (S.conectado() ? "sincronização: " + sit.titulo.toLowerCase() : "sincronização desligada");
     preencherMenuPerfil();
@@ -905,11 +896,14 @@
   // =========================================================================
   // GOOGLE AGENDA (mesmo sistema do Meu Controle) — o motor fica em agenda.js
   // =========================================================================
-  // o que deve estar na agenda: este mês e os dois seguintes
+  // o que deve estar na agenda: este mês e os 11 seguintes (a janela anda
+  // sozinha a cada mês, então uma conta que se repete sem fim aparece sempre
+  // com um ano de antecedência)
+  const MESES_AGENDA = 12;
   function desejadosAgenda(d, itens) {
     const lista = [];
     const [a0, m0] = F.mesAtual().split("-").map(Number);
-    const meses = [0, 1, 2].map((i) => { const x = new Date(a0, m0 - 1 + i, 1); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}`; });
+    const meses = Array.from({ length: MESES_AGENDA }, (_, i) => i).map((i) => { const x = new Date(a0, m0 - 1 + i, 1); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}`; });
     const vistos = {};
     const add = (x) => { if (!x.data || vistos[x.chave]) return; vistos[x.chave] = true; lista.push(x); };
     if (itens.contas) meses.forEach((m) => listaDespesasTodasMes(d, m).forEach((x) => {
@@ -947,7 +941,7 @@
     const c = AG.cfg(DADOS), st = AG.estado;
     if (!c.ativa || !AG.conectadoAqui()) return `
       <div class="ag-intro"><span class="ag-ic">📅</span><div><b>Leve seus vencimentos para o Google Agenda</b>
-        <small>O sistema cria uma agenda “${esc(nomeApp())} Finanças” na sua conta Google com as contas a pagar, as receitas previstas e os prazos das metas. Os alertas tocam mesmo com o sistema fechado — no celular, no relógio e no computador.</small></div></div>
+        <small>Contas a pagar, receitas previstas e prazos das metas numa agenda na sua conta Google, com alertas mesmo com o sistema fechado.</small></div></div>
       <p class="cfg-info cfg-opc" data-opc="2">O Google vai pedir para você escolher a conta e autorizar. O sistema só consegue mexer na agenda que ele mesmo cria — não vê nem altera as suas outras agendas.${c.ativa ? " A agenda já está ligada em outro aparelho: conectar aqui usa a mesma." : ""}</p>
       <div class="cfg-acoes"><button class="btn primario" data-acao="agenda-conectar">Conectar Google Agenda</button></div>`;
     const pend = AG.pendente(DADOS);
@@ -957,8 +951,8 @@
     const item = (k, rot, sub) => `<label class="chk-linha ag-item"><input type="checkbox" data-ag-item="${k}" ${c.itens[k] ? "checked" : ""}> <span>${rot}<small>${sub}</small></span></label>`;
     return `${est}
       <span class="sy-rot">O que vai para a agenda</span>
-      ${item("contas", "💸 Contas a pagar", "no vencimento, com alerta na véspera e no dia")}
-      ${item("receitas", "💰 Receitas previstas", "no dia previsto")}
+      ${item("contas", "💸 Contas a pagar", "próximos 12 meses, alerta na véspera e no dia")}
+      ${item("receitas", "💰 Receitas previstas", "próximos 12 meses, no dia previsto")}
       ${item("metas", "🎯 Prazos das metas", "com alerta uma semana antes")}
       <p class="cfg-info cfg-opc" data-opc="1"><a class="ag-link" href="https://calendar.google.com/" target="_blank" rel="noopener">Abrir o Google Agenda ↗</a></p>
       <div class="cfg-acoes"><button class="btn primario" data-acao="agenda-enviar">Atualizar</button>
@@ -966,7 +960,7 @@
   }
   function atualizarCartaoAgenda() {
     const c = document.getElementById("agendaCorpo");
-    if (c && !document.getElementById("modal").classList.contains("on")) { c.innerHTML = corpoCartaoAgenda(); if (typeof iconizarBotoes === "function") iconizarBotoes(c); }
+    if (c && !document.getElementById("modal").classList.contains("on")) { c.innerHTML = corpoCartaoAgenda(); ajustarAlturaConfig(); }
   }
   // botão flutuante quando o Google pede um toque para liberar o acesso de novo
   function atualizarAvisoAgenda() {
@@ -8637,19 +8631,31 @@
   function ajustarAlturaConfig() {
     const grade = document.querySelector("#conteudo .cfg-grid");
     if (!grade) return;
-    grade.style.minHeight = "";
+    grade.style.minHeight = ""; grade.style.height = "";
     const opcionais = [...grade.querySelectorAll(".cfg-opc")];
     opcionais.forEach((el) => { el.hidden = false; });
     if (window.innerWidth < 700) return;   // celular: tudo à mostra, com rolagem
+    // a grade ocupa exatamente o espaço entre o topo dela e o rodapé, para os
+    // seis quadros (do mesmo tamanho) caberem na tela sem rolar a página
     const rod = document.querySelector(".rodape-app"), cont = document.getElementById("conteudo");
-    const folga = (cont ? parseFloat(getComputedStyle(cont).paddingBottom) || 0 : 0) + (rod ? parseFloat(getComputedStyle(rod).marginTop) || 0 : 0);
-    const sobra = () => (rod ? rod.getBoundingClientRect().top - grade.getBoundingClientRect().bottom - folga : 0);
-    const passou = () => sobra() < 0 || document.documentElement.scrollHeight > window.innerHeight;
-    // tela baixa: tira as linhas opcionais, a menos importante (n maior) primeiro, até caber
+    const topo = grade.getBoundingClientRect().top + window.scrollY;
+    const folga = (cont ? parseFloat(getComputedStyle(cont).paddingBottom) || 0 : 0)
+      + (rod ? rod.offsetHeight + (parseFloat(getComputedStyle(rod).marginTop) || 0) : 0);
+    const alt = Math.max(420, Math.floor(window.innerHeight - topo - folga - 2));
+    grade.style.height = alt + "px";
+    // em cada quadro, o conteúdo fica numa área que rola e os botões, fixos embaixo
+    grade.querySelectorAll(".card .body.pad").forEach((pad) => {
+      if (pad.querySelector(":scope > .cfg-rolar")) return;
+      const area = document.createElement("div");
+      area.className = "cfg-rolar";
+      [...pad.childNodes].filter((n) => !(n.nodeType === 1 && n.classList.contains("cfg-acoes"))).forEach((n) => area.appendChild(n));
+      pad.insertBefore(area, pad.firstChild);
+    });
+    // quadro apertado: tira as linhas opcionais, a menos importante (n maior) primeiro
+    const corpos = [...grade.querySelectorAll(".card .cfg-rolar")];
+    const apertado = () => corpos.some((c) => c.scrollHeight > c.clientHeight + 1);
     const fila = opcionais.sort((a, b) => Number(b.dataset.opc) - Number(a.dataset.opc));
-    for (let i = 0; i < fila.length && passou(); i++) fila[i].hidden = true;
-    const resto = sobra();
-    if (resto > 1) grade.style.minHeight = Math.floor(grade.offsetHeight + resto) + "px";
+    for (let i = 0; i < fila.length && apertado(); i++) fila[i].hidden = true;
     ajustarZonaResumo();
   }
   // Zona Risco: o resumo do que seria apagado só ocupa o espaço que sobra no
