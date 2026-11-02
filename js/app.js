@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.452";
+  const VERSAO_APP = "3.6.453";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -581,7 +581,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.452 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.453 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -8614,31 +8614,60 @@
   }
 
   // meses do quadro A (Receitas x despesas); "Tudo" começa no mês do lançamento mais antigo
-  // mini-gráfico de barras dos quadros do topo de Relatórios (canto direito):
-  // uma barra por mês do período; passar o mouse (ou o dedo) mostra o mês e o valor.
-  // divergente: barras para cima (verde) e para baixo (vermelho) a partir do zero
-  function miniBarrasRel(itens, cor, divergente) {
-    if (!itens.length || itens.every((x) => !x.v)) return "";
-    const W = 120, H = 40, n = itens.length, passo = W / n, larg = Math.max(2, Math.min(10, passo * 0.62));
-    const maxAbs = Math.max(...itens.map((x) => Math.abs(x.v))) || 1;
-    const meio = divergente ? H / 2 : H;
-    const barras = itens.map((x, i) => {
-      const alt = Math.max(x.v ? 1.5 : 0, (Math.abs(x.v) / maxAbs) * (divergente ? H / 2 - 1 : H - 1));
-      const y = divergente && x.v < 0 ? meio : meio - alt;
-      const c = divergente ? (x.v < 0 ? "var(--down)" : "var(--up)") : cor;
-      const nome = new Date(x.mes + "-01T00:00:00").toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
-      return `<rect x="${(i * passo + (passo - larg) / 2).toFixed(1)}" y="${y.toFixed(1)}" width="${larg.toFixed(1)}" height="${alt.toFixed(1)}" rx="1.5" fill="${c}" opacity="${x.atual ? 1 : 0.7}"><title>${nome.charAt(0).toUpperCase() + nome.slice(1)}: ${brlSinal(x.v)}</title></rect>`;
-    }).join("");
-    const zero = divergente ? `<line x1="0" x2="${W}" y1="${meio}" y2="${meio}" stroke="var(--linha-2)" stroke-width="1"/>` : "";
-    return `<span class="metric-mini" aria-hidden="true"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${zero}${barras}</svg></span>`;
-  }
-  // anel da rentabilidade (canto direito do quadro): preenchido até o percentual, verde ou vermelho
-  function miniAnelRel(pctValor) {
-    const v = Number(pctValor) || 0, r = 15, circ = 2 * Math.PI * r, frac = Math.min(1, Math.abs(v) / 100);
-    const cor = v < 0 ? "var(--down)" : "var(--up)";
-    return `<span class="metric-mini metric-anel" aria-hidden="true"><svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="${r}" fill="none" stroke="var(--linha-2)" stroke-width="4"/>
-      <circle cx="20" cy="20" r="${r}" fill="none" stroke="${cor}" stroke-width="4" stroke-linecap="round" stroke-dasharray="${(circ * frac).toFixed(1)} ${circ.toFixed(1)}" transform="rotate(-90 20 20)"><title>Rentabilidade da carteira: ${pct(v)}</title></circle>
-      <text x="20" y="21" text-anchor="middle" dominant-baseline="middle" fill="${cor}" font-size="9" font-weight="800">${v < 0 ? "▼" : "▲"}</text></svg></span>`;
+  // ilustrações dos quadros do topo de Relatórios (canto direito): um desenho
+  // por quadro, que preenche o espaço vazio e muda conforme o valor
+  // (subindo/descendo, balança pendendo para o lado que pesa mais)
+  function ilustraRel(tipo, valor, dica) {
+    const UP = "#2EE59D", DOWN = "#FF5C6A", id = "ir-" + tipo;
+    const neg = Number(valor) < 0, cor = tipo === "despesas" ? DOWN : tipo === "receitas" ? UP : neg ? DOWN : UP;
+    const grad = (g, c1, c2) => `<linearGradient id="${g}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient>`;
+    const brilho = `<radialGradient id="${id}-bg"><stop offset="0" stop-color="${cor}" stop-opacity=".22"/><stop offset="1" stop-color="${cor}" stop-opacity="0"/></radialGradient>`;
+    const moeda = (x, y, r) => `<g><circle cx="${x}" cy="${y}" r="${r}" fill="url(#${id}-ouro)" stroke="#B8860B" stroke-width=".8"/><circle cx="${x}" cy="${y}" r="${r * 0.68}" fill="none" stroke="#B8860B" stroke-width=".6" opacity=".7"/><text x="${x}" y="${y + r * 0.36}" text-anchor="middle" font-size="${r}" font-weight="800" fill="#8A6508">$</text></g>`;
+    const ouro = grad(id + "-ouro", "#FFE37A", "#F5B82E");
+    let corpo = "";
+    if (tipo === "rentabilidade") {
+      // colunas subindo (ou descendo) com a linha da tendência e a seta
+      const alts = neg ? [34, 27, 20, 12] : [12, 20, 27, 36];
+      const cols = alts.map((h, i) => `<rect x="${14 + i * 15}" y="${50 - h}" width="10" height="${h}" rx="2" fill="url(#${id}-col)" opacity="${0.55 + i * 0.15}"/>`).join("");
+      const pts = alts.map((h, i) => [19 + i * 15, 50 - h - 5]);
+      const [ux, uy] = pts[3], [px, py] = pts[2], ang = Math.atan2(uy - py, ux - px);
+      const ponta = [[ux + 7 * Math.cos(ang), uy + 7 * Math.sin(ang)], [ux + 7 * Math.cos(ang + 2.4), uy + 7 * Math.sin(ang + 2.4)], [ux + 7 * Math.cos(ang - 2.4), uy + 7 * Math.sin(ang - 2.4)]];
+      corpo = `<defs>${brilho}${ouro}${grad(id + "-col", cor, cor + "33")}</defs><ellipse cx="50" cy="30" rx="46" ry="28" fill="url(#${id}-bg)"/>
+        <line x1="8" x2="80" y1="50.5" y2="50.5" stroke="${cor}" stroke-opacity=".35" stroke-width="1"/>${cols}
+        <polyline points="${pts.map((q) => q.join(",")).join(" ")}" fill="none" stroke="${cor}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+        <polygon points="${ponta.map((q) => q.map((n) => n.toFixed(1)).join(",")).join(" ")}" fill="${cor}"/>
+        ${pts.slice(0, 3).map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2" fill="#0B1220" stroke="${cor}" stroke-width="1.4"/>`).join("")}${moeda(86, neg ? 40 : 14, 7)}`;
+    } else if (tipo === "receitas") {
+      // carteira recebendo moedas, com a seta entrando
+      corpo = `<defs>${brilho}${ouro}${grad(id + "-cart", "#38F0AE", "#139A68")}${grad(id + "-aba", "#2BD592", "#0F7F55")}</defs><ellipse cx="54" cy="32" rx="44" ry="26" fill="url(#${id}-bg)"/>
+        ${moeda(26, 14, 7)}${moeda(40, 8, 6)}
+        <path d="M33 22 L33 30" stroke="${UP}" stroke-width="2.4" stroke-linecap="round"/><path d="M28.5 27 L33 32 L37.5 27" fill="none" stroke="${UP}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+        <rect x="40" y="20" width="50" height="33" rx="6" fill="url(#${id}-cart)"/>
+        <path d="M40 27 Q40 20 47 20 L82 20 L86 14 L50 14 Q42 14 40 21 Z" fill="url(#${id}-aba)"/>
+        <rect x="70" y="30" width="22" height="13" rx="4" fill="#0F7F55" stroke="#0B5E40" stroke-width=".8"/><circle cx="77" cy="36.5" r="2.6" fill="#FFE37A" stroke="#B8860B" stroke-width=".6"/>
+        <path d="M44 48 L66 48" stroke="#0B5E40" stroke-opacity=".5" stroke-width="1.2" stroke-linecap="round"/>`;
+    } else if (tipo === "despesas") {
+      // cartão de crédito com a seta saindo e uma moeda indo embora
+      corpo = `<defs>${brilho}${ouro}${grad(id + "-cart", "#FF7C88", "#C7303E")}</defs><ellipse cx="48" cy="32" rx="44" ry="26" fill="url(#${id}-bg)"/>
+        <g transform="rotate(-8 44 34)"><rect x="14" y="16" width="56" height="36" rx="6" fill="url(#${id}-cart)"/>
+        <rect x="14" y="23" width="56" height="7" fill="#7A1822" opacity=".75"/>
+        <rect x="21" y="35" width="11" height="8" rx="1.8" fill="#FFE37A" stroke="#B8860B" stroke-width=".6"/><path d="M21 39 H32 M26.5 35 V43" stroke="#B8860B" stroke-width=".5"/>
+        <path d="M38 41 H62 M38 46 H52" stroke="#FFFFFF" stroke-opacity=".55" stroke-width="2" stroke-linecap="round"/></g>
+        <path d="M66 22 L82 8" stroke="${DOWN}" stroke-width="2.6" stroke-linecap="round"/><path d="M73 8 L82 8 L82 17" fill="none" stroke="${DOWN}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+        ${moeda(86, 30, 7)}`;
+    } else {
+      // balança: pende para o lado das receitas (resultado positivo) ou das despesas
+      const g = neg ? 9 : -9, rad = g * Math.PI / 180, cx = 50, cy = 15, L = 30;
+      const xl = cx - L * Math.cos(rad), yl = cy - L * Math.sin(rad), xr = cx + L * Math.cos(rad), yr = cy + L * Math.sin(rad);
+      const prato = (x, y, c, conteudo) => `<path d="M${x - 9} ${y + 13} L${x} ${y} L${x + 9} ${y + 13}" fill="none" stroke="#8FA3B8" stroke-width=".9"/>${conteudo}<path d="M${x - 13} ${y + 13} Q${x} ${y + 22} ${x + 13} ${y + 13} Z" fill="${c}"/>`;
+      corpo = `<defs>${brilho}${ouro}</defs><ellipse cx="50" cy="32" rx="46" ry="26" fill="url(#${id}-bg)"/>
+        <rect x="48.5" y="14" width="3" height="36" rx="1.5" fill="#8FA3B8"/><path d="M36 54 Q50 46 64 54 Z" fill="#6B7F94"/>
+        <line x1="${xl.toFixed(1)}" y1="${yl.toFixed(1)}" x2="${xr.toFixed(1)}" y2="${yr.toFixed(1)}" stroke="#C5D3E0" stroke-width="2.6" stroke-linecap="round"/>
+        <circle cx="${cx}" cy="${cy}" r="3.2" fill="${cor}"/>
+        ${prato(xl, yl, UP, moeda(xl - 4, yl + 9, 4.5) + moeda(xl + 4, yl + 9, 4.5) + moeda(xl, yl + 4, 4.5))}
+        ${prato(xr, yr, DOWN, moeda(xr, yr + 9, 4.5))}`;
+    }
+    return `<span class="metric-mini metric-ilustra" aria-hidden="true" title="${esc(dica || "")}"><svg viewBox="0 0 96 56">${corpo}</svg></span>`;
   }
 
   function mesesDoPeriodoRel(d, fx) {
@@ -8671,10 +8700,10 @@
 
     return `
       <div class="grid g-top rel-kpis">
-        <div class="c3">${metricCard("Rentabilidade", pct(I.rentabilidadeCarteiraAcoes(d)), ICONES_STRIP.melhorativo, "var(--vi)", miniAnelRel(I.rentabilidadeCarteiraAcoes(d)), "Acumulada · Preço Médio", null, "0 0 24 24", "rel-rentabilidade")}</div>
-        <div class="c3">${metricCard("Receitas", "+" + brl(entradasP), ICONES_STRIP.poupanca, "var(--up)", miniBarrasRel(porMesRel.map((x) => ({ ...x, v: x.e })), "var(--up)"), rotuloPeriodo, null, "0 0 24 24", "rel-receitas")}</div>
-        <div class="c3">${metricCard("Despesas", "−" + brl(despesasP), ICONES_STRIP.maiorgasto, "var(--down)", miniBarrasRel(porMesRel.map((x) => ({ ...x, v: -x.dsp })), "var(--down)"), rotuloPeriodo, null, "0 0 24 24", "rel-despesas")}</div>
-        <div class="c3">${metricCard("Resultado", brlSinal(entradasP - despesasP), ICONES_STRIP.projecao, corSinal(entradasP - despesasP) !== "down" ? "var(--up)" : "var(--down)", miniBarrasRel(porMesRel.map((x) => ({ ...x, v: x.e - x.dsp })), "", true), rotuloPeriodo, null, "0 0 24 24", "rel-resultado")}</div>
+        <div class="c3">${metricCard("Rentabilidade", pct(I.rentabilidadeCarteiraAcoes(d)), ICONES_STRIP.melhorativo, "var(--vi)", ilustraRel("rentabilidade", I.rentabilidadeCarteiraAcoes(d), "Rentabilidade da carteira: " + pct(I.rentabilidadeCarteiraAcoes(d))), "Acumulada · Preço Médio", null, "0 0 24 24", "rel-rentabilidade")}</div>
+        <div class="c3">${metricCard("Receitas", "+" + brl(entradasP), ICONES_STRIP.poupanca, "var(--up)", ilustraRel("receitas", entradasP, "Receitas: +" + brl(entradasP)), rotuloPeriodo, null, "0 0 24 24", "rel-receitas")}</div>
+        <div class="c3">${metricCard("Despesas", "−" + brl(despesasP), ICONES_STRIP.maiorgasto, "var(--down)", ilustraRel("despesas", -despesasP, "Despesas: −" + brl(despesasP)), rotuloPeriodo, null, "0 0 24 24", "rel-despesas")}</div>
+        <div class="c3">${metricCard("Resultado", brlSinal(entradasP - despesasP), ICONES_STRIP.projecao, corSinal(entradasP - despesasP) !== "down" ? "var(--up)" : "var(--down)", ilustraRel("resultado", entradasP - despesasP, "Resultado: " + brlSinal(entradasP - despesasP)), rotuloPeriodo, null, "0 0 24 24", "rel-resultado")}</div>
       </div>
       <div class="grid">
         <div class="c12">${card("", "Receitas x despesas", `${rotulo(mesesRelA, anoRelA)}`, `<div class="filtro-mes">${LEGENDA_RD}${seletorAnoDash("anoRelA", anoRelA, anosDashboard(d))}${abasMeses("periodo-rel-a", mesesRelA, OPC)}</div>`, `<div class="rel-grafico rel-alto" style="padding:10px 16px;height:220px"><canvas id="graf-rel-mensal"></canvas></div>`)}</div>
