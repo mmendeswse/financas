@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.422";
+  const VERSAO_APP = "3.6.423";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -581,7 +581,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.422 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.423 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -1032,7 +1032,7 @@
       ${item("contas", "💸 Contas a pagar", "inclusive as que se repetem sem fim; alerta na véspera e no dia")}
       ${item("receitas", "💰 Receitas previstas", "inclusive as que se repetem; no dia previsto")}
       ${item("metas", "🎯 Prazos das metas", "com alerta uma semana antes")}
-      <p class="cfg-info cfg-opc" data-opc="1">Não aparece? No Google Agenda, deixe marcada a agenda <b>“${esc(nomeApp())} Finanças”</b> em <b>Minhas agendas</b>. <a class="ag-link" href="https://calendar.google.com/" target="_blank" rel="noopener">Abrir o Google Agenda ↗</a></p>
+      <p class="cfg-info cfg-opc" data-opc="1">Não aparece? No Google Agenda, deixe marcada a agenda <b>“Finanças”</b> em <b>Minhas agendas</b>. <a class="ag-link" href="https://calendar.google.com/" target="_blank" rel="noopener">Abrir o Google Agenda ↗</a></p>
       <div class="cfg-acoes"><button class="btn primario" data-acao="agenda-enviar">Atualizar</button>
         <button class="btn perigo" data-acao="agenda-desligar">Desconectar</button></div>`;
   }
@@ -1061,7 +1061,7 @@
       AG.enviarComToque().then(() => toast("Google Agenda atualizado" + (AG.estado.msg && AG.estado.msg !== "nada mudou" ? ": " + AG.estado.msg : "") + "."))
         .catch((e) => { toast(e.message); atualizarAvisoAgenda(); });
     },
-    "agenda-desligar": () => confirmarExclusao(`Desconectar o Google Agenda? A agenda “${nomeApp()} Finanças” é apagada da sua conta Google (com os eventos que o sistema criou) e o sistema para de atualizá-la.`,
+    "agenda-desligar": () => confirmarExclusao(`Desconectar o Google Agenda? A agenda “Finanças” é apagada da sua conta Google (com os eventos que o sistema criou) e o sistema para de atualizá-la.`,
       () => AG.desconectar().then(() => { renderRota(); toast("Google Agenda desconectado."); }))
   };
 

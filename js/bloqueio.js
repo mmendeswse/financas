@@ -113,7 +113,7 @@
     return navigator.credentials.create({
       publicKey: {
         challenge: aleatorio(32),
-        rp: { name: "Muller Mendes Finanças", id: location.hostname },
+        rp: { name: "Finanças", id: location.hostname },
         user: { id: aleatorio(16), name: "usuario", displayName: "Muller Mendes" },
         pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
         authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required", residentKey: "preferred" },
