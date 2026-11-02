@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.416";
+  const VERSAO_APP = "3.6.417";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -581,7 +581,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.416 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.417 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -8749,10 +8749,25 @@
     const z = document.querySelector("#conteudo .zona-resumo");
     if (!z) return;
     z.classList.remove("zona-sem-backup", "zona-sem-icone", "zona-linha", "zona-compacta", "zona-oculta");
+    z.style.zoom = "";
     if (window.innerWidth < 700) return;
-    // iPad e Android (tela de toque): o resumo fica sempre completo — se não
-    // couber, rola dentro do quadro
-    if (window.matchMedia && window.matchMedia("(hover: none) and (pointer: coarse)").matches) return;
+    // iPad e Android (tela de toque): o resumo fica sempre completo (ícone, seis
+    // caixas e último backup); se não couber no quadro, diminui por inteiro até
+    // caber, sem barra de rolagem
+    if (window.matchMedia && window.matchMedia("(hover: none) and (pointer: coarse)").matches) {
+      const area = z.closest(".cfg-rolar");
+      if (!area) return;
+      let escala = 1;
+      for (let i = 0; i < 8; i++) {
+        const falta = area.scrollHeight - area.clientHeight;
+        if (falta <= 0) break;
+        const alt = z.getBoundingClientRect().height;
+        escala = Math.max(0.55, escala * Math.max(0.5, (alt - falta - 1) / alt));
+        z.style.zoom = escala.toFixed(3);
+        if (escala <= 0.55) break;
+      }
+      return;
+    }
     const naoCabe = () => z.clientHeight < z.scrollHeight - 2;
     // sem espaço: tira o último backup, depois o ícone, depois põe as
     // caixinhas numa linha só (menores); só sem espaço nem para isso fica o ícone
