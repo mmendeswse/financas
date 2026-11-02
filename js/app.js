@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.434";
+  const VERSAO_APP = "3.6.435";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -581,7 +581,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.434 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.435 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -9006,8 +9006,11 @@
           const folga = (cont ? parseFloat(getComputedStyle(cont).paddingBottom) || 0 : 0) + (rod ? parseFloat(getComputedStyle(rod).marginTop) || 0 : 0);
           const sobra = rod && ultimo ? rod.getBoundingClientRect().top - ultimo.getBoundingClientRect().bottom - folga : 0;
           const ajuste = sobra > 1 ? sobra : -(document.documentElement.scrollHeight - window.innerHeight);
-          const porCaixa = ajuste / caixas.length;
-          if (Math.abs(porCaixa) >= 1) caixas.forEach((c) => { c.style.height = Math.max(110, Math.floor(c.clientHeight + porCaixa)) + "px"; });
+          // os dois gráficos ficam com a mesma altura (a soma das alturas atuais
+          // mais o que sobra — ou menos o que falta —, dividida igualmente)
+          const total = caixas.reduce((t, c) => t + c.clientHeight, 0) + ajuste;
+          const cada = Math.max(110, Math.floor(total / caixas.length));
+          caixas.forEach((c) => { c.style.height = cada + "px"; });
         }
         montarGraficosRelatorio(d);
         break;

@@ -74,6 +74,10 @@
       afterDataLimits: function (sc) {
         var min = Math.min(0, sc.min), max = Math.max(0, sc.max);
         if (!(max > min)) return;
+        // em gráfico baixo, a folga em pixels precisa caber o valor inclinado
+        // (~58 px de altura): a fração cresce o quanto for preciso
+        var plot = Math.max(40, (sc.chart.height || 200) - 46), PRECISA = plot < 150 ? 44 : 58;   // baixo: texto mais em pé (valoresRD)
+        if (plot > PRECISA + 10) fracao = Math.max(fracao, PRECISA / (plot - PRECISA));
         var alvo = max + (max - min) * fracao, passo = passoRedondo((alvo - min) / 5);
         sc.min = Math.floor(min / passo) * passo;
         sc.max = Math.ceil(alvo / passo) * passo;
@@ -111,7 +115,7 @@
     afterDatasetsDraw: function (grafico) {
       var ctx = grafico.ctx, area = grafico.chartArea;
       // colunas estreitas (celular): letra menor e texto mais em pé
-      var estreito = (area.right - area.left) / Math.max(1, grafico.data.labels.length) < 40;
+      var estreito = (area.right - area.left) / Math.max(1, grafico.data.labels.length) < 40 || area.bottom - area.top < 110;
       var angulo = estreito ? -Math.PI * 0.42 : -Math.PI / 3;
       ctx.save();
       ctx.font = "700 " + (estreito ? 9 : 10) + "px 'Segoe UI', Roboto, Inter, sans-serif";
@@ -418,7 +422,7 @@
           if (!meta || meta.data.length < 2) return;
           var passo = (area.right - area.left) / (meta.data.length - 1);
           if (passo < 20) return;   // muitos meses ("Tudo"): ficaria embolado
-          var estreito = passo < 40;
+          var estreito = passo < 40 || area.bottom - area.top < 110;
           c.save();
           c.font = "700 " + (estreito ? 9 : 10) + "px 'Segoe UI', Roboto, Inter, sans-serif";
           c.textBaseline = "middle"; c.textAlign = "left";
