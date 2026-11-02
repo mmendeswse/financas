@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.444";
+  const VERSAO_APP = "3.6.445";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -581,7 +581,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.444 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.445 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -3910,17 +3910,21 @@
       </div>
 
       <div class="grid">
-        <div class="c3">${card("card-centrado", "Saldo bancos", "mapa ativos", `<button class="pill-periodo clicavel ${corSinal(p.bancos)}" data-acao="explicar-kpi" data-kpi="bancos" title="Ver o saldo de cada banco">TOTAL ${brlSinal(p.bancos)}</button>`, `<div class="body pad">${barList(bancos)}</div>`)}</div>
-        <div class="c3">${card("card-centrado", "Composição patrimônio", "ativos líquidos", `<button class="pill-periodo clicavel ${corSinal(totalComp)}" data-acao="explicar-composicao" title="Ver o total de cada classe">TOTAL ${brlSinal(totalComp)}</button>`, `
+        <div class="c4">${card("card-centrado", "Saldo bancos", "mapa ativos", `<button class="pill-periodo clicavel ${corSinal(p.bancos)}" data-acao="explicar-kpi" data-kpi="bancos" title="Ver o saldo de cada banco">TOTAL ${brlSinal(p.bancos)}</button>`, `<div class="body pad">${barList(bancos)}</div>`)}</div>
+        <div class="c4">${card("card-centrado", "Composição patrimônio", "ativos líquidos", `<button class="pill-periodo clicavel ${corSinal(totalComp)}" data-acao="explicar-composicao" title="Ver o total de cada classe">TOTAL ${brlSinal(totalComp)}</button>`, `
           <div class="donut-wrap">
             <div class="donut-centro"><canvas id="graf-dash-composicao" width="150" height="150" style="width:150px;height:150px"></canvas>
               <button class="donut-rotulo clicavel" data-acao="explicar-kpi" data-kpi="investido" title="Ver como este percentual é calculado"><b>${pctInvestido.toFixed(1).replace(".", ",")}%</b><span class="acc-laranja">INVESTIDO</span></button>
             </div>
             <div class="legenda">${legendaComp}</div>
           </div>`)}</div>
-        <div class="c3">${card("", "Receitas x despesas", `${mesesRD} ${mesesRD === 1 ? "mês" : "meses"} de ${anoRD}`,
-          `<div class="filtro-mes">${LEGENDA_RD}${abasMeses("periodo-rd", mesesRD, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }])}</div>`, `<div class="grafico-cheio" style="padding:8px 14px 12px;min-height:236px"><div class="grafico-cheio-area"><canvas id="graf-receitas-despesas"></canvas></div></div>`)}</div>
-        <div class="c3">${card("", "Metas", resumoMetas(d), `<div class="filtro-mes">` + abasMeses("periodo-metas", periodoMetas, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }]) + `</div>`, metasMini(d))}</div>
+        <div class="c4 dash-metas">${card("", "Metas", resumoMetas(d), `<div class="filtro-mes">` + abasMeses("periodo-metas", periodoMetas, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }]) + `</div>`, metasMini(d))}</div>
+      </div>
+
+      <!-- Receitas x despesas na largura toda, do mesmo tamanho da Evolução patrimonial -->
+      <div class="grid">
+        <div class="c12">${card("", "Receitas x despesas", `${mesesRD} ${mesesRD === 1 ? "mês" : "meses"} de ${anoRD}`,
+          `<div class="filtro-mes">${LEGENDA_RD}${abasMeses("periodo-rd", mesesRD, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }])}</div>`, `<div class="grafico-cheio" style="padding:8px 14px 12px;height:280px;flex:none"><div class="grafico-cheio-area"><canvas id="graf-receitas-despesas"></canvas></div></div>`)}</div>
       </div>
 
       <div class="grid">

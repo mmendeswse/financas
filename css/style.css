@@ -3153,3 +3153,14 @@ body.av-aberta { overflow: hidden; }
 .rel-kpis .metric-mini rect:hover { opacity: 1 !important; stroke: var(--texto); stroke-width: .6; }
 .rel-kpis .metric-anel { width: auto; height: 70%; max-height: 46px; aspect-ratio: 1; }
 .rel-kpis .metric .valor, .rel-kpis .metric .topo, .rel-kpis .metric .legenda { position: relative; z-index: 1; max-width: 60%; }
+/* Dashboard: Metas na linha de cima, ao lado de Saldo bancos e Composição.
+   Quando essa linha só cabe dois quadros (iPad, telas médias), Metas ocupa a
+   largura toda com as metas lado a lado, em três colunas */
+@media (min-width: 861px) and (max-width: 1280px) {
+  .grid > .dash-metas { grid-column: span 12; }
+  .dash-metas .metas-lista { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (hover: none) and (pointer: coarse) and (min-width: 861px) and (max-width: 1800px) {
+  .grid > .dash-metas { grid-column: span 12; }
+  .dash-metas .metas-lista { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
