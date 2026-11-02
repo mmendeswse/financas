@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.402";
+  const VERSAO_APP = "3.6.403";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -588,7 +588,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.402 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.403 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -876,11 +876,9 @@
   function preencherMenuPerfil() {
     const dd = document.getElementById("dropdownPerfil");
     if (!dd || !window.Avatar) return;
-    const p = perfilAtual(), sit = situacaoSync();
+    const p = perfilAtual();
     dd.innerHTML = `
-      <button class="perfil-card" data-pf="avatar">${Avatar.circuloHTML("", p)}<span class="pl-txt"><b>${esc(p.nome || "Seu perfil")}</b><small>Editar avatar</small></span></button>
-      <button class="pf-item pf-sync" data-pf="ajustes"><span class="sync-ponto ${sit.cls}"></span><span>${S.conectado() ? `Sincronização: <b>${sit.titulo.toLowerCase()}</b>` : "Sincronização desligada"}${S.conectado() && S.ler().ultimo ? `<small>${quandoSync(S.ler().ultimo)}</small>` : ""}</span></button>
-      <button class="pf-item" data-pf="ajustes"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="2.6"/><path d="M10 3v2M10 15v2M3 10h2M15 10h2M5 5l1.4 1.4M13.6 13.6L15 15M15 5l-1.4 1.4M6.4 13.6L5 15"/></svg><b>Ajustes</b></button>`;
+      <button class="perfil-card" data-pf="avatar">${Avatar.circuloHTML("", p)}<span class="pl-txt"><b>${esc(p.nome || "Seu perfil")}</b><small>Editar avatar</small></span></button>`;
   }
   function ligarPerfilTopo() {
     const btn = document.getElementById("btnPerfil"), dd = document.getElementById("dropdownPerfil");
