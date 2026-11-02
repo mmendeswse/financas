@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.419";
+  const VERSAO_APP = "3.6.420";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -581,7 +581,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.419 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.420 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -981,7 +981,7 @@
     if (itens.receitas) d.entradas.forEach((reg) => serie(reg, "rc"));
     if (itens.metas) (d.metas || []).forEach((mt) => {
       if (!mt.prazo || mt.prazo.slice(0, 7) < meses[0] || Number(mt.atual || 0) >= Number(mt.objetivo || 0)) return;
-      add({ chave: `mt:${mt.id}:${mt.prazo}`, titulo: `🎯 Prazo da meta: ${mt.nome || "Meta"}`, data: mt.prazo, hora: "09:00", duracao: 30, alertas: [0, 10080],
+      add({ chave: `mt:${mt.id}:${mt.prazo}`, titulo: `🎯 Prazo Meta: ${mt.nome || "Meta"}`, data: mt.prazo, hora: "09:00", duracao: 30, alertas: [0, 10080],
         descricao: `Objetivo ${brl(mt.objetivo)} · guardado até agora ${brl(mt.atual || 0)}`, cor: "9" });
     });
     return lista;
