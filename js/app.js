@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.401";
+  const VERSAO_APP = "3.6.402";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -588,7 +588,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.401 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.402 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -596,7 +596,7 @@
     const velho = DADOS.config && DADOS.config.sync;
     if (!velho || !velho.token || !velho.cofre || migrando) return migrando || Promise.resolve();
     migrando = S.migrarAntigo(velho.token, velho.cofre).then((r) => {
-      if (r.estado === "precisa-codigo") definirAvisoSync("A sincronização mudou: agora usa o código da conta, com os dados criptografados. Num aparelho que já sincroniza, abra Configurações → Sincronização → Adicionar aparelho e leia o QR code aqui, em “Entrar com código”.");
+      if (r.estado === "precisa-codigo") definirAvisoSync("A sincronização mudou: agora usa o código da conta, com os dados criptografados. Num aparelho que já sincroniza, abra Configurações → Sincronização → Adicionar e leia o QR code aqui, em “Entrar com código”.");
       if (r.estado === "migrado") { syncBaixado = true; toast("Sincronização atualizada: agora com código da conta e dados criptografados."); }
       // o token sai dos dados (que vão para o backup): agora fica só neste aparelho
       delete DADOS.config.sync;
@@ -656,7 +656,7 @@
         <span class="sy-rot">Aparelhos conectados</span>
         <div id="syAparelhos">${aparelhosSyncHTML()}</div>
         <div class="cfg-acoes"><button class="btn primario" data-acao="sync-agora">Sincronizar</button>
-          <button class="btn" data-acao="sync-codigo">Adicionar aparelho</button></div>`;
+          <button class="btn primario" data-acao="sync-codigo">Adicionar</button></div>`;
     }
     const aviso = avisoSync();
     return `${estado}
@@ -701,7 +701,7 @@
       }).catch((e) => {
         b.disabled = false; b.textContent = "Criar conta";
         if (e.tipo === "existe") {
-          err.innerHTML = `Já existe uma conta nesta chave do GitHub. Para usar os mesmos dados, abra o sistema no aparelho que já sincroniza → <b>Adicionar aparelho</b> e entre com o código aqui. <button class="link-acao" id="sy_mesmo">Criar outra conta mesmo assim</button>`;
+          err.innerHTML = `Já existe uma conta nesta chave do GitHub. Para usar os mesmos dados, abra o sistema no aparelho que já sincroniza → <b>Adicionar</b> e entre com o código aqui. <button class="link-acao" id="sy_mesmo">Criar outra conta mesmo assim</button>`;
           m.querySelector("#sy_mesmo").onclick = () => abrirCriarConta(true);
         } else err.textContent = e.message;
       });
@@ -753,7 +753,7 @@
     const temDados = !DADOS.demo && temDadosReais(DADOS);
     abrirModal(`
       <h3>Entrar com código</h3>
-      <p class="campo ajuda" style="margin-top:0">No aparelho que já sincroniza: <b>Configurações → Sincronização → Adicionar aparelho</b>. Leia o QR code com a câmera ou cole o código.</p>
+      <p class="campo ajuda" style="margin-top:0">No aparelho que já sincroniza: <b>Configurações → Sincronização → Adicionar</b>. Leia o QR code com a câmera ou cole o código.</p>
       <div class="sy-camera" hidden><video muted playsinline></video><span class="sy-mira"></span></div>
       <div class="cfg-acoes"><button class="btn" id="sy_ler">📷 Ler QR code</button></div>
       <div class="campo"><label for="sy_cod">Código da conta</label><textarea id="sy_cod" rows="3" spellcheck="false" autocomplete="off" placeholder="MF1.…">${esc(codigoInicial || "")}</textarea></div>
