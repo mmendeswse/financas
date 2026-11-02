@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.407";
+  const VERSAO_APP = "3.6.410";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -580,7 +580,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.407 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.410 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -872,6 +872,8 @@
     dd.innerHTML = `
       <button class="perfil-card" data-pf="avatar">${Avatar.circuloHTML("", p)}<span class="pl-txt"><b>${esc(p.nome || "Seu perfil")}</b><small>Editar avatar</small></span></button>`;
   }
+  // um quadro do topo de cada vez: abrir as notificações ou a data fecha o menu do perfil
+  function fecharMenuPerfil() { const dd = document.getElementById("dropdownPerfil"); if (dd) dd.classList.remove("on"); }
   function ligarPerfilTopo() {
     const btn = document.getElementById("btnPerfil"), dd = document.getElementById("dropdownPerfil");
     if (!btn || !dd) return;
@@ -939,22 +941,24 @@
     if (!AG.disponivel()) return `<div class="sync-estado"><span class="sync-ponto"></span><b>Só na versão do site</b></div>
       <p class="cfg-texto">O login do Google funciona quando o sistema é aberto pelo navegador (site ou app instalado no celular/iPad). No programa do Windows, conecte por lá.</p>`;
     const c = AG.cfg(DADOS), st = AG.estado;
-    if (!c.ativa || !AG.conectadoAqui()) return `
+    if (!c.ativa) return `
       <div class="ag-intro"><span class="ag-ic">📅</span><div><b>Leve seus vencimentos para o Google Agenda</b>
         <small>Contas a pagar, receitas previstas e prazos das metas numa agenda na sua conta Google, com alertas mesmo com o sistema fechado.</small></div></div>
-      <p class="cfg-info cfg-opc" data-opc="2">O Google vai pedir para você escolher a conta e autorizar. O sistema só consegue mexer na agenda que ele mesmo cria — não vê nem altera as suas outras agendas.${c.ativa ? " A agenda já está ligada em outro aparelho: conectar aqui usa a mesma." : ""}</p>
-      <div class="cfg-acoes"><button class="btn primario" data-acao="agenda-conectar">Conectar Google Agenda</button></div>`;
+      <p class="cfg-info cfg-opc" data-opc="2">O Google vai pedir para você escolher a conta e autorizar. O sistema só consegue mexer na agenda que ele mesmo cria — não vê nem altera as suas outras agendas.</p>
+      <div class="cfg-acoes"><button class="btn primario" data-acao="agenda-conectar">Conectar</button></div>`;
     const pend = AG.pendente(DADOS);
     const est = st.erro ? `<div class="sync-estado"><span class="sync-ponto erro"></span><b>Não atualizou</b><span class="dim">${esc(st.erro)}</span></div>`
       : st.rodando ? `<div class="sync-estado"><span class="sync-ponto rodando"></span><b>Atualizando a agenda…</b></div>`
       : `<div class="sync-estado"><span class="sync-ponto ${pend ? "erro" : "ligado"}"></span><b>${pend ? "Há mudanças para enviar" : "Agenda em dia"}</b><span class="dim">${c.ultimaVez ? quandoSync(c.ultimaVez) : ""}${st.msg ? " · " + esc(st.msg) : ""}</span></div>`;
+    const resumo = c.totalEventos != null ? `<p class="cfg-info"><b>${c.totalEventos}</b> ${c.totalEventos === 1 ? "evento" : "eventos"} na agenda${c.ate ? ` · até <b>${new Date(c.ate + "T12:00:00").toLocaleDateString("pt-BR", { month: "short", year: "numeric" }).replace(".", "")}</b>` : ""}${pend ? " — toque em <b>Atualizar</b> para enviar as mudanças" : ""}</p>` : "";
     const item = (k, rot, sub) => `<label class="chk-linha ag-item"><input type="checkbox" data-ag-item="${k}" ${c.itens[k] ? "checked" : ""}> <span>${rot}<small>${sub}</small></span></label>`;
     return `${est}
+      ${resumo}
       <span class="sy-rot">O que vai para a agenda</span>
       ${item("contas", "💸 Contas a pagar", "próximos 12 meses, alerta na véspera e no dia")}
       ${item("receitas", "💰 Receitas previstas", "próximos 12 meses, no dia previsto")}
       ${item("metas", "🎯 Prazos das metas", "com alerta uma semana antes")}
-      <p class="cfg-info cfg-opc" data-opc="1"><a class="ag-link" href="https://calendar.google.com/" target="_blank" rel="noopener">Abrir o Google Agenda ↗</a></p>
+      <p class="cfg-info cfg-opc" data-opc="1">Não aparece? No Google Agenda, deixe marcada a agenda <b>“${esc(nomeApp())} Finanças”</b> em <b>Minhas agendas</b>. <a class="ag-link" href="https://calendar.google.com/" target="_blank" rel="noopener">Abrir o Google Agenda ↗</a></p>
       <div class="cfg-acoes"><button class="btn primario" data-acao="agenda-enviar">Atualizar</button>
         <button class="btn perigo" data-acao="agenda-desligar">Desconectar</button></div>`;
   }
@@ -1784,7 +1788,7 @@
       e.stopPropagation();
       dropNotif.classList.toggle("on");
       // abrir as notificações fecha o quadro da data (e vice-versa, abaixo)
-      if (dropNotif.classList.contains("on")) { if (popDataEl) popDataEl.classList.remove("on"); preencherNotificacoes(); }
+      if (dropNotif.classList.contains("on")) { if (popDataEl) popDataEl.classList.remove("on"); fecharMenuPerfil(); preencherNotificacoes(); }
     });
     document.addEventListener("click", (e) => {
       if (!dropNotif.contains(e.target) && !btnNotif.contains(e.target)) dropNotif.classList.remove("on");
@@ -1796,7 +1800,7 @@
       caixaData.addEventListener("click", (e) => {
         e.stopPropagation();
         popData.classList.toggle("on");
-        if (popData.classList.contains("on")) { dropNotif.classList.remove("on"); preencherPopData(new Date()); }
+        if (popData.classList.contains("on")) { dropNotif.classList.remove("on"); fecharMenuPerfil(); preencherPopData(new Date()); }
       });
       document.addEventListener("click", (e) => {
         if (!popData.contains(e.target) && !caixaData.contains(e.target)) popData.classList.remove("on");
@@ -2212,6 +2216,7 @@
     senha: svgIc('<rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.5"/>'),
     biometria: svgIc('<path d="M7.5 5.5A8 8 0 0 1 20 12v1.5"/><path d="M4 12a8 8 0 0 1 1.2-4.2"/><path d="M8 12a4 4 0 0 1 8 0v2.5a9 9 0 0 1-1 4"/><path d="M12 12v3a7 7 0 0 1-2.2 5"/><path d="M4.5 16.5a11 11 0 0 0 .5-3"/>'),
     calendario: svgIc('<rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/>'),
+    agenda: svgIc('<rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/><path d="M8.8 14.6l2.2 2.2 4.2-4.3"/>'),
     nuvemBaixar: svgIc('<path d="M7 18.5A4.5 4.5 0 0 1 6.5 9.6 6 6 0 0 1 18 8.5a4 4 0 0 1-.5 8"/><path d="M12 11v9M9 17l3 3 3-3"/>'),
     nuvemEnviar: svgIc('<path d="M7 18.5A4.5 4.5 0 0 1 6.5 9.6 6 6 0 0 1 18 8.5a4 4 0 0 1-.5 8"/><path d="M12 20v-9M9 14l3-3 3 3"/>'),
     pasta: svgIc('<path d="M3.5 7A1.5 1.5 0 0 1 5 5.5h4.5l2 2.5H19A1.5 1.5 0 0 1 20.5 9.5V18a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 18z"/>'),
@@ -2219,6 +2224,7 @@
   };
   // qual ícone combina com o botão: pela ação/id e pelo texto (ordem importa)
   const REGRAS_ICONE = [
+    [(b) => b.dataset.acao === "agenda-conectar", "agenda"],
     [(b, t) => b.id === "btnFecharPainel" || /^(fechar|cancelar)\b/.test(t), "fechar"],
     [(b, t) => /digital|face id/.test(t), "biometria"],
     [(b, t) => /senha/.test(t) || b.dataset.acao === "criar-senha", "senha"],
