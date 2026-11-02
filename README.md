@@ -45,17 +45,31 @@ um servidor. Isso também quer dizer que:
 - Relatórios por período com gráficos
 - Importação de investimentos a partir do extrato/relatório em PDF
 - Backup e restauração completos via arquivo `.json`
-- Sincronização opcional entre aparelhos (Gist privado do GitHub)
+- Sincronização opcional entre aparelhos: conta com código (texto e QR
+  code), dados criptografados num Gist privado do GitHub
+- Perfil com avatar (foto, personagens de anime ou emoji), como no Meu Controle
 - Senha numérica e Face ID / Touch ID para abrir o app
 
 ## Cuidados
 
 - **Cotações dependem da internet.** Sem conexão, o app mostra o último
   preço guardado, com a data em que foi atualizado.
-- **Sincronização usa o seu GitHub.** Os dados vão para um Gist privado na
-  sua conta, com um token que fica só no aparelho (não vai no backup nem
-  no cofre). A versão mais recente vence: evite editar em dois aparelhos
-  ao mesmo tempo sem conexão.
+- **Sincronização usa o seu GitHub — basta a chave, sem repositório.** Em
+  Configurações → Sincronização, "Criar conta" pede uma chave do GitHub
+  (token *classic* só com a permissão **gist**). O sistema cria sozinho um
+  Gist privado com os dados **criptografados** (AES-GCM 256) e gera o
+  **código da conta** (texto e QR code). Nos outros aparelhos: "Entrar com
+  código" (ou ler o QR code com a câmera). O código funciona como uma
+  senha: quem tem o código vê e altera os dados.
+  - Alterações feitas em dois aparelhos são juntadas registro a registro.
+  - "Aparelhos conectados": renomear, remover (com opção de apagar os dados
+    do aparelho removido) e desconectar. "Trocar código" cria um Gist e uma
+    chave novos e apaga o antigo — use se um aparelho for perdido.
+  - A chave nova do GitHub (antes de vencer) vai sozinha para os outros
+    aparelhos. O token fica só no aparelho, fora do backup.
+  - Quem usava a sincronização antiga (sem código): o primeiro aparelho
+    atualizado transforma o cofre na conta criptografada; nos outros, é
+    preciso entrar com o código.
 - **A senha impede o acesso casual, não criptografa os dados.** Quem abrir
   as ferramentas do navegador ainda consegue ver o que está guardado.
   Nunca digite senhas de banco ou de cartão no sistema; ele nunca pede isso.
@@ -77,14 +91,18 @@ financas/
 │   ├── extrato.js          # leitura do extrato de investimentos em PDF
 │   ├── relatorio.js        # leitura do relatório em PDF
 │   ├── cotacoes.js         # cotações, indicadores e notícias (internet)
-│   ├── sincronizacao.js    # sincronização entre aparelhos (Gist do GitHub)
+│   ├── sincronizacao.js    # conta de sincronização (Gist criptografado, código e QR code)
+│   ├── avatar.js           # perfil e tela "Editar avatar"
 │   ├── emojis.js           # emojis das categorias
 │   ├── app.js              # interface: navegação, telas, modais, eventos
 │   └── vendor/             # bibliotecas de terceiros incluídas offline
 │       ├── chart.umd.min.js
+│       ├── qrcode.js       # gera o QR code do código da conta
+│       ├── jsQR.js         # lê o QR code pela câmera
 │       ├── pdf.min.js
 │       └── pdf.worker.min.js
-└── assets/icons/           # ícones do app e dos bancos
+├── assets/icons/           # ícones do app e dos bancos
+└── assets/dados/personagens.json  # galeria de personagens do avatar (mesma do Meu Controle)
 
 desktop/                    # programa para Windows (Electron) — veja INSTALAR-NO-COMPUTADOR.md
 ```
