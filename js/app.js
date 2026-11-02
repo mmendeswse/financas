@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.415";
+  const VERSAO_APP = "3.6.416";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -581,7 +581,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.415 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.416 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -8654,7 +8654,7 @@
         <div class="cfg-zona"><div class="card" style="border-color:rgba(255,84,104,.3)">
           <header><div><h2 class="down">Zona Risco</h2><div class="sub">Atenção: esta ação é permanente e não pode ser desfeita</div></div></header>
           <div class="body"><div class="body pad">
-            <p class="cfg-texto">Apaga todos os dados deste aparelho de uma vez.</p>
+            <p class="cfg-texto cfg-opc" data-opc="6">Apaga todos os dados deste aparelho de uma vez.</p>
             ${lista([
               ["Bancos, lançamentos, investimentos, ações e metas.", 4],
               ["O sistema pede confirmação duas vezes.", 5],
@@ -8750,6 +8750,9 @@
     if (!z) return;
     z.classList.remove("zona-sem-backup", "zona-sem-icone", "zona-linha", "zona-compacta", "zona-oculta");
     if (window.innerWidth < 700) return;
+    // iPad e Android (tela de toque): o resumo fica sempre completo — se não
+    // couber, rola dentro do quadro
+    if (window.matchMedia && window.matchMedia("(hover: none) and (pointer: coarse)").matches) return;
     const naoCabe = () => z.clientHeight < z.scrollHeight - 2;
     // sem espaço: tira o último backup, depois o ícone, depois põe as
     // caixinhas numa linha só (menores); só sem espaço nem para isso fica o ícone
