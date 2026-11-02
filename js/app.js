@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.457";
+  const VERSAO_APP = "3.6.458";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -581,7 +581,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.457 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.458 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -3915,7 +3915,7 @@
 
       <div class="grid">
         <div class="c4">${card("card-centrado", "Saldo bancos", "mapa ativos", `<button class="pill-periodo clicavel ${corSinal(p.bancos)}" data-acao="explicar-kpi" data-kpi="bancos" title="Ver o saldo de cada banco">TOTAL ${brlSinal(p.bancos)}</button>`, `<div class="body pad">${barList(bancos)}</div>`)}</div>
-        <div class="c4">${card("card-centrado", `Composição<span class="tit-extra"> patrimônio</span>`, "ativos líquidos", `<button class="pill-periodo clicavel ${corSinal(totalComp)}" data-acao="explicar-composicao" title="Ver o total de cada classe">TOTAL ${brlSinal(totalComp)}</button>`, `
+        <div class="c4">${card("card-centrado", "Composição patrimônio", "ativos líquidos", `<button class="pill-periodo clicavel ${corSinal(totalComp)}" data-acao="explicar-composicao" title="Ver o total de cada classe">TOTAL ${brlSinal(totalComp)}</button>`, `
           <div class="donut-wrap">
             <div class="donut-centro"><canvas id="graf-dash-composicao" width="150" height="150" style="width:150px;height:150px"></canvas>
               <button class="donut-rotulo clicavel" data-acao="explicar-kpi" data-kpi="investido" title="Ver como este percentual é calculado"><b>${pctInvestido.toFixed(1).replace(".", ",")}%</b><span class="acc-laranja">INVESTIDO</span></button>
@@ -3928,7 +3928,7 @@
       <!-- Receitas x despesas na largura toda -->
       <div class="grid">
         <div class="c12">${card("", "Receitas x despesas", `${mesesRD} ${mesesRD === 1 ? "mês" : "meses"} de ${anoRD}`,
-          `<div class="filtro-mes">${LEGENDA_RD}${abasMeses("periodo-rd", mesesRD, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }])}</div>`, `<div class="grafico-cheio grafico-rd-dash" style="padding:8px 14px 12px;height:280px;flex:none"><div class="grafico-cheio-area"><canvas id="graf-receitas-despesas"></canvas></div></div>`)}</div>
+          `<div class="filtro-mes">${LEGENDA_RD}${abasMeses("periodo-rd", mesesRD, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }])}</div>`, `<div class="grafico-cheio" style="padding:8px 14px 12px;height:280px;flex:none"><div class="grafico-cheio-area"><canvas id="graf-receitas-despesas"></canvas></div></div>`)}</div>
       </div>
 
       ${stripKpis([
@@ -4094,7 +4094,7 @@
       </div>
 
       <div class="grid">
-        <div class="c6">${card("card-centrado", `Composição<span class="tit-extra"> patrimônio</span>`, "ativos líquidos", `<button class="pill-periodo clicavel ${corSinal(total)}" data-acao="explicar-composicao" title="Ver o total de cada classe">TOTAL ${brlSinal(total)}</button>`, `<div class="donut-wrap"><div class="donut-centro"><canvas id="graf-patrimonio-divisao" width="150" height="150" style="width:150px;height:150px"></canvas><div class="donut-rotulo"><b>${brl(p.bruto).replace("R$", "").trim()}</b><span class="acc-laranja">BRUTO</span></div></div><div class="legenda">${legendaHtml}</div></div>`)}</div>
+        <div class="c6">${card("card-centrado", "Composição patrimônio", "ativos líquidos", `<button class="pill-periodo clicavel ${corSinal(total)}" data-acao="explicar-composicao" title="Ver o total de cada classe">TOTAL ${brlSinal(total)}</button>`, `<div class="donut-wrap"><div class="donut-centro"><canvas id="graf-patrimonio-divisao" width="150" height="150" style="width:150px;height:150px"></canvas><div class="donut-rotulo"><b>${brl(p.bruto).replace("R$", "").trim()}</b><span class="acc-laranja">BRUTO</span></div></div><div class="legenda">${legendaHtml}</div></div>`)}</div>
         <div class="c6">${card("", "Resumo patrimonial", "", "", `
           <div class="kv"><span class="dim">Dinheiro em bancos</span><b class="${corSinal(p.bancos)}">${brlSinal(p.bancos)}</b></div>
           <div class="kv"><span class="dim">+ Ações e FIIs</span><b class="${corSinal(p.acoes)}">${brlSinal(p.acoes)}</b></div>
@@ -8941,47 +8941,12 @@
       topos.forEach((t) => t.style.setProperty("--esc", esc.toFixed(3)));
     });
   }
-  // Dashboard numa tela só (iPad e tablet Android deitados): o gráfico
-  // Receitas x despesas fica com a altura que sobra, para o resumo (Taxa
-  // poupança… Contas pendentes) terminar no fim da tela, sem rolar
-  const MQ_TELA_UNICA = window.matchMedia("(hover: none) and (pointer: coarse) and (min-width: 861px) and (max-width: 1800px) and (orientation: landscape)");
-  function ajustarDashTelaUnica() {
-    const cont = document.getElementById("conteudo");
-    if (!cont) return;
-    const ativo = ROTA.secao === "dashboard" && MQ_TELA_UNICA.matches;
-    cont.classList.toggle("dash-tela", ativo);
-    const g = cont.querySelector(".grafico-rd-dash");
-    if (!g) return;
-    g.style.removeProperty("--alt-rd");
-    cont.style.removeProperty("--alt-linha2");
-    if (!ativo) return;
-    // linha 2 (Saldo bancos · Composição · Metas): alta o bastante para as 3 primeiras metas
-    const corpoMetas = cont.querySelector(".dash-metas .card > .body"), itens = cont.querySelectorAll(".dash-metas .meta-item");
-    if (corpoMetas && itens.length) {
-      const cardM = corpoMetas.closest(".card"), ultima = itens[Math.min(3, itens.length) - 1];
-      const falta = ultima.getBoundingClientRect().bottom + 6 - corpoMetas.getBoundingClientRect().bottom;
-      const alt = Math.min(Math.round(window.innerHeight * 0.42), Math.max(212, Math.ceil(cardM.getBoundingClientRect().height + falta)));
-      cont.style.setProperty("--alt-linha2", alt + "px");
-    }
-    const strip = cont.querySelector(".strip");
-    if (!strip) return;
-    const sobra = window.innerHeight - 6 - strip.getBoundingClientRect().bottom - (window.scrollY || 0);
-    const alt = Math.max(150, Math.floor(g.getBoundingClientRect().height + sobra));
-    g.style.setProperty("--alt-rd", alt + "px");
-    // a página ainda pode mudar de altura logo depois (fontes, aviso, cotações): confere de novo
-    if (!ajustarDashTelaUnica.conferindo) {
-      ajustarDashTelaUnica.conferindo = true;
-      setTimeout(() => { ajustarDashTelaUnica.conferindo = false; const c2 = document.querySelector(".strip"); if (c2 && Math.abs(window.innerHeight - 6 - c2.getBoundingClientRect().bottom) > 2) ajustarDashTelaUnica(); }, 400);
-    }
-  }
-  if (MQ_TELA_UNICA.addEventListener) MQ_TELA_UNICA.addEventListener("change", () => { ajustarDashTelaUnica(); ajustarTopoMetas(); });
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => ajustarTopoMetas());
-  window.addEventListener("resize", () => { ajustarAlturaGrafico(); ajustarAlturaConfig(); ajustarRolagemMetas(); ajustarDashTelaUnica(); ajustarTopoMetas(); });
+  window.addEventListener("resize", () => { ajustarAlturaGrafico(); ajustarAlturaConfig(); ajustarRolagemMetas(); ajustarTopoMetas(); });
 
   function montarGraficosDaRota() {
     const d = DADOS;
     ajustarAlturaGrafico();   // antes de desenhar, para o gráfico já nascer no tamanho certo
-    ajustarDashTelaUnica();
     ajustarTopoMetas();
     switch (ROTA.secao) {
       case "dashboard": {
