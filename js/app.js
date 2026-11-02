@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.450";
+  const VERSAO_APP = "3.6.451";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -581,7 +581,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.450 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.451 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -7755,7 +7755,7 @@
         // pela reserva (ETF da B3), o nome diz qual ETF e o preço é em reais
         q["^IXIC"] && q["^IXIC"].bdr ? ["NASDAQ", `Nasdaq · ETF ${q["^IXIC"].bdr} · R$`, "^IXIC", n2] : ["NASDAQ", "Nasdaq", "^IXIC", fmtPontos],
         q["^GSPC"] && q["^GSPC"].bdr ? ["S&P 500", `S&P 500 · ETF ${q["^GSPC"].bdr} · R$`, "^GSPC", n2] : ["S&P 500", "S&P 500", "^GSPC", fmtPontos],
-        ["DÓLAR", "Dólar comercial · R$", "USDBRL", fDolar], ["OURO", "Ouro", "GC=F", n2]]],
+        ["DÓLAR", "Dólar", "USDBRL", fDolar], ["OURO", "Ouro", "GC=F", n2]]],
       [`B3 · AÇÕES · R$ · ${ordenados.filter((x) => !x.eua).length.toLocaleString("pt-BR")} ativos`, ordenados.filter((x) => !x.eua).map((x) => [x.t, x.n, x.sim, n2, x])],
       [`NASDAQ · AÇÕES · ${ordenados.filter((x) => x.eua).length.toLocaleString("pt-BR")} ativos`, ordenados.filter((x) => x.eua).map((x) => [x.t, x.n, x.sim, n2, x])],
     ];
