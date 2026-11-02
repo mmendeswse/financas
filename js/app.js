@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.411";
+  const VERSAO_APP = "3.6.412";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -580,7 +580,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.411 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.412 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -1566,6 +1566,7 @@
     window.addEventListener("online", () => sincronizar(true));
     abrirCodigoDoLink(0);
     agendarAgenda(4000);   // depois de trazer os dados da conta
+    if (AG) setTimeout(() => AG.preparar(), 2000);   // login do Google pronto para o primeiro "Salvar"
     setInterval(atualizarPerfilTopo, 60 * 1000);   // "há 2 min" no menu do perfil
   }
 
@@ -1573,6 +1574,8 @@
     A.salvarDados(DADOS);
     if (mensagem) toast(mensagem);
     agendarEnvioSync();
+    // conta ou receita nova (ou alterada): já vai para o Google Agenda
+    if (AG) AG.atualizarJa();
     agendarAgenda();
     // a entrada que dispara uma transferência automática pode ter acabado de cair
     setTimeout(conferirTransfAutoNovas, 0);

@@ -67,9 +67,15 @@
     });
     return gisP;
   }
-  // precisa vir de um toque (o Google abre uma janelinha)
+  const gisPronto = () => !!(global.google && global.google.accounts && global.google.accounts.oauth2);
+  // precisa vir de um toque (o Google abre uma janelinha). Com o login do
+  // Google já carregado, o pedido sai na mesma hora — ainda dentro do toque,
+  // senão o navegador bloqueia a janelinha.
   function pedirToken(consentir) {
-    return carregarGIS().then(() => new Promise((ok, erro) => {
+    return gisPronto() ? pedirAgora(consentir) : carregarGIS().then(() => pedirAgora(consentir));
+  }
+  function pedirAgora(consentir) {
+    return new Promise((ok, erro) => {
       if (!cliente) {
         cliente = global.google.accounts.oauth2.initTokenClient({
           client_id: idCliente(), scope: ESCOPO,
@@ -85,7 +91,7 @@
       }
       pedido = { ok, erro };
       cliente.requestAccessToken({ prompt: consentir ? "consent" : "" });
-    }));
+    });
   }
 
   // ---------------------------------------------------------------------
@@ -205,6 +211,23 @@
     const t = tokenValido();
     if (t) enviar(t).catch(() => {}); else avisar();
   }
+  // logo depois de salvar algo (ainda dentro do toque em "Salvar"): se a agenda
+  // mudou, envia na hora — renovando o acesso do Google se ele já venceu
+  function atualizarJa() {
+    if (!disponivel()) return;
+    const d = app.dados(), c = cfg(d);
+    if (!c.ativa || d.demo || st.rodando || c.ultimoHash === hashTudo(d)) return;
+    const t = tokenValido();
+    if (t) { enviar(t).catch(() => {}); return; }
+    // sem um toque do usuário o navegador bloquearia a janelinha do Google
+    const ua = navigator.userActivation;
+    if (!gisPronto() || (ua && !ua.isActive)) { avisar(); return; }
+    pedirAgora(false).then((tok) => enviar(tok)).catch(() => avisar());
+  }
+  // deixa o login do Google carregado, para o pedido sair na hora do toque
+  function preparar() {
+    if (disponivel() && cfg(app.dados()).ativa) carregarGIS().catch(() => {});
+  }
   function enviarComToque() {
     const t = tokenValido();
     return (t ? Promise.resolve(t) : pedirToken(false)).then((tok) => enviar(tok));
@@ -229,5 +252,5 @@
   function precisaToque(d) { return disponivel() && pendente(d) && !tokenValido() && !st.rodando; }
   function definirItem(k, ligado) { const d = app.dados(); cfg(d).itens[k] = !!ligado; app.salvar(d); }
 
-  global.Agenda = { configurar, disponivel, conectadoAqui, cfg, conectar, desconectar, enviarComToque, talvezEnviar, pendente, precisaToque, definirItem, estado: st };
+  global.Agenda = { configurar, atualizarJa, preparar, disponivel, conectadoAqui, cfg, conectar, desconectar, enviarComToque, talvezEnviar, pendente, precisaToque, definirItem, estado: st };
 })(window);
