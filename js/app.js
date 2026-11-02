@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.412";
+  const VERSAO_APP = "3.6.413";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -580,7 +580,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.412 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.413 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -861,7 +861,7 @@
     if (ass === assinaturaPerfil) return;
     assinaturaPerfil = ass;
     aplicarNomeApp();   // nome do perfil ao lado do logotipo
-    btn.innerHTML = Avatar.circuloHTML("avatar-barra", p) + `<span class="perfil-ponto" aria-hidden="true"></span>`;
+    btn.innerHTML = Avatar.circuloHTML("avatar-barra", p);
     btn.title = (p.nome || "Seu perfil") + " · " + (S.conectado() ? "sincronização: " + sit.titulo.toLowerCase() : "sincronização desligada");
     preencherMenuPerfil();
   }

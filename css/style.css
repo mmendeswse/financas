@@ -2939,10 +2939,6 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
 .perfil-btn .avatar-barra { width: 100%; height: 100%; font-size: clamp(12px, 1vw, 16px); box-shadow: 0 0 0 2px var(--linha-2); }
 .perfil-btn:hover .avatar-barra { box-shadow: 0 0 0 2px var(--cy); }
 .perfil-btn .avatar-barra .av-emoji { font-size: clamp(16px, 1.35vw, 22px); }
-.perfil-ponto { position: absolute; right: -1px; bottom: -1px; width: 11px; height: 11px; border-radius: 50%; border: 2px solid var(--bg); background: var(--dim); display: none; }
-.perfil-btn[data-sync="ligado"] .perfil-ponto { display: block; background: var(--up); }
-.perfil-btn[data-sync="rodando"] .perfil-ponto { display: block; background: var(--cy); animation: pfPiscar 1s ease-in-out infinite; }
-.perfil-btn[data-sync="erro"] .perfil-ponto { display: block; background: var(--down); }
 @keyframes pfPiscar { 50% { opacity: .35; } }
 
 /* menu do perfil: "Seu perfil · Editar avatar", sincronização e Ajustes */
