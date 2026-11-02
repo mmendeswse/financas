@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.434";
+  const VERSAO_APP = "3.6.438";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -378,16 +378,16 @@
 
   let mesesBancos = 0;
   let anoBancos = null;   // período do gráfico da guia Bancos (0 = saldo atual)
-  let mesesRelA = 12;   // período do quadro Receitas x despesas
-  let mesesRelB = 0;    // período do quadro Evolução patrimonial (abre em "Tudo")
+  let mesesRelA = 12;   // período do quadro Receitas x despesas (sempre abre em 12m)
+  let mesesRelB = 12;   // período do quadro Evolução patrimonial (sempre abre em 12m)
   let anoRelA = null;
   let anoRelB = null;
 
   // intervalo correspondente ao período escolhido; 0 = todo histórico
   function intervaloRel(meses, ano) {
-    const fim = isoLocal(new Date());
-    if (!meses) return { ini: "0000-01-01", fim };   // "Tudo"
-    return intervaloAnoMeses(ano || String(new Date().getFullYear()), meses);
+    const a = ano || String(new Date().getFullYear());
+    if (!meses) return { ini: `${a}-01-01`, fim: `${a}-12-31` };   // "Tudo": o ano escolhido inteiro
+    return intervaloAnoMeses(a, meses);
   }
   let demoBannerOculto = false;
 
@@ -581,7 +581,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.434 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.438 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -1644,8 +1644,8 @@
       anoEvo = String(new Date().getFullYear()); mesesEvo = 0;   // evolução patrimonial sempre em "Tudo"
     }
     if (secao === "relatorios") {
-      anoRelA = String(new Date().getFullYear()); mesesRelA = 12;
-      anoRelB = String(new Date().getFullYear()); mesesRelB = 0;   // evolução patrimonial sempre em "Tudo"
+      anoRelA = String(new Date().getFullYear()); mesesRelA = 12;   // receitas x despesas sempre em 12m
+      anoRelB = String(new Date().getFullYear()); mesesRelB = 12;   // evolução patrimonial sempre em 12m
     }
     document.querySelectorAll("#navPrincipal button").forEach((b) => b.classList.toggle("ativo", b.dataset.secao === secao));
     fecharSidebarMobile();
@@ -8345,22 +8345,26 @@
   // Quadro "Evolução patrimonial": montado pela mesma função no Dashboard e nos
   // Relatórios, para os dois ficarem sempre idênticos (cada guia guarda o seu
   // próprio ano e período)
-  function histEvolucao(d, meses, ano) {
+  // anoTodo (Relatórios, que têm o seletor de ano): "Tudo" é o ano escolhido inteiro;
+  // sem ele (Dashboard), "Tudo" é todo o histórico
+  function histEvolucao(d, meses, ano, anoTodo) {
     const h = histPatrimonio(d);
+    if (!meses && anoTodo && ano) return h.filter((x) => String(x.data).slice(0, 4) === String(ano));
     if (!meses) return h;
     const fx = intervaloAnoMeses(ano, meses);
     return h.filter((x) => x.data >= fx.ini && x.data <= fx.fim);
   }
   // sem cfg.idAno (Dashboard) o quadro não tem seletor de ano: usa sempre o ano atual
   function cardEvolucaoPatrimonial(d, cfg) {
-    const hist = histEvolucao(d, cfg.meses, cfg.ano);
+    const hist = histEvolucao(d, cfg.meses, cfg.ano, !!cfg.idAno);
     const varPer = hist.length >= 2 ? hist[hist.length - 1].valor - hist[0].valor : 0;
-    return card("", "Evolução patrimonial", `patrimônio líquido · ${cfg.meses ? cfg.meses + " meses de " + cfg.ano : "todo histórico"}`,
+    const periodo = cfg.meses ? cfg.meses + " meses de " + cfg.ano : cfg.idAno ? "ano inteiro de " + cfg.ano : "todo histórico";
+    return card("", "Evolução patrimonial", `patrimônio líquido · ${periodo}`,
       (hist.length >= 2 ? `<span class="pill-periodo ${corSinal(varPer)}">PERÍODO ${brlSinal(varPer)}</span>` : "") +
-      `<div class="filtro-mes">${cfg.idAno ? seletorAnoDash(cfg.idAno, cfg.ano, anosDashboard(d)) : ""}${abasMeses(cfg.acao, cfg.meses, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }, { meses: 0, rotulo: "Tudo" }])}</div>`,
+      `<div class="filtro-mes">${cfg.idAno ? seletorAnoDash(cfg.idAno, cfg.ano, anosDashboard(d)) : ""}${abasMeses(cfg.acao, cfg.meses, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }].concat(cfg.idAno ? [] : [{ meses: 0, rotulo: "Tudo" }]))}</div>`,
       hist.length >= 2
         ? `<div${cfg.classe ? ` class="${cfg.classe}"` : ""} style="padding:8px 14px 12px;height:280px"><canvas id="${cfg.canvas}"></canvas></div>`
-        : `<div class="empty">Sem registros de patrimônio em ${cfg.meses ? `${cfg.meses} ${cfg.meses === 1 ? "mês" : "meses"} de ${cfg.ano}` : "todo histórico"}.</div>`);
+        : `<div class="empty">Sem registros de patrimônio em ${cfg.meses ? `${cfg.meses} ${cfg.meses === 1 ? "mês" : "meses"} de ${cfg.ano}` : cfg.idAno ? cfg.ano : "todo histórico"}.</div>`);
   }
 
   function historicoEvo(d) { return histEvolucao(d, mesesEvo, anoEvo); }
@@ -8622,8 +8626,9 @@
     const despesasP = mesesDoPeriodo.reduce((t, m) => t + totalDespesasPagasMes(d, m), 0);
     const historicoP = histPatrimonio(d).filter((h) => h.data >= fxB.ini && h.data <= fxB.fim);
     const picoB = historicoP.length ? Math.max(...historicoP.map((h) => h.valor)) : 0;
-    const OPC = [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }, { meses: 0, rotulo: "Tudo" }];
-    const rotulo = (m, ano) => (m ? `${m} ${m === 1 ? "mês" : "meses"} de ${ano}` : "Todo histórico");
+    // Relatórios: sem o "Tudo" (o período é sempre dentro do ano escolhido)
+    const OPC = [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }];
+    const rotulo = (m, ano) => (m ? `${m} ${m === 1 ? "mês" : "meses"} de ${ano}` : `Ano inteiro de ${ano}`);
     const rotuloPeriodo = rotulo(mesesRelA, anoRelA);
 
     return `
@@ -8742,10 +8747,10 @@
   // =========================================================================
   function montarGraficosRelatorio(d) {
     const fxA = intervaloRel(mesesRelA, anoRelA), fxB = intervaloRel(mesesRelB, anoRelB);
-    const historicoP = histEvolucao(d, mesesRelB, anoRelB);
+    const historicoP = histEvolucao(d, mesesRelB, anoRelB, true);
     if (historicoP.length >= 2) G.renderEvolucaoPatrimonio("graf-rel-evolucao", historicoP, { aoClicar: explicarPatrimonio });
-    const primeiro = histPatrimonio(d).length ? histPatrimonio(d)[0].data : fxA.ini;
-    G.renderReceitasDespesas("graf-rel-mensal", serieMensalPeriodo(d, mesesRelA ? fxA.ini : primeiro, fxA.fim), { aoClicar: explicarMes, semLegenda: window.innerWidth > 600 });   // a legenda fica no cabeçalho, ao lado do ano (no celular, no gráfico)
+    // "Tudo" é o ano escolhido inteiro (janeiro a dezembro)
+    G.renderReceitasDespesas("graf-rel-mensal", serieMensalPeriodo(d, fxA.ini, fxA.fim), { aoClicar: explicarMes, semLegenda: window.innerWidth > 600 });   // a legenda fica no cabeçalho, ao lado do ano (no celular, no gráfico)
   }
 
 
@@ -9006,8 +9011,11 @@
           const folga = (cont ? parseFloat(getComputedStyle(cont).paddingBottom) || 0 : 0) + (rod ? parseFloat(getComputedStyle(rod).marginTop) || 0 : 0);
           const sobra = rod && ultimo ? rod.getBoundingClientRect().top - ultimo.getBoundingClientRect().bottom - folga : 0;
           const ajuste = sobra > 1 ? sobra : -(document.documentElement.scrollHeight - window.innerHeight);
-          const porCaixa = ajuste / caixas.length;
-          if (Math.abs(porCaixa) >= 1) caixas.forEach((c) => { c.style.height = Math.max(110, Math.floor(c.clientHeight + porCaixa)) + "px"; });
+          // os dois gráficos ficam com a mesma altura (a soma das alturas atuais
+          // mais o que sobra — ou menos o que falta —, dividida igualmente)
+          const total = caixas.reduce((t, c) => t + c.clientHeight, 0) + ajuste;
+          const cada = Math.max(110, Math.floor(total / caixas.length));
+          caixas.forEach((c) => { c.style.height = cada + "px"; });
         }
         montarGraficosRelatorio(d);
         break;

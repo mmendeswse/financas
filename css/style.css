@@ -3133,3 +3133,11 @@ body.av-aberta { overflow: hidden; }
 /* aparelho sem a linha "visto há…" (falta de espaço): só a do "este aparelho" fica */
 .sy-ap small:empty { display: none; }
 .sy-ap small:not(:has(> :not([hidden]))):not(:has(em)) { display: none; }
+/* Relatórios em tela baixa (iPad deitado): os quatro indicadores mais
+   compactos, sem a linha de baixo, para sobrar altura para os dois gráficos */
+@media (min-width: 700px) and (max-height: 860px) {
+  .rel-kpis .metric { padding: 7px 12px; }
+  .rel-kpis .metric .topo { margin-bottom: 1px; }
+  .rel-kpis .metric .legenda { display: none; }
+  .rel-kpis .metric .valor { font-size: 16px; }
+}
