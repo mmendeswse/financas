@@ -184,6 +184,9 @@
       return rodar(0);
     })).then(() => {
       c.ultimoHash = hashTudo(d); c.ultimaVez = new Date().toISOString(); c.ativa = true;
+      // resumo para a tela (vale em todos os aparelhos): quantos eventos e até quando
+      c.totalEventos = lista.length;
+      c.ate = lista.reduce((m, x) => { const dt = String(x.corpo.start.dateTime || "").slice(0, 10); return dt > m ? dt : m; }, "");
       app.salvar(d);
       st.msg = n.novos + n.mudados + n.removidos ? `${n.novos ? n.novos + " adicionados" : ""}${n.mudados ? (n.novos ? ", " : "") + n.mudados + " atualizados" : ""}${n.removidos ? (n.novos || n.mudados ? ", " : "") + n.removidos + " removidos" : ""}` : "nada mudou";
       return n;
@@ -194,7 +197,7 @@
   }
   // com token válido: envia sozinho; sem: o app mostra "Atualizar Google Agenda"
   function talvezEnviar() {
-    if (!disponivel() || !conectadoAqui()) return;
+    if (!disponivel()) return;
     const d = app.dados(), c = cfg(d);
     if (d.demo) return;   // dados de exemplo não vão para a agenda de verdade
     if (!c.ativa || c.ultimoHash === hashTudo(d)) { avisar(); return; }
@@ -220,7 +223,8 @@
     });
   }
   // há mudanças que ainda não foram para a agenda
-  function pendente(d) { d = d || app.dados(); const c = cfg(d); return c.ativa && conectadoAqui() && !d.demo && c.ultimoHash !== hashTudo(d); }
+  // a agenda é da conta (config.agenda sincroniza): qualquer aparelho pode atualizá-la
+  function pendente(d) { d = d || app.dados(); const c = cfg(d); return c.ativa && !d.demo && c.ultimoHash !== hashTudo(d); }
   function precisaToque(d) { return disponivel() && pendente(d) && !tokenValido() && !st.rodando; }
   function definirItem(k, ligado) { const d = app.dados(); cfg(d).itens[k] = !!ligado; app.salvar(d); }
 

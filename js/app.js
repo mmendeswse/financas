@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.407";
+  const VERSAO_APP = "3.6.408";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -580,7 +580,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.407 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.408 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -939,22 +939,24 @@
     if (!AG.disponivel()) return `<div class="sync-estado"><span class="sync-ponto"></span><b>Só na versão do site</b></div>
       <p class="cfg-texto">O login do Google funciona quando o sistema é aberto pelo navegador (site ou app instalado no celular/iPad). No programa do Windows, conecte por lá.</p>`;
     const c = AG.cfg(DADOS), st = AG.estado;
-    if (!c.ativa || !AG.conectadoAqui()) return `
+    if (!c.ativa) return `
       <div class="ag-intro"><span class="ag-ic">📅</span><div><b>Leve seus vencimentos para o Google Agenda</b>
         <small>Contas a pagar, receitas previstas e prazos das metas numa agenda na sua conta Google, com alertas mesmo com o sistema fechado.</small></div></div>
-      <p class="cfg-info cfg-opc" data-opc="2">O Google vai pedir para você escolher a conta e autorizar. O sistema só consegue mexer na agenda que ele mesmo cria — não vê nem altera as suas outras agendas.${c.ativa ? " A agenda já está ligada em outro aparelho: conectar aqui usa a mesma." : ""}</p>
+      <p class="cfg-info cfg-opc" data-opc="2">O Google vai pedir para você escolher a conta e autorizar. O sistema só consegue mexer na agenda que ele mesmo cria — não vê nem altera as suas outras agendas.</p>
       <div class="cfg-acoes"><button class="btn primario" data-acao="agenda-conectar">Conectar Google Agenda</button></div>`;
     const pend = AG.pendente(DADOS);
     const est = st.erro ? `<div class="sync-estado"><span class="sync-ponto erro"></span><b>Não atualizou</b><span class="dim">${esc(st.erro)}</span></div>`
       : st.rodando ? `<div class="sync-estado"><span class="sync-ponto rodando"></span><b>Atualizando a agenda…</b></div>`
       : `<div class="sync-estado"><span class="sync-ponto ${pend ? "erro" : "ligado"}"></span><b>${pend ? "Há mudanças para enviar" : "Agenda em dia"}</b><span class="dim">${c.ultimaVez ? quandoSync(c.ultimaVez) : ""}${st.msg ? " · " + esc(st.msg) : ""}</span></div>`;
+    const resumo = c.totalEventos != null ? `<p class="cfg-info"><b>${c.totalEventos}</b> ${c.totalEventos === 1 ? "evento" : "eventos"} na agenda${c.ate ? ` · até <b>${new Date(c.ate + "T12:00:00").toLocaleDateString("pt-BR", { month: "short", year: "numeric" }).replace(".", "")}</b>` : ""}${pend ? " — toque em <b>Atualizar</b> para enviar as mudanças" : ""}</p>` : "";
     const item = (k, rot, sub) => `<label class="chk-linha ag-item"><input type="checkbox" data-ag-item="${k}" ${c.itens[k] ? "checked" : ""}> <span>${rot}<small>${sub}</small></span></label>`;
     return `${est}
+      ${resumo}
       <span class="sy-rot">O que vai para a agenda</span>
       ${item("contas", "💸 Contas a pagar", "próximos 12 meses, alerta na véspera e no dia")}
       ${item("receitas", "💰 Receitas previstas", "próximos 12 meses, no dia previsto")}
       ${item("metas", "🎯 Prazos das metas", "com alerta uma semana antes")}
-      <p class="cfg-info cfg-opc" data-opc="1"><a class="ag-link" href="https://calendar.google.com/" target="_blank" rel="noopener">Abrir o Google Agenda ↗</a></p>
+      <p class="cfg-info cfg-opc" data-opc="1">Não aparece? No Google Agenda, deixe marcada a agenda <b>“${esc(nomeApp())} Finanças”</b> em <b>Minhas agendas</b>. <a class="ag-link" href="https://calendar.google.com/" target="_blank" rel="noopener">Abrir o Google Agenda ↗</a></p>
       <div class="cfg-acoes"><button class="btn primario" data-acao="agenda-enviar">Atualizar</button>
         <button class="btn perigo" data-acao="agenda-desligar">Desconectar</button></div>`;
   }
