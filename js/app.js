@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.449";
+  const VERSAO_APP = "3.6.450";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -581,7 +581,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.449 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.450 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -2554,7 +2554,9 @@
       const falta = objetivo > 0 ? objetivo - atual : Infinity;
       const paraFicarEmDia = Math.min(falta, atraso + mensal - noMes);
       if (paraFicarEmDia > 0.005) return { chave: "nada", atrasado: true, deposito: paraFicarEmDia,
-        rotulo: `Atrasado ${brlCurto(atraso)} · deposite ${brlCurto(paraFicarEmDia)}`, curto: `Atrasado ${brlCurto(atraso)} · deposite ${brlCurto(paraFicarEmDia)}` };
+        // ⏰ atrasado · 📥 deposite (ícones no lugar das palavras, para caber numa linha com os centavos)
+        rotulo: `⏰ ${brl(atraso)} · 📥 ${brl(paraFicarEmDia)}`, curto: `⏰ ${brl(atraso)} · 📥 ${brl(paraFicarEmDia)}`,
+        dica: `Atrasado ${brl(atraso)} · deposite ${brl(paraFicarEmDia)} para ficar em dia` };
       return { chave: "ok", rotulo: `Em dia · guardou ${brl(noMes)} este mês`, curto: `Em dia · guardou ${brlCurto(noMes)}` };
     }
     if (noMes <= 0) return { chave: "nada", deposito: mensal, rotulo: mensal > 0 ? `Nenhum depósito este mês · guardar ${brl(mensal)}` : "Nenhum depósito este mês", curto: mensal > 0 ? `Sem depósito · guardar ${brlCurto(mensal)}` : "Nenhum depósito no mês" };
@@ -2623,9 +2625,9 @@
       const vencida = diasPrazo !== null && diasPrazo < 0 && Number(m.atual || 0) < objetivo;
       const situacao = vencida ? `<span class="down">prazo vencido há ${plural(Math.abs(diasPrazo), "dia")}</span>` : esc(st.rotulo);
       return `<button class="meta-item clicavel st-${st.chave}" style="--meta-cor:${esc(m.cor || "var(--up)")}" data-acao="explicar-meta" data-id="${m.id}" title="Ver detalhes da meta">
-        <div class="meta-topo meta-topo-linha"><span class="meta-bolinha st-${st.chave}" title="${st.rotulo}"></span><span class="meta-nome">${nomeMeta(m)}</span><span class="meta-selos"><span class="meta-st meta-falta" title="Guardar por mês: ${Number(m.aporteMensal) > 0 ? brl(m.aporteMensal) : "não definido"}"><span class="meta-falta-ic">💰</span>${Number(m.aporteMensal) > 0 ? brlCurto(m.aporteMensal).replace(/^R\$\s*/, "") : "—"}</span>${m.prazo ? `<span class="meta-st meta-falta" title="Data final da meta"><span class="meta-falta-ic">📅</span>${fmtData(m.prazo)}</span>` : ""}<span class="meta-st meta-falta" title="Objetivo: ${brl(objetivo)}"><span class="meta-falta-ic">🏁</span>${brlCurto(objetivo).replace(/^R\$\s*/, "")}</span></span></div>
+        <div class="meta-topo meta-topo-linha"><span class="meta-bolinha st-${st.chave}" title="${esc(st.dica || st.rotulo)}"></span><span class="meta-nome">${nomeMeta(m)}</span><span class="meta-selos"><span class="meta-st meta-falta" title="Guardar por mês: ${Number(m.aporteMensal) > 0 ? brl(m.aporteMensal) : "não definido"}"><span class="meta-falta-ic">💰</span>${Number(m.aporteMensal) > 0 ? brlCurto(m.aporteMensal).replace(/^R\$\s*/, "") : "—"}</span>${m.prazo ? `<span class="meta-st meta-falta" title="Data final da meta"><span class="meta-falta-ic">📅</span>${fmtData(m.prazo)}</span>` : ""}<span class="meta-st meta-falta" title="Objetivo: ${brl(objetivo)}"><span class="meta-falta-ic">🏁</span>${brlCurto(objetivo).replace(/^R\$\s*/, "")}</span></span></div>
         <div class="meta-barra meta-barra-grande"><i style="width:${p}%"></i><b class="meta-pct-dentro">${p.toFixed(0)}%</b></div>
-        <div class="meta-rodape meta-rodape-3"><span title="Valor guardado">💵 ${brlCurto(valor)}</span><span class="meta-situacao-meio" title="${esc(vencida ? `Prazo vencido há ${plural(Math.abs(diasPrazo), "dia")}` : st.rotulo)}"><span class="sit-longo">${situacao}</span><span class="sit-curto">${vencida ? `<span class="down">vencida há ${plural(Math.abs(diasPrazo), "dia")}</span>` : esc(st.curto || st.rotulo)}</span></span><span class="meta-falta-valor" title="Falta para o objetivo">${objetivo > valor ? `⏳ ${brlCurto(objetivo - valor)}` : "✅ Concluída"}</span></div>
+        <div class="meta-rodape meta-rodape-3"><span title="Valor guardado">💵 ${brlCurto(valor)}</span><span class="meta-situacao-meio" title="${esc(vencida ? `Prazo vencido há ${plural(Math.abs(diasPrazo), "dia")}` : st.dica || st.rotulo)}"><span class="sit-longo">${situacao}</span><span class="sit-curto">${vencida ? `<span class="down">vencida há ${plural(Math.abs(diasPrazo), "dia")}</span>` : esc(st.curto || st.rotulo)}</span></span><span class="meta-falta-valor" title="Falta para o objetivo">${objetivo > valor ? `⏳ ${brlCurto(objetivo - valor)}` : "✅ Concluída"}</span></div>
       </button>`;
     }
   }
