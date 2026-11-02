@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.448";
+  const VERSAO_APP = "3.6.449";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -581,7 +581,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.448 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.449 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -2554,7 +2554,7 @@
       const falta = objetivo > 0 ? objetivo - atual : Infinity;
       const paraFicarEmDia = Math.min(falta, atraso + mensal - noMes);
       if (paraFicarEmDia > 0.005) return { chave: "nada", atrasado: true, deposito: paraFicarEmDia,
-        rotulo: `Atrasado ${brl(atraso)} · deposite ${brl(paraFicarEmDia)} para ficar em dia`, curto: `Atrasado ${brlCurto(atraso)} · deposite ${brlCurto(paraFicarEmDia)}` };
+        rotulo: `Atrasado ${brlCurto(atraso)} · deposite ${brlCurto(paraFicarEmDia)}`, curto: `Atrasado ${brlCurto(atraso)} · deposite ${brlCurto(paraFicarEmDia)}` };
       return { chave: "ok", rotulo: `Em dia · guardou ${brl(noMes)} este mês`, curto: `Em dia · guardou ${brlCurto(noMes)}` };
     }
     if (noMes <= 0) return { chave: "nada", deposito: mensal, rotulo: mensal > 0 ? `Nenhum depósito este mês · guardar ${brl(mensal)}` : "Nenhum depósito este mês", curto: mensal > 0 ? `Sem depósito · guardar ${brlCurto(mensal)}` : "Nenhum depósito no mês" };
