@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.433";
+  const VERSAO_APP = "3.6.434";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -311,7 +311,7 @@
   let anoRD = null;    // ano escolhido no quadro Receitas x despesas
   let anoEvo = null;   // ano escolhido no quadro Evolução patrimonial
   let mesesRD = 6;        // meses no gráfico receitas x despesas
-  let mesesEvo = 12;      // meses no gráfico de evolução patrimonial   // período mostrado no gráfico do ativo
+  let mesesEvo = 0;       // meses no gráfico de evolução patrimonial (0 = Tudo)   // período mostrado no gráfico do ativo
   let filtrosHistorico = { periodo: "3m", banco: "", categoria: "", tipo: "todos", busca: "", ordenarPor: "data", ordemAsc: false };
   // cada quadro de relatório tem o seu próprio intervalo de datas
   // mês selecionado nas guias Entradas e Despesas (começa no mês atual)
@@ -379,7 +379,7 @@
   let mesesBancos = 0;
   let anoBancos = null;   // período do gráfico da guia Bancos (0 = saldo atual)
   let mesesRelA = 12;   // período do quadro Receitas x despesas
-  let mesesRelB = 12;   // período do quadro Evolução patrimonial (abre em 12 meses)
+  let mesesRelB = 0;    // período do quadro Evolução patrimonial (abre em "Tudo")
   let anoRelA = null;
   let anoRelB = null;
 
@@ -581,7 +581,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.433 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.434 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -1641,11 +1641,11 @@
     if (secao === "dashboard") {
       anoRD = String(new Date().getFullYear()); mesesRD = 12;
       anoMetas = String(new Date().getFullYear()); periodoMetas = 0;
-      anoEvo = String(new Date().getFullYear()); mesesEvo = 12;
+      anoEvo = String(new Date().getFullYear()); mesesEvo = 0;   // evolução patrimonial sempre em "Tudo"
     }
     if (secao === "relatorios") {
       anoRelA = String(new Date().getFullYear()); mesesRelA = 12;
-      anoRelB = String(new Date().getFullYear()); mesesRelB = 12;
+      anoRelB = String(new Date().getFullYear()); mesesRelB = 0;   // evolução patrimonial sempre em "Tudo"
     }
     document.querySelectorAll("#navPrincipal button").forEach((b) => b.classList.toggle("ativo", b.dataset.secao === secao));
     fecharSidebarMobile();
