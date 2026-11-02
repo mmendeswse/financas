@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.443";
+  const VERSAO_APP = "3.6.444";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -581,7 +581,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.443 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.444 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -8606,6 +8606,33 @@
   }
 
   // meses do quadro A (Receitas x despesas); "Tudo" começa no mês do lançamento mais antigo
+  // mini-gráfico de barras dos quadros do topo de Relatórios (canto direito):
+  // uma barra por mês do período; passar o mouse (ou o dedo) mostra o mês e o valor.
+  // divergente: barras para cima (verde) e para baixo (vermelho) a partir do zero
+  function miniBarrasRel(itens, cor, divergente) {
+    if (!itens.length || itens.every((x) => !x.v)) return "";
+    const W = 120, H = 40, n = itens.length, passo = W / n, larg = Math.max(2, Math.min(10, passo * 0.62));
+    const maxAbs = Math.max(...itens.map((x) => Math.abs(x.v))) || 1;
+    const meio = divergente ? H / 2 : H;
+    const barras = itens.map((x, i) => {
+      const alt = Math.max(x.v ? 1.5 : 0, (Math.abs(x.v) / maxAbs) * (divergente ? H / 2 - 1 : H - 1));
+      const y = divergente && x.v < 0 ? meio : meio - alt;
+      const c = divergente ? (x.v < 0 ? "var(--down)" : "var(--up)") : cor;
+      const nome = new Date(x.mes + "-01T00:00:00").toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+      return `<rect x="${(i * passo + (passo - larg) / 2).toFixed(1)}" y="${y.toFixed(1)}" width="${larg.toFixed(1)}" height="${alt.toFixed(1)}" rx="1.5" fill="${c}" opacity="${x.atual ? 1 : 0.7}"><title>${nome.charAt(0).toUpperCase() + nome.slice(1)}: ${brlSinal(x.v)}</title></rect>`;
+    }).join("");
+    const zero = divergente ? `<line x1="0" x2="${W}" y1="${meio}" y2="${meio}" stroke="var(--linha-2)" stroke-width="1"/>` : "";
+    return `<span class="metric-mini" aria-hidden="true"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${zero}${barras}</svg></span>`;
+  }
+  // anel da rentabilidade (canto direito do quadro): preenchido até o percentual, verde ou vermelho
+  function miniAnelRel(pctValor) {
+    const v = Number(pctValor) || 0, r = 15, circ = 2 * Math.PI * r, frac = Math.min(1, Math.abs(v) / 100);
+    const cor = v < 0 ? "var(--down)" : "var(--up)";
+    return `<span class="metric-mini metric-anel" aria-hidden="true"><svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="${r}" fill="none" stroke="var(--linha-2)" stroke-width="4"/>
+      <circle cx="20" cy="20" r="${r}" fill="none" stroke="${cor}" stroke-width="4" stroke-linecap="round" stroke-dasharray="${(circ * frac).toFixed(1)} ${circ.toFixed(1)}" transform="rotate(-90 20 20)"><title>Rentabilidade da carteira: ${pct(v)}</title></circle>
+      <text x="20" y="21" text-anchor="middle" dominant-baseline="middle" fill="${cor}" font-size="9" font-weight="800">${v < 0 ? "▼" : "▲"}</text></svg></span>`;
+  }
+
   function mesesDoPeriodoRel(d, fx) {
     const primeiraData = [...d.entradas.map((e) => e.data), ...d.despesas.map((x) => x.data), ...(d.contasPagar || []).map((c) => c.vencimento)]
       .filter(Boolean).map(String).sort()[0] || fx.fim;
@@ -8623,8 +8650,10 @@
     // (inclui contas pagas e repetições marcadas como pagas), mês a mês
     // "Tudo" começa no mês do lançamento mais antigo
     const mesesDoPeriodo = mesesDoPeriodoRel(d, fxA);
-    const entradasP = mesesDoPeriodo.reduce((t, m) => t + totalEntradasEfetivas(d, m), 0);
-    const despesasP = mesesDoPeriodo.reduce((t, m) => t + totalDespesasPagasMes(d, m), 0);
+    const mesAtualRel = F.mesAtual();
+    const porMesRel = mesesDoPeriodo.map((m) => ({ mes: m, e: totalEntradasEfetivas(d, m), dsp: totalDespesasPagasMes(d, m), atual: m === mesAtualRel }));
+    const entradasP = porMesRel.reduce((t, x) => t + x.e, 0);
+    const despesasP = porMesRel.reduce((t, x) => t + x.dsp, 0);
     const historicoP = histPatrimonio(d).filter((h) => h.data >= fxB.ini && h.data <= fxB.fim);
     const picoB = historicoP.length ? Math.max(...historicoP.map((h) => h.valor)) : 0;
     // Relatórios: sem o "Tudo" (o período é sempre dentro do ano escolhido)
@@ -8634,10 +8663,10 @@
 
     return `
       <div class="grid g-top rel-kpis">
-        <div class="c3">${metricCard("Rentabilidade", pct(I.rentabilidadeCarteiraAcoes(d)), ICONES_STRIP.melhorativo, "var(--vi)", "", "Acumulada · Preço Médio", null, "0 0 24 24", "rel-rentabilidade")}</div>
-        <div class="c3">${metricCard("Receitas", "+" + brl(entradasP), ICONES_STRIP.poupanca, "var(--up)", "", rotuloPeriodo, null, "0 0 24 24", "rel-receitas")}</div>
-        <div class="c3">${metricCard("Despesas", "−" + brl(despesasP), ICONES_STRIP.maiorgasto, "var(--down)", "", rotuloPeriodo, null, "0 0 24 24", "rel-despesas")}</div>
-        <div class="c3">${metricCard("Resultado", brlSinal(entradasP - despesasP), ICONES_STRIP.projecao, corSinal(entradasP - despesasP) !== "down" ? "var(--up)" : "var(--down)", "", rotuloPeriodo, null, "0 0 24 24", "rel-resultado")}</div>
+        <div class="c3">${metricCard("Rentabilidade", pct(I.rentabilidadeCarteiraAcoes(d)), ICONES_STRIP.melhorativo, "var(--vi)", miniAnelRel(I.rentabilidadeCarteiraAcoes(d)), "Acumulada · Preço Médio", null, "0 0 24 24", "rel-rentabilidade")}</div>
+        <div class="c3">${metricCard("Receitas", "+" + brl(entradasP), ICONES_STRIP.poupanca, "var(--up)", miniBarrasRel(porMesRel.map((x) => ({ ...x, v: x.e })), "var(--up)"), rotuloPeriodo, null, "0 0 24 24", "rel-receitas")}</div>
+        <div class="c3">${metricCard("Despesas", "−" + brl(despesasP), ICONES_STRIP.maiorgasto, "var(--down)", miniBarrasRel(porMesRel.map((x) => ({ ...x, v: -x.dsp })), "var(--down)"), rotuloPeriodo, null, "0 0 24 24", "rel-despesas")}</div>
+        <div class="c3">${metricCard("Resultado", brlSinal(entradasP - despesasP), ICONES_STRIP.projecao, corSinal(entradasP - despesasP) !== "down" ? "var(--up)" : "var(--down)", miniBarrasRel(porMesRel.map((x) => ({ ...x, v: x.e - x.dsp })), "", true), rotuloPeriodo, null, "0 0 24 24", "rel-resultado")}</div>
       </div>
       <div class="grid">
         <div class="c12">${card("", "Receitas x despesas", `${rotulo(mesesRelA, anoRelA)}`, `<div class="filtro-mes">${LEGENDA_RD}${seletorAnoDash("anoRelA", anoRelA, anosDashboard(d))}${abasMeses("periodo-rel-a", mesesRelA, OPC)}</div>`, `<div class="rel-grafico rel-alto" style="padding:10px 16px;height:220px"><canvas id="graf-rel-mensal"></canvas></div>`)}</div>
