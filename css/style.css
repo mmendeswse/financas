@@ -3181,3 +3181,24 @@ body.av-aberta { overflow: hidden; }
 /* situação da meta: a frase completa; nas metas lado a lado do Dashboard
    (iPad), a versão curta numa linha só */
 .meta-situacao-meio .sit-curto { display: none; }
+/* Metas: o mesmo desenho em todos os quadros, sem depender do tamanho do nome.
+   1) bolinha + nome  2) 💰 · 📅 · 🏁 espalhados na largura toda
+   3) barra  4) 💵 guardado à esquerda, ⏳ falta à direita  5) situação centralizada.
+   Valores completos, com os centavos */
+.meta-topo.meta-topo-linha { flex-wrap: nowrap !important; margin-bottom: 6px; }
+.meta-topo-linha .meta-nome { flex: 1 1 auto !important; min-width: 0; }
+.meta-item .meta-selos.meta-selos-linha { display: flex; flex-wrap: nowrap; justify-content: space-between; align-items: center; gap: 4px; margin: 0 0 8px; max-width: 100%; }
+.meta-selos-linha .meta-st { font-size: 11px; padding: 2px 6px; gap: 3px; white-space: nowrap; flex: none; }
+.meta-selos-linha .meta-falta-ic { font-size: 11px; }
+.meta-item .meta-rodape-3 { display: grid; grid-template-columns: auto auto; justify-content: space-between; row-gap: 3px; column-gap: 8px; white-space: nowrap; }
+.meta-item .meta-rodape-3 .meta-falta-valor { grid-column: 2; grid-row: 1; justify-self: end; }
+.meta-item .meta-rodape-3 .meta-situacao-meio { grid-column: 1 / -1; grid-row: 2; justify-self: center; text-align: center; letter-spacing: .03em;
+  white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
+.meta-item .meta-situacao-meio .sit-longo { display: none; }
+.meta-item .meta-situacao-meio .sit-curto { display: inline; }
+@container (max-width: 300px) { .meta-selos-linha .meta-st { font-size: 10px; padding: 1px 4px; gap: 2px; } .meta-selos-linha .meta-falta-ic { font-size: 10px; } .meta-item .meta-rodape-3 { font-size: 12px; } }
+.meta-item { container-type: inline-size; }
+@container (max-width: 320px) {
+  .meta-selos-linha .meta-st { font-size: 10px; padding: 1px 4px; gap: 2px; } .meta-selos-linha .meta-falta-ic { font-size: 9.5px; } .meta-item .meta-selos.meta-selos-linha { gap: 2px; }
+  .meta-item .meta-rodape-3 { font-size: 11.5px; } .meta-item .meta-rodape-3 .meta-situacao-meio { font-size: 9.5px; letter-spacing: 0; }
+}
