@@ -348,8 +348,8 @@
     return d.toLocaleDateString("pt-BR", { month: "short" }).replace(".", "");
   }
 
-  // pico da Evolução patrimonial em roxo (o dourado é do mês atual)
-  var COR_PICO = "#B57BFF";
+  // pico da Evolução patrimonial em verde (o dourado é do mês atual)
+  var COR_PICO = "#2EE59D";
   function renderEvolucaoPatrimonio(canvasId, historico, opcoes) {
     opcoes = opcoes || {};
     destruir(canvasId);
@@ -376,7 +376,7 @@
           data: serie.map(function (p) { return p.valor; }),
           borderColor: CORES.azul, backgroundColor: gradiente(ctx, CORES.azul, 240), fill: true, tension: 0.3,
           borderWidth: 2.5,
-          // pico em roxo; os demais pontos em verde quando o patrimônio subiu
+          // pico em verde (maior ponto); os demais pontos em verde quando o patrimônio subiu
           // em relação ao mês anterior e em vermelho quando caiu
           pointRadius: serie.map(function (p, i) { return i === iPico ? 7 : (serie.length <= 14 ? 4.5 : 2.5); }),
           pointHoverRadius: 8,
@@ -411,7 +411,7 @@
       },
       plugins: [botoesMesRD, {
         // valor de cada mês escrito acima do ponto, inclinado, na cor do ponto
-        // (verde subiu, vermelho caiu); o pico já tem a etiqueta roxa
+        // (verde subiu, vermelho caiu); o pico já tem a etiqueta verde
         id: "valoresEvolucao",
         afterDatasetsDraw: function (grafico) {
           var meta = grafico.getDatasetMeta(0), area = grafico.chartArea, c = grafico.ctx;
@@ -435,7 +435,7 @@
           c.restore();
         }
       }, {
-        // etiqueta roxa em cima do pico
+        // etiqueta verde em cima do pico
         id: "rotuloPico",
         afterDatasetsDraw: function (grafico) {
           var pt = grafico.getDatasetMeta(0).data[iPico]; if (!pt) return;
@@ -445,7 +445,7 @@
           var x = Math.min(ca.right - larg, Math.max(ca.left, pt.x - larg / 2));
           var y = pt.y - 14 - alt; if (y < ca.top) y = pt.y + 12;
           c.fillStyle = "#0B1420"; c.fillRect(x, y, larg, alt);
-          c.fillStyle = "rgba(181,123,255,0.16)"; c.fillRect(x, y, larg, alt);
+          c.fillStyle = "rgba(46,229,157,0.16)"; c.fillRect(x, y, larg, alt);
           c.strokeStyle = COR_PICO; c.lineWidth = 1; c.strokeRect(x + 0.5, y + 0.5, larg - 1, alt - 1);
           c.fillStyle = COR_PICO; c.textBaseline = "middle"; c.fillText(txt, x + 6, y + alt / 2 + 0.5);
           c.restore();
