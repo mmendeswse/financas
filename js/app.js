@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.431";
+  const VERSAO_APP = "3.6.432";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -581,7 +581,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.431 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.432 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -7661,10 +7661,16 @@
     const pts = (v) => fmtPontos(v);
     const moeda2 = (v) => Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const comSimbolo = (sim) => q[sim] ? { ...q[sim], simbolo: sim } : null;
+    // índice dos EUA que veio pela reserva (ETF da B3): mostra o nome do ETF e o preço em R$
+    const caixaIndiceEUA = (nome, sim, chaveRel) => {
+      const c = q[sim];
+      if (c && c.bdr) return caixa(nome, { ...c, simbolo: sim, fonte: `ETF ${c.bdr} · R$` }, null, (v) => "R$ " + moeda2(v));
+      return caixa(nome, comSimbolo(sim), ativoRelatorio(chaveRel), pts);
+    };
     const board = `<div class="term-board">
       ${caixa("IBOVESPA", comSimbolo("^BVSP"), ativoRelatorio("IBOVESPA"), pts)}
-      ${caixa("S&amp;P 500", comSimbolo("^GSPC"), ativoRelatorio("SP500"), pts)}
-      ${caixa("NASDAQ", comSimbolo("^IXIC"), ativoRelatorio("NASDAQ"), pts)}
+      ${caixaIndiceEUA("S&amp;P 500", "^GSPC", "SP500")}
+      ${caixaIndiceEUA("NASDAQ", "^IXIC", "NASDAQ")}
       ${caixa("OURO", comSimbolo("GC=F"), ativoRelatorio("OURO") || REF_OURO, (v) => "US$ " + moeda2(v), ativoRelatorio("OURO") ? undefined : "REF.")}
       ${caixa("DÓLAR", dolarVivo, ativoRelatorio("DÓLAR / REAL"), (v) => "R$ " + moeda2(v))}
       ${["BTC", "ETH"].map((m) => caixa(m === "BTC" ? "BITCOIN" : "ETHEREUM", criptoVivo(m), null, (v) => "R$ " + Number(v).toLocaleString("pt-BR", { maximumFractionDigits: 0 }))).join("")}
@@ -7737,7 +7743,10 @@
     else if (ordemCot.campo) resto.sort((a, b) => { const va = chaveOrdem(a), vb = chaveOrdem(b); if (va == null) return vb == null ? 0 : 1; if (vb == null) return -1; return ordemCot.desc ? vb - va : va - vb; });
     const ordenados = [...papeis.filter((x) => tickersCarteira.has(x.t)), ...papeis.filter((x) => !tickersCarteira.has(x.t) && favBolsa.has(x.sim)), ...resto];
     const grupos = [
-      ["ÍNDICES, MOEDAS E OURO", [["IBOV", "Ibovespa", "^BVSP", fmtPontos], ["NASDAQ", "Nasdaq", "^IXIC", fmtPontos], ["S&P 500", "S&P 500", "^GSPC", fmtPontos],
+      ["ÍNDICES, MOEDAS E OURO", [["IBOV", "Ibovespa", "^BVSP", fmtPontos],
+        // pela reserva (ETF da B3), o nome diz qual ETF e o preço é em reais
+        q["^IXIC"] && q["^IXIC"].bdr ? ["NASDAQ", `Nasdaq · ETF ${q["^IXIC"].bdr} · R$`, "^IXIC", n2] : ["NASDAQ", "Nasdaq", "^IXIC", fmtPontos],
+        q["^GSPC"] && q["^GSPC"].bdr ? ["S&P 500", `S&P 500 · ETF ${q["^GSPC"].bdr} · R$`, "^GSPC", n2] : ["S&P 500", "S&P 500", "^GSPC", fmtPontos],
         ["DÓLAR", "Dólar comercial · R$", "USDBRL", fDolar], ["OURO", "Ouro", "GC=F", n2]]],
       [`B3 · AÇÕES · R$ · ${ordenados.filter((x) => !x.eua).length.toLocaleString("pt-BR")} ativos`, ordenados.filter((x) => !x.eua).map((x) => [x.t, x.n, x.sim, n2, x])],
       [`NASDAQ · AÇÕES · ${ordenados.filter((x) => x.eua).length.toLocaleString("pt-BR")} ativos`, ordenados.filter((x) => x.eua).map((x) => [x.t, x.n, x.sim, n2, x])],

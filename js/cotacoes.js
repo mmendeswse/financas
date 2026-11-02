@@ -385,7 +385,10 @@
     AAPL: "AAPL34", MSFT: "MSFT34", NVDA: "NVDC34", AMZN: "AMZO34", GOOGL: "GOGL34", META: "M1TA34", TSLA: "TSLA34",
     AVGO: "AVGO34", NFLX: "NFLX34", AMD: "A1MD34", COST: "COWC34", PEP: "PEPB34", ADBE: "ADBE34", CSCO: "CSCO34",
     INTC: "ITLC34", QCOM: "QCOM34", TXN: "TEXA34", AMGN: "AMGN34", INTU: "INTU34", PYPL: "PYPL34", SBUX: "SBUB34",
-    BKNG: "BKNG34", MU: "MUTC34", PLTR: "P2LT34", ASML: "ASML34"
+    BKNG: "BKNG34", MU: "MUTC34", PLTR: "P2LT34", ASML: "ASML34",
+    // índices dos EUA: o ETF da B3 que acompanha cada um (em reais) — reserva
+    // quando o Yahoo e a Stooq não respondem no aparelho
+    "^GSPC": "IVVB11", "^IXIC": "NASD11", "^NDX": "NASD11"
   };
   function lerBDR(simbolo, token) {
     var bdr = BDR[simbolo];
@@ -464,6 +467,9 @@
             .catch(function () { return yahoo(s); })
         // EUA: Yahoo (US$); sem ele, o BDR pela brapi (R$, com histórico,
         // como as ações da B3); por último a Stooq (só a cotação do dia)
+        // índices dos EUA: Yahoo; sem ele, a Stooq (o índice em pontos); por
+        // último o ETF da B3 que acompanha o índice (IVVB11 / NASD11, em R$)
+        : /^\^/.test(s) ? yahoo(s).catch(function () { return stooq(s); }).catch(function () { return lerBDR(s, token); })
         : yahoo(s).catch(function () { return lerBDR(s, token); }).catch(function () { return stooq(s); });
       return p.then(function (r) { cotacoes[s] = r; if (aoChegar) { try { aoChegar(s, r); } catch (e) { /* tela */ } } },
         function (e) { erros[s] = e.message || "falhou"; });
