@@ -64,7 +64,34 @@
   // escala com folga em cima (para os valores escritos acima das barras e dos
   // pontos não serem cortados), sempre a partir de zero e em números redondos
   // (R$ 5k, 10k, 20k…): o Chart.js arredondava a folga para baixo
-  function topoComFolga(fracao) {
+  // os valores cabem na horizontal? (espaço de cada barra ou ponto, em px:
+  // "R$ 9,4 mil" ocupa ~55 px) — senão ficam inclinados
+  function espacoPorValor(grafico, porMes) {
+    var largura = grafico.chartArea ? grafico.chartArea.right - grafico.chartArea.left : (grafico.width || 300) - 80;
+    return largura / Math.max(1, grafico.data.labels.length * porMes);
+  }
+  // na horizontal com ≥ 34 px por valor (os que se encostariam sobem uma
+  // linha, em escada); abaixo disso (celular) ficam inclinados
+  function cabeHorizontal(grafico, porMes) { return espacoPorValor(grafico, porMes) >= 34; }
+  // escreve os valores na horizontal, centralizados em x; quando um encostaria
+  // num já escrito, sobe uma linha (até 4 vezes)
+  function escreverSemEncostar(ctx, itens, area, alturaLinha) {
+    var postos = [];
+    itens.slice().sort(function (a, b) { return a.x - b.x; }).forEach(function (it) {
+      var larg = ctx.measureText(it.txt).width, y = it.y;
+      for (var k = 0; k < 5; k++) {
+        var r = { x0: it.x - larg / 2 - 2, x1: it.x + larg / 2 + 2, y0: y - alturaLinha, y1: y };
+        var bate = postos.some(function (p) { return r.x0 < p.x1 && r.x1 > p.x0 && r.y0 < p.y1 && r.y1 > p.y0; });
+        if (!bate) break;
+        y -= alturaLinha + 1;
+      }
+      postos.push({ x0: it.x - larg / 2 - 2, x1: it.x + larg / 2 + 2, y0: y - alturaLinha, y1: y });
+      ctx.fillStyle = it.cor;
+      ctx.fillText(it.txt, it.x, y);
+    });
+  }
+  // porMes: quantos valores por mês (2 nas barras de receitas x despesas, 1 na linha)
+  function topoComFolga(fracao, porMes) {
     var passoRedondo = function (bruto) {
       var pot = Math.pow(10, Math.floor(Math.log10(bruto))), n = bruto / pot;
       return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10) * pot;
@@ -76,7 +103,10 @@
         if (!(max > min)) return;
         // em gráfico baixo, a folga em pixels precisa caber o valor inclinado
         // (~58 px de altura): a fração cresce o quanto for preciso
-        var plot = Math.max(40, (sc.chart.height || 200) - 46), PRECISA = plot < 150 ? 44 : 58;   // baixo: texto mais em pé (valoresRD)
+        var plot = Math.max(40, (sc.chart.height || 200) - 46);
+        var esp = espacoPorValor(sc.chart, porMes || 1);
+        // na horizontal precisa de pouco (uma linha, ou algumas em escada); inclinado, mais
+        var PRECISA = esp >= 60 ? 18 : esp >= 34 ? 40 : plot < 150 ? 44 : 58;
         if (plot > PRECISA + 10) fracao = Math.max(fracao, PRECISA / (plot - PRECISA));
         var alvo = max + (max - min) * fracao, passo = passoRedondo((alvo - min) / 5);
         sc.min = Math.floor(min / passo) * passo;
@@ -115,11 +145,14 @@
     afterDatasetsDraw: function (grafico) {
       var ctx = grafico.ctx, area = grafico.chartArea;
       // colunas estreitas (celular): letra menor e texto mais em pé
+      // na horizontal quando cabe; senão inclinado (mais em pé em colunas estreitas)
+      var deitado = cabeHorizontal(grafico, 2);
       var estreito = (area.right - area.left) / Math.max(1, grafico.data.labels.length) < 40 || area.bottom - area.top < 110;
       var angulo = estreito ? -Math.PI * 0.42 : -Math.PI / 3;
       ctx.save();
-      ctx.font = "700 " + (estreito ? 9 : 10) + "px 'Segoe UI', Roboto, Inter, sans-serif";
-      ctx.textBaseline = "middle"; ctx.textAlign = "left";
+      ctx.font = "700 " + (estreito || (deitado && espacoPorValor(grafico, 2) < 60) ? 9 : 10) + "px 'Segoe UI', Roboto, Inter, sans-serif";
+      ctx.textBaseline = deitado ? "bottom" : "middle"; ctx.textAlign = deitado ? "center" : "left";
+      var itens = [];
       [0, 1].forEach(function (ds) {
         var meta = grafico.getDatasetMeta(ds);
         if (!meta || meta.hidden) return;
@@ -128,6 +161,7 @@
         meta.data.forEach(function (b, i) {
           var v = Number(dados[i]);
           if (!b || !(v > 0)) return;
+          if (deitado) { itens.push({ x: b.x, y: Math.max(area.top + 12, b.y - 4), txt: valorCurto(v), cor: ds === 0 ? CORES.up : CORES.down }); return; }
           ctx.save();
           ctx.translate(b.x, Math.max(area.top + 2, b.y - 5));
           ctx.rotate(angulo);   // inclinado (60°; 75° em colunas estreitas)
@@ -135,6 +169,7 @@
           ctx.restore();
         });
       });
+      if (itens.length) escreverSemEncostar(ctx, itens, area, 11);
       ctx.restore();
     }
   };
@@ -271,7 +306,7 @@
         layout: { padding: { bottom: 4 } },
         scales: { x: eixoX({ ticks: { color: function (c) { return (c.tick ? c.tick.value : c.index) === mesAtualIdx ? "#FFC64A" : CORES.cy; }, font: fonte(10.5), maxRotation: 0, autoSkip: false, padding: 9, callback: function (v) { return nomeMesEixo(this, v); } } }),
           // folga em cima para o valor inclinado da barra mais alta (valoresRD)
-          y: eixoY(topoComFolga(0.38)) },
+          y: eixoY(topoComFolga(0.12, 2)) },
         plugins: {
           legend: { display: !(opcoes && opcoes.semLegenda), position: "top", align: "end", labels: { color: CORES.texto, font: fonte(10.5), boxWidth: 8, boxHeight: 8, usePointStyle: true, pointStyle: "circle" } },
           tooltip: tooltipPadrao({ callbacks: { label: function (c) { return " " + c.dataset.label + ": " + moeda(c.parsed.y); } } })
@@ -415,7 +450,7 @@
         layout: { padding: { bottom: 4, right: 40 } },
         scales: { x: eixoX({ ticks: { color: function (c) { return (c.tick ? c.tick.value : c.index) === mesAtualIdx ? "#FFC64A" : CORES.cy; }, font: fonte(10.5), maxTicksLimit: 12, maxRotation: 0, padding: 9, callback: function (v) { return nomeMesEixo(this, v); } } }),
           // folga em cima para o valor inclinado do ponto mais alto (valoresEvolucao)
-          y: eixoY(topoComFolga(0.3)) },
+          y: eixoY(topoComFolga(0.12, 1)) },
         plugins: { legend: { display: false }, tooltip: tooltipPadrao({ callbacks: {
           label: function (c) { return " Patrimônio: " + moeda(c.parsed.y) + (c.dataIndex === iPico ? "  🏆 pico" : ""); },
           afterLabel: function (c) {
@@ -434,20 +469,30 @@
           if (!meta || meta.data.length < 2) return;
           var passo = (area.right - area.left) / (meta.data.length - 1);
           if (passo < 20) return;   // muitos meses ("Tudo"): ficaria embolado
+          var deitado = cabeHorizontal(grafico, 1);
           var estreito = passo < 40 || area.bottom - area.top < 110;
           c.save();
-          c.font = "700 " + (estreito ? 9 : 10) + "px 'Segoe UI', Roboto, Inter, sans-serif";
-          c.textBaseline = "middle"; c.textAlign = "left";
+          c.font = "700 " + (estreito || (deitado && espacoPorValor(grafico, 1) < 60) ? 9 : 10) + "px 'Segoe UI', Roboto, Inter, sans-serif";
+          c.textBaseline = deitado ? "bottom" : "middle"; c.textAlign = deitado ? "center" : "left";
+          var itensEvo = [];
           meta.data.forEach(function (pt, i) {
             if (i === iPico || !pt) return;
             var v = serie[i].valor;
             c.fillStyle = i === 0 ? "#FFFFFF" : (v >= serie[i - 1].valor ? CORES.up : CORES.down);
+            var txt = (v < 0 ? "−" : "") + valorCurto(Math.abs(v));
+            if (deitado) {
+              // na horizontal, sem sair pelas bordas do gráfico
+              var meia = c.measureText(txt).width / 2, x = Math.min(area.right + 30 - meia, Math.max(area.left - 20 + meia, pt.x));
+              itensEvo.push({ x: x, y: Math.max(area.top + 12, pt.y - 8), txt: txt, cor: c.fillStyle });
+              return;
+            }
             c.save();
             c.translate(pt.x + 2, Math.max(area.top + 2, pt.y - 9));
             c.rotate(estreito ? -Math.PI * 0.42 : -Math.PI / 3);
             c.fillText((v < 0 ? "−" : "") + valorCurto(Math.abs(v)), 0, 0);   // −R$ 9,7 mil
             c.restore();
           });
+          if (itensEvo.length) escreverSemEncostar(c, itensEvo, area, 11);
           c.restore();
         }
       }, {
