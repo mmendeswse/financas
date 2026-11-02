@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.435";
+  const VERSAO_APP = "3.6.436";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -378,7 +378,7 @@
 
   let mesesBancos = 0;
   let anoBancos = null;   // período do gráfico da guia Bancos (0 = saldo atual)
-  let mesesRelA = 12;   // período do quadro Receitas x despesas
+  let mesesRelA = 0;    // período do quadro Receitas x despesas (abre em "Tudo")
   let mesesRelB = 0;    // período do quadro Evolução patrimonial (abre em "Tudo")
   let anoRelA = null;
   let anoRelB = null;
@@ -581,7 +581,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.435 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.436 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -1644,7 +1644,7 @@
       anoEvo = String(new Date().getFullYear()); mesesEvo = 0;   // evolução patrimonial sempre em "Tudo"
     }
     if (secao === "relatorios") {
-      anoRelA = String(new Date().getFullYear()); mesesRelA = 12;
+      anoRelA = String(new Date().getFullYear()); mesesRelA = 0;   // receitas x despesas sempre em "Tudo"
       anoRelB = String(new Date().getFullYear()); mesesRelB = 0;   // evolução patrimonial sempre em "Tudo"
     }
     document.querySelectorAll("#navPrincipal button").forEach((b) => b.classList.toggle("ativo", b.dataset.secao === secao));
