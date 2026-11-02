@@ -148,7 +148,7 @@
     if (!MESES_INTEIROS[chave]) return rot;   // datas (dd/mm/aaaa) ficam como estão
     var g = eixo.chart, n = Math.max(1, Math.min(g.data.labels.length, eixo.options.ticks.maxTicksLimit || 99));
     var espaco = ((g.chartArea && g.chartArea.right - g.chartArea.left) || g.width - 70) / n;
-    return espaco >= 88 ? MESES_INTEIROS[chave] : chave.charAt(0).toUpperCase() + chave.slice(1);
+    return espaco >= 76 ? MESES_INTEIROS[chave] : chave.charAt(0).toUpperCase() + chave.slice(1);
   }
 
   // nomes dos meses embaixo do gráfico desenhados como botões (fundo e contorno
