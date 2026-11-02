@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.455";
+  const VERSAO_APP = "3.6.456";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -581,7 +581,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.455 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.456 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -3925,14 +3925,10 @@
         <div class="c4 dash-metas">${card("", "Metas", resumoMetas(d), `<div class="filtro-mes">` + abasMeses("periodo-metas", periodoMetas, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }]) + `</div>`, metasMini(d))}</div>
       </div>
 
-      <!-- Receitas x despesas na largura toda, do mesmo tamanho da Evolução patrimonial -->
+      <!-- Receitas x despesas na largura toda -->
       <div class="grid">
         <div class="c12">${card("", "Receitas x despesas", `${mesesRD} ${mesesRD === 1 ? "mês" : "meses"} de ${anoRD}`,
           `<div class="filtro-mes">${LEGENDA_RD}${abasMeses("periodo-rd", mesesRD, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }])}</div>`, `<div class="grafico-cheio" style="padding:8px 14px 12px;height:280px;flex:none"><div class="grafico-cheio-area"><canvas id="graf-receitas-despesas"></canvas></div></div>`)}</div>
-      </div>
-
-      <div class="grid">
-        <div class="c12">${cardEvolucaoPatrimonial(d, { canvas: "graf-evolucao", acao: "periodo-evo", meses: mesesEvo, ano: anoEvo })}</div>
       </div>
 
       ${stripKpis([
@@ -8956,11 +8952,7 @@
       case "dashboard": {
         ajustarRolagemMetas();
         if (!anoRD) anoRD = String(new Date().getFullYear());
-        if (!anoEvo) anoEvo = String(new Date().getFullYear());
-        const hist = historicoEvo(d);
-        if (hist.length < 2) break;
-        if (hist.length >= 2) G.renderEvolucaoPatrimonio("graf-evolucao", hist, { aoClicar: explicarPatrimonio });
-        else G.destruir("graf-evolucao");
+        // Evolução patrimonial saiu do Dashboard (continua em Relatórios)
         G.renderReceitasDespesas("graf-receitas-despesas", serieRD(d), { aoClicar: explicarMes, semLegenda: window.innerWidth > 600 });   // a legenda fica no cabeçalho
         if (itensPatrimonio(d).length) G.renderDoughnutGenerico("graf-dash-composicao", itensPatrimonio(d), { semLegenda: true, aoClicar: (item) => explicarClasse(item.rotulo) });
         break;
