@@ -3159,8 +3159,25 @@ body.av-aberta { overflow: hidden; }
 @media (min-width: 861px) and (max-width: 1280px) {
   .grid > .dash-metas { grid-column: span 12; }
   .dash-metas .metas-lista { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .dash-metas .meta-situacao-meio .sit-longo { display: none; }
+  .dash-metas .meta-situacao-meio .sit-curto { display: inline; }
+  /* guardado e o que falta numa linha; a situação embaixo, numa linha só, na largura toda */
+  .dash-metas .meta-rodape-3 { grid-template-columns: auto auto; justify-content: space-between; row-gap: 3px; }
+  .dash-metas .meta-rodape-3 .meta-falta-valor { grid-column: 2; grid-row: 1; justify-self: end; }
+  .dash-metas .meta-rodape-3 .meta-situacao-meio { grid-column: 1 / -1; grid-row: 2; justify-self: start; letter-spacing: .03em;
+    white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
 }
 @media (hover: none) and (pointer: coarse) and (min-width: 861px) and (max-width: 1800px) {
   .grid > .dash-metas { grid-column: span 12; }
   .dash-metas .metas-lista { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .dash-metas .meta-situacao-meio .sit-longo { display: none; }
+  .dash-metas .meta-situacao-meio .sit-curto { display: inline; }
+  /* guardado e o que falta numa linha; a situação embaixo, numa linha só, na largura toda */
+  .dash-metas .meta-rodape-3 { grid-template-columns: auto auto; justify-content: space-between; row-gap: 3px; }
+  .dash-metas .meta-rodape-3 .meta-falta-valor { grid-column: 2; grid-row: 1; justify-self: end; }
+  .dash-metas .meta-rodape-3 .meta-situacao-meio { grid-column: 1 / -1; grid-row: 2; justify-self: start; letter-spacing: .03em;
+    white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
 }
+/* situação da meta: a frase completa; nas metas lado a lado do Dashboard
+   (iPad), a versão curta numa linha só */
+.meta-situacao-meio .sit-curto { display: none; }
