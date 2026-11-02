@@ -217,6 +217,9 @@
     if (!disponivel()) return;
     const d = app.dados(), c = cfg(d);
     if (!c.ativa || d.demo || st.rodando || c.ultimoHash === hashTudo(d)) return;
+    // aparelho que nunca entrou no Google: não pede a conta sozinho — a
+    // mudança chega pela sincronização ao aparelho onde a agenda foi conectada
+    if (!conectadoAqui()) return;
     const t = tokenValido();
     if (t) { enviar(t).catch(() => {}); return; }
     // sem um toque do usuário o navegador bloquearia a janelinha do Google
@@ -249,7 +252,7 @@
   // há mudanças que ainda não foram para a agenda
   // a agenda é da conta (config.agenda sincroniza): qualquer aparelho pode atualizá-la
   function pendente(d) { d = d || app.dados(); const c = cfg(d); return c.ativa && !d.demo && c.ultimoHash !== hashTudo(d); }
-  function precisaToque(d) { return disponivel() && pendente(d) && !tokenValido() && !st.rodando; }
+  function precisaToque(d) { return disponivel() && conectadoAqui() && pendente(d) && !tokenValido() && !st.rodando; }
   function definirItem(k, ligado) { const d = app.dados(); cfg(d).itens[k] = !!ligado; app.salvar(d); }
 
   global.Agenda = { configurar, atualizarJa, preparar, disponivel, conectadoAqui, cfg, conectar, desconectar, enviarComToque, talvezEnviar, pendente, precisaToque, definirItem, estado: st };
