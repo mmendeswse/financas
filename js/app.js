@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.423";
+  const VERSAO_APP = "3.6.424";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -581,7 +581,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.423 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.424 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -3718,8 +3718,11 @@
     ajustarLarguraHistorico();
   }
 
-  function explicarMes(ponto) {
+  // tipo: "receitas" (barra verde) ou "despesas" (barra vermelha) mostram só
+  // aquele lado do mês; sem tipo (nome do mês), as duas, como antes
+  function explicarMes(ponto, tipo) {
     if (!ponto || !ponto.mes) return;
+    if (tipo === "receitas" || tipo === "despesas") { explicarMesTipo(ponto, tipo); return; }
     const d = DADOS;
     const mes = ponto.mes;
     painelReabrir = () => explicarMes(ponto);   // redesenha depois de trocar status/banco
@@ -3755,6 +3758,41 @@
   }
 
 
+
+  // só as receitas ou só as despesas do mês (barra verde / barra vermelha do gráfico)
+  function explicarMesTipo(ponto, tipo) {
+    const d = DADOS, mes = ponto.mes, ehRec = tipo === "receitas";
+    painelReabrir = () => explicarMesTipo(ponto, tipo);   // redesenha depois de trocar status/banco
+    const linha = (r, v, c) => `<div class="kv"><span class="dim">${rotuloPainel(r)}</span><b class="${c || ""}">${v}</b></div>`;
+    const itens = (ehRec ? listaEntradasTodasMes(d, mes) : listaDespesasTodasMes(d, mes))
+      .sort((a, b) => String(a.data || "").localeCompare(String(b.data || "")) || (ehRec ? F.ordemNoDia(a) - F.ordemNoDia(b) : 0));
+    const sinal = ehRec ? "+" : "−", cor = ehRec ? "up" : "down";
+    const linhaItem = (it) => linhaEditavel(it, linha(descPainel(it),
+      `<span class="col-rep">${repColuna(it, it.data)}</span>` + seloStatusPainel(it.status, it) + bancoPainel(it.banco, it) + `<span class="col-valor valor-guia ${cor}">${sinal}${brl(it.valor)}</span>`));
+    // pagas (o que conta no mês), previstas (ainda não pagas) e o total
+    const pagas = ehRec ? totalEntradasEfetivas(d, mes) : totalDespesasPagasMes(d, mes);
+    const total = itens.reduce((t, x) => t + Number(x.valor || 0), 0), previstas = Math.max(0, total - pagas);
+    const [a, m] = mes.split("-").map(Number), ant = new Date(a, m - 2, 1);
+    const mesAnt = `${ant.getFullYear()}-${String(ant.getMonth() + 1).padStart(2, "0")}`;
+    const totE = totalEntradasEfetivas(d, mes);
+    const pct = ehRec ? F.variacaoPercentual(pagas, totalEntradasEfetivas(d, mesAnt)) : (totE > 0 ? (pagas / totE) * 100 : 0);
+    const nomeMes = new Date(mes + "-01T00:00:00").toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+    painelSimples(`${ehRec ? "Receitas" : "Despesas"} · ${nomeMes.charAt(0).toUpperCase() + nomeMes.slice(1)}`,
+      pct, ehRec ? "de variação em relação ao mês anterior" : "das receitas do mês foram gastas",
+      ehRec ? "soma das entradas pagas no mês (as previstas aparecem à parte)" : "soma das despesas pagas no mês (as previstas aparecem à parte)",
+      cabecalhoColunasPainel() +
+      (itens.length ? itens.map(linhaItem).join("") : `<div class="kv"><span class="dim">${ehRec ? "Nenhuma receita no mês" : "Nenhuma despesa no mês"}</span><b>—</b></div>`) +
+      `<div class="extrato-tabela rodape-painel"><div class="extrato-resumo">
+        ${celResumo("Pagas", "Pag.", pagas, pagas > 0 ? sinal : "", cor + " fluxo")}
+        ${celResumo("Previstas", "Prev.", previstas, previstas > 0 ? sinal : "", "dim")}
+        ${celResumo("Total", "Tot.", total, total > 0 ? sinal : "", cor)}
+      </div></div>`,
+      ehRec ? "entradas" : "despesas",
+      { rotulo: "Abrir", acao: () => { navegarPara(ehRec ? "entradas" : "despesas"); if (ehRec) mesEntradas = mes; else mesDespesas = mes; renderRota(); } });
+    if (!ehRec) return;
+    // receita menor que a do mês anterior: o percentual aparece com "−" e em vermelho
+    if (pct < 0) { const b = document.querySelector("#modal .explica-pct b"); if (b) { b.textContent = "−" + b.textContent; b.classList.add("down"); } }
+  }
 
   // Painel do quadro "Evolução patrimonial": detalha o ponto clicado —
   // quanto o patrimônio variou desde o mês anterior e desde o começo do
