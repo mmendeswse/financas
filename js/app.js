@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.420";
+  const VERSAO_APP = "3.6.421";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -581,7 +581,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.420 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.421 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -1010,12 +1010,12 @@
     const pend = AG.pendente(DADOS), aqui = AG.conectadoAqui();
     const est = st.erro ? `<div class="sync-estado"><span class="sync-ponto erro"></span><b>Não atualizou</b><span class="dim">${esc(st.erro)}</span></div>`
       : st.rodando ? `<div class="sync-estado"><span class="sync-ponto rodando"></span><b>Atualizando a agenda…</b></div>`
-      : !aqui ? `<div class="sync-estado"><span class="sync-ponto ligado"></span><b>Conectada em outro aparelho</b><span class="dim">${pend ? "mudanças a caminho" : c.ultimaVez ? quandoSync(c.ultimaVez) : ""}</span></div>`
+      : !aqui ? `<div class="sync-estado"><span class="sync-ponto ${AG.pedidoPendente(c) ? "rodando" : "ligado"}"></span><b>${AG.pedidoPendente(c) ? "Atualização pedida" : "Conectada em outro aparelho"}</b><span class="dim">${AG.pedidoPendente(c) ? "aguardando o aparelho conectado" : pend ? "mudanças a caminho" : c.ultimaVez ? quandoSync(c.ultimaVez) : ""}</span></div>`
       : `<div class="sync-estado"><span class="sync-ponto ${pend ? "erro" : "ligado"}"></span><b>${pend ? "Há mudanças para enviar" : "Agenda em dia"}</b><span class="dim">${c.ultimaVez ? quandoSync(c.ultimaVez) : ""}${st.msg ? " · " + esc(st.msg) : ""}</span></div>`;
     const resumo = c.totalEventos != null ? `<p class="cfg-info"><b>${c.totalEventos}</b> ${c.totalEventos === 1 ? "evento" : "eventos"} na agenda${c.semFim ? " · as que se repetem seguem <b>sem fim</b>" : c.ate ? ` · até <b>${new Date(c.ate + "T12:00:00").toLocaleDateString("pt-BR", { month: "short", year: "numeric" }).replace(".", "")}</b>` : ""}${pend && aqui ? " — toque em <b>Atualizar</b> para enviar as mudanças" : ""}</p>` : "";
     // aparelho que não entrou no Google (o Google guarda a autorização em cada
     // aparelho): não precisa — quem atualiza a agenda é o aparelho conectado
-    const outro = aqui ? "" : `<p class="cfg-info">Não precisa entrar no Google aqui: o que você muda neste aparelho chega ao aparelho conectado pela sincronização e vai para a agenda quando o sistema for aberto nele.</p>`;
+    const outro = aqui ? "" : `<p class="cfg-info">A agenda foi conectada em outro aparelho: aqui, <b>Atualizar</b> pede para ele atualizar (pela sincronização), sem entrar no Google neste aparelho. Ele atualiza quando o sistema estiver aberto nele.</p>`;
     // as explicações pequenas são as primeiras a sair quando falta espaço
     const item = (k, rot, sub) => `<label class="chk-linha ag-item"><input type="checkbox" data-ag-item="${k}" ${c.itens[k] ? "checked" : ""}> <span>${rot}<small class="cfg-opc" data-opc="8">${sub}</small></span></label>`;
     return `${est}
@@ -1026,7 +1026,7 @@
       ${item("receitas", "💰 Receitas previstas", "inclusive as que se repetem; no dia previsto")}
       ${item("metas", "🎯 Prazos das metas", "com alerta uma semana antes")}
       <p class="cfg-info cfg-opc" data-opc="1">Não aparece? No Google Agenda, deixe marcada a agenda <b>“${esc(nomeApp())} Finanças”</b> em <b>Minhas agendas</b>. <a class="ag-link" href="https://calendar.google.com/" target="_blank" rel="noopener">Abrir o Google Agenda ↗</a></p>
-      <div class="cfg-acoes"><button class="btn primario" data-acao="agenda-enviar" ${aqui ? "" : 'title="O Google pede para escolher a conta uma vez neste aparelho"'}>${aqui ? "Atualizar" : "Autorizar aqui"}</button>
+      <div class="cfg-acoes"><button class="btn primario" data-acao="agenda-enviar">Atualizar</button>
         <button class="btn perigo" data-acao="agenda-desligar">Desconectar</button></div>`;
   }
   function atualizarCartaoAgenda() {
@@ -1051,6 +1051,13 @@
         .catch((e) => { toast(e.message); atualizarCartaoAgenda(); });
     },
     "agenda-enviar": () => {
+      // aparelho que não entrou no Google: pede ao aparelho conectado, pela sincronização
+      if (!AG.conectadoAqui()) {
+        AG.pedirAoConectado();
+        sincronizar(true);
+        toast(S.conectado() ? "Pedido enviado: o aparelho onde a agenda foi conectada atualiza assim que o sistema estiver aberto nele." : "Ligue a Sincronização para pedir a atualização ao aparelho onde a agenda foi conectada.");
+        return;
+      }
       AG.enviarComToque().then(() => toast("Google Agenda atualizado" + (AG.estado.msg && AG.estado.msg !== "nada mudou" ? ": " + AG.estado.msg : "") + "."))
         .catch((e) => { toast(e.message); atualizarAvisoAgenda(); });
     },
