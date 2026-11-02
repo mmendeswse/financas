@@ -71,6 +71,42 @@
   // ---------------------------------------------------------------------
   // Receitas x despesas por mês (barras agrupadas — verde x rosa)
   // ---------------------------------------------------------------------
+  // nomes dos meses embaixo do gráfico desenhados como botões (fundo e contorno
+  // ciano), para ficar claro que dá para tocar e ver o mês; o que está sob o
+  // mouse fica mais forte
+  var botoesMesRD = {
+    id: "botoesMesRD",
+    beforeDraw: function (grafico) {   // antes dos eixos: o nome do mês fica por cima do botão
+      var eixo = grafico.scales.x, ctx = grafico.ctx;
+      if (!eixo || !eixo.ticks || !eixo.ticks.length) return;
+      var fonteTick = Chart.helpers.toFont(eixo.options.ticks.font);
+      ctx.save();
+      ctx.font = fonteTick.string;
+      var passo = eixo.ticks.length > 1 ? Math.abs(eixo.getPixelForTick(1) - eixo.getPixelForTick(0)) : 60;
+      // posição real de cada texto (o Chart.js já calculou onde vai desenhar)
+      var itens = eixo.getLabelItems ? eixo.getLabelItems() : [];
+      eixo.ticks.forEach(function (t, i) {
+        var rot = String(eixo.getLabelForValue(t.value));
+        var it = itens[i], ty = it ? it.options.translation[1] : eixo.top + eixo.options.ticks.padding;
+        var base = it ? it.options.textBaseline : "top";
+        // no eixo de baixo o Chart.js desenha o texto meia linha abaixo do ponto informado
+        var meioY = (base === "bottom" ? ty - fonteTick.lineHeight / 2 : ty) + fonteTick.lineHeight / 2;
+        var larg = Math.min(passo - 3, ctx.measureText(rot).width + 12), alt = fonteTick.lineHeight + 6;
+        var x = eixo.getPixelForTick(i) - larg / 2, y = meioY - alt / 2;
+        var forte = grafico._mesHover === i, atual = grafico.$mesAtual === i;
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(x, y, larg, alt, 6); else ctx.rect(x, y, larg, alt);
+        // mês atual em dourado; os outros em ciano
+        var rgb = atual ? "255,198,74" : "0,229,255";
+        ctx.fillStyle = "rgba(" + rgb + "," + (forte ? 0.24 : atual ? 0.14 : 0.07) + ")";
+        ctx.strokeStyle = "rgba(" + rgb + "," + (forte ? 0.95 : atual ? 0.75 : 0.35) + ")";
+        ctx.lineWidth = 1;
+        ctx.fill(); ctx.stroke();
+      });
+      ctx.restore();
+    }
+  };
+
   // o que está embaixo do toque: { indice do mês, tipo: "receitas" | "despesas" | null }
   // — a barra conta com uma folga em volta (barras baixas são difíceis de acertar no toque);
   // o nome do mês embaixo do gráfico e o resto da coluna dão tipo null (as duas)
@@ -97,10 +133,14 @@
   }
   function renderReceitasDespesas(canvasId, serie, opcoes) {
     opcoes = opcoes || {};
+    // posição do mês atual no gráfico (o botão dele fica em dourado)
+    var hojeD = new Date(), mesHoje = hojeD.getFullYear() + "-" + String(hojeD.getMonth() + 1).padStart(2, "0");
+    var mesAtualIdx = serie.findIndex(function (s) { return s.mes === mesHoje; });
     destruir(canvasId);
     var ctx = ctxOf(canvasId); if (!ctx) return;
     instancias[canvasId] = new Chart(ctx, {
       type: "bar",
+      plugins: [botoesMesRD],
       data: {
         labels: serie.map(function (s) { return s.rotulo; }),
         datasets: [
@@ -121,7 +161,9 @@
         onHover: function (evt, elementos, grafico) {
           if (evt && evt.native && evt.native.target) evt.native.target.style.cursor = (opcoes.aoClicar && alvoRD(evt, grafico || this)) ? "pointer" : "default";
         },
-        scales: { x: eixoX(), y: eixoY() },
+        // nomes dos meses como botões (ver botoesMesRD): na horizontal, com espaço em volta
+        layout: { padding: { bottom: 4 } },
+        scales: { x: eixoX({ ticks: { color: function (c) { return c.index === mesAtualIdx ? "#FFC64A" : CORES.cy; }, font: fonte(10.5), maxRotation: 0, autoSkip: false, padding: 9 } }), y: eixoY() },
         plugins: {
           legend: { display: !(opcoes && opcoes.semLegenda), position: "top", align: "end", labels: { color: CORES.texto, font: fonte(10.5), boxWidth: 8, boxHeight: 8, usePointStyle: true, pointStyle: "circle" } },
           tooltip: tooltipPadrao({ callbacks: { label: function (c) { return " " + c.dataset.label + ": " + moeda(c.parsed.y); } } })
@@ -130,6 +172,8 @@
     });
     // o Chart.js só avisa cliques dentro da área das barras: o nome do mês,
     // embaixo, é tratado aqui (abre receitas e despesas do mês, como antes)
+    instancias[canvasId].$mesAtual = mesAtualIdx;
+    instancias[canvasId].draw();
     var tela = instancias[canvasId].canvas;
     if (tela._rdClique) tela.removeEventListener("click", tela._rdClique);
     if (tela._rdMove) tela.removeEventListener("mousemove", tela._rdMove);
@@ -140,7 +184,17 @@
       return alvoRD({ x: x, y: y }, g);
     };
     tela._rdClique = function (e) { if (!opcoes.aoClicar) return; var a = foraDaArea(e); if (a) opcoes.aoClicar(serie[a.indice], a.tipo); };
-    tela._rdMove = function (e) { var r = tela.getBoundingClientRect(); var g = instancias[canvasId]; if (!g || !g.chartArea || e.clientY - r.top <= g.chartArea.bottom) return; tela.style.cursor = opcoes.aoClicar && foraDaArea(e) ? "pointer" : "default"; };
+    tela._rdMove = function (e) {
+      var r = tela.getBoundingClientRect(); var g = instancias[canvasId]; if (!g || !g.chartArea) return;
+      var a = e.clientY - r.top > g.chartArea.bottom ? foraDaArea(e) : null;
+      var antes = g._mesHover; g._mesHover = a ? a.indice : null;
+      if (antes !== g._mesHover) g.draw();   // realça o botão do mês sob o mouse
+      if (e.clientY - r.top <= g.chartArea.bottom) return;
+      tela.style.cursor = opcoes.aoClicar && a ? "pointer" : "default";
+    };
+    if (tela._rdSai) tela.removeEventListener("mouseleave", tela._rdSai);
+    tela._rdSai = function () { var g = instancias[canvasId]; if (g && g._mesHover != null) { g._mesHover = null; g.draw(); } };
+    tela.addEventListener("mouseleave", tela._rdSai);
     tela.addEventListener("click", tela._rdClique);
     tela.addEventListener("mousemove", tela._rdMove);
   }
