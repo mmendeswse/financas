@@ -186,6 +186,7 @@
       c.ultimoHash = hashTudo(d); c.ultimaVez = new Date().toISOString(); c.ativa = true;
       // resumo para a tela (vale em todos os aparelhos): quantos eventos e até quando
       c.totalEventos = lista.length;
+      c.semFim = lista.some((x) => x.corpo.recurrence);
       c.ate = lista.reduce((m, x) => { const dt = String(x.corpo.start.dateTime || "").slice(0, 10); return dt > m ? dt : m; }, "");
       app.salvar(d);
       st.msg = n.novos + n.mudados + n.removidos ? `${n.novos ? n.novos + " adicionados" : ""}${n.mudados ? (n.novos ? ", " : "") + n.mudados + " atualizados" : ""}${n.removidos ? (n.novos || n.mudados ? ", " : "") + n.removidos + " removidos" : ""}` : "nada mudou";
