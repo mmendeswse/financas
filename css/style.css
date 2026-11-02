@@ -3073,9 +3073,7 @@ body.av-aberta { overflow: hidden; }
 .av-rodape { margin: 34px 0 0; font-size: 12px; color: #8a9aa6; line-height: 1.5; text-align: center; }
 .av-rodape a { color: #c7d0d6; }
 
-/* logotipo com o avatar do perfil e o nome ao lado */
-.logo-mark.com-avatar .logo-avatar { width: 100%; height: 100%; font-size: clamp(12px, 1vw, 16px); box-shadow: 0 0 0 2px var(--cy); }
-.logo-mark.com-avatar .logo-avatar .av-emoji { font-size: clamp(16px, 1.4vw, 23px); }
+/* nome do perfil ao lado do logotipo */
 .logo-txt b { display: block; max-width: 22ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* quadro Google Agenda */

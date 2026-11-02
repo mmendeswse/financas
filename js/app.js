@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.404";
+  const VERSAO_APP = "3.6.405";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -36,20 +36,11 @@
     const p = DADOS && DADOS.config && DADOS.config.perfil;
     return (p && String(p.nome || "").trim()) || nomeAntigoAparelho() || NOME_PADRAO;
   }
-  let logoOriginal = null;
   function aplicarNomeApp() {
     const n = nomeApp();
     document.title = n;   // aba do navegador: o nome do perfil
     document.querySelectorAll(".logo-txt b").forEach((b) => { b.textContent = n; });
     const rod = document.getElementById("rodapeNome"); if (rod) rod.textContent = `${n} v1.0`;
-    // logotipo: o avatar do perfil (foto, personagem ou emoji); sem avatar, o ícone do programa
-    const marca = document.querySelector(".logo .logo-mark");
-    if (!marca) return;
-    if (logoOriginal == null) logoOriginal = marca.innerHTML;
-    const p = (DADOS && DADOS.config && DADOS.config.perfil) || {}, av = p.avatar || {};
-    const comAvatar = window.Avatar && ((av.img && av.img.src) || av.emoji);
-    marca.classList.toggle("com-avatar", !!comAvatar);
-    marca.innerHTML = comAvatar ? Avatar.circuloHTML("logo-avatar", p) : logoOriginal;
   }
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
@@ -589,7 +580,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.404 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.405 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -869,7 +860,7 @@
     btn.dataset.sync = sit.cls;
     if (ass === assinaturaPerfil) return;
     assinaturaPerfil = ass;
-    aplicarNomeApp();   // logotipo com o avatar e o nome do perfil
+    aplicarNomeApp();   // nome do perfil ao lado do logotipo
     btn.innerHTML = Avatar.circuloHTML("avatar-barra", p) + `<span class="perfil-ponto" aria-hidden="true"></span>`;
     btn.title = (p.nome || "Seu perfil") + " · " + (S.conectado() ? "sincronização: " + sit.titulo.toLowerCase() : "sincronização desligada");
     preencherMenuPerfil();
