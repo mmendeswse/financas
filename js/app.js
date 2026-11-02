@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.400";
+  const VERSAO_APP = "3.6.401";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -588,7 +588,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.400 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.401 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -651,17 +651,12 @@
     if (on) {
       const venc = S.diasParaVencer();
       return `${estado}
-        ${venc != null && venc <= 30 ? `<p class="cfg-info cfg-alerta">⏳ A chave do GitHub ${venc < 0 ? "venceu" : venc === 0 ? "vence hoje" : `vence em ${venc} ${venc === 1 ? "dia" : "dias"}`}. Crie uma chave nova e toque em <b>Atualizar chave</b> (em Mais opções) — os outros aparelhos recebem sozinhos.</p>` : ""}
+        ${venc != null && venc <= 30 ? `<p class="cfg-info cfg-alerta">⏳ A chave do GitHub ${venc < 0 ? "venceu" : venc === 0 ? "vence hoje" : `vence em ${venc} ${venc === 1 ? "dia" : "dias"}`}. Crie uma chave nova e toque em <b>Atualizar chave</b> — os outros aparelhos recebem sozinhos. <button class="btn pequeno" data-acao="sync-token">Atualizar chave</button></p>` : ""}
+        ${sit.cls === "erro" && /chave do GitHub/.test(sit.detalhe || "") && !(venc != null && venc <= 30) ? `<div class="cfg-acoes"><button class="btn pequeno" data-acao="sync-token">Atualizar chave do GitHub</button></div>` : ""}
         <span class="sy-rot">Aparelhos conectados</span>
         <div id="syAparelhos">${aparelhosSyncHTML()}</div>
         <div class="cfg-acoes"><button class="btn primario" data-acao="sync-agora">Sincronizar</button>
-          <button class="btn" data-acao="sync-codigo">Adicionar aparelho</button></div>
-        <details class="sy-mais"><summary>Mais opções</summary>
-          <div class="cfg-acoes"><button class="btn pequeno" data-acao="sync-token">Atualizar chave do GitHub</button>
-            <button class="btn pequeno" data-acao="sync-trocar">Trocar código (aparelho perdido)</button>
-            <a class="btn pequeno" href="https://gist.github.com/${esc(S.ler().g)}/revisions" target="_blank" rel="noopener">Histórico no GitHub</a>
-            <button class="btn pequeno perigo" data-acao="sync-sair">Desconectar este aparelho</button></div>
-        </details>`;
+          <button class="btn" data-acao="sync-codigo">Adicionar aparelho</button></div>`;
     }
     const aviso = avisoSync();
     return `${estado}
@@ -813,7 +808,7 @@
       const id = el.dataset.id, ap = (S.estado.aparelhos || {})[id] || {};
       pedirNaJanela(`Remover “${esc(ap.nome || "aparelho")}”`, `<p style="margin-top:0">O aparelho deixa de sincronizar na próxima vez que abrir o sistema.</p>
         <label class="chk-linha"><input type="checkbox" id="sy_apagar"> <span><b>Apagar os dados dele também</b> — use se o aparelho foi perdido ou roubado.</span></label>
-        <p class="campo ajuda">Se ele foi roubado, use também <b>Trocar código</b> em “Mais opções”: aí ele perde o acesso mesmo que nunca mais abra o sistema.</p>`, "Remover",
+`, "Remover",
         (m) => S.removerAparelho(id, m.querySelector("#sy_apagar").checked).then(() => toast("Aparelho removido.")), true);
     },
     "sync-sair": () => pedirNaJanela("Desconectar este aparelho", `<p style="margin-top:0">Os dados continuam neste aparelho, mas param de sincronizar. Os outros aparelhos não são afetados.</p>`, "Desconectar",
