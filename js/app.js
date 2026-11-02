@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.421";
+  const VERSAO_APP = "3.6.422";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -581,7 +581,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.421 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.422 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -8679,7 +8679,6 @@
               const itens = [["Bancos", n(d.bancos)], ["Lançamentos", n(d.entradas) + n(d.despesas) + n(d.contasPagar)], ["Investimentos", n(d.investimentos)],
                 ["Ações", n(d.acoes)], ["Metas", n(d.metas)], ["Cartões", n(d.cartoes)]];
               return `<div class="zona-resumo">
-                <div class="zona-icone"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M24 5l19 34H5z"/><path d="M24 19v10"/><circle cx="24" cy="34" r="1.2" fill="currentColor"/></svg></div>
                 <div class="zona-contagem">${itens.map(([r, v]) => `<div><b>${v}</b><span>${r}</span></div>`).join("")}</div>
                 <div class="zona-backup">Último backup: <b>${ultimoBackup || "nenhum ainda"}</b></div>
               </div>`;
