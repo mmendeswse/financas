@@ -3164,7 +3164,7 @@ body.av-aberta { overflow: hidden; }
   /* guardado e o que falta numa linha; a situação embaixo, numa linha só, na largura toda */
   .dash-metas .meta-rodape-3 { grid-template-columns: auto auto; justify-content: space-between; row-gap: 3px; }
   .dash-metas .meta-rodape-3 .meta-falta-valor { grid-column: 2; grid-row: 1; justify-self: end; }
-  .dash-metas .meta-rodape-3 .meta-situacao-meio { grid-column: 1 / -1; grid-row: 2; justify-self: start; letter-spacing: .03em;
+  .dash-metas .meta-rodape-3 .meta-situacao-meio { grid-column: 1 / -1; grid-row: 2; justify-self: center; text-align: center; letter-spacing: .03em;
     white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
 }
 @media (hover: none) and (pointer: coarse) and (min-width: 861px) and (max-width: 1800px) {
@@ -3175,7 +3175,7 @@ body.av-aberta { overflow: hidden; }
   /* guardado e o que falta numa linha; a situação embaixo, numa linha só, na largura toda */
   .dash-metas .meta-rodape-3 { grid-template-columns: auto auto; justify-content: space-between; row-gap: 3px; }
   .dash-metas .meta-rodape-3 .meta-falta-valor { grid-column: 2; grid-row: 1; justify-self: end; }
-  .dash-metas .meta-rodape-3 .meta-situacao-meio { grid-column: 1 / -1; grid-row: 2; justify-self: start; letter-spacing: .03em;
+  .dash-metas .meta-rodape-3 .meta-situacao-meio { grid-column: 1 / -1; grid-row: 2; justify-self: center; text-align: center; letter-spacing: .03em;
     white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
 }
 /* situação da meta: a frase completa; nas metas lado a lado do Dashboard
