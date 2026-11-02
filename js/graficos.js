@@ -61,6 +61,32 @@
   function eixoY(extra) {
     return Object.assign({ grid: { color: CORES.grade }, border: { display: false, dash: [3, 3] }, ticks: { color: CORES.texto, font: fonte(10.5), callback: function (v) { return abreviaK(v); } } }, extra || {});
   }
+  // escala com folga em cima (para os valores escritos acima das barras e dos
+  // pontos não serem cortados), sempre a partir de zero e em números redondos
+  // (R$ 5k, 10k, 20k…): o Chart.js arredondava a folga para baixo
+  function topoComFolga(fracao) {
+    var passoRedondo = function (bruto) {
+      var pot = Math.pow(10, Math.floor(Math.log10(bruto))), n = bruto / pot;
+      return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10) * pot;
+    };
+    return {
+      bounds: "data",
+      afterDataLimits: function (sc) {
+        var min = Math.min(0, sc.min), max = Math.max(0, sc.max);
+        if (!(max > min)) return;
+        var alvo = max + (max - min) * fracao, passo = passoRedondo((alvo - min) / 5);
+        sc.min = Math.floor(min / passo) * passo;
+        sc.max = Math.ceil(alvo / passo) * passo;
+        sc._passoRedondo = passo;
+      },
+      afterBuildTicks: function (sc) {
+        var passo = sc._passoRedondo; if (!passo) return;
+        var t = [];
+        for (var v = sc.min; v <= sc.max + passo / 1000; v += passo) t.push({ value: Math.round(v * 100) / 100 });
+        sc.ticks = t;
+      }
+    };
+  }
   function gradiente(ctx, cor, altura) {
     var g = ctx.createLinearGradient(0, 0, 0, altura || 220);
     g.addColorStop(0, cor + "66");
@@ -73,11 +99,12 @@
   // ---------------------------------------------------------------------
   // valor de cada barra escrito logo acima dela, inclinado, na cor da barra
   // (forma curta: 9,8 mil · 750), para caber mesmo com 12 meses lado a lado
+  // sempre com "R$" (também abaixo de mil): R$ 775 · R$ 9,4 mil · R$ 1,2 mi
   function valorCurto(v) {
     var a = Math.abs(v);
-    if (a >= 1e6) return (v / 1e6).toFixed(a >= 1e7 ? 0 : 1).replace(".", ",").replace(/,0$/, "") + " mi";
-    if (a >= 1e3) return (v / 1e3).toFixed(a >= 1e4 ? 0 : 1).replace(".", ",").replace(/,0$/, "") + " mil";
-    return String(Math.round(v));
+    if (a >= 1e6) return "R$ " + (v / 1e6).toFixed(a >= 1e7 ? 0 : 1).replace(".", ",").replace(/,0$/, "") + " mi";
+    if (a >= 1e3) return "R$ " + (v / 1e3).toFixed(a >= 1e4 ? 0 : 1).replace(".", ",").replace(/,0$/, "") + " mil";
+    return "R$ " + Math.round(v);
   }
   var valoresRD = {
     id: "valoresRD",
@@ -228,7 +255,7 @@
         layout: { padding: { bottom: 4 } },
         scales: { x: eixoX({ ticks: { color: function (c) { return (c.tick ? c.tick.value : c.index) === mesAtualIdx ? "#FFC64A" : CORES.cy; }, font: fonte(10.5), maxRotation: 0, autoSkip: false, padding: 9 } }),
           // folga em cima para o valor inclinado da barra mais alta (valoresRD)
-          y: eixoY({ grace: "22%" }) },
+          y: eixoY(topoComFolga(0.38)) },
         plugins: {
           legend: { display: !(opcoes && opcoes.semLegenda), position: "top", align: "end", labels: { color: CORES.texto, font: fonte(10.5), boxWidth: 8, boxHeight: 8, usePointStyle: true, pointStyle: "circle" } },
           tooltip: tooltipPadrao({ callbacks: { label: function (c) { return " " + c.dataset.label + ": " + moeda(c.parsed.y); } } })
@@ -365,11 +392,12 @@
         onHover: function (evt, elementos) {
           if (evt && evt.native && evt.native.target) evt.native.target.style.cursor = (opcoes.aoClicar && elementos.length) ? "pointer" : "default";
         },
-        // nomes dos meses como botões (botoesMesRD), o do mês atual em dourado
-        layout: { padding: { bottom: 4 } },
+        // nomes dos meses como botões (botoesMesRD), o do mês atual em dourado;
+        // folga à direita para o valor inclinado do último mês
+        layout: { padding: { bottom: 4, right: 26 } },
         scales: { x: eixoX({ ticks: { color: function (c) { return (c.tick ? c.tick.value : c.index) === mesAtualIdx ? "#FFC64A" : CORES.cy; }, font: fonte(10.5), maxTicksLimit: 12, maxRotation: 0, padding: 9 } }),
           // folga em cima para o valor inclinado do ponto mais alto (valoresEvolucao)
-          y: eixoY({ grace: "18%" }) },
+          y: eixoY(topoComFolga(0.3)) },
         plugins: { legend: { display: false }, tooltip: tooltipPadrao({ callbacks: {
           label: function (c) { return " Patrimônio: " + moeda(c.parsed.y) + (c.dataIndex === iPico ? "  🏆 pico" : ""); },
           afterLabel: function (c) {
@@ -399,7 +427,7 @@
             c.save();
             c.translate(pt.x + 2, Math.max(area.top + 2, pt.y - 9));
             c.rotate(estreito ? -Math.PI * 0.42 : -Math.PI / 3);
-            c.fillText((v < 0 ? "−" : "") + valorCurto(Math.abs(v)), 0, 0);
+            c.fillText((v < 0 ? "−" : "") + valorCurto(Math.abs(v)), 0, 0);   // −R$ 9,7 mil
             c.restore();
           });
           c.restore();
