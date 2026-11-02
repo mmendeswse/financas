@@ -71,6 +71,30 @@
   // ---------------------------------------------------------------------
   // Receitas x despesas por mês (barras agrupadas — verde x rosa)
   // ---------------------------------------------------------------------
+  // o que está embaixo do toque: { indice do mês, tipo: "receitas" | "despesas" | null }
+  // — a barra conta com uma folga em volta (barras baixas são difíceis de acertar no toque);
+  // o nome do mês embaixo do gráfico e o resto da coluna dão tipo null (as duas)
+  function alvoRD(evt, grafico) {
+    if (!grafico || !grafico.chartArea || !evt) return null;
+    var x = evt.x, y = evt.y, area = grafico.chartArea, eixo = grafico.scales.x;
+    if (x == null || y == null || x < area.left || x > area.right) return null;
+    var FOLGA = 6, ALTURA_MIN = 18;
+    for (var ds = 0; ds < 2; ds++) {
+      var meta = grafico.getDatasetMeta(ds);
+      if (!meta || meta.hidden) continue;
+      for (var i = 0; i < meta.data.length; i++) {
+        var b = meta.data[i], valor = (grafico.data.datasets[ds].data || [])[i];
+        if (!b || !(Number(valor) > 0)) continue;
+        var meia = (b.width || 0) / 2 + FOLGA, topo = Math.min(b.y, b.base - ALTURA_MIN) - FOLGA;
+        if (x >= b.x - meia && x <= b.x + meia && y >= topo && y <= b.base + 2) return { indice: i, tipo: ds === 0 ? "receitas" : "despesas" };
+      }
+    }
+    // nome do mês (embaixo da área do gráfico) ou espaço vazio da coluna
+    if (y > area.bottom + 2 && y > eixo.bottom + 4) return null;
+    var idx = Math.round(eixo.getValueForPixel(x));
+    if (!(idx >= 0 && idx < grafico.data.labels.length)) return null;
+    return { indice: idx, tipo: null };
+  }
   function renderReceitasDespesas(canvasId, serie, opcoes) {
     opcoes = opcoes || {};
     destruir(canvasId);
@@ -87,11 +111,15 @@
       options: {
         responsive: true, maintainAspectRatio: false,
         interaction: { mode: "index", intersect: false },
-        onClick: function (evt, elementos) {
-          if (opcoes.aoClicar && elementos && elementos.length) opcoes.aoClicar(serie[elementos[0].index]);
+        // barra verde → só as receitas do mês; barra vermelha → só as despesas;
+        // o nome do mês (ou o espaço vazio da coluna) → as duas, como antes
+        onClick: function (evt, elementos, grafico) {
+          if (!opcoes.aoClicar) return;
+          var alvo = alvoRD(evt, grafico || this);
+          if (alvo) opcoes.aoClicar(serie[alvo.indice], alvo.tipo);
         },
-        onHover: function (evt, elementos) {
-          if (evt && evt.native && evt.native.target) evt.native.target.style.cursor = (opcoes.aoClicar && elementos.length) ? "pointer" : "default";
+        onHover: function (evt, elementos, grafico) {
+          if (evt && evt.native && evt.native.target) evt.native.target.style.cursor = (opcoes.aoClicar && alvoRD(evt, grafico || this)) ? "pointer" : "default";
         },
         scales: { x: eixoX(), y: eixoY() },
         plugins: {
@@ -100,6 +128,21 @@
         }
       }
     });
+    // o Chart.js só avisa cliques dentro da área das barras: o nome do mês,
+    // embaixo, é tratado aqui (abre receitas e despesas do mês, como antes)
+    var tela = instancias[canvasId].canvas;
+    if (tela._rdClique) tela.removeEventListener("click", tela._rdClique);
+    if (tela._rdMove) tela.removeEventListener("mousemove", tela._rdMove);
+    var foraDaArea = function (e) {
+      var g = instancias[canvasId]; if (!g || !g.chartArea) return null;
+      var r = tela.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+      if (y <= g.chartArea.bottom) return null;   // dentro da área: o onClick do gráfico cuida
+      return alvoRD({ x: x, y: y }, g);
+    };
+    tela._rdClique = function (e) { if (!opcoes.aoClicar) return; var a = foraDaArea(e); if (a) opcoes.aoClicar(serie[a.indice], a.tipo); };
+    tela._rdMove = function (e) { var r = tela.getBoundingClientRect(); var g = instancias[canvasId]; if (!g || !g.chartArea || e.clientY - r.top <= g.chartArea.bottom) return; tela.style.cursor = opcoes.aoClicar && foraDaArea(e) ? "pointer" : "default"; };
+    tela.addEventListener("click", tela._rdClique);
+    tela.addEventListener("mousemove", tela._rdMove);
   }
 
   // ---------------------------------------------------------------------
