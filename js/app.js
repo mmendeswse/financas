@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.408";
+  const VERSAO_APP = "3.6.409";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -580,7 +580,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.408 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.409 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -872,6 +872,8 @@
     dd.innerHTML = `
       <button class="perfil-card" data-pf="avatar">${Avatar.circuloHTML("", p)}<span class="pl-txt"><b>${esc(p.nome || "Seu perfil")}</b><small>Editar avatar</small></span></button>`;
   }
+  // um quadro do topo de cada vez: abrir as notificações ou a data fecha o menu do perfil
+  function fecharMenuPerfil() { const dd = document.getElementById("dropdownPerfil"); if (dd) dd.classList.remove("on"); }
   function ligarPerfilTopo() {
     const btn = document.getElementById("btnPerfil"), dd = document.getElementById("dropdownPerfil");
     if (!btn || !dd) return;
@@ -1786,7 +1788,7 @@
       e.stopPropagation();
       dropNotif.classList.toggle("on");
       // abrir as notificações fecha o quadro da data (e vice-versa, abaixo)
-      if (dropNotif.classList.contains("on")) { if (popDataEl) popDataEl.classList.remove("on"); preencherNotificacoes(); }
+      if (dropNotif.classList.contains("on")) { if (popDataEl) popDataEl.classList.remove("on"); fecharMenuPerfil(); preencherNotificacoes(); }
     });
     document.addEventListener("click", (e) => {
       if (!dropNotif.contains(e.target) && !btnNotif.contains(e.target)) dropNotif.classList.remove("on");
@@ -1798,7 +1800,7 @@
       caixaData.addEventListener("click", (e) => {
         e.stopPropagation();
         popData.classList.toggle("on");
-        if (popData.classList.contains("on")) { dropNotif.classList.remove("on"); preencherPopData(new Date()); }
+        if (popData.classList.contains("on")) { dropNotif.classList.remove("on"); fecharMenuPerfil(); preencherPopData(new Date()); }
       });
       document.addEventListener("click", (e) => {
         if (!popData.contains(e.target) && !caixaData.contains(e.target)) popData.classList.remove("on");
