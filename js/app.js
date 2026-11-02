@@ -23,19 +23,33 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.399";
-  // nome do programa (título, logotipo, rodapé e tela da senha), escolhido em
-  // Configurações › Senha Acesso; vale só para este aparelho
-  const NOMES_APP = ["Muller Mendes", "Mateus Mendes", "Michel Mendes"];
-  function nomeApp() {
-    try { const n = localStorage.getItem("nomeApp1"); if (NOMES_APP.includes(n)) return n; } catch (e) { /* sem acesso */ }
-    return NOMES_APP[0];
+  const VERSAO_APP = "3.6.400";
+  // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
+  // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
+  // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
+  const NOME_PADRAO = "Muller Mendes";
+  function nomeAntigoAparelho() {
+    try { const n = localStorage.getItem("nomeApp1"); if (["Muller Mendes", "Mateus Mendes", "Michel Mendes"].includes(n)) return n; } catch (e) { /* sem acesso */ }
+    return "";
   }
+  function nomeApp() {
+    const p = DADOS && DADOS.config && DADOS.config.perfil;
+    return (p && String(p.nome || "").trim()) || nomeAntigoAparelho() || NOME_PADRAO;
+  }
+  let logoOriginal = null;
   function aplicarNomeApp() {
     const n = nomeApp();
-    document.title = n;   // aba do navegador: só o nome escolhido em Configurações
+    document.title = n;   // aba do navegador: o nome do perfil
     document.querySelectorAll(".logo-txt b").forEach((b) => { b.textContent = n; });
     const rod = document.getElementById("rodapeNome"); if (rod) rod.textContent = `${n} v1.0`;
+    // logotipo: o avatar do perfil (foto, personagem ou emoji); sem avatar, o ícone do programa
+    const marca = document.querySelector(".logo .logo-mark");
+    if (!marca) return;
+    if (logoOriginal == null) logoOriginal = marca.innerHTML;
+    const p = (DADOS && DADOS.config && DADOS.config.perfil) || {}, av = p.avatar || {};
+    const comAvatar = window.Avatar && ((av.img && av.img.src) || av.emoji);
+    marca.classList.toggle("com-avatar", !!comAvatar);
+    marca.innerHTML = comAvatar ? Avatar.circuloHTML("logo-avatar", p) : logoOriginal;
   }
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
@@ -574,7 +588,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.399 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.400 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -859,6 +873,7 @@
     btn.dataset.sync = sit.cls;
     if (ass === assinaturaPerfil) return;
     assinaturaPerfil = ass;
+    aplicarNomeApp();   // logotipo com o avatar e o nome do perfil
     btn.innerHTML = Avatar.circuloHTML("avatar-barra", p) + `<span class="perfil-ponto" aria-hidden="true"></span>`;
     btn.title = (p.nome || "Seu perfil") + " · " + (S.conectado() ? "sincronização: " + sit.titulo.toLowerCase() : "sincronização desligada");
     preencherMenuPerfil();
@@ -1333,10 +1348,16 @@
     aplicarNomeApp();
     if (A.definirAparelho) A.definirAparelho(rotuloAparelho());
     DADOS = A.carregarDados();
+    // quem tinha escolhido o nome na antiga lista (Senha Acesso) passa a tê-lo no perfil
+    if (!(DADOS.config && DADOS.config.perfil && DADOS.config.perfil.nome) && nomeAntigoAparelho()) {
+      DADOS.config = DADOS.config || {};
+      DADOS.config.perfil = Object.assign({}, DADOS.config.perfil, { nome: nomeAntigoAparelho() });
+    }
+    aplicarNomeApp();
     migrarRecorrenciasAntigas();
     I.registrarPontoPatrimonio(DADOS);
     A.salvarDados(DADOS, true, true);   // automático: não conta como alteração sua
-    A.aoMudar(() => { DADOS = A.carregarDados(); migrarRecorrenciasAntigas(); renderRota(); });
+    A.aoMudar(() => { DADOS = A.carregarDados(); migrarRecorrenciasAntigas(); renderRota(); atualizarPerfilTopo(); });
 
     ligarTopbar();
     ligarPerfilTopo();
@@ -8437,8 +8458,6 @@
           </div>`)}</div>
         <div class="cfg-senha">${card("", "Senha Acesso", "protege sistema neste aparelho", "", `
           <div class="body pad">
-            <div class="campo cfg-nome-app"><label for="cfgNomeApp">Nome</label>
-              <select id="cfgNomeApp">${NOMES_APP.map((n) => `<option value="${esc(n)}"${n === nomeApp() ? " selected" : ""}>${esc(n)}</option>`).join("")}</select></div>
             <p class="cfg-texto">${comSenha ? "A senha está <b>ativa</b>: o sistema pede a senha sempre que é aberto neste aparelho." : "Sem senha: qualquer pessoa com acesso a este aparelho consegue abrir o sistema."}</p>
             ${comSenha ? `<div id="areaBiometria" class="cfg-biometria"></div>` : ""}
             ${lista([
@@ -8971,10 +8990,6 @@
 
     cont.addEventListener("change", (e) => {
       const id = e.target.id;
-      if (id === "cfgNomeApp") {
-        try { localStorage.setItem("nomeApp1", e.target.value); } catch (err) { /* sem acesso */ }
-        aplicarNomeApp(); toast(`Nome: ${nomeApp()}`); return;
-      }
       if (id === "anoRelA") { anoRelA = e.target.value; renderRota(); return; }
       if (id === "anoRelB") { anoRelB = e.target.value; renderRota(); return; }
       if (id === "anoBancos") { anoBancos = e.target.value; renderRota(); return; }
