@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.420";
+  const VERSAO_APP = "3.6.421";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -581,7 +581,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.420 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.421 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -937,15 +937,27 @@
     const [a0, m0] = F.mesAtual().split("-").map(Number);
     const meses = Array.from({ length: MESES_AGENDA }, (_, i) => i).map((i) => { const x = new Date(a0, m0 - 1 + i, 1); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}`; });
     const vistos = {};
+    // " 15/16" para as parcelas (mesma conta da lista de Dívidas): a série
+    // personalizada com número de parcelas, a partir da primeira parcela
+    const todos = [...d.despesas, ...(d.contasPagar || []), ...d.entradas];
+    const parcela = (id, data) => {
+      let reg = todos.find((r) => r.id === id);
+      if (reg && reg.origemRecorrente) reg = todos.find((r) => r.id === reg.origemRecorrente) || reg;
+      if (!reg || !ehPers(reg) || !(Number(regraDe(reg).parcelas) > 0) || !data) return "";
+      const regra = regraDe(reg), total = Number(regra.parcelas), inicio = regra.primeiraParcela || mesReg(reg);
+      const [a0, m0] = inicio.split("-").map(Number), [a1, m1] = data.slice(0, 7).split("-").map(Number);
+      const n = Math.floor(((a1 - a0) * 12 + (m1 - m0)) / Math.max(1, Number(regra.intervalo) || 1)) + 1;
+      return n >= 1 && n <= total ? ` ${String(n).padStart(2, "0")}/${String(total).padStart(2, "0")}` : "";
+    };
     const add = (x) => { if (!x.data || vistos[x.chave]) return; vistos[x.chave] = true; lista.push(x); };
     if (itens.contas) meses.forEach((m) => listaDespesasTodasMes(d, m).forEach((x) => {
       if (x.status === "Pago") return;
-      add({ chave: `pg:${x.id}:${x.data}`, titulo: `💸 ${x.descricao || "Conta"} — ${brl(x.valor)}`, data: x.data, hora: "09:00", duracao: 30, alertas: [0, 1440],
+      add({ chave: `pg:${x.id}:${x.data}`, titulo: `💸 ${x.descricao || "Conta"}${parcela(x.id, x.data)} — ${brl(x.valor)}`, data: x.data, hora: "09:00", duracao: 30, alertas: [0, 1440],
         descricao: ["Conta a pagar", x.categoria, x.banco && x.banco !== "—" ? x.banco : ""].filter(Boolean).join(" · "), cor: "11" });
     }));
     if (itens.receitas) meses.forEach((m) => listaEntradasTodasMes(d, m).forEach((x) => {
       if (x.status !== "Prevista") return;
-      add({ chave: `rc:${x.id}:${x.data}`, titulo: `💰 ${x.descricao || "Receita"} — ${brl(x.valor)}`, data: x.data, hora: "09:00", duracao: 30, alertas: [0],
+      add({ chave: `rc:${x.id}:${x.data}`, titulo: `💰 ${x.descricao || "Receita"}${parcela(x.id, x.data)} — ${brl(x.valor)}`, data: x.data, hora: "09:00", duracao: 30, alertas: [0],
         descricao: ["Receita prevista", x.categoria, x.banco && x.banco !== "—" ? x.banco : ""].filter(Boolean).join(" · "), cor: "10" });
     }));
     // depois da janela: as contas e receitas que se repetem sem fim (ou até
