@@ -71,6 +71,43 @@
   // ---------------------------------------------------------------------
   // Receitas x despesas por mês (barras agrupadas — verde x rosa)
   // ---------------------------------------------------------------------
+  // valor de cada barra escrito logo acima dela, inclinado, na cor da barra
+  // (forma curta: 9,8 mil · 750), para caber mesmo com 12 meses lado a lado
+  function valorCurto(v) {
+    var a = Math.abs(v);
+    if (a >= 1e6) return (v / 1e6).toFixed(a >= 1e7 ? 0 : 1).replace(".", ",").replace(/,0$/, "") + " mi";
+    if (a >= 1e3) return (v / 1e3).toFixed(a >= 1e4 ? 0 : 1).replace(".", ",").replace(/,0$/, "") + " mil";
+    return String(Math.round(v));
+  }
+  var valoresRD = {
+    id: "valoresRD",
+    afterDatasetsDraw: function (grafico) {
+      var ctx = grafico.ctx, area = grafico.chartArea;
+      // colunas estreitas (celular): letra menor e texto mais em pé
+      var estreito = (area.right - area.left) / Math.max(1, grafico.data.labels.length) < 40;
+      var angulo = estreito ? -Math.PI * 0.42 : -Math.PI / 3;
+      ctx.save();
+      ctx.font = "700 " + (estreito ? 9 : 10) + "px 'Segoe UI', Roboto, Inter, sans-serif";
+      ctx.textBaseline = "middle"; ctx.textAlign = "left";
+      [0, 1].forEach(function (ds) {
+        var meta = grafico.getDatasetMeta(ds);
+        if (!meta || meta.hidden) return;
+        var dados = grafico.data.datasets[ds].data || [];
+        ctx.fillStyle = ds === 0 ? CORES.up : CORES.down;
+        meta.data.forEach(function (b, i) {
+          var v = Number(dados[i]);
+          if (!b || !(v > 0)) return;
+          ctx.save();
+          ctx.translate(b.x, Math.max(area.top + 2, b.y - 5));
+          ctx.rotate(angulo);   // inclinado (60°; 75° em colunas estreitas)
+          ctx.fillText(valorCurto(v), 0, 0);
+          ctx.restore();
+        });
+      });
+      ctx.restore();
+    }
+  };
+
   // nomes dos meses embaixo do gráfico desenhados como botões (fundo e contorno
   // ciano), para ficar claro que dá para tocar e ver o mês; o que está sob o
   // mouse fica mais forte
@@ -166,7 +203,7 @@
     var ctx = ctxOf(canvasId); if (!ctx) return;
     instancias[canvasId] = new Chart(ctx, {
       type: "bar",
-      plugins: [botoesMesRD],
+      plugins: [botoesMesRD, valoresRD],
       data: {
         labels: serie.map(function (s) { return s.rotulo; }),
         datasets: [
@@ -189,7 +226,9 @@
         },
         // nomes dos meses como botões (ver botoesMesRD): na horizontal, com espaço em volta
         layout: { padding: { bottom: 4 } },
-        scales: { x: eixoX({ ticks: { color: function (c) { return (c.tick ? c.tick.value : c.index) === mesAtualIdx ? "#FFC64A" : CORES.cy; }, font: fonte(10.5), maxRotation: 0, autoSkip: false, padding: 9 } }), y: eixoY() },
+        scales: { x: eixoX({ ticks: { color: function (c) { return (c.tick ? c.tick.value : c.index) === mesAtualIdx ? "#FFC64A" : CORES.cy; }, font: fonte(10.5), maxRotation: 0, autoSkip: false, padding: 9 } }),
+          // folga em cima para o valor inclinado da barra mais alta (valoresRD)
+          y: eixoY({ grace: "22%" }) },
         plugins: {
           legend: { display: !(opcoes && opcoes.semLegenda), position: "top", align: "end", labels: { color: CORES.texto, font: fonte(10.5), boxWidth: 8, boxHeight: 8, usePointStyle: true, pointStyle: "circle" } },
           tooltip: tooltipPadrao({ callbacks: { label: function (c) { return " " + c.dataset.label + ": " + moeda(c.parsed.y); } } })
