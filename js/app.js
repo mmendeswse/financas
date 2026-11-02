@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.454";
+  const VERSAO_APP = "3.6.455";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -581,7 +581,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.454 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.455 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -2626,8 +2626,7 @@
       const vencida = diasPrazo !== null && diasPrazo < 0 && Number(m.atual || 0) < objetivo;
       const situacao = vencida ? `<span class="down">prazo vencido há ${plural(Math.abs(diasPrazo), "dia")}</span>` : esc(st.rotulo);
       return `<button class="meta-item clicavel st-${st.chave}" style="--meta-cor:${esc(m.cor || "var(--up)")}" data-acao="explicar-meta" data-id="${m.id}" title="Ver detalhes da meta">
-        <div class="meta-topo meta-topo-linha"><span class="meta-bolinha st-${st.chave}" title="${esc(st.dica || st.rotulo)}"></span><span class="meta-nome">${nomeMeta(m)}</span></div>
-        <div class="meta-selos meta-selos-linha"><span class="meta-st meta-falta" title="Guardar por mês: ${Number(m.aporteMensal) > 0 ? brl(m.aporteMensal) : "não definido"}"><span class="meta-falta-ic">💰</span>${Number(m.aporteMensal) > 0 ? brl(m.aporteMensal).replace(/^R\$\s*/, "") : "—"}</span>${m.prazo ? `<span class="meta-st meta-falta" title="Data final da meta"><span class="meta-falta-ic">📅</span>${fmtData(m.prazo)}</span>` : ""}<span class="meta-st meta-falta" title="Objetivo: ${brl(objetivo)}"><span class="meta-falta-ic">🏁</span>${brl(objetivo).replace(/^R\$\s*/, "")}</span></div>
+        <div class="meta-topo meta-topo-linha"><span class="meta-bolinha st-${st.chave}" title="${esc(st.dica || st.rotulo)}"></span><span class="meta-nome">${nomeMeta(m)}</span><span class="meta-selos meta-selos-linha"><span class="meta-st meta-falta" title="Guardar por mês: ${Number(m.aporteMensal) > 0 ? brl(m.aporteMensal) : "não definido"}"><span class="meta-falta-ic">💰</span>${Number(m.aporteMensal) > 0 ? brl(m.aporteMensal).replace(/^R\$\s*/, "") : "—"}</span>${m.prazo ? `<span class="meta-st meta-falta" title="Data final da meta"><span class="meta-falta-ic">📅</span>${fmtData(m.prazo)}</span>` : ""}<span class="meta-st meta-falta" title="Objetivo: ${brl(objetivo)}"><span class="meta-falta-ic">🏁</span>${brl(objetivo).replace(/^R\$\s*/, "")}</span></span></div>
         <div class="meta-barra meta-barra-grande"><i style="width:${p}%"></i><b class="meta-pct-dentro">${p.toFixed(0)}%</b></div>
         <div class="meta-rodape meta-rodape-3"><span title="Valor guardado">💵 ${brl(valor)}</span><span class="meta-situacao-meio" title="${esc(vencida ? `Prazo vencido há ${plural(Math.abs(diasPrazo), "dia")}` : st.dica || st.rotulo)}"><span class="sit-longo">${situacao}</span><span class="sit-curto">${vencida ? `<span class="down">vencida há ${plural(Math.abs(diasPrazo), "dia")}</span>` : esc(st.curto || st.rotulo)}</span></span><span class="meta-falta-valor" title="Falta para o objetivo">${objetivo > valor ? `⏳ ${brl(objetivo - valor)}` : "✅ Concluída"}</span></div>
       </button>`;
@@ -8926,11 +8925,33 @@
     const fim = itens[2].getBoundingClientRect().bottom - lista.getBoundingClientRect().top;
     lista.style.maxHeight = Math.ceil(fim + (parseFloat(getComputedStyle(lista).paddingBottom) || 0)) + "px";
   }
-  window.addEventListener("resize", () => { ajustarAlturaGrafico(); ajustarAlturaConfig(); ajustarRolagemMetas(); });
+  // metas: nome e selos (💰 · 📅 · 🏁) numa linha só. Se não couber, a linha
+  // inteira diminui na mesma proporção, igual em todos os quadros da lista
+  function ajustarTopoMetas() {
+    // Dashboard: uma lista; guia Metas: um quadro por meta, todos juntos
+    [document.querySelector("#conteudo")].filter(Boolean).forEach((lista) => {
+      const topos = [...lista.querySelectorAll(".metas-lista .meta-topo-linha")];
+      topos.forEach((t) => t.style.setProperty("--esc", "1"));
+      // todos os quadros da lista com o mesmo tamanho de letra (o do nome mais longo)
+      let menor = 1;
+      topos.forEach((t) => {
+        const nome = t.querySelector(".meta-nome"), selos = t.querySelector(".meta-selos"), bol = t.querySelector(".meta-bolinha");
+        if (!nome || !selos || !t.clientWidth) return;
+        const gap = parseFloat(getComputedStyle(t).columnGap) || 0;
+        const precisa = (bol ? bol.offsetWidth + gap : 0) + nome.scrollWidth + gap + selos.scrollWidth;
+        menor = Math.min(menor, (t.clientWidth - 8) / precisa);
+      });
+      const esc = Math.max(0.45, menor);
+      topos.forEach((t) => t.style.setProperty("--esc", esc.toFixed(3)));
+    });
+  }
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => ajustarTopoMetas());
+  window.addEventListener("resize", () => { ajustarAlturaGrafico(); ajustarAlturaConfig(); ajustarRolagemMetas(); ajustarTopoMetas(); });
 
   function montarGraficosDaRota() {
     const d = DADOS;
     ajustarAlturaGrafico();   // antes de desenhar, para o gráfico já nascer no tamanho certo
+    ajustarTopoMetas();
     switch (ROTA.secao) {
       case "dashboard": {
         ajustarRolagemMetas();

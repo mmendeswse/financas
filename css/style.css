@@ -3216,3 +3216,13 @@ body.av-aberta { overflow: hidden; }
 .meta-item .meta-rodape.meta-rodape-3 .meta-falta-valor { grid-column: 3 !important; justify-self: end; }
 .meta-item .meta-rodape.meta-rodape-3 .meta-situacao-meio { grid-column: 2 !important; justify-self: center; font-size: .86em !important; letter-spacing: 0 !important; overflow: visible !important; text-overflow: clip !important; }
 .meta-item .meta-rodape.meta-rodape-3 .meta-situacao-meio, .meta-item .meta-rodape.meta-rodape-3 .meta-situacao-meio * { white-space: nowrap !important; }
+/* Metas: nome e selos (💰 · 📅 · 🏁) numa linha só; --esc (calculado no app.js)
+   diminui a linha inteira por igual quando não cabe */
+.meta-item .meta-topo.meta-topo-linha { font-size: calc(14.5px * var(--esc, 1)); display: flex; flex-wrap: nowrap !important; align-items: center; gap: .35em !important; margin-bottom: 8px; }
+.meta-item .meta-topo-linha .meta-nome { font-size: 1em !important; flex: 0 1 auto !important; min-width: 0; }
+.meta-item .meta-topo-linha .meta-nome .emoji-desc { font-size: 1.1em !important; }
+.meta-item .meta-topo-linha .meta-selos.meta-selos-linha { margin: 0 0 0 auto !important; flex: none !important; display: flex; gap: .3em !important; }
+.meta-item .meta-topo-linha .meta-selos-linha .meta-st { font-size: .76em !important; padding: .18em .5em !important; gap: .28em !important; }
+.meta-item .meta-topo-linha .meta-selos-linha .meta-falta-ic { font-size: 1em !important; }
+.meta-item .meta-topo-linha > .meta-bolinha { width: .62em; height: .62em; }
+.meta-item .meta-topo-linha .meta-nome, .meta-item .meta-topo-linha .meta-nome * { white-space: nowrap !important; } .meta-item .meta-topo-linha .meta-nome { overflow: hidden !important; text-overflow: ellipsis !important; }
