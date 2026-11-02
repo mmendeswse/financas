@@ -1,18 +1,23 @@
-# Muller Mendes Finanças no computador (Windows)
+# Finanças no computador (Windows)
 
 ## Instalar
-1. Baixe o arquivo `Muller-Mendes-Financas-Instalador-<versão>.exe`.
+1. Baixe o arquivo `Financas-Instalador-<versão>.exe`.
 2. Dê dois cliques nele.
 3. O Windows pode mostrar **"O Windows protegeu o computador"** (o instalador
    não tem assinatura digital paga). Clique em **Mais informações** →
    **Executar assim mesmo**.
 4. Siga o instalador (pode escolher a pasta). No fim, o atalho
-   **Muller Mendes Finanças** fica na Área de Trabalho e no menu Iniciar.
+   **Finanças** fica na Área de Trabalho e no menu Iniciar. Se você já tinha
+   o programa com o nome antigo (Muller Mendes Finanças), o instalador novo
+   substitui o antigo e os seus dados continuam lá.
 
 ## Onde ficam os dados
 Num arquivo no próprio computador:
 
     %APPDATA%\Muller Mendes Finanças\dados.json
+
+(A pasta mantém o nome antigo de propósito: assim quem já usava o programa
+não perde os dados.)
 
 A cada gravação, a versão anterior fica guardada em `dados.bak.json` (se o
 arquivo principal estragar, o programa usa a cópia sozinho). Em
@@ -23,9 +28,10 @@ Desinstalar o programa **não apaga** os dados.
 ## Levar os dados do navegador para o programa
 O programa começa com os dados de demonstração. Para trazer os seus:
 
-- **Pela sincronização (recomendado):** em Configurações → Sincronização,
-  cole o mesmo token do GitHub usado no iPad e escolha ficar com os dados
-  do cofre. Daí em diante, computador e iPad ficam iguais.
+- **Pela sincronização (recomendado):** no aparelho que já sincroniza,
+  Configurações → Sincronização → **Adicionar** mostra o código da conta;
+  no programa, Configurações → Sincronização → **Entrar com código** e cole
+  o código. Daí em diante, computador e iPad ficam iguais.
 - **Pelo backup:** no navegador, Configurações → **Exportar Backup**; no
   programa, Configurações → **Importar Backup** e escolha o arquivo.
 
@@ -41,7 +47,7 @@ versão atual do sistema.
     cd desktop
     npm install
     npm start        # abre o programa para testar
-    npm run dist     # gera desktop/dist/Muller-Mendes-Financas-Instalador-<versão>.exe
+    npm run dist     # gera desktop/dist/Financas-Instalador-<versão>.exe
 
 No Windows funciona direto. No Linux, o passo do instalador precisa do Wine
 (com suporte a 32 bits: `wine` e `wine32`).

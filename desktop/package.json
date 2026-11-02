@@ -1,6 +1,6 @@
 {
   "name": "muller-mendes-financas",
-  "productName": "Muller Mendes Finanças",
+  "productName": "Finanças",
   "version": "0.0.0",
   "description": "Gerenciamento de finanças pessoais",
   "author": "Muller Mendes",
@@ -17,7 +17,7 @@
   },
   "build": {
     "appId": "com.mullermendes.financas",
-    "productName": "Muller Mendes Finanças",
+    "productName": "Finanças",
     "copyright": "Muller Mendes",
     "directories": {
       "output": "dist",
@@ -48,17 +48,17 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": "always",
       "createStartMenuShortcut": true,
-      "shortcutName": "Muller Mendes Finanças",
+      "shortcutName": "Finanças",
       "installerIcon": "build/icon.ico",
       "uninstallerIcon": "build/icon.ico",
       "installerHeaderIcon": "build/icon.ico",
-      "uninstallDisplayName": "Muller Mendes Finanças",
+      "uninstallDisplayName": "Finanças",
       "installerLanguages": [
         "pt_BR"
       ],
       "language": "1046",
       "deleteAppDataOnUninstall": false,
-      "artifactName": "Muller-Mendes-Financas-Instalador-${version}.exe",
+      "artifactName": "Financas-Instalador-${version}.exe",
       "differentialPackage": false
     },
     "publish": null
