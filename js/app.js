@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.398";
+  const VERSAO_APP = "3.6.399";
   // nome do programa (título, logotipo, rodapé e tela da senha), escolhido em
   // Configurações › Senha Acesso; vale só para este aparelho
   const NOMES_APP = ["Muller Mendes", "Mateus Mendes", "Michel Mendes"];
@@ -504,10 +504,13 @@
 
 
   // =========================================================================
-  // SINCRONIZAÇÃO ENTRE APARELHOS (cofre = Gist privado do GitHub)
+  // SINCRONIZAÇÃO ENTRE APARELHOS — conta com código (mesmo sistema do Meu
+  // Controle), guardada num Gist privado e criptografado: basta a chave do
+  // GitHub, sem criar repositório. O motor fica em sincronizacao.js.
   // =========================================================================
   const S = window.Sincronizacao;
-  let sincronizando = false, timerEnvio = null, statusSync = "";
+  let timerEnvio = null, syncBaixado = false;
+  const CHAVE_AVISO_SYNC = "mullerMendes:avisoSync";
 
   // nome curto deste aparelho, gravado junto com cada alteração
   function rotuloAparelho() {
@@ -523,154 +526,370 @@
     const quando = new Date(d.atualizadoEm).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
     return `última alteração: ${d.alteradoPor || "outro aparelho"} · ${quando}`;
   }
+  // a sincronização está ligada neste aparelho?
+  function cfgSync() { const on = S.conectado(); return { token: on ? "conta" : "", ligada: on }; }
+  function avisoSync() { try { return localStorage.getItem(CHAVE_AVISO_SYNC) || ""; } catch (e) { return ""; } }
+  function definirAvisoSync(t) { try { if (t) localStorage.setItem(CHAVE_AVISO_SYNC, t); else localStorage.removeItem(CHAVE_AVISO_SYNC); } catch (e) { /* ignora */ } }
 
-  function cfgSync() {
-    const c = (DADOS.config && DADOS.config.sync) || {};
-    return { token: c.token || "", cofre: c.cofre || "", ultima: c.ultima || null, ligada: !!c.token };
-  }
-  function gravarCfgSync(novo) {
-    DADOS.config = DADOS.config || {};
-    DADOS.config.sync = Object.assign({}, DADOS.config.sync || {}, novo);
-    A.salvarDados(DADOS, true, true);   // não muda o carimbo: isso não é dado financeiro
-  }
-  function mostrarStatusSync(texto) {
-    statusSync = texto;
-    const el = document.getElementById("statusSync");
-    if (el) el.textContent = texto;
-  }
-
-  // o que vai para o cofre: os dados, sem o token de acesso deste aparelho
-  function dadosParaCofre() {
-    const copia = JSON.parse(JSON.stringify(DADOS));
-    if (copia.config) delete copia.config.sync;
-    return JSON.stringify(copia, null, 2);
-  }
-
-  // aplica os dados vindos do cofre, preservando a configuração deste aparelho
-  function aplicarRemoto(remoto) {
-    const meuSync = (DADOS.config && DADOS.config.sync) || {};
-    remoto.config = Object.assign({}, remoto.config || {}, { sync: meuSync });
-    corrigirNomesBancos(remoto);
-    A.salvarDados(remoto, true, true);
+  // dados que chegaram da conta (junção já feita pelo motor)
+  function aplicarDaConta(novo, salvoEm, por) {
+    novo.config = novo.config || {};
+    if (DADOS.config && DADOS.config.ultimoBackup) novo.config.ultimoBackup = DADOS.config.ultimoBackup;
+    novo.atualizadoEm = salvoEm || DADOS.atualizadoEm || new Date().toISOString();
+    if (por) novo.alteradoPor = por;
+    corrigirNomesBancos(novo);
+    A.salvarDados(novo, true, true);
     DADOS = A.carregarDados();
     renderRota();
+    atualizarPerfilTopo();
   }
+  const temDadosReais = (d) => !!((d.bancos || []).length || (d.entradas || []).length || (d.despesas || []).length || (d.acoes || []).length || (d.investimentos || []).length);
 
+  S.configurar({
+    dados: () => DADOS,
+    aplicar: aplicarDaConta,
+    versao: VERSAO_APP,
+    temDados: (d) => !d.demo && temDadosReais(d),
+    ocupado: () => document.getElementById("modal").classList.contains("on") || document.body.classList.contains("av-aberta") || !!document.querySelector(".tela-bloqueio"),
+    aoEstado: () => { atualizarCartaoSync(); atualizarPerfilTopo(); },
+    aoRemovido: (apagar) => {
+      if (apagar) { A.limparDados(); toast("Este aparelho foi removido da sincronização e os dados dele foram apagados."); }
+      else toast("Este aparelho foi desconectado da sincronização em outro aparelho.");
+      renderRota();
+    }
+  });
+
+  // silencioso = false: o usuário pediu (mostra o resultado)
   function sincronizar(silencioso) {
-    const cfg = cfgSync();
-    if (sincronizando) { syncPendente = true; return Promise.resolve(); }
-    if (!S || !cfg.token || typeof fetch !== "function") return Promise.resolve();
-    sincronizando = true;
-    mostrarStatusSync("sincronizando…");
-
-    const garantirCofre = cfg.cofre
-      ? Promise.resolve(cfg.cofre)
-      : S.procurarCofre(cfg.token).then((id) => id || S.criarCofre(cfg.token, dadosParaCofre()))
-         .then((id) => { gravarCfgSync({ cofre: id }); return id; });
-
-    return garantirCofre.then((cofre) => S.baixar(cfg.token, cofre).then((remoto) => {
-      syncBaixado = true;   // o cofre respondeu: os dados locais já são os mais novos
-      const hrLocal = DADOS.atualizadoEm || "";
-      const hrRemoto = (remoto && remoto.atualizadoEm) || "";
-      if (hrRemoto && hrRemoto > hrLocal) {
-        aplicarRemoto(remoto);
-        gravarCfgSync({ ultima: new Date().toISOString() });
-        mostrarStatusSync(descreverAlteracao(remoto));
-        toast(`Dados atualizados pelo ${remoto.alteradoPor || "outro aparelho"}.`);
-      } else if (hrLocal && hrLocal !== hrRemoto) {
-        return S.enviar(cfg.token, cofre, dadosParaCofre()).then(() => {
-          gravarCfgSync({ ultima: new Date().toISOString() });
-          mostrarStatusSync(descreverAlteracao(DADOS));
-          if (!silencioso) toast("Dados enviados para o cofre.");
-        });
-      } else {
-        mostrarStatusSync(descreverAlteracao(DADOS));
-      }
-    })).catch((e) => {
-      mostrarStatusSync("não sincronizado: " + e.message);
-      if (!silencioso) toast("Sincronização: " + e.message);
-    }).then(() => {
-      sincronizando = false;
-      // algo mudou enquanto sincronizava: envia de novo, senão a alteração
-      // só subiria na próxima conferência (até 2 minutos depois)
-      if (syncPendente) { syncPendente = false; agendarEnvioSync(); }
+    if (!S.conectado()) return migrarCofreAntigo();
+    return S.sincronizar({ agora: !silencioso }).then(() => {
+      syncBaixado = !!S.estado.baixou;
+      if (silencioso) return;
+      if (S.estado.estado === "ok") toast("Sincronizado.");
+      else if (S.estado.msg) toast("Sincronização: " + S.estado.msg);
     });
   }
-
-  let syncBaixado = false, syncPendente = false;
-
   function agendarEnvioSync() {                       // chamado após cada alteração
-    if (!cfgSync().token) return;
-    clearTimeout(timerEnvio);
-    timerEnvio = setTimeout(() => sincronizar(true), 2000);
+    if (!S.conectado() || S.aplicando()) return;
+    S.agendar(2000);
   }
 
-  // Ao ligar um aparelho, se já existe um cofre com dados, o usuário
-  // escolhe de que lado ficam os dados. Sem isso, um aparelho novo (vazio
-  // ou com o exemplo) pareceria "mais recente" e apagaria o cofre.
-  function conectarSync() {
-    const token = (document.getElementById("cfgSyncToken").value || "").trim();
-    if (!token) { toast("Cole o token do GitHub para ativar."); return; }
-    mostrarStatusSync("verificando token…");
-    let login = "";
-    S.verificarToken(token)
-      .then((l) => { login = l; return S.procurarCofre(token); })
-      .then((cofre) => {
-        if (!cofre) {
-          // primeiro aparelho: cria o cofre com os dados daqui
-          gravarCfgSync({ token, cofre: "" });
-          mostrarStatusSync("conectado como " + login + " · criando o cofre…");
-          return sincronizar(false).then(() => renderRota());
-        }
-        return S.baixar(token, cofre).then((remoto) => escolherLadoDoCofre(token, cofre, login, remoto));
-      })
-      .catch((e) => { mostrarStatusSync("falhou: " + e.message); toast("Não consegui conectar: " + e.message); });
-  }
-
-  function escolherLadoDoCofre(token, cofre, login, remoto) {
-    const cont = (d) => d ? `${plural((d.entradas || []).length + (d.despesas || []).length, "lançamento")}, ${plural((d.bancos || []).length, "banco")}` : "vazio";
-    const quando = (iso) => iso ? new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
-    abrirModal(`
-      <h3>Já existe um cofre nesta conta</h3>
-      <p style="margin-top:0;font-size:13px">Conectado como <b>${esc(login)}</b>. Escolha quais dados ficam valendo:</p>
-      <div class="explica-lista">
-        <div class="kv"><span class="dim">No cofre</span><b>${cont(remoto)} · ${quando(remoto && remoto.atualizadoEm)}</b></div>
-        <div class="kv"><span class="dim">Neste aparelho</span><b>${cont(DADOS)} · ${quando(DADOS.atualizadoEm)}</b></div>
-      </div>
-      <p class="campo ajuda" style="margin-top:12px">Na maioria dos casos, use os dados do cofre: é o que acontece ao ligar um segundo aparelho seu.</p>
-      <div class="modal-acoes">
-        <button class="btn primario salvar" id="btnUsarCofre">Usar dados do cofre</button>
-        <button class="btn perigo" id="btnEnviarAparelho">Enviar deste aparelho</button>
-      </div>`);
-    document.getElementById("btnUsarCofre").onclick = () => {
-      fecharModal();
-      gravarCfgSync({ token, cofre });
-      if (remoto) aplicarRemoto(remoto);
-      gravarCfgSync({ ultima: new Date().toISOString() });
-      mostrarStatusSync("dados trazidos do cofre · " + new Date().toLocaleTimeString("pt-BR"));
+  // versões até 3.6.399 guardavam o token e o cofre (sem criptografia) nos
+  // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
+  // nos outros, é preciso entrar com o código da conta
+  let migrando = null;
+  function migrarCofreAntigo() {
+    const velho = DADOS.config && DADOS.config.sync;
+    if (!velho || !velho.token || !velho.cofre || migrando) return migrando || Promise.resolve();
+    migrando = S.migrarAntigo(velho.token, velho.cofre).then((r) => {
+      if (r.estado === "precisa-codigo") definirAvisoSync("A sincronização mudou: agora usa o código da conta, com os dados criptografados. Num aparelho que já sincroniza, abra Configurações → Sincronização → Adicionar aparelho e leia o QR code aqui, em “Entrar com código”.");
+      if (r.estado === "migrado") { syncBaixado = true; toast("Sincronização atualizada: agora com código da conta e dados criptografados."); }
+      // o token sai dos dados (que vão para o backup): agora fica só neste aparelho
+      delete DADOS.config.sync;
+      A.salvarDados(DADOS, true, true);
       renderRota();
-      toast("Aparelho conectado com os dados do cofre.");
-    };
-    document.getElementById("btnEnviarAparelho").onclick = () => {
-      confirmarExclusao("Substituir TUDO o que está no cofre pelos dados deste aparelho? Isso apaga o que estava lá — inclusive se pertencer a outra pessoa que usa o mesmo token — e todos os outros aparelhos ligados a este cofre passam a ver só os dados daqui.", () => {
-        gravarCfgSync({ token, cofre });
-        S.enviar(token, cofre, dadosParaCofre()).then(() => {
-          gravarCfgSync({ ultima: new Date().toISOString() });
-          mostrarStatusSync("dados enviados ao cofre · " + new Date().toLocaleTimeString("pt-BR"));
-          renderRota();
-          toast("Cofre atualizado com os dados deste aparelho.");
-        }).catch((e) => toast("Não consegui enviar: " + e.message));
+    }).catch(() => { /* sem internet: tenta de novo na próxima */ }).then(() => { migrando = null; });
+    return migrando;
+  }
+
+  // apagar tudo neste aparelho não pode apagar os outros: antes, este aparelho sai da conta
+  function sairDaContaAntesDeApagar() {
+    if (!S.conectado()) return;
+    S.sair();
+    setTimeout(() => toast("Este aparelho saiu da sincronização (os outros aparelhos não foram afetados)."), 800);
+  }
+
+  // ---------------------------------------------------------------------
+  // quadro "Sincronização" em Configurações
+  // ---------------------------------------------------------------------
+  function quandoSync(iso) {
+    if (!iso) return "nunca";
+    const d = new Date(iso), seg = (Date.now() - d.getTime()) / 1000;
+    if (seg < 60) return "agora há pouco";
+    if (seg < 3600) return `há ${Math.round(seg / 60)} min`;
+    if (seg < 86400 && d.getDate() === new Date().getDate()) return "hoje às " + d.toTimeString().slice(0, 5);
+    if (seg < 2 * 86400) return "ontem às " + d.toTimeString().slice(0, 5);
+    return d.toLocaleDateString("pt-BR") + " às " + d.toTimeString().slice(0, 5);
+  }
+  // { cls, titulo, detalhe } do estado atual
+  function situacaoSync() {
+    const st = S.estado, s = S.ler();
+    if (!S.conectado()) return { cls: "", titulo: "Desligada", detalhe: "" };
+    if (st.estado === "sincronizando") return { cls: "rodando", titulo: "Sincronizando…", detalhe: "" };
+    if (st.estado === "erro" || s.erro) return { cls: "erro", titulo: "Não sincronizou", detalhe: st.msg || s.erro };
+    if (st.estado === "demo") return { cls: "erro", titulo: "Pausada", detalhe: "os dados de exemplo não vão para a sua conta" };
+    if (st.estado === "offline") return { cls: "erro", titulo: "Sem internet", detalhe: "as alterações sobem quando a conexão voltar" };
+    return { cls: "ligado", titulo: "Sincronizado", detalhe: "última vez: " + quandoSync(s.ultimo) };
+  }
+  function aparelhosSyncHTML() {
+    const ap = S.estado.aparelhos;
+    const lista = ap ? Object.keys(ap).map((id) => Object.assign({ id }, ap[id])).filter((x) => !x.removido) : null;
+    if (!lista) return `<p class="cfg-texto dim">Carregando a lista de aparelhos…</p>`;
+    const eu = S.idAparelho();
+    lista.sort((a, b) => (a.id === eu ? -1 : b.id === eu ? 1 : (b.visto || "").localeCompare(a.visto || "")));
+    return `<div class="sy-aparelhos">${lista.map((x) => `<div class="sy-ap"><span class="sy-ap-ic">${/iPhone|Celular/.test(x.nome) ? "📱" : /iPad|Tablet/.test(x.nome) ? "📲" : "💻"}</span>
+      <div><b>${esc(x.nome || "Aparelho")}</b><small>${x.id === eu ? `<em>este aparelho</em> · ` : ""}visto ${quandoSync(x.visto)}</small></div>
+      ${x.id === eu ? `<button class="btn pequeno" data-acao="sync-renomear">Renomear</button>` : `<button class="btn pequeno perigo" data-acao="sync-remover" data-id="${esc(x.id)}">Remover</button>`}</div>`).join("")}</div>`;
+  }
+  function corpoCartaoSync() {
+    const on = S.conectado(), sit = situacaoSync();
+    const estado = `<div class="sync-estado"><span class="sync-ponto ${sit.cls}"></span><b>${sit.titulo}</b>${sit.detalhe ? `<span class="dim" id="statusSync">${esc(sit.detalhe)}</span>` : ""}</div>`;
+    if (on) {
+      const venc = S.diasParaVencer();
+      return `${estado}
+        ${venc != null && venc <= 30 ? `<p class="cfg-info cfg-alerta">⏳ A chave do GitHub ${venc < 0 ? "venceu" : venc === 0 ? "vence hoje" : `vence em ${venc} ${venc === 1 ? "dia" : "dias"}`}. Crie uma chave nova e toque em <b>Atualizar chave</b> (em Mais opções) — os outros aparelhos recebem sozinhos.</p>` : ""}
+        <span class="sy-rot">Aparelhos conectados</span>
+        <div id="syAparelhos">${aparelhosSyncHTML()}</div>
+        <div class="cfg-acoes"><button class="btn primario" data-acao="sync-agora">Sincronizar</button>
+          <button class="btn" data-acao="sync-codigo">Adicionar aparelho</button></div>
+        <details class="sy-mais"><summary>Mais opções</summary>
+          <div class="cfg-acoes"><button class="btn pequeno" data-acao="sync-token">Atualizar chave do GitHub</button>
+            <button class="btn pequeno" data-acao="sync-trocar">Trocar código (aparelho perdido)</button>
+            <a class="btn pequeno" href="https://gist.github.com/${esc(S.ler().g)}/revisions" target="_blank" rel="noopener">Histórico no GitHub</a>
+            <button class="btn pequeno perigo" data-acao="sync-sair">Desconectar este aparelho</button></div>
+        </details>`;
+    }
+    const aviso = avisoSync();
+    return `${estado}
+      ${aviso ? `<p class="cfg-info cfg-alerta">${esc(aviso)}</p>` : ""}
+      <p class="cfg-texto">Use o sistema no computador, no iPad e no celular com os mesmos dados. Basta uma <b>chave do GitHub</b> — não precisa criar repositório: os dados ficam num Gist privado, <b>criptografados</b> com um código que só os seus aparelhos têm.</p>
+      <ul class="cfg-lista"><li class="cfg-opc" data-opc="2">No primeiro aparelho, <b>Criar conta</b>; nos outros, <b>Entrar com código</b> (QR code ou texto).</li>
+        <li class="cfg-opc" data-opc="1">Cada pessoa usa a própria conta — quem tem o código vê e altera os dados.</li></ul>
+      <div class="cfg-acoes"><button class="btn primario" data-acao="sync-criar">Criar conta</button>
+        <button class="btn" data-acao="sync-entrar">Entrar com código</button></div>`;
+  }
+  function atualizarCartaoSync() {
+    const c = document.getElementById("syncCorpo");
+    if (c && !document.getElementById("modal").classList.contains("on")) c.innerHTML = corpoCartaoSync();
+  }
+
+  // ---------------------------------------------------------------------
+  // janelas: criar conta, mostrar código, entrar com código, opções
+  // ---------------------------------------------------------------------
+  const LINK_CHAVE = "https://github.com/settings/tokens/new?scopes=gist&description=Muller%20Mendes%20Finan%C3%A7as";
+  function abrirCriarConta(mesmoAssim) {
+    abrirModal(`
+      <h3>Criar conta de sincronização</h3>
+      <ol class="sy-passos">
+        <li>No GitHub, crie uma chave de acesso — <a href="${LINK_CHAVE}" target="_blank" rel="noopener">abrir</a>: deixe marcada só a permissão <b>gist</b>, escolha a maior validade e clique em <b>Generate token</b>.</li>
+        <li>Copie a chave (começa com <code>ghp_</code>) e cole aqui. Não precisa criar repositório: o sistema cria um Gist privado sozinho.</li>
+      </ol>
+      <div class="campo"><label for="sy_token">Chave do GitHub</label><input id="sy_token" type="password" autocomplete="off" spellcheck="false" placeholder="ghp_…"></div>
+      <div class="campo"><label for="sy_nome">Nome deste aparelho</label><input id="sy_nome" value="${esc(S.nomeAparelho())}" maxlength="40"></div>
+      <p class="sy-erro" role="alert"></p>
+      <div class="modal-acoes"><button class="btn" id="sy_cancelar">Cancelar</button><button class="btn primario salvar" id="sy_ok">Criar conta</button></div>`, true);
+    const m = document.getElementById("modal");
+    m.querySelector("#sy_cancelar").onclick = fecharModal;
+    m.querySelector("#sy_ok").onclick = () => {
+      const b = m.querySelector("#sy_ok"), err = m.querySelector(".sy-erro");
+      const token = m.querySelector("#sy_token").value.trim();
+      if (!/^(github_pat_|ghp_|gho_)[A-Za-z0-9_]+$/.test(token)) { err.textContent = "Cole a chave inteira — ela começa com ghp_ (ou github_pat_)."; return; }
+      b.disabled = true; b.textContent = "Conferindo…"; err.textContent = "";
+      S.criarConta(token, m.querySelector("#sy_nome").value.trim(), { mesmoAssim }).then(() => {
+        definirAvisoSync("");
+        fecharModal(); mostrarCodigoConta(true);
+        renderRota();
+      }).catch((e) => {
+        b.disabled = false; b.textContent = "Criar conta";
+        if (e.tipo === "existe") {
+          err.innerHTML = `Já existe uma conta nesta chave do GitHub. Para usar os mesmos dados, abra o sistema no aparelho que já sincroniza → <b>Adicionar aparelho</b> e entre com o código aqui. <button class="link-acao" id="sy_mesmo">Criar outra conta mesmo assim</button>`;
+          m.querySelector("#sy_mesmo").onclick = () => abrirCriarConta(true);
+        } else err.textContent = e.message;
       });
     };
   }
-
-  function desligarSync() {
-    confirmarExclusao("Desligar a sincronização neste aparelho? Os dados continuam aqui e no cofre.", () => {
-      gravarCfgSync({ token: "", cofre: "" });
-      mostrarStatusSync("desligada");
-      renderRota();
-      toast("Sincronização desligada neste aparelho.");
+  // pede a senha do sistema (se houver) antes de mostrar o código da conta
+  function pedirSenhaSistema(motivo) {
+    if (!(window.Bloqueio && Bloqueio.ativo())) return Promise.resolve(true);
+    return new Promise((ok) => {
+      abrirModal(`<h3>Confirme a senha</h3><p class="campo ajuda" style="margin-top:0">${esc(motivo)}</p>
+        <div class="campo"><label for="sy_senha">Senha do sistema</label><input id="sy_senha" type="password" inputmode="numeric" autocomplete="off"></div>
+        <p class="sy-erro" role="alert"></p>
+        <div class="modal-acoes"><button class="btn" id="sy_cancelar">Cancelar</button><button class="btn primario salvar" id="sy_ok">Continuar</button></div>`);
+      const m = document.getElementById("modal");
+      m.querySelector("#sy_cancelar").onclick = () => { fecharModal(); ok(false); };
+      const conferir = () => Bloqueio.conferir(m.querySelector("#sy_senha").value).then((certa) => {
+        if (certa) { fecharModal(); ok(true); } else m.querySelector(".sy-erro").textContent = "Senha incorreta.";
+      });
+      m.querySelector("#sy_ok").onclick = conferir;
+      m.querySelector("#sy_senha").addEventListener("keydown", (e) => { if (e.key === "Enter") conferir(); });
     });
+  }
+  function mostrarCodigoConta(recemCriada, aviso) {
+    (recemCriada ? Promise.resolve(true) : pedirSenhaSistema("Para mostrar o código da conta.")).then((ok) => {
+      if (!ok) return;
+      const codigo = S.codigoDe(), link = S.linkDe();
+      abrirModal(`
+        <h3>${recemCriada ? "Conta criada! 🎉" : "Adicionar um aparelho"}</h3>
+        ${aviso ? `<p class="cfg-info cfg-alerta">${esc(aviso)}</p>` : ""}
+        <p class="campo ajuda" style="margin-top:0">No outro aparelho, abra o sistema → <b>Configurações → Sincronização → Entrar com código</b> e leia este QR code (ou cole o código). Pela câmera do celular, o QR code também abre o sistema já com o código.</p>
+        <div class="sy-qr" id="syQR"><span class="dim">Gerando QR code…</span></div>
+        <div class="campo"><label for="sy_cod">Código da conta</label><textarea id="sy_cod" rows="3" readonly spellcheck="false">${esc(codigo)}</textarea></div>
+        <div class="cfg-acoes"><button class="btn primario" id="sy_copiar">Copiar código</button>${navigator.share ? `<button class="btn" id="sy_comp">Enviar para mim</button>` : ""}</div>
+        <p class="campo ajuda">🔐 Quem tiver este código vê e altera os seus dados. Mande só para você mesmo e apague depois.</p>
+        <div class="modal-acoes"><button class="btn primario salvar" id="sy_pronto">Pronto</button></div>`, true);
+      const m = document.getElementById("modal");
+      S.qrSVG(link).then((svg) => { const q = m.querySelector("#syQR"); if (q) q.innerHTML = svg; })
+        .catch(() => { const q = m.querySelector("#syQR"); if (q) q.innerHTML = `<span class="dim">Não consegui gerar o QR code — use o código abaixo.</span>`; });
+      m.querySelector("#sy_pronto").onclick = () => { fecharModal(); renderRota(); };
+      m.querySelector("#sy_copiar").onclick = () => {
+        const t = m.querySelector("#sy_cod");
+        (navigator.clipboard ? navigator.clipboard.writeText(codigo) : Promise.reject()).catch(() => { t.select(); document.execCommand("copy"); }).then(() => toast("Código copiado."));
+      };
+      const comp = m.querySelector("#sy_comp");
+      if (comp) comp.onclick = () => navigator.share({ title: "Código do " + nomeApp(), text: "Código da minha conta (não compartilhe):\n" + codigo }).catch(() => {});
+    });
+  }
+  function abrirEntrarComCodigo(codigoInicial) {
+    const temDados = !DADOS.demo && temDadosReais(DADOS);
+    abrirModal(`
+      <h3>Entrar com código</h3>
+      <p class="campo ajuda" style="margin-top:0">No aparelho que já sincroniza: <b>Configurações → Sincronização → Adicionar aparelho</b>. Leia o QR code com a câmera ou cole o código.</p>
+      <div class="sy-camera" hidden><video muted playsinline></video><span class="sy-mira"></span></div>
+      <div class="cfg-acoes"><button class="btn" id="sy_ler">📷 Ler QR code</button></div>
+      <div class="campo"><label for="sy_cod">Código da conta</label><textarea id="sy_cod" rows="3" spellcheck="false" autocomplete="off" placeholder="MF1.…">${esc(codigoInicial || "")}</textarea></div>
+      <div class="campo"><label for="sy_nome">Nome deste aparelho</label><input id="sy_nome" value="${esc(S.nomeAparelho())}" maxlength="40"></div>
+      ${temDados ? `<span class="sy-rot">Este aparelho já tem dados</span>
+        <div class="sy-modos"><label><input type="radio" name="sy_modo" value="juntar" checked><span><b>Juntar</b><small>Fica tudo: os dados deste aparelho e os da conta.</small></span></label>
+        <label><input type="radio" name="sy_modo" value="conta"><span><b>Usar só os da conta</b><small>Os dados deste aparelho são substituídos (antes, baixe um backup se quiser guardar).</small></span></label></div>` : ""}
+      <p class="sy-erro" role="alert"></p>
+      <div class="modal-acoes"><button class="btn" id="sy_cancelar">Cancelar</button><button class="btn primario salvar" id="sy_ok">Entrar</button></div>`, true);
+    const m = document.getElementById("modal");
+    const cod = m.querySelector("#sy_cod"), err = m.querySelector(".sy-erro"), cam = m.querySelector(".sy-camera");
+    if (codigoInicial) setTimeout(() => m.querySelector("#sy_ok").focus(), 60);
+    m.querySelector("#sy_cancelar").onclick = fecharModal;
+    m.querySelector("#sy_ler").onclick = () => {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { err.textContent = "Este navegador não deixa usar a câmera aqui. Cole o código."; return; }
+      cam.hidden = false; err.textContent = "";
+      S.lerQR(cam.querySelector("video"), (txt) => { cam.hidden = true; const c = S.lerCodigo(txt); cod.value = c ? S.codigoDe(c) : txt; toast("QR code lido."); })
+        .catch(() => { cam.hidden = true; err.textContent = "Não consegui abrir a câmera. Libere o acesso à câmera ou cole o código."; });
+    };
+    m.querySelector("#sy_ok").onclick = () => {
+      const b = m.querySelector("#sy_ok");
+      if (!S.lerCodigo(cod.value)) { err.textContent = "Código inválido. Confira se copiou inteiro (começa com MF1.)."; return; }
+      const modoEl = m.querySelector("input[name=sy_modo]:checked");
+      b.disabled = true; b.textContent = "Entrando…"; err.textContent = ""; S.pararLeitor();
+      S.entrar(cod.value, modoEl ? modoEl.value : "juntar", m.querySelector("#sy_nome").value.trim()).then(() => {
+        definirAvisoSync("");
+        fecharModal(); renderRota(); toast("Pronto! Este aparelho agora sincroniza com a sua conta.");
+      }).catch((e) => { b.disabled = false; b.textContent = "Entrar"; err.textContent = e.message; });
+    };
+  }
+  // janela simples com um campo e um botão; aoOk devolve uma Promise
+  function pedirNaJanela(titulo, html, rotulo, aoOk, perigo) {
+    abrirModal(`<h3>${titulo}</h3>${html}<p class="sy-erro" role="alert"></p>
+      <div class="modal-acoes"><button class="btn" id="sy_cancelar">Cancelar</button><button class="btn ${perigo ? "perigo" : "primario salvar"}" id="sy_ok">${rotulo}</button></div>`, true);
+    const m = document.getElementById("modal");
+    const b = m.querySelector("#sy_ok"), err = m.querySelector(".sy-erro");
+    m.querySelector("#sy_cancelar").onclick = fecharModal;
+    b.onclick = () => {
+      b.disabled = true; err.textContent = "";
+      Promise.resolve().then(() => aoOk(m)).then((fechar) => { if (fechar !== false) { fecharModal(); renderRota(); } else b.disabled = false; })
+        .catch((e) => { b.disabled = false; err.textContent = e.message; });
+    };
+  }
+  const ACOES_SYNC = {
+    "sync-criar": () => abrirCriarConta(false),
+    "sync-entrar": () => abrirEntrarComCodigo(),
+    "sync-agora": () => { toast("Sincronizando…"); sincronizar(false); },
+    "sync-codigo": () => mostrarCodigoConta(false),
+    "sync-renomear": () => pedirNaJanela("Nome deste aparelho", `<div class="campo"><input id="sy_nome" value="${esc(S.nomeAparelho())}" maxlength="40"></div>`, "Salvar",
+      (m) => S.renomear(m.querySelector("#sy_nome").value)),
+    "sync-remover": (el) => {
+      const id = el.dataset.id, ap = (S.estado.aparelhos || {})[id] || {};
+      pedirNaJanela(`Remover “${esc(ap.nome || "aparelho")}”`, `<p style="margin-top:0">O aparelho deixa de sincronizar na próxima vez que abrir o sistema.</p>
+        <label class="chk-linha"><input type="checkbox" id="sy_apagar"> <span><b>Apagar os dados dele também</b> — use se o aparelho foi perdido ou roubado.</span></label>
+        <p class="campo ajuda">Se ele foi roubado, use também <b>Trocar código</b> em “Mais opções”: aí ele perde o acesso mesmo que nunca mais abra o sistema.</p>`, "Remover",
+        (m) => S.removerAparelho(id, m.querySelector("#sy_apagar").checked).then(() => toast("Aparelho removido.")), true);
+    },
+    "sync-sair": () => pedirNaJanela("Desconectar este aparelho", `<p style="margin-top:0">Os dados continuam neste aparelho, mas param de sincronizar. Os outros aparelhos não são afetados.</p>`, "Desconectar",
+      () => S.sair().then(() => toast("Este aparelho não sincroniza mais.")), true),
+    "sync-token": () => pedirNaJanela("Atualizar chave do GitHub", `<p class="campo ajuda" style="margin-top:0">Crie uma chave nova (<a href="${LINK_CHAVE}" target="_blank" rel="noopener">abrir</a>) na <b>mesma conta do GitHub</b>, com a permissão <b>gist</b>. Os outros aparelhos recebem a chave nova sozinhos na próxima sincronização — desde que a antiga ainda não tenha vencido.</p>
+      <div class="campo"><label for="sy_token">Chave nova</label><input id="sy_token" type="password" autocomplete="off" spellcheck="false" placeholder="ghp_…"></div>`, "Atualizar", (m) => {
+      const t = m.querySelector("#sy_token").value.trim();
+      if (!/^(github_pat_|ghp_|gho_)/.test(t)) throw new Error("Cole a chave inteira — ela começa com ghp_ (ou github_pat_).");
+      return S.atualizarToken(t).then(() => { if (S.estado.estado === "erro") throw new Error(S.estado.msg); toast("Chave atualizada."); });
+    }),
+    "sync-trocar": () => pedirSenhaSistema("Para trocar o código da conta.").then((ok) => {
+      if (!ok) return;
+      pedirNaJanela("Trocar código", `<p style="margin-top:0">Cria um código novo e encerra o antigo. <b>Todos os outros aparelhos</b> param de sincronizar e precisam ler o código novo — use quando um aparelho for perdido ou roubado.</p>
+        <p class="campo ajuda">Para garantir, apague também a chave antiga no GitHub (<a href="https://github.com/settings/tokens" target="_blank" rel="noopener">abrir</a>), crie outra e cole abaixo.</p>
+        <div class="campo"><label for="sy_token">Chave nova do GitHub (recomendado)</label><input id="sy_token" type="password" autocomplete="off" spellcheck="false" placeholder="ghp_… (opcional)"></div>`, "Trocar código", (m) => {
+        const t = m.querySelector("#sy_token").value.trim();
+        return S.trocarCodigo(t || null).then(() => { fecharModal(); mostrarCodigoConta(true, "Código novo criado. Leia este QR code em cada aparelho que deve continuar sincronizando."); return false; });
+      }, true);
+    })
+  };
+
+  // link do QR code (#sync=MF1.…): abre "Entrar com código" já preenchido
+  let codigoDoLink = null;
+  function lerCodigoDoEndereco() {
+    const mh = location.hash.match(/^#sync=(MF1\.[A-Za-z0-9_-]+)/);
+    if (mh) { codigoDoLink = mh[1]; try { history.replaceState(null, "", location.pathname + location.search); } catch (e) { /* ignora */ } }
+    return !!mh;
+  }
+  lerCodigoDoEndereco();
+  window.addEventListener("hashchange", () => { if (lerCodigoDoEndereco()) abrirCodigoDoLink(0); });
+  function abrirCodigoDoLink(n) {
+    if (!codigoDoLink) return;
+    setTimeout(() => {
+      if (document.querySelector(".tela-bloqueio") || document.getElementById("modal").classList.contains("on")) { if ((n || 0) < 120) abrirCodigoDoLink((n || 0) + 1); return; }
+      if (S.conectado()) { toast("Este aparelho já sincroniza com uma conta."); codigoDoLink = null; return; }
+      navegarPara("configuracoes");
+      const c = codigoDoLink; codigoDoLink = null;
+      setTimeout(() => abrirEntrarComCodigo(c), 400);
+    }, n ? 1000 : 1500);
+  }
+
+  // ---------------------------------------------------------------------
+  // perfil no topo: avatar + menu (Seu perfil · Editar avatar, Ajustes)
+  // ---------------------------------------------------------------------
+  function perfilAtual() { return (DADOS && DADOS.config && DADOS.config.perfil) || {}; }
+  if (window.Avatar) Avatar.configurar({
+    perfil: perfilAtual,
+    salvar: (p) => { DADOS.config = DADOS.config || {}; DADOS.config.perfil = p; salvarEAtualizar("Perfil atualizado."); atualizarPerfilTopo(); },
+    toast
+  });
+  let assinaturaPerfil = "";
+  function atualizarPerfilTopo() {
+    const btn = document.getElementById("btnPerfil");
+    if (!btn || !window.Avatar) return;
+    const p = perfilAtual(), sit = situacaoSync();
+    const ass = JSON.stringify([p.nome, p.avatar && p.avatar.emoji, p.avatar && p.avatar.cor, p.avatar && p.avatar.img && (p.avatar.img.src || "").length, sit.cls, sit.titulo]);
+    btn.dataset.sync = sit.cls;
+    if (ass === assinaturaPerfil) return;
+    assinaturaPerfil = ass;
+    btn.innerHTML = Avatar.circuloHTML("avatar-barra", p) + `<span class="perfil-ponto" aria-hidden="true"></span>`;
+    btn.title = (p.nome || "Seu perfil") + " · " + (S.conectado() ? "sincronização: " + sit.titulo.toLowerCase() : "sincronização desligada");
+    preencherMenuPerfil();
+  }
+  function preencherMenuPerfil() {
+    const dd = document.getElementById("dropdownPerfil");
+    if (!dd || !window.Avatar) return;
+    const p = perfilAtual(), sit = situacaoSync();
+    dd.innerHTML = `
+      <button class="perfil-card" data-pf="avatar">${Avatar.circuloHTML("", p)}<span class="pl-txt"><b>${esc(p.nome || "Seu perfil")}</b><small>Editar avatar</small></span></button>
+      <button class="pf-item pf-sync" data-pf="ajustes"><span class="sync-ponto ${sit.cls}"></span><span>${S.conectado() ? `Sincronização: <b>${sit.titulo.toLowerCase()}</b>` : "Sincronização desligada"}${S.conectado() && S.ler().ultimo ? `<small>${quandoSync(S.ler().ultimo)}</small>` : ""}</span></button>
+      <button class="pf-item" data-pf="ajustes"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="2.6"/><path d="M10 3v2M10 15v2M3 10h2M15 10h2M5 5l1.4 1.4M13.6 13.6L15 15M15 5l-1.4 1.4M6.4 13.6L5 15"/></svg><b>Ajustes</b></button>`;
+  }
+  function ligarPerfilTopo() {
+    const btn = document.getElementById("btnPerfil"), dd = document.getElementById("dropdownPerfil");
+    if (!btn || !dd) return;
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      preencherMenuPerfil();
+      dd.classList.toggle("on");
+      if (dd.classList.contains("on")) document.querySelectorAll("#dropdownNotificacoes, #popData").forEach((x) => x.classList.remove("on"));
+    });
+    dd.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-pf]");
+      if (!b) return;
+      dd.classList.remove("on");
+      if (b.dataset.pf === "avatar") Avatar.abrir();
+      else navegarPara("configuracoes");
+    });
+    document.addEventListener("click", (e) => { if (!dd.contains(e.target) && !btn.contains(e.target)) dd.classList.remove("on"); });
+    atualizarPerfilTopo();
   }
 
 
@@ -1120,6 +1339,7 @@
     A.aoMudar(() => { DADOS = A.carregarDados(); migrarRecorrenciasAntigas(); renderRota(); });
 
     ligarTopbar();
+    ligarPerfilTopo();
     ligarSidebar();
     ligarModalGlobal();
     ligarCliqueNotificacoes();
@@ -1179,6 +1399,8 @@
     });
     window.addEventListener("focus", () => sincronizar(true));
     window.addEventListener("online", () => sincronizar(true));
+    abrirCodigoDoLink(0);
+    setInterval(atualizarPerfilTopo, 60 * 1000);   // "há 2 min" no menu do perfil
   }
 
   function salvarEAtualizar(mensagem) {
@@ -1380,6 +1602,7 @@
   }
   function fecharModal() {
     painelReabrir = null;
+    if (window.Sincronizacao) Sincronizacao.pararLeitor();   // a câmera do "Ler QR code" não fica ligada
     document.getElementById("modal").classList.remove("on");
     document.getElementById("scrim").classList.remove("on");
   }
@@ -8193,8 +8416,6 @@
     const acoes = (html) => `<div class="cfg-acoes">${html}</div>`;
     const ultimoBackup = d.config && d.config.ultimoBackup ? new Date(d.config.ultimoBackup).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
     const comSenha = window.Bloqueio && Bloqueio.ativo();
-    const sc = cfgSync();
-    const ultimaSync = sc.ultima ? new Date(sc.ultima).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
     return `
       <div class="grid g-top cfg-grid">
         <div class="cfg-backup">${card("", "Backup Dados", A.ehDesktop ? "arquivo do programa, com cópia automática (dados.bak.json)" : "Todas informações são armazenadas exclusivamente neste navegador", "", `
@@ -8229,34 +8450,8 @@
               <button class="btn perigo" data-acao="remover-senha">Remover senha</button>`
               : `<button class="btn primario" data-acao="criar-senha">Criar</button>`)}
           </div>`)}</div>
-        <div class="cfg-sync">${card("", "Sincronização", "entre aparelhos · web, iPad e Windows", "", sc.ligada ? `
-          <div class="body pad">
-            <div class="sync-estado"><span class="sync-ponto ligado"></span><b>Ligado</b>
-              <span class="dim" id="statusSync">${esc(statusSync || descreverAlteracao(DADOS) || "última sincronização: " + ultimaSync)}</span></div>
-            <div class="campo"><label for="cfgSyncCofre">Cofre</label>
-              ${sc.cofre ? `<input id="cfgSyncCofre" type="password" readonly value="${esc(sc.cofre)}" autocomplete="off" spellcheck="false">`
-                : `<input id="cfgSyncCofre" type="text" readonly value="sendo criado…">`}</div>
-            ${lista([
-              "Cada alteração é enviada para o cofre em poucos segundos.",
-              ["A cada 2 minutos o sistema confere se outro aparelho mandou algo novo.", 3],
-              "Para ligar outro aparelho seu, use o mesmo token."
-            ])}
-            ${acoes(`<button class="btn primario" data-acao="sincronizar-agora">Sincronizar</button>
-              <button class="btn perigo" data-acao="desligar-sync">Desligar</button>`)}
-          </div>` : `
-          <div class="body pad">
-            <div class="sync-estado"><span class="sync-ponto"></span><b>Desligado</b>
-              <span class="dim" id="statusSync">${esc(statusSync)}</span></div>
-            <div class="campo"><label for="cfgSyncToken">Token do GitHub</label>
-              <input id="cfgSyncToken" type="password" autocomplete="off" spellcheck="false" placeholder="ghp_…"></div>
-            ${lista([
-              ["Crie em GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic), marcando só a permissão <b>gist</b>.", 1],
-              ["Ligue primeiro no aparelho com os dados mais completos; nos outros, use o mesmo token.", 2],
-              ["O token fica salvo só neste aparelho.", 5]
-            ])}
-            <p class="cfg-info cfg-alerta"><b>Outras pessoas vão usar o sistema?</b> Cada uma precisa da própria conta do GitHub e do próprio token — com o mesmo token, os dados se misturam no mesmo cofre.</p>
-            ${acoes(`<button class="btn primario" data-acao="conectar-sync">Ligar</button>`)}
-          </div>`)}</div>
+        <div class="cfg-sync">${card("", "Sincronização", "conta com código · celular, iPad e computador", "", `
+          <div class="body pad" id="syncCorpo">${corpoCartaoSync()}</div>`)}</div>
         <div class="cfg-cotacoes">${card("", "Cotações automáticas", "dólar e ações · AwesomeAPI e brapi", "", `
           <div class="body pad">
             <label class="chk-linha"><input type="checkbox" id="cfgCotacoesAuto" ${configCotacoes().auto ? "checked" : ""}> Atualizar cotações a cada 5 min</label>
@@ -8549,6 +8744,7 @@
       if (!b) return;
       const acao = b.dataset.acao;
       const id = b.dataset.id;
+      if (ACOES_SYNC[acao]) { ACOES_SYNC[acao](b); return; }
 
       switch (acao) {
         case "ir": if (b.dataset.sel) velaBolsa = b.dataset.sel; navegarPara(b.dataset.secao, b.dataset.id); break;
@@ -8731,7 +8927,7 @@
         case "recarregar-demo": {
           const temReais = DADOS.bancos.length || DADOS.entradas.length || DADOS.despesas.length || DADOS.acoes.length || DADOS.investimentos.length;
           const msg = temReais ? "Isso vai substituir TODOS os seus dados atuais pelos dados de demonstração. Tem certeza?" : "Carregar os dados de demonstração?";
-          confirmarExclusao(msg, () => { A.carregarExemplo(); toast("Dados de exemplo carregados."); });
+          confirmarExclusao(msg, () => { sairDaContaAntesDeApagar(); A.carregarExemplo(); toast("Dados de exemplo carregados."); });
           break;
         }
 
@@ -8756,13 +8952,10 @@
             Bloqueio.remover(); renderRota(); toast("Senha removida.");
           });
           break;
-        case "conectar-sync": conectarSync(); break;
         case "copiar-cofre":
           if (navigator.clipboard) navigator.clipboard.writeText(b.dataset.cofre).then(() => toast("Código copiado."), () => toast("Código: " + b.dataset.cofre));
           else toast("Código: " + b.dataset.cofre);
           break;
-        case "sincronizar-agora": toast("Sincronizando…"); sincronizar(false); break;
-        case "desligar-sync": desligarSync(); break;
         case "abrir-pasta-banco": A.abrirPastaBanco(); break;
         case "exportar-backup": A.exportarDados(); toast("Backup exportado — verifique seus downloads."); break;
         case "importar-pdf": document.getElementById("inputImportarPdf").click(); break;
@@ -8770,7 +8963,7 @@
 
         case "apagar-tudo":
           confirmarExclusao("Isso vai apagar TODOS os seus dados permanentemente. Essa ação não pode ser desfeita. Deseja continuar?", () => {
-            confirmarExclusao("Tem certeza mesmo? Não há como desfazer.", () => { A.limparDados(); toast("Todos os dados foram apagados."); });
+            confirmarExclusao("Tem certeza mesmo? Não há como desfazer.", () => { sairDaContaAntesDeApagar(); A.limparDados(); toast("Todos os dados foram apagados."); });
           });
           break;
       }

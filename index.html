@@ -29,7 +29,7 @@
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=8">
 <meta name="color-scheme" content="dark">
 <title>Muller Mendes</title>
-<link rel="stylesheet" href="css/style.css?v=3.6.398">
+<link rel="stylesheet" href="css/style.css?v=3.6.399">
 </head>
 <body>
 
@@ -62,7 +62,9 @@
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a4 4 0 0 1 8 0c0 3.5 1.2 4.5 1.2 4.5H4.8S6 11.5 6 8z"/><path d="M8.3 15a1.8 1.8 0 0 0 3.4 0"/></svg>
           <span class="bolinha" id="badgeNotificacoes" style="display:none">0</span>
         </button>
+        <button class="perfil-btn" id="btnPerfil" aria-label="Seu perfil e ajustes" title="Seu perfil e ajustes"></button>
         <div class="dropdown" id="dropdownNotificacoes"></div>
+        <div class="dropdown dd-perfil" id="dropdownPerfil"></div>
         <div class="dropdown pop-data" id="popData"></div>
     </div>
 
@@ -95,17 +97,18 @@
 <script src="js/vendor/chart.umd.min.js"></script>
 
 <!-- módulos do sistema — ordem importa: cada um usa o anterior -->
-<script src="js/bloqueio.js?v=3.6.398"></script>
-<script src="js/armazenamento.js?v=3.6.398"></script>
-<script src="js/financeiro.js?v=3.6.398"></script>
-<script src="js/investimentos.js?v=3.6.398"></script>
-<script src="js/graficos.js?v=3.6.398"></script>
-<script src="js/extrato.js?v=3.6.398"></script>
-<script src="js/relatorio.js?v=3.6.398"></script>
-<script src="js/cotacoes.js?v=3.6.398"></script>
-<script src="js/sincronizacao.js?v=3.6.398"></script>
-<script src="js/emojis.js?v=3.6.398"></script>
-<script src="js/app.js?v=3.6.398"></script>
+<script src="js/bloqueio.js?v=3.6.399"></script>
+<script src="js/armazenamento.js?v=3.6.399"></script>
+<script src="js/financeiro.js?v=3.6.399"></script>
+<script src="js/investimentos.js?v=3.6.399"></script>
+<script src="js/graficos.js?v=3.6.399"></script>
+<script src="js/extrato.js?v=3.6.399"></script>
+<script src="js/relatorio.js?v=3.6.399"></script>
+<script src="js/cotacoes.js?v=3.6.399"></script>
+<script src="js/sincronizacao.js?v=3.6.399"></script>
+<script src="js/avatar.js?v=3.6.399"></script>
+<script src="js/emojis.js?v=3.6.399"></script>
+<script src="js/app.js?v=3.6.399"></script>
 <script>
   // registra o service worker (só funciona via http/https — no iPad, depois de publicado)
   if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
