@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.406";
+  const VERSAO_APP = "3.6.407";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -580,7 +580,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.406 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.407 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -896,11 +896,14 @@
   // =========================================================================
   // GOOGLE AGENDA (mesmo sistema do Meu Controle) — o motor fica em agenda.js
   // =========================================================================
-  // o que deve estar na agenda: este mês e os dois seguintes
+  // o que deve estar na agenda: este mês e os 11 seguintes (a janela anda
+  // sozinha a cada mês, então uma conta que se repete sem fim aparece sempre
+  // com um ano de antecedência)
+  const MESES_AGENDA = 12;
   function desejadosAgenda(d, itens) {
     const lista = [];
     const [a0, m0] = F.mesAtual().split("-").map(Number);
-    const meses = [0, 1, 2].map((i) => { const x = new Date(a0, m0 - 1 + i, 1); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}`; });
+    const meses = Array.from({ length: MESES_AGENDA }, (_, i) => i).map((i) => { const x = new Date(a0, m0 - 1 + i, 1); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}`; });
     const vistos = {};
     const add = (x) => { if (!x.data || vistos[x.chave]) return; vistos[x.chave] = true; lista.push(x); };
     if (itens.contas) meses.forEach((m) => listaDespesasTodasMes(d, m).forEach((x) => {
@@ -948,8 +951,8 @@
     const item = (k, rot, sub) => `<label class="chk-linha ag-item"><input type="checkbox" data-ag-item="${k}" ${c.itens[k] ? "checked" : ""}> <span>${rot}<small>${sub}</small></span></label>`;
     return `${est}
       <span class="sy-rot">O que vai para a agenda</span>
-      ${item("contas", "💸 Contas a pagar", "no vencimento, com alerta na véspera e no dia")}
-      ${item("receitas", "💰 Receitas previstas", "no dia previsto")}
+      ${item("contas", "💸 Contas a pagar", "próximos 12 meses, alerta na véspera e no dia")}
+      ${item("receitas", "💰 Receitas previstas", "próximos 12 meses, no dia previsto")}
       ${item("metas", "🎯 Prazos das metas", "com alerta uma semana antes")}
       <p class="cfg-info cfg-opc" data-opc="1"><a class="ag-link" href="https://calendar.google.com/" target="_blank" rel="noopener">Abrir o Google Agenda ↗</a></p>
       <div class="cfg-acoes"><button class="btn primario" data-acao="agenda-enviar">Atualizar</button>
