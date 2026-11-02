@@ -5,6 +5,8 @@
  * arquivo no computador (dados.json), com uma cópia da versão anterior
  * (dados.bak.json), na pasta do usuário:
  *   %APPDATA%\Muller Mendes Finanças\
+ * (o programa se chama "Finanças", mas a pasta continua com o nome antigo,
+ * para quem já usa não perder os dados — ver PASTA_DADOS abaixo)
  *
  * O armazenamento.js já sabe usar esse arquivo: quando existe
  * window.bancoDados (criado pelo preload.js), ele lê e grava por aqui em
@@ -21,6 +23,12 @@ const { pathToFileURL } = require("url");
 protocol.registerSchemesAsPrivileged([
   { scheme: "app", privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, stream: true } }
 ]);
+
+// pasta dos dados: fixa no nome antigo. Sem isto, o Electron usaria o nome do
+// programa ("Finanças") e quem já usa abriria o programa vazio (dados, senha,
+// sincronização e Google Agenda ficam nesta pasta)
+const PASTA_DADOS = "Muller Mendes Finanças";
+app.setPath("userData", path.join(app.getPath("appData"), PASTA_DADOS));
 
 const WEB = path.join(__dirname, "web");
 const pasta = () => app.getPath("userData");
