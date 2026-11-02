@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.437";
+  const VERSAO_APP = "3.6.438";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -378,8 +378,8 @@
 
   let mesesBancos = 0;
   let anoBancos = null;   // período do gráfico da guia Bancos (0 = saldo atual)
-  let mesesRelA = 0;    // período do quadro Receitas x despesas (abre em "Tudo")
-  let mesesRelB = 0;    // período do quadro Evolução patrimonial (abre em "Tudo")
+  let mesesRelA = 12;   // período do quadro Receitas x despesas (sempre abre em 12m)
+  let mesesRelB = 12;   // período do quadro Evolução patrimonial (sempre abre em 12m)
   let anoRelA = null;
   let anoRelB = null;
 
@@ -581,7 +581,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.437 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.438 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -1644,8 +1644,8 @@
       anoEvo = String(new Date().getFullYear()); mesesEvo = 0;   // evolução patrimonial sempre em "Tudo"
     }
     if (secao === "relatorios") {
-      anoRelA = String(new Date().getFullYear()); mesesRelA = 0;   // receitas x despesas sempre em "Tudo"
-      anoRelB = String(new Date().getFullYear()); mesesRelB = 0;   // evolução patrimonial sempre em "Tudo"
+      anoRelA = String(new Date().getFullYear()); mesesRelA = 12;   // receitas x despesas sempre em 12m
+      anoRelB = String(new Date().getFullYear()); mesesRelB = 12;   // evolução patrimonial sempre em 12m
     }
     document.querySelectorAll("#navPrincipal button").forEach((b) => b.classList.toggle("ativo", b.dataset.secao === secao));
     fecharSidebarMobile();
@@ -8361,7 +8361,7 @@
     const periodo = cfg.meses ? cfg.meses + " meses de " + cfg.ano : cfg.idAno ? "ano inteiro de " + cfg.ano : "todo histórico";
     return card("", "Evolução patrimonial", `patrimônio líquido · ${periodo}`,
       (hist.length >= 2 ? `<span class="pill-periodo ${corSinal(varPer)}">PERÍODO ${brlSinal(varPer)}</span>` : "") +
-      `<div class="filtro-mes">${cfg.idAno ? seletorAnoDash(cfg.idAno, cfg.ano, anosDashboard(d)) : ""}${abasMeses(cfg.acao, cfg.meses, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }, { meses: 0, rotulo: "Tudo" }])}</div>`,
+      `<div class="filtro-mes">${cfg.idAno ? seletorAnoDash(cfg.idAno, cfg.ano, anosDashboard(d)) : ""}${abasMeses(cfg.acao, cfg.meses, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }].concat(cfg.idAno ? [] : [{ meses: 0, rotulo: "Tudo" }]))}</div>`,
       hist.length >= 2
         ? `<div${cfg.classe ? ` class="${cfg.classe}"` : ""} style="padding:8px 14px 12px;height:280px"><canvas id="${cfg.canvas}"></canvas></div>`
         : `<div class="empty">Sem registros de patrimônio em ${cfg.meses ? `${cfg.meses} ${cfg.meses === 1 ? "mês" : "meses"} de ${cfg.ano}` : cfg.idAno ? cfg.ano : "todo histórico"}.</div>`);
@@ -8626,7 +8626,8 @@
     const despesasP = mesesDoPeriodo.reduce((t, m) => t + totalDespesasPagasMes(d, m), 0);
     const historicoP = histPatrimonio(d).filter((h) => h.data >= fxB.ini && h.data <= fxB.fim);
     const picoB = historicoP.length ? Math.max(...historicoP.map((h) => h.valor)) : 0;
-    const OPC = [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }, { meses: 0, rotulo: "Tudo" }];
+    // Relatórios: sem o "Tudo" (o período é sempre dentro do ano escolhido)
+    const OPC = [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }];
     const rotulo = (m, ano) => (m ? `${m} ${m === 1 ? "mês" : "meses"} de ${ano}` : `Ano inteiro de ${ano}`);
     const rotuloPeriodo = rotulo(mesesRelA, anoRelA);
 
