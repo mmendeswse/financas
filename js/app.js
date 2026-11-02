@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.410";
+  const VERSAO_APP = "3.6.412";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -580,7 +580,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.410 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.412 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -902,6 +902,35 @@
   // sozinha a cada mês, então uma conta que se repete sem fim aparece sempre
   // com um ano de antecedência)
   const MESES_AGENDA = 12;
+  // regra de repetição do Google Agenda (RFC 5545) para uma série do sistema,
+  // a partir da data da primeira ocorrência depois da janela
+  function rruleSerie(reg, freq, data) {
+    const fimDe = (mes) => { const [a, m] = mes.split("-").map(Number); const ult = new Date(a, m, 0); return `${a}${String(m).padStart(2, "0")}${String(ult.getDate()).padStart(2, "0")}T235959Z`; };
+    let fim = reg.ateMes ? ";UNTIL=" + fimDe(reg.ateMes) : "";
+    // dia de referência da série: o da data original (ou da última mudança de
+    // data), não o da ocorrência — num mês curto, o dia 31 vira 30 ou 28
+    const ancora = ((reg.reancoragens || []).slice().sort((a, b) => a.desde.localeCompare(b.desde)).pop() || {}).data || dataReg(reg);
+    const dia = freq === FREQ_PERS && regraDe(reg).tipo === "diaFixo" ? Math.min(31, Math.max(1, Number(regraDe(reg).n) || 1)) : Number(String(ancora).slice(8, 10)) || Number(data.slice(8, 10));
+    // dia 29 a 31: nos meses mais curtos, o último dia do mês (como no sistema)
+    const porDia = dia > 28 ? `BYMONTHDAY=${Array.from({ length: dia - 27 }, (_, i) => 28 + i).join(",")};BYSETPOS=-1` : `BYMONTHDAY=${dia}`;
+    if (freq === "Mensal") return `FREQ=MONTHLY;${porDia}${fim}`;
+    if (freq === "Anual") return `FREQ=YEARLY${fim}`;
+    if (freq === "Semanal") return `FREQ=WEEKLY${fim}`;
+    if (freq === "Quinzenal") return `FREQ=WEEKLY;INTERVAL=2${fim}`;
+    if (freq === FREQ_PERS) {
+      const regra = regraDe(reg), passo = Math.max(1, Number(regra.intervalo) || 1);
+      if (Number(regra.parcelas) > 0) {
+        const faltam = Number(regra.parcelas) - numeroParcela(regra, data.slice(0, 7)) + 1;
+        if (faltam <= 0) return null;
+        fim = ";COUNT=" + faltam;
+      }
+      const base = `FREQ=MONTHLY${passo > 1 ? ";INTERVAL=" + passo : ""}`;
+      if (regra.tipo === "diaFixo") return `${base};${porDia}${fim}`;
+      if (regra.tipo === "ultimoDiaUtil") return `${base};BYDAY=MO,TU,WE,TH,FR;BYSETPOS=-1${fim}`;
+      return `${base};BYDAY=MO,TU,WE,TH,FR;BYSETPOS=${Math.max(1, Number(regra.n) || 1)}${fim}`;   // Nº dia útil
+    }
+    return null;
+  }
   function desejadosAgenda(d, itens) {
     const lista = [];
     const [a0, m0] = F.mesAtual().split("-").map(Number);
@@ -918,6 +947,37 @@
       add({ chave: `rc:${x.id}:${x.data}`, titulo: `💰 ${x.descricao || "Receita"} — ${brl(x.valor)}`, data: x.data, hora: "09:00", duracao: 30, alertas: [0],
         descricao: ["Receita prevista", x.categoria, x.banco && x.banco !== "—" ? x.banco : ""].filter(Boolean).join(" · "), cor: "10" });
     }));
+    // depois da janela: as contas e receitas que se repetem sem fim (ou até
+    // uma data / parcela distante) viram um evento que se repete no próprio
+    // Google Agenda, então aparecem em qualquer mês futuro
+    const depois = proximoMes(meses[meses.length - 1]);
+    const serie = (reg, tipo) => {
+      if (!reg || reg.origemRecorrente || !dataReg(reg)) return;
+      const freq = freqDe(reg);
+      if (freq === FREQUENCIAS[0]) return;
+      if (reg.ateMes && reg.ateMes < depois) return;
+      // primeira ocorrência depois da janela (procura até 2 anos à frente)
+      let mes = depois, data = null;
+      for (let i = 0; i < 24 && !data; i++, mes = proximoMes(mes)) data = ocorrenciasNoMes(reg, mes)[0] || null;
+      if (!data) return;
+      const r = rruleSerie(reg, freq, data);
+      if (!r) return;
+      // Nº / último dia útil: o Google não conhece os feriados; o início da série
+      // segue a mesma regra dele (senão o primeiro evento ficaria duplicado)
+      const sp = r.match(/BYDAY=MO,TU,WE,TH,FR;BYSETPOS=(-?\d+)/);
+      if (sp) {
+        const [a, m] = data.slice(0, 7).split("-").map(Number), uteis = [];
+        for (let dd = 1; dd <= new Date(a, m, 0).getDate(); dd++) { const w = new Date(a, m - 1, dd).getDay(); if (w >= 1 && w <= 5) uteis.push(dd); }
+        const n = Number(sp[1]), escolhido = n < 0 ? uteis[uteis.length - 1] : uteis[Math.min(n, uteis.length) - 1];
+        data = `${data.slice(0, 7)}-${String(escolhido).padStart(2, "0")}`;
+      }
+      const rotulo = tipo === "pg" ? "Conta a pagar" : "Receita prevista";
+      add({ chave: `${tipo}s:${reg.id}`, titulo: `${tipo === "pg" ? "💸" : "💰"} ${reg.descricao || (tipo === "pg" ? "Conta" : "Receita")} — ${brl(valorDoMes(reg, data.slice(0, 7)))}`,
+        data, hora: "09:00", duracao: 30, alertas: tipo === "pg" ? [0, 1440] : [0], rrule: r,
+        descricao: [rotulo, reg.categoria, "repete " + (ROTULO_FREQ[freq] || freq).toLowerCase()].filter(Boolean).join(" · "), cor: tipo === "pg" ? "11" : "10" });
+    };
+    if (itens.contas) [...d.despesas, ...(d.contasPagar || []).map((c) => ({ ...c, data: c.vencimento }))].forEach((reg) => serie(reg, "pg"));
+    if (itens.receitas) d.entradas.forEach((reg) => serie(reg, "rc"));
     if (itens.metas) (d.metas || []).forEach((mt) => {
       if (!mt.prazo || mt.prazo.slice(0, 7) < meses[0] || Number(mt.atual || 0) >= Number(mt.objetivo || 0)) return;
       add({ chave: `mt:${mt.id}:${mt.prazo}`, titulo: `🎯 Prazo da meta: ${mt.nome || "Meta"}`, data: mt.prazo, hora: "09:00", duracao: 30, alertas: [0, 10080],
@@ -950,13 +1010,13 @@
     const est = st.erro ? `<div class="sync-estado"><span class="sync-ponto erro"></span><b>Não atualizou</b><span class="dim">${esc(st.erro)}</span></div>`
       : st.rodando ? `<div class="sync-estado"><span class="sync-ponto rodando"></span><b>Atualizando a agenda…</b></div>`
       : `<div class="sync-estado"><span class="sync-ponto ${pend ? "erro" : "ligado"}"></span><b>${pend ? "Há mudanças para enviar" : "Agenda em dia"}</b><span class="dim">${c.ultimaVez ? quandoSync(c.ultimaVez) : ""}${st.msg ? " · " + esc(st.msg) : ""}</span></div>`;
-    const resumo = c.totalEventos != null ? `<p class="cfg-info"><b>${c.totalEventos}</b> ${c.totalEventos === 1 ? "evento" : "eventos"} na agenda${c.ate ? ` · até <b>${new Date(c.ate + "T12:00:00").toLocaleDateString("pt-BR", { month: "short", year: "numeric" }).replace(".", "")}</b>` : ""}${pend ? " — toque em <b>Atualizar</b> para enviar as mudanças" : ""}</p>` : "";
+    const resumo = c.totalEventos != null ? `<p class="cfg-info"><b>${c.totalEventos}</b> ${c.totalEventos === 1 ? "evento" : "eventos"} na agenda${c.semFim ? " · as que se repetem seguem <b>sem fim</b>" : c.ate ? ` · até <b>${new Date(c.ate + "T12:00:00").toLocaleDateString("pt-BR", { month: "short", year: "numeric" }).replace(".", "")}</b>` : ""}${pend ? " — toque em <b>Atualizar</b> para enviar as mudanças" : ""}</p>` : "";
     const item = (k, rot, sub) => `<label class="chk-linha ag-item"><input type="checkbox" data-ag-item="${k}" ${c.itens[k] ? "checked" : ""}> <span>${rot}<small>${sub}</small></span></label>`;
     return `${est}
       ${resumo}
       <span class="sy-rot">O que vai para a agenda</span>
-      ${item("contas", "💸 Contas a pagar", "próximos 12 meses, alerta na véspera e no dia")}
-      ${item("receitas", "💰 Receitas previstas", "próximos 12 meses, no dia previsto")}
+      ${item("contas", "💸 Contas a pagar", "inclusive as que se repetem sem fim; alerta na véspera e no dia")}
+      ${item("receitas", "💰 Receitas previstas", "inclusive as que se repetem; no dia previsto")}
       ${item("metas", "🎯 Prazos das metas", "com alerta uma semana antes")}
       <p class="cfg-info cfg-opc" data-opc="1">Não aparece? No Google Agenda, deixe marcada a agenda <b>“${esc(nomeApp())} Finanças”</b> em <b>Minhas agendas</b>. <a class="ag-link" href="https://calendar.google.com/" target="_blank" rel="noopener">Abrir o Google Agenda ↗</a></p>
       <div class="cfg-acoes"><button class="btn primario" data-acao="agenda-enviar">Atualizar</button>
@@ -1506,6 +1566,7 @@
     window.addEventListener("online", () => sincronizar(true));
     abrirCodigoDoLink(0);
     agendarAgenda(4000);   // depois de trazer os dados da conta
+    if (AG) setTimeout(() => AG.preparar(), 2000);   // login do Google pronto para o primeiro "Salvar"
     setInterval(atualizarPerfilTopo, 60 * 1000);   // "há 2 min" no menu do perfil
   }
 
@@ -1513,6 +1574,8 @@
     A.salvarDados(DADOS);
     if (mensagem) toast(mensagem);
     agendarEnvioSync();
+    // conta ou receita nova (ou alterada): já vai para o Google Agenda
+    if (AG) AG.atualizarJa();
     agendarAgenda();
     // a entrada que dispara uma transferência automática pode ter acabado de cair
     setTimeout(conferirTransfAutoNovas, 0);
