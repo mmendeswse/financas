@@ -2001,9 +2001,7 @@ button.pill-periodo:hover { filter: brightness(1.25); }
    quadros até a linha do rodapé (ajustarAlturaConfig) */
 .cfg-grid > div { grid-column: span 12; }   /* celular: um embaixo do outro */
 @media (min-width: 700px) {   /* tablet e computador: Senha do tamanho da Zona Risco, logo acima dela; Backup ocupa o resto da linha; Sincronização, Cotações e Zona Risco do mesmo tamanho */
-  .cfg-grid > .cfg-backup { grid-column: span 6; }
-  .cfg-grid > .cfg-senha, .cfg-grid > .cfg-agenda { grid-column: span 3; }
-  .cfg-grid > .cfg-sync, .cfg-grid > .cfg-cotacoes, .cfg-grid > .cfg-zona { grid-column: span 4; }
+  .cfg-grid > div { grid-column: span 4; }   /* seis quadros do mesmo tamanho: 3 em cima, 3 embaixo */
 }
 .cfg-grid .card > .body { flex: 1 1 auto; display: flex; flex-direction: column; }
 .cfg-grid .body.pad { flex: 1 1 auto; display: flex; flex-direction: column; gap: 10px; padding-top: 14px; padding-bottom: 14px; }
@@ -3090,3 +3088,19 @@ body.av-aberta { overflow: hidden; }
 .agenda-aviso small { display: block; font-size: 11.5px; color: var(--dim); }
 .ag-link { color: var(--cy); text-decoration: none; font-size: 12.5px; }
 .ag-link:hover { text-decoration: underline; }
+
+/* Configurações em tablet e computador: as duas linhas com a mesma altura,
+   a grade inteira cabe na tela (ajustarAlturaConfig) e o que não couber
+   num quadro rola dentro dele */
+@media (min-width: 700px) {
+  .cfg-grid { grid-auto-rows: minmax(0, 1fr); }
+  .cfg-grid > div { min-height: 0; display: flex; }
+  .cfg-grid > div > .card { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+  .cfg-grid .card > .body { min-height: 0; overflow: hidden; }
+  .cfg-grid .card > .body > .body.pad, .cfg-grid .card > .body.pad { min-height: 0; overflow: hidden; }
+  .cfg-grid .cfg-rolar { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; display: flex; flex-direction: column; gap: inherit; }
+  .cfg-grid .cfg-rolar > * { flex: none; }
+  .cfg-grid .cfg-rolar > .zona-resumo { flex: 1 1 0; }
+  .cfg-grid .cfg-acoes { flex: none; }
+  .cfg-grid #syAparelhos { min-height: 0; }
+}
