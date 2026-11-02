@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.420";
+  const VERSAO_APP = "3.6.419";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -581,7 +581,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.420 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.419 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -1007,26 +1007,21 @@
         <small>Contas a pagar, receitas previstas e prazos das metas numa agenda na sua conta Google, com alertas mesmo com o sistema fechado.</small></div></div>
       <p class="cfg-info cfg-opc" data-opc="2">O Google vai pedir para você escolher a conta e autorizar. O sistema só consegue mexer na agenda que ele mesmo cria — não vê nem altera as suas outras agendas.</p>
       <div class="cfg-acoes"><button class="btn primario" data-acao="agenda-conectar">Conectar</button></div>`;
-    const pend = AG.pendente(DADOS), aqui = AG.conectadoAqui();
+    const pend = AG.pendente(DADOS);
     const est = st.erro ? `<div class="sync-estado"><span class="sync-ponto erro"></span><b>Não atualizou</b><span class="dim">${esc(st.erro)}</span></div>`
       : st.rodando ? `<div class="sync-estado"><span class="sync-ponto rodando"></span><b>Atualizando a agenda…</b></div>`
-      : !aqui ? `<div class="sync-estado"><span class="sync-ponto ligado"></span><b>Conectada em outro aparelho</b><span class="dim">${pend ? "mudanças a caminho" : c.ultimaVez ? quandoSync(c.ultimaVez) : ""}</span></div>`
       : `<div class="sync-estado"><span class="sync-ponto ${pend ? "erro" : "ligado"}"></span><b>${pend ? "Há mudanças para enviar" : "Agenda em dia"}</b><span class="dim">${c.ultimaVez ? quandoSync(c.ultimaVez) : ""}${st.msg ? " · " + esc(st.msg) : ""}</span></div>`;
-    const resumo = c.totalEventos != null ? `<p class="cfg-info"><b>${c.totalEventos}</b> ${c.totalEventos === 1 ? "evento" : "eventos"} na agenda${c.semFim ? " · as que se repetem seguem <b>sem fim</b>" : c.ate ? ` · até <b>${new Date(c.ate + "T12:00:00").toLocaleDateString("pt-BR", { month: "short", year: "numeric" }).replace(".", "")}</b>` : ""}${pend && aqui ? " — toque em <b>Atualizar</b> para enviar as mudanças" : ""}</p>` : "";
-    // aparelho que não entrou no Google (o Google guarda a autorização em cada
-    // aparelho): não precisa — quem atualiza a agenda é o aparelho conectado
-    const outro = aqui ? "" : `<p class="cfg-info">Não precisa entrar no Google aqui: o que você muda neste aparelho chega ao aparelho conectado pela sincronização e vai para a agenda quando o sistema for aberto nele.</p>`;
+    const resumo = c.totalEventos != null ? `<p class="cfg-info"><b>${c.totalEventos}</b> ${c.totalEventos === 1 ? "evento" : "eventos"} na agenda${c.semFim ? " · as que se repetem seguem <b>sem fim</b>" : c.ate ? ` · até <b>${new Date(c.ate + "T12:00:00").toLocaleDateString("pt-BR", { month: "short", year: "numeric" }).replace(".", "")}</b>` : ""}${pend ? " — toque em <b>Atualizar</b> para enviar as mudanças" : ""}</p>` : "";
     // as explicações pequenas são as primeiras a sair quando falta espaço
     const item = (k, rot, sub) => `<label class="chk-linha ag-item"><input type="checkbox" data-ag-item="${k}" ${c.itens[k] ? "checked" : ""}> <span>${rot}<small class="cfg-opc" data-opc="8">${sub}</small></span></label>`;
     return `${est}
       ${resumo}
-      ${outro}
       <span class="sy-rot cfg-opc" data-opc="7">O que vai para a agenda</span>
       ${item("contas", "💸 Contas a pagar", "inclusive as que se repetem sem fim; alerta na véspera e no dia")}
       ${item("receitas", "💰 Receitas previstas", "inclusive as que se repetem; no dia previsto")}
       ${item("metas", "🎯 Prazos das metas", "com alerta uma semana antes")}
       <p class="cfg-info cfg-opc" data-opc="1">Não aparece? No Google Agenda, deixe marcada a agenda <b>“${esc(nomeApp())} Finanças”</b> em <b>Minhas agendas</b>. <a class="ag-link" href="https://calendar.google.com/" target="_blank" rel="noopener">Abrir o Google Agenda ↗</a></p>
-      <div class="cfg-acoes"><button class="btn primario" data-acao="agenda-enviar" ${aqui ? "" : 'title="O Google pede para escolher a conta uma vez neste aparelho"'}>${aqui ? "Atualizar" : "Autorizar aqui"}</button>
+      <div class="cfg-acoes"><button class="btn primario" data-acao="agenda-enviar">Atualizar</button>
         <button class="btn perigo" data-acao="agenda-desligar">Desconectar</button></div>`;
   }
   function atualizarCartaoAgenda() {
@@ -2308,7 +2303,7 @@
   };
   // qual ícone combina com o botão: pela ação/id e pelo texto (ordem importa)
   const REGRAS_ICONE = [
-    [(b, t) => b.dataset.acao === "agenda-conectar" || /^autorizar/.test(t), "agenda"],
+    [(b) => b.dataset.acao === "agenda-conectar", "agenda"],
     [(b, t) => b.id === "btnFecharPainel" || /^(fechar|cancelar)\b/.test(t), "fechar"],
     [(b, t) => /digital|face id/.test(t), "biometria"],
     [(b, t) => /senha/.test(t) || b.dataset.acao === "criar-senha", "senha"],
