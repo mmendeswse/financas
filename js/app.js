@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.417";
+  const VERSAO_APP = "3.6.419";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -581,7 +581,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.417 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.419 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -635,7 +635,7 @@
     const eu = S.idAparelho();
     lista.sort((a, b) => (a.id === eu ? -1 : b.id === eu ? 1 : (b.visto || "").localeCompare(a.visto || "")));
     return `<div class="sy-aparelhos">${lista.map((x) => `<div class="sy-ap"><span class="sy-ap-ic">${/iPhone|Celular/.test(x.nome) ? "📱" : /iPad|Tablet/.test(x.nome) ? "📲" : "💻"}</span>
-      <div><b>${esc(x.nome || "Aparelho")}</b><small>${x.id === eu ? `<em>este aparelho</em> · ` : ""}visto ${quandoSync(x.visto)}</small></div>
+      <div><b>${esc(x.nome || "Aparelho")}</b><small>${x.id === eu ? `<em>este aparelho</em><span class="cfg-opc" data-opc="8"> · visto ${quandoSync(x.visto)}</span>` : `<span class="cfg-opc" data-opc="8">visto ${quandoSync(x.visto)}</span>`}</small></div>
       ${x.id === eu ? `<button class="btn pequeno" data-acao="sync-renomear">Renomear</button>` : `<button class="btn pequeno perigo" data-acao="sync-remover" data-id="${esc(x.id)}">Remover</button>`}</div>`).join("")}</div>`;
   }
   function corpoCartaoSync() {
@@ -646,7 +646,7 @@
       return `${estado}
         ${venc != null && venc <= 30 ? `<p class="cfg-info cfg-alerta">⏳ A chave do GitHub ${venc < 0 ? "venceu" : venc === 0 ? "vence hoje" : `vence em ${venc} ${venc === 1 ? "dia" : "dias"}`}. Crie uma chave nova e toque em <b>Atualizar chave</b> — os outros aparelhos recebem sozinhos. <button class="btn pequeno" data-acao="sync-token">Atualizar chave</button></p>` : ""}
         ${sit.cls === "erro" && /chave do GitHub/.test(sit.detalhe || "") && !(venc != null && venc <= 30) ? `<div class="cfg-acoes"><button class="btn pequeno" data-acao="sync-token">Atualizar chave do GitHub</button></div>` : ""}
-        <span class="sy-rot">Aparelhos conectados</span>
+        <span class="sy-rot cfg-opc" data-opc="7">Aparelhos conectados</span>
         <div id="syAparelhos">${aparelhosSyncHTML()}</div>
         <div class="cfg-acoes"><button class="btn primario" data-acao="sync-agora">Sincronizar</button>
           <button class="btn primario" data-acao="sync-codigo">Adicionar</button></div>`;
@@ -1012,10 +1012,11 @@
       : st.rodando ? `<div class="sync-estado"><span class="sync-ponto rodando"></span><b>Atualizando a agenda…</b></div>`
       : `<div class="sync-estado"><span class="sync-ponto ${pend ? "erro" : "ligado"}"></span><b>${pend ? "Há mudanças para enviar" : "Agenda em dia"}</b><span class="dim">${c.ultimaVez ? quandoSync(c.ultimaVez) : ""}${st.msg ? " · " + esc(st.msg) : ""}</span></div>`;
     const resumo = c.totalEventos != null ? `<p class="cfg-info"><b>${c.totalEventos}</b> ${c.totalEventos === 1 ? "evento" : "eventos"} na agenda${c.semFim ? " · as que se repetem seguem <b>sem fim</b>" : c.ate ? ` · até <b>${new Date(c.ate + "T12:00:00").toLocaleDateString("pt-BR", { month: "short", year: "numeric" }).replace(".", "")}</b>` : ""}${pend ? " — toque em <b>Atualizar</b> para enviar as mudanças" : ""}</p>` : "";
-    const item = (k, rot, sub) => `<label class="chk-linha ag-item"><input type="checkbox" data-ag-item="${k}" ${c.itens[k] ? "checked" : ""}> <span>${rot}<small>${sub}</small></span></label>`;
+    // as explicações pequenas são as primeiras a sair quando falta espaço
+    const item = (k, rot, sub) => `<label class="chk-linha ag-item"><input type="checkbox" data-ag-item="${k}" ${c.itens[k] ? "checked" : ""}> <span>${rot}<small class="cfg-opc" data-opc="8">${sub}</small></span></label>`;
     return `${est}
       ${resumo}
-      <span class="sy-rot">O que vai para a agenda</span>
+      <span class="sy-rot cfg-opc" data-opc="7">O que vai para a agenda</span>
       ${item("contas", "💸 Contas a pagar", "inclusive as que se repetem sem fim; alerta na véspera e no dia")}
       ${item("receitas", "💰 Receitas previstas", "inclusive as que se repetem; no dia previsto")}
       ${item("metas", "🎯 Prazos das metas", "com alerta uma semana antes")}
@@ -8741,6 +8742,27 @@
     const fila = opcionais.sort((a, b) => Number(b.dataset.opc) - Number(a.dataset.opc));
     for (let i = 0; i < fila.length && apertado(); i++) fila[i].hidden = true;
     ajustarZonaResumo();
+    ajustarQuadrosToque(grade);
+  }
+  const ehToque = () => !!(window.matchMedia && window.matchMedia("(hover: none) and (pointer: coarse)").matches);
+  // iPad e Android: o conteúdo de cada quadro cabe inteiro, sem barra de
+  // rolagem — se não couber, diminui por inteiro (texto, caixas, listas) só o
+  // necessário; os botões de baixo ficam no tamanho normal
+  function ajustarQuadrosToque(grade) {
+    const areas = [...grade.querySelectorAll(".cfg-rolar")];
+    areas.forEach((a) => [...a.children].forEach((c) => { c.style.zoom = ""; }));
+    if (!ehToque() || window.innerWidth < 700) return;
+    areas.forEach((a) => {
+      let escala = 1;
+      for (let i = 0; i < 10; i++) {
+        const falta = a.scrollHeight - a.clientHeight;
+        if (falta <= 0) break;
+        const alt = a.scrollHeight;
+        escala = Math.max(0.55, escala * Math.max(0.5, (alt - falta - 1) / alt));
+        [...a.children].forEach((c) => { c.style.zoom = escala.toFixed(3); });
+        if (escala <= 0.55) break;
+      }
+    });
   }
   // Zona Risco: o resumo do que seria apagado só ocupa o espaço que sobra no
   // quadro (não aumenta a linha); se sobrar pouco, mostra só o ícone, e sem
@@ -8749,25 +8771,10 @@
     const z = document.querySelector("#conteudo .zona-resumo");
     if (!z) return;
     z.classList.remove("zona-sem-backup", "zona-sem-icone", "zona-linha", "zona-compacta", "zona-oculta");
-    z.style.zoom = "";
     if (window.innerWidth < 700) return;
     // iPad e Android (tela de toque): o resumo fica sempre completo (ícone, seis
-    // caixas e último backup); se não couber no quadro, diminui por inteiro até
-    // caber, sem barra de rolagem
-    if (window.matchMedia && window.matchMedia("(hover: none) and (pointer: coarse)").matches) {
-      const area = z.closest(".cfg-rolar");
-      if (!area) return;
-      let escala = 1;
-      for (let i = 0; i < 8; i++) {
-        const falta = area.scrollHeight - area.clientHeight;
-        if (falta <= 0) break;
-        const alt = z.getBoundingClientRect().height;
-        escala = Math.max(0.55, escala * Math.max(0.5, (alt - falta - 1) / alt));
-        z.style.zoom = escala.toFixed(3);
-        if (escala <= 0.55) break;
-      }
-      return;
-    }
+    // caixas e último backup); se não couber, ajustarQuadrosToque diminui o quadro
+    if (ehToque()) return;
     const naoCabe = () => z.clientHeight < z.scrollHeight - 2;
     // sem espaço: tira o último backup, depois o ícone, depois põe as
     // caixinhas numa linha só (menores); só sem espaço nem para isso fica o ícone
