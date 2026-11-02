@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.453";
+  const VERSAO_APP = "3.6.454";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -581,7 +581,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.453 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.454 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -2545,8 +2545,9 @@
   }
   function situacaoMeta(m) {
     const atual = Number(m.atual || 0), objetivo = Number(m.objetivo || 0);
-    // curto: a mesma frase resumida, para caber numa linha (metas lado a lado no Dashboard)
-    if (objetivo > 0 && atual >= objetivo) return { chave: "ok", rotulo: "Meta concluída", curto: "Meta concluída" };
+    // curto: a mesma frase com ícones (✅ guardou · 📥 depositar · ⏰ atrasado), numa linha com os centavos;
+    // a frase inteira fica na dica (passar o mouse)
+    if (objetivo > 0 && atual >= objetivo) return { chave: "ok", rotulo: "Meta concluída", curto: "🏆 Concluída" };
     const mensal = Number(m.aporteMensal || 0), noMes = guardadoNoMes(m);
     // devendo de meses anteriores: vermelho até depositar o atrasado e o do mês
     const atraso = atrasoMeta(m);
@@ -2557,11 +2558,11 @@
         // ⏰ atrasado · 📥 deposite (ícones no lugar das palavras, para caber numa linha com os centavos)
         rotulo: `⏰ ${brl(atraso)} · 📥 ${brl(paraFicarEmDia)}`, curto: `⏰ ${brl(atraso)} · 📥 ${brl(paraFicarEmDia)}`,
         dica: `Atrasado ${brl(atraso)} · deposite ${brl(paraFicarEmDia)} para ficar em dia` };
-      return { chave: "ok", rotulo: `Em dia · guardou ${brl(noMes)} este mês`, curto: `Em dia · guardou ${brlCurto(noMes)}` };
+      return { chave: "ok", rotulo: `Em dia · guardou ${brl(noMes)} este mês`, curto: `✅ ${brl(noMes)}` };
     }
-    if (noMes <= 0) return { chave: "nada", deposito: mensal, rotulo: mensal > 0 ? `Nenhum depósito este mês · guardar ${brl(mensal)}` : "Nenhum depósito este mês", curto: mensal > 0 ? `Sem depósito · guardar ${brlCurto(mensal)}` : "Nenhum depósito no mês" };
-    if (!(mensal > 0) || noMes >= mensal - 0.005) return { chave: "ok", rotulo: `Guardou ${brl(noMes)} este mês`, curto: `Guardou ${brlCurto(noMes)} no mês` };
-    return { chave: "atencao", deposito: mensal - noMes, rotulo: `Guardou ${brl(noMes)} · falta ${brl(mensal - noMes)} este mês`, curto: `Guardou ${brlCurto(noMes)} · falta ${brlCurto(mensal - noMes)}` };
+    if (noMes <= 0) return { chave: "nada", deposito: mensal, rotulo: mensal > 0 ? `Nenhum depósito este mês · guardar ${brl(mensal)}` : "Nenhum depósito este mês", curto: mensal > 0 ? `📥 ${brl(mensal)}` : "Sem depósito" };
+    if (!(mensal > 0) || noMes >= mensal - 0.005) return { chave: "ok", rotulo: `Guardou ${brl(noMes)} este mês`, curto: `✅ ${brl(noMes)}` };
+    return { chave: "atencao", deposito: mensal - noMes, rotulo: `Guardou ${brl(noMes)} · falta ${brl(mensal - noMes)} este mês`, curto: `✅ ${brl(noMes)} · 📥 ${brl(mensal - noMes)}` };
   }
 
   const ICONE_GUARDAR_MES = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M12 13.2v5M9.8 15.4h4.4"/></svg>';

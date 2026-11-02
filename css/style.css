@@ -3207,3 +3207,12 @@ body.av-aberta { overflow: hidden; }
 .rel-kpis .metric-ilustra svg { filter: drop-shadow(0 3px 6px rgba(0,0,0,.35)); transition: transform .25s; }
 .rel-kpis .metric:hover .metric-ilustra svg { transform: translateY(-2px) scale(1.04); }
 .rel-kpis .metric-ilustra rect:hover { stroke: none; }
+/* Metas: rodapé numa linha só — 💵 guardado | ⏰ atrasado · 📥 deposite | ⏳ falta.
+   O tamanho da letra acompanha a largura do quadro (cqi), para tudo caber
+   sem cortar os centavos em qualquer tela */
+.meta-item .meta-rodape.meta-rodape-3 { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; column-gap: 6px; row-gap: 0;
+  font-size: clamp(8px, calc((100cqi - 20px) / 28), 13px); white-space: nowrap; }
+.meta-item .meta-rodape.meta-rodape-3 > * { grid-row: 1 !important; }
+.meta-item .meta-rodape.meta-rodape-3 .meta-falta-valor { grid-column: 3 !important; justify-self: end; }
+.meta-item .meta-rodape.meta-rodape-3 .meta-situacao-meio { grid-column: 2 !important; justify-self: center; font-size: .86em !important; letter-spacing: 0 !important; overflow: visible !important; text-overflow: clip !important; }
+.meta-item .meta-rodape.meta-rodape-3 .meta-situacao-meio, .meta-item .meta-rodape.meta-rodape-3 .meta-situacao-meio * { white-space: nowrap !important; }
