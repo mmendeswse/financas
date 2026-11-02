@@ -207,13 +207,10 @@
     if (!disponivel()) return;
     const d = app.dados(), c = cfg(d);
     if (d.demo) return;   // dados de exemplo não vão para a agenda de verdade
-    if (!c.ativa || (c.ultimoHash === hashTudo(d) && !pedidoPendente(c))) { avisar(); return; }
+    if (!c.ativa || c.ultimoHash === hashTudo(d)) { avisar(); return; }
     const t = tokenValido();
     if (t) enviar(t).catch(() => {}); else avisar();
   }
-  // pedido de outro aparelho (que não entrou no Google) para este atualizar a agenda
-  function pedidoPendente(c) { c = c || cfg(); return !!c.pedido && (!c.ultimaVez || c.pedido > c.ultimaVez); }
-  function pedirAoConectado() { const d = app.dados(); cfg(d).pedido = new Date().toISOString(); app.salvar(d); avisar(); }
   // logo depois de salvar algo (ainda dentro do toque em "Salvar"): se a agenda
   // mudou, envia na hora — renovando o acesso do Google se ele já venceu
   function atualizarJa() {
@@ -254,9 +251,9 @@
   }
   // há mudanças que ainda não foram para a agenda
   // a agenda é da conta (config.agenda sincroniza): qualquer aparelho pode atualizá-la
-  function pendente(d) { d = d || app.dados(); const c = cfg(d); return c.ativa && !d.demo && (c.ultimoHash !== hashTudo(d) || pedidoPendente(c)); }
+  function pendente(d) { d = d || app.dados(); const c = cfg(d); return c.ativa && !d.demo && c.ultimoHash !== hashTudo(d); }
   function precisaToque(d) { return disponivel() && conectadoAqui() && pendente(d) && !tokenValido() && !st.rodando; }
   function definirItem(k, ligado) { const d = app.dados(); cfg(d).itens[k] = !!ligado; app.salvar(d); }
 
-  global.Agenda = { configurar, atualizarJa, pedirAoConectado, pedidoPendente, preparar, disponivel, conectadoAqui, cfg, conectar, desconectar, enviarComToque, talvezEnviar, pendente, precisaToque, definirItem, estado: st };
+  global.Agenda = { configurar, atualizarJa, preparar, disponivel, conectadoAqui, cfg, conectar, desconectar, enviarComToque, talvezEnviar, pendente, precisaToque, definirItem, estado: st };
 })(window);
