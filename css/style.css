@@ -3100,3 +3100,9 @@ body.av-aberta { overflow: hidden; }
   .cfg-grid .cfg-acoes { flex: none; }
   .cfg-grid #syAparelhos { min-height: 0; }
 }
+/* nome ao lado do logotipo centralizado na altura do ícone: a caixa do texto
+   fica só com a altura das maiúsculas (cada fonte — a do iPad, a do Windows —
+   tem um espaço diferente em cima e embaixo das letras) */
+.logo { align-items: center; }
+.logo-txt { display: flex; align-items: center; }
+.logo-txt b { line-height: 1; text-box: trim-both cap alphabetic; overflow-x: clip; overflow-y: visible; }   /* acentos (Ã, É) não são cortados */
