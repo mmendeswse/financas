@@ -23,19 +23,33 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.399";
-  // nome do programa (título, logotipo, rodapé e tela da senha), escolhido em
-  // Configurações › Senha Acesso; vale só para este aparelho
-  const NOMES_APP = ["Muller Mendes", "Mateus Mendes", "Michel Mendes"];
-  function nomeApp() {
-    try { const n = localStorage.getItem("nomeApp1"); if (NOMES_APP.includes(n)) return n; } catch (e) { /* sem acesso */ }
-    return NOMES_APP[0];
+  const VERSAO_APP = "3.6.404";
+  // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
+  // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
+  // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
+  const NOME_PADRAO = "Muller Mendes";
+  function nomeAntigoAparelho() {
+    try { const n = localStorage.getItem("nomeApp1"); if (["Muller Mendes", "Mateus Mendes", "Michel Mendes"].includes(n)) return n; } catch (e) { /* sem acesso */ }
+    return "";
   }
+  function nomeApp() {
+    const p = DADOS && DADOS.config && DADOS.config.perfil;
+    return (p && String(p.nome || "").trim()) || nomeAntigoAparelho() || NOME_PADRAO;
+  }
+  let logoOriginal = null;
   function aplicarNomeApp() {
     const n = nomeApp();
-    document.title = n;   // aba do navegador: só o nome escolhido em Configurações
+    document.title = n;   // aba do navegador: o nome do perfil
     document.querySelectorAll(".logo-txt b").forEach((b) => { b.textContent = n; });
     const rod = document.getElementById("rodapeNome"); if (rod) rod.textContent = `${n} v1.0`;
+    // logotipo: o avatar do perfil (foto, personagem ou emoji); sem avatar, o ícone do programa
+    const marca = document.querySelector(".logo .logo-mark");
+    if (!marca) return;
+    if (logoOriginal == null) logoOriginal = marca.innerHTML;
+    const p = (DADOS && DADOS.config && DADOS.config.perfil) || {}, av = p.avatar || {};
+    const comAvatar = window.Avatar && ((av.img && av.img.src) || av.emoji);
+    marca.classList.toggle("com-avatar", !!comAvatar);
+    marca.innerHTML = comAvatar ? Avatar.circuloHTML("logo-avatar", p) : logoOriginal;
   }
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
     "Dividendos", "Juros", "Rendimentos", "Reembolso", "Restituição de IR", "Cashback", "Presente", "Outros"];
@@ -542,6 +556,7 @@
     DADOS = A.carregarDados();
     renderRota();
     atualizarPerfilTopo();
+    agendarAgenda();
   }
   const temDadosReais = (d) => !!((d.bancos || []).length || (d.entradas || []).length || (d.despesas || []).length || (d.acoes || []).length || (d.investimentos || []).length);
 
@@ -574,7 +589,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.399 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.404 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -582,7 +597,7 @@
     const velho = DADOS.config && DADOS.config.sync;
     if (!velho || !velho.token || !velho.cofre || migrando) return migrando || Promise.resolve();
     migrando = S.migrarAntigo(velho.token, velho.cofre).then((r) => {
-      if (r.estado === "precisa-codigo") definirAvisoSync("A sincronização mudou: agora usa o código da conta, com os dados criptografados. Num aparelho que já sincroniza, abra Configurações → Sincronização → Adicionar aparelho e leia o QR code aqui, em “Entrar com código”.");
+      if (r.estado === "precisa-codigo") definirAvisoSync("A sincronização mudou: agora usa o código da conta, com os dados criptografados. Num aparelho que já sincroniza, abra Configurações → Sincronização → Adicionar e leia o QR code aqui, em “Entrar com código”.");
       if (r.estado === "migrado") { syncBaixado = true; toast("Sincronização atualizada: agora com código da conta e dados criptografados."); }
       // o token sai dos dados (que vão para o backup): agora fica só neste aparelho
       delete DADOS.config.sync;
@@ -637,17 +652,12 @@
     if (on) {
       const venc = S.diasParaVencer();
       return `${estado}
-        ${venc != null && venc <= 30 ? `<p class="cfg-info cfg-alerta">⏳ A chave do GitHub ${venc < 0 ? "venceu" : venc === 0 ? "vence hoje" : `vence em ${venc} ${venc === 1 ? "dia" : "dias"}`}. Crie uma chave nova e toque em <b>Atualizar chave</b> (em Mais opções) — os outros aparelhos recebem sozinhos.</p>` : ""}
+        ${venc != null && venc <= 30 ? `<p class="cfg-info cfg-alerta">⏳ A chave do GitHub ${venc < 0 ? "venceu" : venc === 0 ? "vence hoje" : `vence em ${venc} ${venc === 1 ? "dia" : "dias"}`}. Crie uma chave nova e toque em <b>Atualizar chave</b> — os outros aparelhos recebem sozinhos. <button class="btn pequeno" data-acao="sync-token">Atualizar chave</button></p>` : ""}
+        ${sit.cls === "erro" && /chave do GitHub/.test(sit.detalhe || "") && !(venc != null && venc <= 30) ? `<div class="cfg-acoes"><button class="btn pequeno" data-acao="sync-token">Atualizar chave do GitHub</button></div>` : ""}
         <span class="sy-rot">Aparelhos conectados</span>
         <div id="syAparelhos">${aparelhosSyncHTML()}</div>
         <div class="cfg-acoes"><button class="btn primario" data-acao="sync-agora">Sincronizar</button>
-          <button class="btn" data-acao="sync-codigo">Adicionar aparelho</button></div>
-        <details class="sy-mais"><summary>Mais opções</summary>
-          <div class="cfg-acoes"><button class="btn pequeno" data-acao="sync-token">Atualizar chave do GitHub</button>
-            <button class="btn pequeno" data-acao="sync-trocar">Trocar código (aparelho perdido)</button>
-            <a class="btn pequeno" href="https://gist.github.com/${esc(S.ler().g)}/revisions" target="_blank" rel="noopener">Histórico no GitHub</a>
-            <button class="btn pequeno perigo" data-acao="sync-sair">Desconectar este aparelho</button></div>
-        </details>`;
+          <button class="btn primario" data-acao="sync-codigo">Adicionar</button></div>`;
     }
     const aviso = avisoSync();
     return `${estado}
@@ -692,7 +702,7 @@
       }).catch((e) => {
         b.disabled = false; b.textContent = "Criar conta";
         if (e.tipo === "existe") {
-          err.innerHTML = `Já existe uma conta nesta chave do GitHub. Para usar os mesmos dados, abra o sistema no aparelho que já sincroniza → <b>Adicionar aparelho</b> e entre com o código aqui. <button class="link-acao" id="sy_mesmo">Criar outra conta mesmo assim</button>`;
+          err.innerHTML = `Já existe uma conta nesta chave do GitHub. Para usar os mesmos dados, abra o sistema no aparelho que já sincroniza → <b>Adicionar</b> e entre com o código aqui. <button class="link-acao" id="sy_mesmo">Criar outra conta mesmo assim</button>`;
           m.querySelector("#sy_mesmo").onclick = () => abrirCriarConta(true);
         } else err.textContent = e.message;
       });
@@ -744,7 +754,7 @@
     const temDados = !DADOS.demo && temDadosReais(DADOS);
     abrirModal(`
       <h3>Entrar com código</h3>
-      <p class="campo ajuda" style="margin-top:0">No aparelho que já sincroniza: <b>Configurações → Sincronização → Adicionar aparelho</b>. Leia o QR code com a câmera ou cole o código.</p>
+      <p class="campo ajuda" style="margin-top:0">No aparelho que já sincroniza: <b>Configurações → Sincronização → Adicionar</b>. Leia o QR code com a câmera ou cole o código.</p>
       <div class="sy-camera" hidden><video muted playsinline></video><span class="sy-mira"></span></div>
       <div class="cfg-acoes"><button class="btn" id="sy_ler">📷 Ler QR code</button></div>
       <div class="campo"><label for="sy_cod">Código da conta</label><textarea id="sy_cod" rows="3" spellcheck="false" autocomplete="off" placeholder="MF1.…">${esc(codigoInicial || "")}</textarea></div>
@@ -799,7 +809,7 @@
       const id = el.dataset.id, ap = (S.estado.aparelhos || {})[id] || {};
       pedirNaJanela(`Remover “${esc(ap.nome || "aparelho")}”`, `<p style="margin-top:0">O aparelho deixa de sincronizar na próxima vez que abrir o sistema.</p>
         <label class="chk-linha"><input type="checkbox" id="sy_apagar"> <span><b>Apagar os dados dele também</b> — use se o aparelho foi perdido ou roubado.</span></label>
-        <p class="campo ajuda">Se ele foi roubado, use também <b>Trocar código</b> em “Mais opções”: aí ele perde o acesso mesmo que nunca mais abra o sistema.</p>`, "Remover",
+`, "Remover",
         (m) => S.removerAparelho(id, m.querySelector("#sy_apagar").checked).then(() => toast("Aparelho removido.")), true);
     },
     "sync-sair": () => pedirNaJanela("Desconectar este aparelho", `<p style="margin-top:0">Os dados continuam neste aparelho, mas param de sincronizar. Os outros aparelhos não são afetados.</p>`, "Desconectar",
@@ -859,6 +869,7 @@
     btn.dataset.sync = sit.cls;
     if (ass === assinaturaPerfil) return;
     assinaturaPerfil = ass;
+    aplicarNomeApp();   // logotipo com o avatar e o nome do perfil
     btn.innerHTML = Avatar.circuloHTML("avatar-barra", p) + `<span class="perfil-ponto" aria-hidden="true"></span>`;
     btn.title = (p.nome || "Seu perfil") + " · " + (S.conectado() ? "sincronização: " + sit.titulo.toLowerCase() : "sincronização desligada");
     preencherMenuPerfil();
@@ -866,11 +877,9 @@
   function preencherMenuPerfil() {
     const dd = document.getElementById("dropdownPerfil");
     if (!dd || !window.Avatar) return;
-    const p = perfilAtual(), sit = situacaoSync();
+    const p = perfilAtual();
     dd.innerHTML = `
-      <button class="perfil-card" data-pf="avatar">${Avatar.circuloHTML("", p)}<span class="pl-txt"><b>${esc(p.nome || "Seu perfil")}</b><small>Editar avatar</small></span></button>
-      <button class="pf-item pf-sync" data-pf="ajustes"><span class="sync-ponto ${sit.cls}"></span><span>${S.conectado() ? `Sincronização: <b>${sit.titulo.toLowerCase()}</b>` : "Sincronização desligada"}${S.conectado() && S.ler().ultimo ? `<small>${quandoSync(S.ler().ultimo)}</small>` : ""}</span></button>
-      <button class="pf-item" data-pf="ajustes"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="2.6"/><path d="M10 3v2M10 15v2M3 10h2M15 10h2M5 5l1.4 1.4M13.6 13.6L15 15M15 5l-1.4 1.4M6.4 13.6L5 15"/></svg><b>Ajustes</b></button>`;
+      <button class="perfil-card" data-pf="avatar">${Avatar.circuloHTML("", p)}<span class="pl-txt"><b>${esc(p.nome || "Seu perfil")}</b><small>Editar avatar</small></span></button>`;
   }
   function ligarPerfilTopo() {
     const btn = document.getElementById("btnPerfil"), dd = document.getElementById("dropdownPerfil");
@@ -891,6 +900,98 @@
     document.addEventListener("click", (e) => { if (!dd.contains(e.target) && !btn.contains(e.target)) dd.classList.remove("on"); });
     atualizarPerfilTopo();
   }
+
+
+  // =========================================================================
+  // GOOGLE AGENDA (mesmo sistema do Meu Controle) — o motor fica em agenda.js
+  // =========================================================================
+  // o que deve estar na agenda: este mês e os dois seguintes
+  function desejadosAgenda(d, itens) {
+    const lista = [];
+    const [a0, m0] = F.mesAtual().split("-").map(Number);
+    const meses = [0, 1, 2].map((i) => { const x = new Date(a0, m0 - 1 + i, 1); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}`; });
+    const vistos = {};
+    const add = (x) => { if (!x.data || vistos[x.chave]) return; vistos[x.chave] = true; lista.push(x); };
+    if (itens.contas) meses.forEach((m) => listaDespesasTodasMes(d, m).forEach((x) => {
+      if (x.status === "Pago") return;
+      add({ chave: `pg:${x.id}:${x.data}`, titulo: `💸 ${x.descricao || "Conta"} — ${brl(x.valor)}`, data: x.data, hora: "09:00", duracao: 30, alertas: [0, 1440],
+        descricao: ["Conta a pagar", x.categoria, x.banco && x.banco !== "—" ? x.banco : ""].filter(Boolean).join(" · "), cor: "11" });
+    }));
+    if (itens.receitas) meses.forEach((m) => listaEntradasTodasMes(d, m).forEach((x) => {
+      if (x.status !== "Prevista") return;
+      add({ chave: `rc:${x.id}:${x.data}`, titulo: `💰 ${x.descricao || "Receita"} — ${brl(x.valor)}`, data: x.data, hora: "09:00", duracao: 30, alertas: [0],
+        descricao: ["Receita prevista", x.categoria, x.banco && x.banco !== "—" ? x.banco : ""].filter(Boolean).join(" · "), cor: "10" });
+    }));
+    if (itens.metas) (d.metas || []).forEach((mt) => {
+      if (!mt.prazo || mt.prazo.slice(0, 7) < meses[0] || Number(mt.atual || 0) >= Number(mt.objetivo || 0)) return;
+      add({ chave: `mt:${mt.id}:${mt.prazo}`, titulo: `🎯 Prazo da meta: ${mt.nome || "Meta"}`, data: mt.prazo, hora: "09:00", duracao: 30, alertas: [0, 10080],
+        descricao: `Objetivo ${brl(mt.objetivo)} · guardado até agora ${brl(mt.atual || 0)}`, cor: "9" });
+    });
+    return lista;
+  }
+  const AG = window.Agenda;
+  if (AG) AG.configurar({
+    dados: () => DADOS,
+    salvar: (d) => { A.salvarDados(d, true, true); agendarEnvioSync(); },
+    nome: () => nomeApp(),
+    desejados: desejadosAgenda,
+    aoMudarEstado: () => { atualizarCartaoAgenda(); atualizarAvisoAgenda(); }
+  });
+  let timerAgenda = null;
+  function agendarAgenda(ms) { if (!AG) return; clearTimeout(timerAgenda); timerAgenda = setTimeout(() => { AG.talvezEnviar(); atualizarAvisoAgenda(); }, ms == null ? 1200 : ms); }
+
+  function corpoCartaoAgenda() {
+    if (!AG) return "";
+    if (!AG.disponivel()) return `<div class="sync-estado"><span class="sync-ponto"></span><b>Só na versão do site</b></div>
+      <p class="cfg-texto">O login do Google funciona quando o sistema é aberto pelo navegador (site ou app instalado no celular/iPad). No programa do Windows, conecte por lá.</p>`;
+    const c = AG.cfg(DADOS), st = AG.estado;
+    if (!c.ativa || !AG.conectadoAqui()) return `
+      <div class="ag-intro"><span class="ag-ic">📅</span><div><b>Leve seus vencimentos para o Google Agenda</b>
+        <small>O sistema cria uma agenda “${esc(nomeApp())} Finanças” na sua conta Google com as contas a pagar, as receitas previstas e os prazos das metas. Os alertas tocam mesmo com o sistema fechado — no celular, no relógio e no computador.</small></div></div>
+      <p class="cfg-info cfg-opc" data-opc="2">O Google vai pedir para você escolher a conta e autorizar. O sistema só consegue mexer na agenda que ele mesmo cria — não vê nem altera as suas outras agendas.${c.ativa ? " A agenda já está ligada em outro aparelho: conectar aqui usa a mesma." : ""}</p>
+      <div class="cfg-acoes"><button class="btn primario" data-acao="agenda-conectar">Conectar Google Agenda</button></div>`;
+    const pend = AG.pendente(DADOS);
+    const est = st.erro ? `<div class="sync-estado"><span class="sync-ponto erro"></span><b>Não atualizou</b><span class="dim">${esc(st.erro)}</span></div>`
+      : st.rodando ? `<div class="sync-estado"><span class="sync-ponto rodando"></span><b>Atualizando a agenda…</b></div>`
+      : `<div class="sync-estado"><span class="sync-ponto ${pend ? "erro" : "ligado"}"></span><b>${pend ? "Há mudanças para enviar" : "Agenda em dia"}</b><span class="dim">${c.ultimaVez ? quandoSync(c.ultimaVez) : ""}${st.msg ? " · " + esc(st.msg) : ""}</span></div>`;
+    const item = (k, rot, sub) => `<label class="chk-linha ag-item"><input type="checkbox" data-ag-item="${k}" ${c.itens[k] ? "checked" : ""}> <span>${rot}<small>${sub}</small></span></label>`;
+    return `${est}
+      <span class="sy-rot">O que vai para a agenda</span>
+      ${item("contas", "💸 Contas a pagar", "no vencimento, com alerta na véspera e no dia")}
+      ${item("receitas", "💰 Receitas previstas", "no dia previsto")}
+      ${item("metas", "🎯 Prazos das metas", "com alerta uma semana antes")}
+      <p class="cfg-info cfg-opc" data-opc="1"><a class="ag-link" href="https://calendar.google.com/" target="_blank" rel="noopener">Abrir o Google Agenda ↗</a></p>
+      <div class="cfg-acoes"><button class="btn primario" data-acao="agenda-enviar">Atualizar</button>
+        <button class="btn perigo" data-acao="agenda-desligar">Desconectar</button></div>`;
+  }
+  function atualizarCartaoAgenda() {
+    const c = document.getElementById("agendaCorpo");
+    if (c && !document.getElementById("modal").classList.contains("on")) { c.innerHTML = corpoCartaoAgenda(); if (typeof iconizarBotoes === "function") iconizarBotoes(c); }
+  }
+  // botão flutuante quando o Google pede um toque para liberar o acesso de novo
+  function atualizarAvisoAgenda() {
+    let el = document.getElementById("agendaAviso");
+    if (!AG || !AG.precisaToque(DADOS)) { if (el) el.remove(); return; }
+    if (!el) {
+      el = document.createElement("button");
+      el.id = "agendaAviso"; el.className = "agenda-aviso";
+      el.innerHTML = `<span>📅</span><span><b>Atualizar Google Agenda</b><small>há mudanças nas contas, receitas ou metas</small></span>`;
+      el.addEventListener("click", () => { el.remove(); ACOES_AGENDA["agenda-enviar"](); });
+      document.body.appendChild(el);
+    }
+  }
+  const ACOES_AGENDA = {
+    "agenda-conectar": () => {
+      AG.conectar().then((n) => { renderRota(); toast(`Pronto! Agenda criada com ${n.novos} ${n.novos === 1 ? "evento" : "eventos"}.`); })
+        .catch((e) => { toast(e.message); atualizarCartaoAgenda(); });
+    },
+    "agenda-enviar": () => {
+      AG.enviarComToque().then(() => toast("Google Agenda atualizado" + (AG.estado.msg && AG.estado.msg !== "nada mudou" ? ": " + AG.estado.msg : "") + "."))
+        .catch((e) => { toast(e.message); atualizarAvisoAgenda(); });
+    },
+    "agenda-desligar": () => confirmarExclusao(`Desconectar o Google Agenda? A agenda “${nomeApp()} Finanças” é apagada da sua conta Google (com os eventos que o sistema criou) e o sistema para de atualizá-la.`,
+      () => AG.desconectar().then(() => { renderRota(); toast("Google Agenda desconectado."); }))
+  };
 
 
   // =========================================================================
@@ -1333,10 +1434,16 @@
     aplicarNomeApp();
     if (A.definirAparelho) A.definirAparelho(rotuloAparelho());
     DADOS = A.carregarDados();
+    // quem tinha escolhido o nome na antiga lista (Senha Acesso) passa a tê-lo no perfil
+    if (!(DADOS.config && DADOS.config.perfil && DADOS.config.perfil.nome) && nomeAntigoAparelho()) {
+      DADOS.config = DADOS.config || {};
+      DADOS.config.perfil = Object.assign({}, DADOS.config.perfil, { nome: nomeAntigoAparelho() });
+    }
+    aplicarNomeApp();
     migrarRecorrenciasAntigas();
     I.registrarPontoPatrimonio(DADOS);
     A.salvarDados(DADOS, true, true);   // automático: não conta como alteração sua
-    A.aoMudar(() => { DADOS = A.carregarDados(); migrarRecorrenciasAntigas(); renderRota(); });
+    A.aoMudar(() => { DADOS = A.carregarDados(); migrarRecorrenciasAntigas(); renderRota(); atualizarPerfilTopo(); agendarAgenda(); });
 
     ligarTopbar();
     ligarPerfilTopo();
@@ -1400,6 +1507,7 @@
     window.addEventListener("focus", () => sincronizar(true));
     window.addEventListener("online", () => sincronizar(true));
     abrirCodigoDoLink(0);
+    agendarAgenda(4000);   // depois de trazer os dados da conta
     setInterval(atualizarPerfilTopo, 60 * 1000);   // "há 2 min" no menu do perfil
   }
 
@@ -1407,6 +1515,7 @@
     A.salvarDados(DADOS);
     if (mensagem) toast(mensagem);
     agendarEnvioSync();
+    agendarAgenda();
     // a entrada que dispara uma transferência automática pode ter acabado de cair
     setTimeout(conferirTransfAutoNovas, 0);
   }
@@ -8437,8 +8546,6 @@
           </div>`)}</div>
         <div class="cfg-senha">${card("", "Senha Acesso", "protege sistema neste aparelho", "", `
           <div class="body pad">
-            <div class="campo cfg-nome-app"><label for="cfgNomeApp">Nome</label>
-              <select id="cfgNomeApp">${NOMES_APP.map((n) => `<option value="${esc(n)}"${n === nomeApp() ? " selected" : ""}>${esc(n)}</option>`).join("")}</select></div>
             <p class="cfg-texto">${comSenha ? "A senha está <b>ativa</b>: o sistema pede a senha sempre que é aberto neste aparelho." : "Sem senha: qualquer pessoa com acesso a este aparelho consegue abrir o sistema."}</p>
             ${comSenha ? `<div id="areaBiometria" class="cfg-biometria"></div>` : ""}
             ${lista([
@@ -8450,6 +8557,8 @@
               <button class="btn perigo" data-acao="remover-senha">Remover senha</button>`
               : `<button class="btn primario" data-acao="criar-senha">Criar</button>`)}
           </div>`)}</div>
+        <div class="cfg-agenda">${card("", "Google Agenda", "alertas mesmo com o sistema fechado", "", `
+          <div class="body pad" id="agendaCorpo">${corpoCartaoAgenda()}</div>`)}</div>
         <div class="cfg-sync">${card("", "Sincronização", "conta com código · celular, iPad e computador", "", `
           <div class="body pad" id="syncCorpo">${corpoCartaoSync()}</div>`)}</div>
         <div class="cfg-cotacoes">${card("", "Cotações automáticas", "dólar e ações · AwesomeAPI e brapi", "", `
@@ -8745,6 +8854,7 @@
       const acao = b.dataset.acao;
       const id = b.dataset.id;
       if (ACOES_SYNC[acao]) { ACOES_SYNC[acao](b); return; }
+      if (ACOES_AGENDA[acao]) { ACOES_AGENDA[acao](b); return; }
 
       switch (acao) {
         case "ir": if (b.dataset.sel) velaBolsa = b.dataset.sel; navegarPara(b.dataset.secao, b.dataset.id); break;
@@ -8971,10 +9081,7 @@
 
     cont.addEventListener("change", (e) => {
       const id = e.target.id;
-      if (id === "cfgNomeApp") {
-        try { localStorage.setItem("nomeApp1", e.target.value); } catch (err) { /* sem acesso */ }
-        aplicarNomeApp(); toast(`Nome: ${nomeApp()}`); return;
-      }
+      if (e.target.dataset.agItem) { AG.definirItem(e.target.dataset.agItem, e.target.checked); atualizarCartaoAgenda(); agendarAgenda(300); return; }
       if (id === "anoRelA") { anoRelA = e.target.value; renderRota(); return; }
       if (id === "anoRelB") { anoRelB = e.target.value; renderRota(); return; }
       if (id === "anoBancos") { anoBancos = e.target.value; renderRota(); return; }

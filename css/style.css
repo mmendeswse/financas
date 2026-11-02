@@ -2001,8 +2001,8 @@ button.pill-periodo:hover { filter: brightness(1.25); }
    quadros até a linha do rodapé (ajustarAlturaConfig) */
 .cfg-grid > div { grid-column: span 12; }   /* celular: um embaixo do outro */
 @media (min-width: 700px) {   /* tablet e computador: Senha do tamanho da Zona Risco, logo acima dela; Backup ocupa o resto da linha; Sincronização, Cotações e Zona Risco do mesmo tamanho */
-  .cfg-grid > .cfg-backup { grid-column: span 8; }
-  .cfg-grid > .cfg-senha { grid-column: span 4; }
+  .cfg-grid > .cfg-backup { grid-column: span 6; }
+  .cfg-grid > .cfg-senha, .cfg-grid > .cfg-agenda { grid-column: span 3; }
   .cfg-grid > .cfg-sync, .cfg-grid > .cfg-cotacoes, .cfg-grid > .cfg-zona { grid-column: span 4; }
 }
 .cfg-grid .card > .body { flex: 1 1 auto; display: flex; flex-direction: column; }
@@ -2883,8 +2883,6 @@ table.terminal.tab-rel td.papel small { display: block; margin-left: 0; }
   .prof-cot .prof-tab td.prof-posc .prof-pos { gap: 6px; }
 }
 /* Senha Acesso: escolha do nome do programa */
-.cfg-nome-app { margin: 0 0 12px; }
-.cfg-nome-app select { width: 100%; }
 /* Zona Risco com pouco espaço: as caixinhas com as contagens continuam
    aparecendo (sem o ícone e, se preciso, todas numa linha e menores) */
 .zona-resumo.zona-sem-icone .zona-icone { display: none; }
@@ -3074,3 +3072,23 @@ body.av-aberta { overflow: hidden; }
 .av-cor.ativo { box-shadow: 0 0 0 3px #0A1118, 0 0 0 5px var(--c); }
 .av-rodape { margin: 34px 0 0; font-size: 12px; color: #8a9aa6; line-height: 1.5; text-align: center; }
 .av-rodape a { color: #c7d0d6; }
+
+/* logotipo com o avatar do perfil e o nome ao lado */
+.logo-mark.com-avatar .logo-avatar { width: 100%; height: 100%; font-size: clamp(12px, 1vw, 16px); box-shadow: 0 0 0 2px var(--cy); }
+.logo-mark.com-avatar .logo-avatar .av-emoji { font-size: clamp(16px, 1.4vw, 23px); }
+.logo-txt b { display: block; max-width: 22ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* quadro Google Agenda */
+.ag-intro { display: flex; gap: 12px; align-items: flex-start; padding: 12px; border-radius: 12px; background: var(--painel-2); }
+.ag-ic { font-size: 26px; line-height: 1; flex: none; }
+.ag-intro b { display: block; font-size: 13.5px; margin-bottom: 3px; }
+.ag-intro small { display: block; font-size: 12.5px; line-height: 1.45; color: var(--dim); }
+.cfg-grid .chk-linha.ag-item { height: auto; white-space: normal; align-items: flex-start; gap: 8px; font-size: 13px; }
+.chk-linha.ag-item small { display: block; font-size: 11.5px; color: var(--dim); }
+.agenda-aviso { position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); z-index: 90; display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+  border: 1px solid var(--cy); border-radius: 14px; background: var(--painel); color: var(--texto); box-shadow: 0 10px 30px rgba(0,0,0,.45); cursor: pointer; text-align: left; font: inherit; }
+.agenda-aviso > span:first-child { font-size: 22px; }
+.agenda-aviso b { display: block; font-size: 13px; }
+.agenda-aviso small { display: block; font-size: 11.5px; color: var(--dim); }
+.ag-link { color: var(--cy); text-decoration: none; font-size: 12.5px; }
+.ag-link:hover { text-decoration: underline; }
