@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.414";
+  const VERSAO_APP = "3.6.415";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -40,6 +40,7 @@
     const n = nomeApp();
     document.title = n;   // aba do navegador: o nome do perfil
     document.querySelectorAll(".logo-txt b").forEach((b) => { b.textContent = n; });
+    if (typeof centralizarNomeLogo === "function") requestAnimationFrame(() => centralizarNomeLogo());
     const rod = document.getElementById("rodapeNome"); if (rod) rod.textContent = `${n} v1.0`;
   }
   const CATS_ENTRADA = ["Salário", "13º salário", "Férias", "Bônus / PLR", "Benefícios (VR/VA)", "Pró-labore", "Freelance", "Venda", "Aluguel recebido",
@@ -580,7 +581,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.414 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.415 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -1104,6 +1105,20 @@
         if (cabe()) break;
       }
     }
+    centralizarNomeLogo();
+  }
+  // nome no meio do espaço entre o ícone do logotipo e a primeira guia. Só
+  // desloca o desenho do nome (transform): o tamanho das guias não muda.
+  function centralizarNomeLogo() {
+    const b = document.querySelector(".logo-txt b"), marca = document.querySelector(".logo .logo-mark");
+    const guia = [...document.querySelectorAll("#navPrincipal button[data-secao]")].find((x) => x.offsetParent);
+    if (!b) return;
+    b.style.transform = "";
+    if (!marca || !guia || !b.offsetParent) return;
+    const m = marca.getBoundingClientRect(), t = b.getBoundingClientRect(), g = guia.getBoundingClientRect();
+    if (Math.abs(g.top - t.top) > 40) return;   // guias em outra linha (tela estreita)
+    const desloca = Math.round(((g.left - t.right) - (t.left - m.right)) / 2);
+    if (desloca > 0) b.style.transform = `translateX(${desloca}px)`;
   }
 
 
