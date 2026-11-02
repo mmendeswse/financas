@@ -76,6 +76,37 @@
   // escreve os valores na horizontal, centralizados em x; quando um encostaria
   // num já escrito, sobe uma linha (até 4 vezes)
   function escreverSemEncostar(ctx, itens, area, alturaLinha) {
+    // 1º tenta tudo numa linha só: no lugar; depois afastando a receita e a
+    // despesa do mesmo mês para lados opostos (na mesma altura); depois com a
+    // letra um pouco menor. Só se nada disso couber, um valor sobe uma linha.
+    var fonteBase = ctx.font, tamanho = parseFloat((/(\d+(?:\.\d+)?)px/.exec(fonteBase) || [0, 10])[1]);
+    var comFonte = function (px) { ctx.font = fonteBase.replace(/\d+(?:\.\d+)?px/, px + "px"); };
+    var tentar = function (px, espalhar) {
+      comFonte(px);
+      var pos = itens.map(function (it) { return { it: it, x: it.x, y: it.y, w: ctx.measureText(it.txt).width }; });
+      if (espalhar) {
+        var grupos = {};
+        pos.forEach(function (p) { if (p.it.grupo != null) (grupos[p.it.grupo] = grupos[p.it.grupo] || []).push(p); });
+        Object.keys(grupos).forEach(function (g) {
+          var par = grupos[g]; if (par.length !== 2) return;
+          par.sort(function (a, b) { return a.x - b.x; });
+          var esq = par[0], dir = par[1], meio = (esq.x + dir.x) / 2, y = Math.min(esq.y, dir.y);
+          esq.y = dir.y = y;
+          esq.x = Math.min(esq.x, meio - 2 - esq.w / 2);
+          dir.x = Math.max(dir.x, meio + 2 + dir.w / 2);
+        });
+      }
+      var rets = pos.map(function (p) { return { x0: p.x - p.w / 2 - 1, x1: p.x + p.w / 2 + 1, y0: p.y - alturaLinha, y1: p.y }; });
+      for (var i = 0; i < rets.length; i++) for (var j = i + 1; j < rets.length; j++) {
+        var r = rets[i], q = rets[j];
+        if (r.x0 < q.x1 && r.x1 > q.x0 && r.y0 < q.y1 && r.y1 > q.y0) return null;
+      }
+      return pos;
+    };
+    var ok = tentar(tamanho, false) || tentar(tamanho, true) || tentar(tamanho - 1, true) || tentar(tamanho - 1.5, true);
+    if (ok) { ok.forEach(function (p) { ctx.fillStyle = p.it.cor; ctx.fillText(p.it.txt, p.x, p.y); }); comFonte(tamanho); return; }
+    // sem espaço nem assim: em escada (quem encostaria sobe uma linha)
+    comFonte(tamanho - 1);
     var postos = [];
     itens.slice().sort(function (a, b) { return a.x - b.x; }).forEach(function (it) {
       var larg = ctx.measureText(it.txt).width, y = it.y;
@@ -89,6 +120,7 @@
       ctx.fillStyle = it.cor;
       ctx.fillText(it.txt, it.x, y);
     });
+    comFonte(tamanho);
   }
   // porMes: quantos valores por mês (2 nas barras de receitas x despesas, 1 na linha)
   function topoComFolga(fracao, porMes) {
@@ -161,7 +193,7 @@
         meta.data.forEach(function (b, i) {
           var v = Number(dados[i]);
           if (!b || !(v > 0)) return;
-          if (deitado) { itens.push({ x: b.x, y: Math.max(area.top + 12, b.y - 4), txt: valorCurto(v), cor: ds === 0 ? CORES.up : CORES.down }); return; }
+          if (deitado) { itens.push({ x: b.x, y: Math.max(area.top + 12, b.y - 4), txt: valorCurto(v), cor: ds === 0 ? CORES.up : CORES.down, grupo: i }); return; }
           ctx.save();
           ctx.translate(b.x, Math.max(area.top + 2, b.y - 5));
           ctx.rotate(angulo);   // inclinado (60°; 75° em colunas estreitas)
