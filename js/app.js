@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.438";
+  const VERSAO_APP = "3.6.439";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -307,11 +307,11 @@
   let editandoPrecos = false;
   let periodoGrafico = "tudo";
   let anoMetas = null;    // quadro de metas: ano de referência (o atual = hoje; anos passados = 31/12)
-  let periodoMetas = 0;   // quadro de metas: 0 = Atual (sempre abre assim), -1 = Início, 3/6/12 = meses atrás
+  let periodoMetas = 12;  // quadro de metas: 12 = valor de hoje (sempre abre assim), 3/6 = como estava 3 ou 6 meses atrás, -1 = Início
   let anoRD = null;    // ano escolhido no quadro Receitas x despesas
   let anoEvo = null;   // ano escolhido no quadro Evolução patrimonial
   let mesesRD = 6;        // meses no gráfico receitas x despesas
-  let mesesEvo = 0;       // meses no gráfico de evolução patrimonial (0 = Tudo)   // período mostrado no gráfico do ativo
+  let mesesEvo = 12;      // meses no gráfico de evolução patrimonial (sempre abre em 12m)   // período mostrado no gráfico do ativo
   let filtrosHistorico = { periodo: "3m", banco: "", categoria: "", tipo: "todos", busca: "", ordenarPor: "data", ordemAsc: false };
   // cada quadro de relatório tem o seu próprio intervalo de datas
   // mês selecionado nas guias Entradas e Despesas (começa no mês atual)
@@ -581,7 +581,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.438 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.439 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -1637,11 +1637,11 @@
     // a guia Bancos sempre abre mostrando o saldo atual ("Tudo")
     if (secao === "bancos") { mesesBancos = 0; anoBancos = String(new Date().getFullYear()); }
     // Dashboard e Relatórios abrem sempre no ano atual: receitas x despesas
-    // em 12 meses e evolução patrimonial em "Tudo"
+    // em 12 meses, metas em 12m (valor de hoje) e evolução patrimonial em 12m
     if (secao === "dashboard") {
       anoRD = String(new Date().getFullYear()); mesesRD = 12;
-      anoMetas = String(new Date().getFullYear()); periodoMetas = 0;
-      anoEvo = String(new Date().getFullYear()); mesesEvo = 0;   // evolução patrimonial sempre em "Tudo"
+      anoMetas = String(new Date().getFullYear()); periodoMetas = 12;
+      anoEvo = String(new Date().getFullYear()); mesesEvo = 12;   // evolução patrimonial sempre em 12m
     }
     if (secao === "relatorios") {
       anoRelA = String(new Date().getFullYear()); mesesRelA = 12;   // receitas x despesas sempre em 12m
@@ -2595,7 +2595,8 @@
   // data cujo valor o quadro mostra: Início = 1º registro; 3/6/12m = meses antes da referência do ano
   function dataInicioPeriodoMetas(m) {
     if (periodoMetas === -1) return (Array.isArray(m.historico) && m.historico.length) ? m.historico[0].data : hojeISO();
-    const d = new Date(dataRefAnoMetas() + "T12:00:00"); d.setMonth(d.getMonth() - periodoMetas);
+    // 12m mostra o valor de hoje (ou do fim do ano, nos anos passados)
+    const d = new Date(dataRefAnoMetas() + "T12:00:00"); d.setMonth(d.getMonth() - (periodoMetas === 12 ? 0 : periodoMetas));
     return isoLocal(d);
   }
 
@@ -2611,7 +2612,7 @@
   function itemMetaHtml(m, sempreAtual) {
     {
       // fora de "Atual", os valores e a barra mostram como a meta estava no começo do período escolhido
-      const naHoje = sempreAtual === true || (periodoMetas === 0 && dataRefAnoMetas() === hojeISO());
+      const naHoje = sempreAtual === true || ((periodoMetas === 12 || periodoMetas === 0) && dataRefAnoMetas() === hojeISO());
       const valor = naHoje ? Number(m.atual || 0) : valorMetaEm(m, dataInicioPeriodoMetas(m));
       const objetivo = Number(m.objetivo || 0);
       const p = objetivo > 0 ? Math.min(100, (valor / objetivo) * 100) : 0;
@@ -3919,7 +3920,7 @@
           </div>`)}</div>
         <div class="c3">${card("", "Receitas x despesas", `${mesesRD} ${mesesRD === 1 ? "mês" : "meses"} de ${anoRD}`,
           `<div class="filtro-mes">${LEGENDA_RD}${abasMeses("periodo-rd", mesesRD, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }])}</div>`, `<div class="grafico-cheio" style="padding:8px 14px 12px;min-height:236px"><div class="grafico-cheio-area"><canvas id="graf-receitas-despesas"></canvas></div></div>`)}</div>
-        <div class="c3">${card("", "Metas", resumoMetas(d), `<div class="filtro-mes">` + abasMeses("periodo-metas", periodoMetas, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }, { meses: 0, rotulo: "Tudo" }]) + `</div>`, metasMini(d))}</div>
+        <div class="c3">${card("", "Metas", resumoMetas(d), `<div class="filtro-mes">` + abasMeses("periodo-metas", periodoMetas, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }]) + `</div>`, metasMini(d))}</div>
       </div>
 
       <div class="grid">
@@ -8361,7 +8362,7 @@
     const periodo = cfg.meses ? cfg.meses + " meses de " + cfg.ano : cfg.idAno ? "ano inteiro de " + cfg.ano : "todo histórico";
     return card("", "Evolução patrimonial", `patrimônio líquido · ${periodo}`,
       (hist.length >= 2 ? `<span class="pill-periodo ${corSinal(varPer)}">PERÍODO ${brlSinal(varPer)}</span>` : "") +
-      `<div class="filtro-mes">${cfg.idAno ? seletorAnoDash(cfg.idAno, cfg.ano, anosDashboard(d)) : ""}${abasMeses(cfg.acao, cfg.meses, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }].concat(cfg.idAno ? [] : [{ meses: 0, rotulo: "Tudo" }]))}</div>`,
+      `<div class="filtro-mes">${cfg.idAno ? seletorAnoDash(cfg.idAno, cfg.ano, anosDashboard(d)) : ""}${abasMeses(cfg.acao, cfg.meses, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }])}</div>`,
       hist.length >= 2
         ? `<div${cfg.classe ? ` class="${cfg.classe}"` : ""} style="padding:8px 14px 12px;height:280px"><canvas id="${cfg.canvas}"></canvas></div>`
         : `<div class="empty">Sem registros de patrimônio em ${cfg.meses ? `${cfg.meses} ${cfg.meses === 1 ? "mês" : "meses"} de ${cfg.ano}` : cfg.idAno ? cfg.ano : "todo histórico"}.</div>`);
