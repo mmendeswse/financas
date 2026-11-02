@@ -93,11 +93,13 @@
         var meioY = (base === "bottom" ? ty - fonteTick.lineHeight / 2 : ty) + fonteTick.lineHeight / 2;
         var larg = Math.min(passo - 3, ctx.measureText(rot).width + 12), alt = fonteTick.lineHeight + 6;
         var x = eixo.getPixelForTick(i) - larg / 2, y = meioY - alt / 2;
-        var forte = grafico._mesHover === i;
+        var forte = grafico._mesHover === i, atual = grafico.$mesAtual === i;
         ctx.beginPath();
         if (ctx.roundRect) ctx.roundRect(x, y, larg, alt, 6); else ctx.rect(x, y, larg, alt);
-        ctx.fillStyle = forte ? "rgba(0,229,255,0.22)" : "rgba(0,229,255,0.07)";
-        ctx.strokeStyle = forte ? "rgba(0,229,255,0.9)" : "rgba(0,229,255,0.35)";
+        // mês atual em dourado; os outros em ciano
+        var rgb = atual ? "255,198,74" : "0,229,255";
+        ctx.fillStyle = "rgba(" + rgb + "," + (forte ? 0.24 : atual ? 0.14 : 0.07) + ")";
+        ctx.strokeStyle = "rgba(" + rgb + "," + (forte ? 0.95 : atual ? 0.75 : 0.35) + ")";
         ctx.lineWidth = 1;
         ctx.fill(); ctx.stroke();
       });
@@ -131,6 +133,9 @@
   }
   function renderReceitasDespesas(canvasId, serie, opcoes) {
     opcoes = opcoes || {};
+    // posição do mês atual no gráfico (o botão dele fica em dourado)
+    var hojeD = new Date(), mesHoje = hojeD.getFullYear() + "-" + String(hojeD.getMonth() + 1).padStart(2, "0");
+    var mesAtualIdx = serie.findIndex(function (s) { return s.mes === mesHoje; });
     destruir(canvasId);
     var ctx = ctxOf(canvasId); if (!ctx) return;
     instancias[canvasId] = new Chart(ctx, {
@@ -158,7 +163,7 @@
         },
         // nomes dos meses como botões (ver botoesMesRD): na horizontal, com espaço em volta
         layout: { padding: { bottom: 4 } },
-        scales: { x: eixoX({ ticks: { color: CORES.cy, font: fonte(10.5), maxRotation: 0, autoSkip: false, padding: 9 } }), y: eixoY() },
+        scales: { x: eixoX({ ticks: { color: function (c) { return c.index === mesAtualIdx ? "#FFC64A" : CORES.cy; }, font: fonte(10.5), maxRotation: 0, autoSkip: false, padding: 9 } }), y: eixoY() },
         plugins: {
           legend: { display: !(opcoes && opcoes.semLegenda), position: "top", align: "end", labels: { color: CORES.texto, font: fonte(10.5), boxWidth: 8, boxHeight: 8, usePointStyle: true, pointStyle: "circle" } },
           tooltip: tooltipPadrao({ callbacks: { label: function (c) { return " " + c.dataset.label + ": " + moeda(c.parsed.y); } } })
@@ -167,6 +172,8 @@
     });
     // o Chart.js só avisa cliques dentro da área das barras: o nome do mês,
     // embaixo, é tratado aqui (abre receitas e despesas do mês, como antes)
+    instancias[canvasId].$mesAtual = mesAtualIdx;
+    instancias[canvasId].draw();
     var tela = instancias[canvasId].canvas;
     if (tela._rdClique) tela.removeEventListener("click", tela._rdClique);
     if (tela._rdMove) tela.removeEventListener("mousemove", tela._rdMove);
