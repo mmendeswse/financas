@@ -29,7 +29,7 @@
 
   var API = "https://api.github.com";
   var ARQUIVO = "muller-mendes-conta.json";
-  var DESCRICAO = "Muller Mendes Finanças — conta criptografada (não apague)";
+  var DESCRICAO = "Finanças — conta criptografada (não apague)";
   var ARQUIVO_ANTIGO = "muller-mendes-dados.json";   // cofre sem criptografia (versões até 3.6.398)
   var CHAVE = "mullerMendes:sync";
   var BANCO = "muller-mendes-sync";

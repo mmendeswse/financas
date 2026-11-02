@@ -1,4 +1,4 @@
-# Muller Mendes Finanças no iPad (e iPhone)
+# Finanças no iPad (e iPhone)
 
 No iOS não existe instalador como no Windows. O Safari instala o sistema como um
 aplicativo (PWA): fica na Tela de Início com ícone próprio, abre em tela cheia,

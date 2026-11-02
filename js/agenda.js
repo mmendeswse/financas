@@ -25,7 +25,9 @@
   const idCliente = () => global.MM_GOOGLE_CLIENT_ID || CLIENT_ID_PADRAO;
   const ESCOPO = "https://www.googleapis.com/auth/calendar.app.created";
   const API = "https://www.googleapis.com/calendar/v3";
-  const CHAVE = "mullerMendes:agenda";   // token deste aparelho (vale ~1 h)
+  const CHAVE = "mullerMendes:agenda";
+  const NOME_AGENDA = "Finanças";   // nome da agenda na conta Google
+  const DESCRICAO_AGENDA = "Contas a pagar, receitas e metas do Finanças. Para mudar, altere no sistema.";   // token deste aparelho (vale ~1 h)
   const fuso = () => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || "America/Sao_Paulo"; } catch (e) { return "America/Sao_Paulo"; } };
 
   // ganchos do app
@@ -124,7 +126,7 @@
     const tz = fuso();
     const e = {
       summary: x.titulo,
-      description: (x.descricao ? x.descricao + "\n\n" : "") + "Criado pelo " + app.nome() + " Finanças. Para mudar, altere no sistema.",
+      description: (x.descricao ? x.descricao + "\n\n" : "") + "Criado pelo Finanças. Para mudar, altere no sistema.",
       start: { dateTime: x.data + "T" + x.hora + ":00", timeZone: tz },
       end: { dateTime: somarMin(x.data, x.hora, x.duracao || 30), timeZone: tz },
       reminders: { useDefault: false, overrides: (x.alertas || [0]).map((m) => ({ method: "popup", minutes: m })) },
@@ -150,10 +152,14 @@
   function avisar() { try { app.aoMudarEstado(st); } catch (e) { /* tela */ } }
   function garantirCalendario(token, d) {
     const c = cfg(d);
-    const criar = () => api(token, "POST", "/calendars", { summary: app.nome() + " Finanças", description: "Contas a pagar, receitas e metas do " + app.nome() + " Finanças. Para mudar, altere no sistema.", timeZone: fuso() })
+    const criar = () => api(token, "POST", "/calendars", { summary: NOME_AGENDA, description: DESCRICAO_AGENDA, timeZone: fuso() })
       .then((cal) => { c.calendarioId = cal.id; app.salvar(d); return cal.id; });
     if (!c.calendarioId) return criar();
-    return api(token, "GET", `/calendars/${encodeURIComponent(c.calendarioId)}`).then(() => c.calendarioId)
+    return api(token, "GET", `/calendars/${encodeURIComponent(c.calendarioId)}`).then((cal) => {
+      // agenda criada com o nome antigo ("Muller Mendes Finanças"): passa a se chamar "Finanças"
+      if (cal && cal.summary !== NOME_AGENDA) return api(token, "PATCH", `/calendars/${encodeURIComponent(c.calendarioId)}`, { summary: NOME_AGENDA, description: DESCRICAO_AGENDA }).catch(() => null).then(() => c.calendarioId);
+      return c.calendarioId;
+    })
       .catch((e) => { if (e.status === 404) { c.calendarioId = null; return criar(); } throw e; });
   }
   function listar(token, cal) {
