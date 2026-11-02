@@ -3106,3 +3106,27 @@ body.av-aberta { overflow: hidden; }
 .logo { align-items: center; }
 .logo-txt { display: flex; align-items: center; }
 .logo-txt b { line-height: 1; text-box: trim-both cap alphabetic; overflow-x: clip; overflow-y: visible; }   /* acentos (Ã, É) não são cortados */
+/* iPad e Android: resumo da Zona Risco sempre completo (ícone, 6 caixas e último backup) */
+@media (hover: none) and (pointer: coarse) {
+  .cfg-grid .cfg-rolar > .zona-resumo { flex: none; overflow: visible; gap: 6px; padding: 8px 10px; }
+  .zona-resumo .zona-icone svg { width: 20px; height: 20px; }
+  .zona-resumo .zona-contagem { gap: 5px; }
+  .zona-resumo .zona-contagem div { padding: 3px 4px; }
+  .zona-resumo .zona-contagem b { font-size: 15px; line-height: 1.15; }
+  .zona-resumo .zona-contagem span { font-size: 8.5px; }
+  .zona-resumo .zona-backup { font-size: 11px; }
+}
+/* iPad deitado de tela baixa: quadros de Configurações sem o subtítulo e com
+   botões e caixas mais justos, para o resumo da Zona Risco caber inteiro */
+@media (hover: none) and (pointer: coarse) and (min-width: 700px) and (max-height: 760px) {
+  .cfg-grid .card > header .sub { display: none; }
+  .cfg-grid .body.pad { padding-top: 8px; padding-bottom: 8px; gap: 6px; }
+  .cfg-grid .cfg-acoes { padding-top: 8px; }
+  .cfg-grid .cfg-acoes .btn { padding-top: 8px; padding-bottom: 8px; }
+  .cfg-grid .cfg-rolar > .zona-resumo { gap: 4px; padding: 6px 8px; }
+  .zona-resumo .zona-icone svg { width: 18px; height: 18px; }
+  .zona-resumo .zona-contagem { gap: 4px; }
+  .zona-resumo .zona-contagem div { padding: 2px 4px; }
+  .zona-resumo .zona-contagem b { font-size: 14px; line-height: 1.1; }
+  .zona-resumo .zona-contagem span { font-size: 8px; }
+}
