@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.418";
+  const VERSAO_APP = "3.6.419";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -581,7 +581,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.418 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.419 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -635,7 +635,7 @@
     const eu = S.idAparelho();
     lista.sort((a, b) => (a.id === eu ? -1 : b.id === eu ? 1 : (b.visto || "").localeCompare(a.visto || "")));
     return `<div class="sy-aparelhos">${lista.map((x) => `<div class="sy-ap"><span class="sy-ap-ic">${/iPhone|Celular/.test(x.nome) ? "📱" : /iPad|Tablet/.test(x.nome) ? "📲" : "💻"}</span>
-      <div><b>${esc(x.nome || "Aparelho")}</b><small>${x.id === eu ? `<em>este aparelho</em> · ` : ""}visto ${quandoSync(x.visto)}</small></div>
+      <div><b>${esc(x.nome || "Aparelho")}</b><small>${x.id === eu ? `<em>este aparelho</em><span class="cfg-opc" data-opc="8"> · visto ${quandoSync(x.visto)}</span>` : `<span class="cfg-opc" data-opc="8">visto ${quandoSync(x.visto)}</span>`}</small></div>
       ${x.id === eu ? `<button class="btn pequeno" data-acao="sync-renomear">Renomear</button>` : `<button class="btn pequeno perigo" data-acao="sync-remover" data-id="${esc(x.id)}">Remover</button>`}</div>`).join("")}</div>`;
   }
   function corpoCartaoSync() {
@@ -646,7 +646,7 @@
       return `${estado}
         ${venc != null && venc <= 30 ? `<p class="cfg-info cfg-alerta">⏳ A chave do GitHub ${venc < 0 ? "venceu" : venc === 0 ? "vence hoje" : `vence em ${venc} ${venc === 1 ? "dia" : "dias"}`}. Crie uma chave nova e toque em <b>Atualizar chave</b> — os outros aparelhos recebem sozinhos. <button class="btn pequeno" data-acao="sync-token">Atualizar chave</button></p>` : ""}
         ${sit.cls === "erro" && /chave do GitHub/.test(sit.detalhe || "") && !(venc != null && venc <= 30) ? `<div class="cfg-acoes"><button class="btn pequeno" data-acao="sync-token">Atualizar chave do GitHub</button></div>` : ""}
-        <span class="sy-rot">Aparelhos conectados</span>
+        <span class="sy-rot cfg-opc" data-opc="7">Aparelhos conectados</span>
         <div id="syAparelhos">${aparelhosSyncHTML()}</div>
         <div class="cfg-acoes"><button class="btn primario" data-acao="sync-agora">Sincronizar</button>
           <button class="btn primario" data-acao="sync-codigo">Adicionar</button></div>`;

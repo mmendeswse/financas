@@ -3130,3 +3130,6 @@ body.av-aberta { overflow: hidden; }
   .zona-resumo .zona-contagem b { font-size: 14px; line-height: 1.1; }
   .zona-resumo .zona-contagem span { font-size: 8px; }
 }
+/* aparelho sem a linha "visto há…" (falta de espaço): só a do "este aparelho" fica */
+.sy-ap small:empty { display: none; }
+.sy-ap small:not(:has(> :not([hidden]))):not(:has(em)) { display: none; }
