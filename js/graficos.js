@@ -348,6 +348,8 @@
     return d.toLocaleDateString("pt-BR", { month: "short" }).replace(".", "");
   }
 
+  // pico da Evolução patrimonial em roxo (o dourado é do mês atual)
+  var COR_PICO = "#B57BFF";
   function renderEvolucaoPatrimonio(canvasId, historico, opcoes) {
     opcoes = opcoes || {};
     destruir(canvasId);
@@ -374,12 +376,12 @@
           data: serie.map(function (p) { return p.valor; }),
           borderColor: CORES.azul, backgroundColor: gradiente(ctx, CORES.azul, 240), fill: true, tension: 0.3,
           borderWidth: 2.5,
-          // pico em dourado; os demais pontos em verde quando o patrimônio subiu
+          // pico em roxo; os demais pontos em verde quando o patrimônio subiu
           // em relação ao mês anterior e em vermelho quando caiu
           pointRadius: serie.map(function (p, i) { return i === iPico ? 7 : (serie.length <= 14 ? 4.5 : 2.5); }),
           pointHoverRadius: 8,
-          pointBackgroundColor: serie.map(function (p, i) { return i === iPico ? "#FFD633" : (i === 0 ? "#FFFFFF" : (p.valor >= serie[i - 1].valor ? CORES.up : CORES.down)); }),
-          pointBorderColor: serie.map(function (p, i) { return i === iPico ? "#FFD633" : "#0B1420"; }),
+          pointBackgroundColor: serie.map(function (p, i) { return i === iPico ? COR_PICO : (i === 0 ? "#FFFFFF" : (p.valor >= serie[i - 1].valor ? CORES.up : CORES.down)); }),
+          pointBorderColor: serie.map(function (p, i) { return i === iPico ? COR_PICO : "#0B1420"; }),
           pointBorderWidth: 2
         }]
       },
@@ -394,7 +396,7 @@
         },
         // nomes dos meses como botões (botoesMesRD), o do mês atual em dourado;
         // folga à direita para o valor inclinado do último mês
-        layout: { padding: { bottom: 4, right: 26 } },
+        layout: { padding: { bottom: 4, right: 40 } },
         scales: { x: eixoX({ ticks: { color: function (c) { return (c.tick ? c.tick.value : c.index) === mesAtualIdx ? "#FFC64A" : CORES.cy; }, font: fonte(10.5), maxTicksLimit: 12, maxRotation: 0, padding: 9 } }),
           // folga em cima para o valor inclinado do ponto mais alto (valoresEvolucao)
           y: eixoY(topoComFolga(0.3)) },
@@ -409,7 +411,7 @@
       },
       plugins: [botoesMesRD, {
         // valor de cada mês escrito acima do ponto, inclinado, na cor do ponto
-        // (verde subiu, vermelho caiu); o pico já tem a etiqueta dourada
+        // (verde subiu, vermelho caiu); o pico já tem a etiqueta roxa
         id: "valoresEvolucao",
         afterDatasetsDraw: function (grafico) {
           var meta = grafico.getDatasetMeta(0), area = grafico.chartArea, c = grafico.ctx;
@@ -433,7 +435,7 @@
           c.restore();
         }
       }, {
-        // etiqueta dourada em cima do pico
+        // etiqueta roxa em cima do pico
         id: "rotuloPico",
         afterDatasetsDraw: function (grafico) {
           var pt = grafico.getDatasetMeta(0).data[iPico]; if (!pt) return;
@@ -443,9 +445,9 @@
           var x = Math.min(ca.right - larg, Math.max(ca.left, pt.x - larg / 2));
           var y = pt.y - 14 - alt; if (y < ca.top) y = pt.y + 12;
           c.fillStyle = "#0B1420"; c.fillRect(x, y, larg, alt);
-          c.fillStyle = "rgba(255,214,51,0.14)"; c.fillRect(x, y, larg, alt);
-          c.strokeStyle = "#FFD633"; c.lineWidth = 1; c.strokeRect(x + 0.5, y + 0.5, larg - 1, alt - 1);
-          c.fillStyle = "#FFD633"; c.textBaseline = "middle"; c.fillText(txt, x + 6, y + alt / 2 + 0.5);
+          c.fillStyle = "rgba(181,123,255,0.16)"; c.fillRect(x, y, larg, alt);
+          c.strokeStyle = COR_PICO; c.lineWidth = 1; c.strokeRect(x + 0.5, y + 0.5, larg - 1, alt - 1);
+          c.fillStyle = COR_PICO; c.textBaseline = "middle"; c.fillText(txt, x + 6, y + alt / 2 + 0.5);
           c.restore();
         }
       }]
