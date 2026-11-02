@@ -139,6 +139,18 @@
     }
   };
 
+  // nome do mês no eixo: inteiro e com maiúscula (Janeiro) quando cabe; senão
+  // a forma curta com maiúscula (Jan) — no celular, por exemplo
+  var MESES_INTEIROS = { jan: "Janeiro", fev: "Fevereiro", mar: "Março", abr: "Abril", mai: "Maio", jun: "Junho", jul: "Julho", ago: "Agosto", set: "Setembro", out: "Outubro", nov: "Novembro", dez: "Dezembro" };
+  function nomeMesEixo(eixo, value) {
+    var rot = String(eixo.getLabelForValue(value));
+    var chave = rot.toLowerCase();
+    if (!MESES_INTEIROS[chave]) return rot;   // datas (dd/mm/aaaa) ficam como estão
+    var g = eixo.chart, n = Math.max(1, Math.min(g.data.labels.length, eixo.options.ticks.maxTicksLimit || 99));
+    var espaco = ((g.chartArea && g.chartArea.right - g.chartArea.left) || g.width - 70) / n;
+    return espaco >= 76 ? MESES_INTEIROS[chave] : chave.charAt(0).toUpperCase() + chave.slice(1);
+  }
+
   // nomes dos meses embaixo do gráfico desenhados como botões (fundo e contorno
   // ciano), para ficar claro que dá para tocar e ver o mês; o que está sob o
   // mouse fica mais forte
@@ -154,7 +166,7 @@
       // posição real de cada texto (o Chart.js já calculou onde vai desenhar)
       var itens = eixo.getLabelItems ? eixo.getLabelItems() : [];
       eixo.ticks.forEach(function (t, i) {
-        var rot = String(eixo.getLabelForValue(t.value));
+        var rot = String(t.label != null ? t.label : eixo.getLabelForValue(t.value));
         var it = itens[i], ty = it ? it.options.translation[1] : eixo.top + eixo.options.ticks.padding;
         var base = it ? it.options.textBaseline : "top";
         // no eixo de baixo o Chart.js desenha o texto meia linha abaixo do ponto informado
@@ -257,7 +269,7 @@
         },
         // nomes dos meses como botões (ver botoesMesRD): na horizontal, com espaço em volta
         layout: { padding: { bottom: 4 } },
-        scales: { x: eixoX({ ticks: { color: function (c) { return (c.tick ? c.tick.value : c.index) === mesAtualIdx ? "#FFC64A" : CORES.cy; }, font: fonte(10.5), maxRotation: 0, autoSkip: false, padding: 9 } }),
+        scales: { x: eixoX({ ticks: { color: function (c) { return (c.tick ? c.tick.value : c.index) === mesAtualIdx ? "#FFC64A" : CORES.cy; }, font: fonte(10.5), maxRotation: 0, autoSkip: false, padding: 9, callback: function (v) { return nomeMesEixo(this, v); } } }),
           // folga em cima para o valor inclinado da barra mais alta (valoresRD)
           y: eixoY(topoComFolga(0.38)) },
         plugins: {
@@ -401,7 +413,7 @@
         // nomes dos meses como botões (botoesMesRD), o do mês atual em dourado;
         // folga à direita para o valor inclinado do último mês
         layout: { padding: { bottom: 4, right: 40 } },
-        scales: { x: eixoX({ ticks: { color: function (c) { return (c.tick ? c.tick.value : c.index) === mesAtualIdx ? "#FFC64A" : CORES.cy; }, font: fonte(10.5), maxTicksLimit: 12, maxRotation: 0, padding: 9 } }),
+        scales: { x: eixoX({ ticks: { color: function (c) { return (c.tick ? c.tick.value : c.index) === mesAtualIdx ? "#FFC64A" : CORES.cy; }, font: fonte(10.5), maxTicksLimit: 12, maxRotation: 0, padding: 9, callback: function (v) { return nomeMesEixo(this, v); } } }),
           // folga em cima para o valor inclinado do ponto mais alto (valoresEvolucao)
           y: eixoY(topoComFolga(0.3)) },
         plugins: { legend: { display: false }, tooltip: tooltipPadrao({ callbacks: {
