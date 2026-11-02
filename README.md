@@ -47,6 +47,9 @@ um servidor. Isso também quer dizer que:
 - Backup e restauração completos via arquivo `.json`
 - Sincronização opcional entre aparelhos: conta com código (texto e QR
   code), dados criptografados num Gist privado do GitHub
+- Google Agenda (Configurações): contas a pagar, receitas previstas e prazos
+  das metas numa agenda própria na sua conta Google, com alertas mesmo com o
+  sistema fechado (mesmo sistema do Meu Controle; só na versão do site)
 - Perfil com avatar (foto, personagens de anime ou emoji), como no Meu Controle
 - Senha numérica e Face ID / Touch ID para abrir o app
 
@@ -93,6 +96,7 @@ financas/
 │   ├── cotacoes.js         # cotações, indicadores e notícias (internet)
 │   ├── sincronizacao.js    # conta de sincronização (Gist criptografado, código e QR code)
 │   ├── avatar.js           # perfil e tela "Editar avatar"
+│   ├── agenda.js           # integração com o Google Agenda
 │   ├── emojis.js           # emojis das categorias
 │   ├── app.js              # interface: navegação, telas, modais, eventos
 │   └── vendor/             # bibliotecas de terceiros incluídas offline

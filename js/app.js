@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.403";
+  const VERSAO_APP = "3.6.404";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -556,6 +556,7 @@
     DADOS = A.carregarDados();
     renderRota();
     atualizarPerfilTopo();
+    agendarAgenda();
   }
   const temDadosReais = (d) => !!((d.bancos || []).length || (d.entradas || []).length || (d.despesas || []).length || (d.acoes || []).length || (d.investimentos || []).length);
 
@@ -588,7 +589,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.403 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.404 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -899,6 +900,98 @@
     document.addEventListener("click", (e) => { if (!dd.contains(e.target) && !btn.contains(e.target)) dd.classList.remove("on"); });
     atualizarPerfilTopo();
   }
+
+
+  // =========================================================================
+  // GOOGLE AGENDA (mesmo sistema do Meu Controle) — o motor fica em agenda.js
+  // =========================================================================
+  // o que deve estar na agenda: este mês e os dois seguintes
+  function desejadosAgenda(d, itens) {
+    const lista = [];
+    const [a0, m0] = F.mesAtual().split("-").map(Number);
+    const meses = [0, 1, 2].map((i) => { const x = new Date(a0, m0 - 1 + i, 1); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}`; });
+    const vistos = {};
+    const add = (x) => { if (!x.data || vistos[x.chave]) return; vistos[x.chave] = true; lista.push(x); };
+    if (itens.contas) meses.forEach((m) => listaDespesasTodasMes(d, m).forEach((x) => {
+      if (x.status === "Pago") return;
+      add({ chave: `pg:${x.id}:${x.data}`, titulo: `💸 ${x.descricao || "Conta"} — ${brl(x.valor)}`, data: x.data, hora: "09:00", duracao: 30, alertas: [0, 1440],
+        descricao: ["Conta a pagar", x.categoria, x.banco && x.banco !== "—" ? x.banco : ""].filter(Boolean).join(" · "), cor: "11" });
+    }));
+    if (itens.receitas) meses.forEach((m) => listaEntradasTodasMes(d, m).forEach((x) => {
+      if (x.status !== "Prevista") return;
+      add({ chave: `rc:${x.id}:${x.data}`, titulo: `💰 ${x.descricao || "Receita"} — ${brl(x.valor)}`, data: x.data, hora: "09:00", duracao: 30, alertas: [0],
+        descricao: ["Receita prevista", x.categoria, x.banco && x.banco !== "—" ? x.banco : ""].filter(Boolean).join(" · "), cor: "10" });
+    }));
+    if (itens.metas) (d.metas || []).forEach((mt) => {
+      if (!mt.prazo || mt.prazo.slice(0, 7) < meses[0] || Number(mt.atual || 0) >= Number(mt.objetivo || 0)) return;
+      add({ chave: `mt:${mt.id}:${mt.prazo}`, titulo: `🎯 Prazo da meta: ${mt.nome || "Meta"}`, data: mt.prazo, hora: "09:00", duracao: 30, alertas: [0, 10080],
+        descricao: `Objetivo ${brl(mt.objetivo)} · guardado até agora ${brl(mt.atual || 0)}`, cor: "9" });
+    });
+    return lista;
+  }
+  const AG = window.Agenda;
+  if (AG) AG.configurar({
+    dados: () => DADOS,
+    salvar: (d) => { A.salvarDados(d, true, true); agendarEnvioSync(); },
+    nome: () => nomeApp(),
+    desejados: desejadosAgenda,
+    aoMudarEstado: () => { atualizarCartaoAgenda(); atualizarAvisoAgenda(); }
+  });
+  let timerAgenda = null;
+  function agendarAgenda(ms) { if (!AG) return; clearTimeout(timerAgenda); timerAgenda = setTimeout(() => { AG.talvezEnviar(); atualizarAvisoAgenda(); }, ms == null ? 1200 : ms); }
+
+  function corpoCartaoAgenda() {
+    if (!AG) return "";
+    if (!AG.disponivel()) return `<div class="sync-estado"><span class="sync-ponto"></span><b>Só na versão do site</b></div>
+      <p class="cfg-texto">O login do Google funciona quando o sistema é aberto pelo navegador (site ou app instalado no celular/iPad). No programa do Windows, conecte por lá.</p>`;
+    const c = AG.cfg(DADOS), st = AG.estado;
+    if (!c.ativa || !AG.conectadoAqui()) return `
+      <div class="ag-intro"><span class="ag-ic">📅</span><div><b>Leve seus vencimentos para o Google Agenda</b>
+        <small>O sistema cria uma agenda “${esc(nomeApp())} Finanças” na sua conta Google com as contas a pagar, as receitas previstas e os prazos das metas. Os alertas tocam mesmo com o sistema fechado — no celular, no relógio e no computador.</small></div></div>
+      <p class="cfg-info cfg-opc" data-opc="2">O Google vai pedir para você escolher a conta e autorizar. O sistema só consegue mexer na agenda que ele mesmo cria — não vê nem altera as suas outras agendas.${c.ativa ? " A agenda já está ligada em outro aparelho: conectar aqui usa a mesma." : ""}</p>
+      <div class="cfg-acoes"><button class="btn primario" data-acao="agenda-conectar">Conectar Google Agenda</button></div>`;
+    const pend = AG.pendente(DADOS);
+    const est = st.erro ? `<div class="sync-estado"><span class="sync-ponto erro"></span><b>Não atualizou</b><span class="dim">${esc(st.erro)}</span></div>`
+      : st.rodando ? `<div class="sync-estado"><span class="sync-ponto rodando"></span><b>Atualizando a agenda…</b></div>`
+      : `<div class="sync-estado"><span class="sync-ponto ${pend ? "erro" : "ligado"}"></span><b>${pend ? "Há mudanças para enviar" : "Agenda em dia"}</b><span class="dim">${c.ultimaVez ? quandoSync(c.ultimaVez) : ""}${st.msg ? " · " + esc(st.msg) : ""}</span></div>`;
+    const item = (k, rot, sub) => `<label class="chk-linha ag-item"><input type="checkbox" data-ag-item="${k}" ${c.itens[k] ? "checked" : ""}> <span>${rot}<small>${sub}</small></span></label>`;
+    return `${est}
+      <span class="sy-rot">O que vai para a agenda</span>
+      ${item("contas", "💸 Contas a pagar", "no vencimento, com alerta na véspera e no dia")}
+      ${item("receitas", "💰 Receitas previstas", "no dia previsto")}
+      ${item("metas", "🎯 Prazos das metas", "com alerta uma semana antes")}
+      <p class="cfg-info cfg-opc" data-opc="1"><a class="ag-link" href="https://calendar.google.com/" target="_blank" rel="noopener">Abrir o Google Agenda ↗</a></p>
+      <div class="cfg-acoes"><button class="btn primario" data-acao="agenda-enviar">Atualizar</button>
+        <button class="btn perigo" data-acao="agenda-desligar">Desconectar</button></div>`;
+  }
+  function atualizarCartaoAgenda() {
+    const c = document.getElementById("agendaCorpo");
+    if (c && !document.getElementById("modal").classList.contains("on")) { c.innerHTML = corpoCartaoAgenda(); if (typeof iconizarBotoes === "function") iconizarBotoes(c); }
+  }
+  // botão flutuante quando o Google pede um toque para liberar o acesso de novo
+  function atualizarAvisoAgenda() {
+    let el = document.getElementById("agendaAviso");
+    if (!AG || !AG.precisaToque(DADOS)) { if (el) el.remove(); return; }
+    if (!el) {
+      el = document.createElement("button");
+      el.id = "agendaAviso"; el.className = "agenda-aviso";
+      el.innerHTML = `<span>📅</span><span><b>Atualizar Google Agenda</b><small>há mudanças nas contas, receitas ou metas</small></span>`;
+      el.addEventListener("click", () => { el.remove(); ACOES_AGENDA["agenda-enviar"](); });
+      document.body.appendChild(el);
+    }
+  }
+  const ACOES_AGENDA = {
+    "agenda-conectar": () => {
+      AG.conectar().then((n) => { renderRota(); toast(`Pronto! Agenda criada com ${n.novos} ${n.novos === 1 ? "evento" : "eventos"}.`); })
+        .catch((e) => { toast(e.message); atualizarCartaoAgenda(); });
+    },
+    "agenda-enviar": () => {
+      AG.enviarComToque().then(() => toast("Google Agenda atualizado" + (AG.estado.msg && AG.estado.msg !== "nada mudou" ? ": " + AG.estado.msg : "") + "."))
+        .catch((e) => { toast(e.message); atualizarAvisoAgenda(); });
+    },
+    "agenda-desligar": () => confirmarExclusao(`Desconectar o Google Agenda? A agenda “${nomeApp()} Finanças” é apagada da sua conta Google (com os eventos que o sistema criou) e o sistema para de atualizá-la.`,
+      () => AG.desconectar().then(() => { renderRota(); toast("Google Agenda desconectado."); }))
+  };
 
 
   // =========================================================================
@@ -1350,7 +1443,7 @@
     migrarRecorrenciasAntigas();
     I.registrarPontoPatrimonio(DADOS);
     A.salvarDados(DADOS, true, true);   // automático: não conta como alteração sua
-    A.aoMudar(() => { DADOS = A.carregarDados(); migrarRecorrenciasAntigas(); renderRota(); atualizarPerfilTopo(); });
+    A.aoMudar(() => { DADOS = A.carregarDados(); migrarRecorrenciasAntigas(); renderRota(); atualizarPerfilTopo(); agendarAgenda(); });
 
     ligarTopbar();
     ligarPerfilTopo();
@@ -1414,6 +1507,7 @@
     window.addEventListener("focus", () => sincronizar(true));
     window.addEventListener("online", () => sincronizar(true));
     abrirCodigoDoLink(0);
+    agendarAgenda(4000);   // depois de trazer os dados da conta
     setInterval(atualizarPerfilTopo, 60 * 1000);   // "há 2 min" no menu do perfil
   }
 
@@ -1421,6 +1515,7 @@
     A.salvarDados(DADOS);
     if (mensagem) toast(mensagem);
     agendarEnvioSync();
+    agendarAgenda();
     // a entrada que dispara uma transferência automática pode ter acabado de cair
     setTimeout(conferirTransfAutoNovas, 0);
   }
@@ -8462,6 +8557,8 @@
               <button class="btn perigo" data-acao="remover-senha">Remover senha</button>`
               : `<button class="btn primario" data-acao="criar-senha">Criar</button>`)}
           </div>`)}</div>
+        <div class="cfg-agenda">${card("", "Google Agenda", "alertas mesmo com o sistema fechado", "", `
+          <div class="body pad" id="agendaCorpo">${corpoCartaoAgenda()}</div>`)}</div>
         <div class="cfg-sync">${card("", "Sincronização", "conta com código · celular, iPad e computador", "", `
           <div class="body pad" id="syncCorpo">${corpoCartaoSync()}</div>`)}</div>
         <div class="cfg-cotacoes">${card("", "Cotações automáticas", "dólar e ações · AwesomeAPI e brapi", "", `
@@ -8757,6 +8854,7 @@
       const acao = b.dataset.acao;
       const id = b.dataset.id;
       if (ACOES_SYNC[acao]) { ACOES_SYNC[acao](b); return; }
+      if (ACOES_AGENDA[acao]) { ACOES_AGENDA[acao](b); return; }
 
       switch (acao) {
         case "ir": if (b.dataset.sel) velaBolsa = b.dataset.sel; navegarPara(b.dataset.secao, b.dataset.id); break;
@@ -8983,6 +9081,7 @@
 
     cont.addEventListener("change", (e) => {
       const id = e.target.id;
+      if (e.target.dataset.agItem) { AG.definirItem(e.target.dataset.agItem, e.target.checked); atualizarCartaoAgenda(); agendarAgenda(300); return; }
       if (id === "anoRelA") { anoRelA = e.target.value; renderRota(); return; }
       if (id === "anoRelB") { anoRelB = e.target.value; renderRota(); return; }
       if (id === "anoBancos") { anoBancos = e.target.value; renderRota(); return; }
