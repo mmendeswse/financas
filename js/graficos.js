@@ -367,7 +367,9 @@
         },
         // nomes dos meses como botões (botoesMesRD), o do mês atual em dourado
         layout: { padding: { bottom: 4 } },
-        scales: { x: eixoX({ ticks: { color: function (c) { return (c.tick ? c.tick.value : c.index) === mesAtualIdx ? "#FFC64A" : CORES.cy; }, font: fonte(10.5), maxTicksLimit: 12, maxRotation: 0, padding: 9 } }), y: eixoY() },
+        scales: { x: eixoX({ ticks: { color: function (c) { return (c.tick ? c.tick.value : c.index) === mesAtualIdx ? "#FFC64A" : CORES.cy; }, font: fonte(10.5), maxTicksLimit: 12, maxRotation: 0, padding: 9 } }),
+          // folga em cima para o valor inclinado do ponto mais alto (valoresEvolucao)
+          y: eixoY({ grace: "18%" }) },
         plugins: { legend: { display: false }, tooltip: tooltipPadrao({ callbacks: {
           label: function (c) { return " Patrimônio: " + moeda(c.parsed.y) + (c.dataIndex === iPico ? "  🏆 pico" : ""); },
           afterLabel: function (c) {
@@ -378,6 +380,31 @@
           } } }) }
       },
       plugins: [botoesMesRD, {
+        // valor de cada mês escrito acima do ponto, inclinado, na cor do ponto
+        // (verde subiu, vermelho caiu); o pico já tem a etiqueta dourada
+        id: "valoresEvolucao",
+        afterDatasetsDraw: function (grafico) {
+          var meta = grafico.getDatasetMeta(0), area = grafico.chartArea, c = grafico.ctx;
+          if (!meta || meta.data.length < 2) return;
+          var passo = (area.right - area.left) / (meta.data.length - 1);
+          if (passo < 20) return;   // muitos meses ("Tudo"): ficaria embolado
+          var estreito = passo < 40;
+          c.save();
+          c.font = "700 " + (estreito ? 9 : 10) + "px 'Segoe UI', Roboto, Inter, sans-serif";
+          c.textBaseline = "middle"; c.textAlign = "left";
+          meta.data.forEach(function (pt, i) {
+            if (i === iPico || !pt) return;
+            var v = serie[i].valor;
+            c.fillStyle = i === 0 ? "#FFFFFF" : (v >= serie[i - 1].valor ? CORES.up : CORES.down);
+            c.save();
+            c.translate(pt.x + 2, Math.max(area.top + 2, pt.y - 9));
+            c.rotate(estreito ? -Math.PI * 0.42 : -Math.PI / 3);
+            c.fillText((v < 0 ? "−" : "") + valorCurto(Math.abs(v)), 0, 0);
+            c.restore();
+          });
+          c.restore();
+        }
+      }, {
         // etiqueta dourada em cima do pico
         id: "rotuloPico",
         afterDatasetsDraw: function (grafico) {
