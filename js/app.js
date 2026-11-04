@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.459";
+  const VERSAO_APP = "3.6.460";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -581,7 +581,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.459 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.460 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -8945,6 +8945,19 @@
       });
       const esc = Math.max(0.45, menor);
       topos.forEach((t) => t.style.setProperty("--esc", esc.toFixed(3)));
+      // rodapé (💵 guardado · situação · ⏳ falta): mede o texto de verdade e
+      // diminui a letra por igual em todas as metas até nada encostar
+      const rods = [...lista.querySelectorAll(".metas-lista .meta-rodape-3")];
+      rods.forEach((r) => r.style.setProperty("--esc-rod", "1"));
+      let menorRod = 1;
+      rods.forEach((r) => {
+        if (!r.clientWidth) return;
+        const filhos = [...r.children], gap = parseFloat(getComputedStyle(r).columnGap) || 0;
+        const larg = filhos.reduce((t, f) => { const c = f.querySelector(".sit-curto") || f; return t + (getComputedStyle(c).display === "none" ? 0 : Math.max(c.scrollWidth, c.getBoundingClientRect().width)); }, 0);
+        menorRod = Math.min(menorRod, (r.clientWidth - 6) / (larg + gap * Math.max(0, filhos.length - 1)));
+      });
+      const escRod = Math.max(0.5, menorRod);
+      rods.forEach((r) => r.style.setProperty("--esc-rod", escRod.toFixed(3)));
     });
   }
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => ajustarTopoMetas());
