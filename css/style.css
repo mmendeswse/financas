@@ -3235,3 +3235,5 @@ body.av-aberta { overflow: hidden; }
 .meta-rodape-3 .mv-atraso { color: var(--down); }
 .meta-rodape-3 .mv-deposito { color: var(--amarelo); }
 .meta-rodape-3 .mv-ok { color: var(--up); }
+/* rodapé das metas: a letra vem do app.js (--esc-rod), medida para nada se sobrepor */
+.meta-item .meta-rodape.meta-rodape-3 { font-size: calc(13px * var(--esc-rod, 1)) !important; column-gap: .6em !important; }
