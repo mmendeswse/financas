@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.460";
+  const VERSAO_APP = "3.6.461";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -581,7 +581,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.460 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.461 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -2614,7 +2614,7 @@
     if (!d.metas.length) return `<div class="empty" style="padding:14px">Nenhuma meta cadastrada.</div>`;
     // todas as metas; a lista mostra 3 de cada vez (mesma altura do quadro
     // Receitas x despesas) e rola dentro do quadro para ver as outras
-    return `<div class="metas-lista${d.metas.length > 3 ? " metas-rolagem" : ""}">` + metasPorStatus(d.metas).map(itemMetaHtml).join("") + `</div>`;
+    return `<div class="metas-lista${d.metas.length > 3 ? " metas-rolagem" : ""}">` + d.metas.map(itemMetaHtml).join("")   /* lugar fixo: ordem de criação, sem mudar pelo status */ + `</div>`;
   }
 
   // uma meta como no quadro Metas do Dashboard (usado também nos quadros da guia Metas)
@@ -8521,7 +8521,8 @@
       // cada meta num quadro igual ao quadro Metas do Dashboard (o mesmo bloco
       // da meta), com o Editar no topo à direita (o "Guardar Mês" aparece no
       // selo 💰 da meta); sempre com o valor de hoje
-      corpo = metasPorStatus(d.metas).map((m) => {
+      // quadros em lugar fixo, na ordem de criação (não mudam de posição pelo status)
+      corpo = d.metas.map((m) => {
         const diasPrazo = m.prazo ? F.diasEntre(m.prazo) : null;
         const vencida = diasPrazo !== null && diasPrazo < 0 && Number(m.atual || 0) < Number(m.objetivo || 0);
         // sem título repetido: o bloco da meta é o mesmo do Dashboard (bolinha, nome,
@@ -8961,12 +8962,26 @@
     });
   }
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => ajustarTopoMetas());
+  // se a largura dos quadros mudar depois (fontes, barra de rolagem, aviso que
+  // aparece ou some), mede de novo — assim o nome nunca fica cortado com "…"
+  const obsMetas = "ResizeObserver" in window ? new ResizeObserver((ents) => {
+    if (ents.some((e) => Math.abs((e.target._largMeta || 0) - e.contentRect.width) > 0.5)) {
+      ents.forEach((e) => { e.target._largMeta = e.contentRect.width; });
+      cancelAnimationFrame(obsMetas._q); obsMetas._q = requestAnimationFrame(() => ajustarTopoMetas());
+    }
+  }) : null;
+  function observarMetas() {
+    if (!obsMetas) return;
+    obsMetas.disconnect();
+    document.querySelectorAll("#conteudo .metas-lista .meta-item").forEach((el) => { el._largMeta = el.getBoundingClientRect().width; obsMetas.observe(el); });
+  }
   window.addEventListener("resize", () => { ajustarAlturaGrafico(); ajustarAlturaConfig(); ajustarRolagemMetas(); ajustarTopoMetas(); });
 
   function montarGraficosDaRota() {
     const d = DADOS;
     ajustarAlturaGrafico();   // antes de desenhar, para o gráfico já nascer no tamanho certo
     ajustarTopoMetas();
+    observarMetas();
     switch (ROTA.secao) {
       case "dashboard": {
         ajustarRolagemMetas();
