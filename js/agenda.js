@@ -217,18 +217,18 @@
     const t = tokenValido();
     if (t) enviar(t).catch(() => {}); else avisar();
   }
-  // logo depois de salvar algo (ainda dentro do toque em "Salvar"): se a agenda
-  // mudou, envia na hora — renovando o acesso do Google se ele já venceu
+  // logo depois de salvar algo: se a agenda mudou e o acesso do Google ainda
+  // vale, envia na hora
   function atualizarJa() {
     if (!disponivel()) return;
     const d = app.dados(), c = cfg(d);
     if (!c.ativa || d.demo || st.rodando || c.ultimoHash === hashTudo(d)) return;
     const t = tokenValido();
     if (t) { enviar(t).catch(() => {}); return; }
-    // sem um toque do usuário o navegador bloquearia a janelinha do Google
-    const ua = navigator.userActivation;
-    if (!gisPronto() || (ua && !ua.isActive)) { avisar(); return; }
-    pedirAgora(false).then((tok) => enviar(tok)).catch(() => avisar());
+    // acesso do Google vencido: NÃO abre a janelinha do Google sozinha ao
+    // salvar (ela piscava e fechava a cada edição). Só mostra o botão
+    // "Atualizar Google Agenda"; a janelinha abre quando a pessoa tocar nele
+    avisar();
   }
   // deixa o login do Google carregado, para o pedido sair na hora do toque
   function preparar() {
