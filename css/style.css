@@ -3226,3 +3226,12 @@ body.av-aberta { overflow: hidden; }
 .meta-item .meta-topo-linha .meta-selos-linha .meta-falta-ic { font-size: 1em !important; }
 .meta-item .meta-topo-linha > .meta-bolinha { width: .62em; height: .62em; }
 .meta-item .meta-topo-linha .meta-nome, .meta-item .meta-topo-linha .meta-nome * { white-space: nowrap !important; } .meta-item .meta-topo-linha .meta-nome { overflow: hidden !important; text-overflow: ellipsis !important; }
+/* Metas: os quatro valores do rodapé do mesmo tamanho, cada um com sua cor */
+.meta-item .meta-rodape.meta-rodape-3 { font-size: clamp(7px, calc((100cqi - 20px) / 31.5), 13px); }
+.meta-item .meta-rodape.meta-rodape-3 .meta-situacao-meio { font-size: 1em !important; text-transform: none !important; letter-spacing: 0 !important; color: var(--dim); }
+.meta-rodape-3 .mv { font-weight: 600; }
+.meta-rodape-3 .mv-guardado { color: var(--up); }
+.meta-rodape-3 .mv-falta { color: var(--cy); }
+.meta-rodape-3 .mv-atraso { color: var(--down); }
+.meta-rodape-3 .mv-deposito { color: var(--amarelo); }
+.meta-rodape-3 .mv-ok { color: var(--up); }
