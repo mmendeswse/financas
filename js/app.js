@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.462";
+  const VERSAO_APP = "3.6.463";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -581,7 +581,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.462 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.463 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -2403,7 +2403,7 @@
   // WIDGETS — KPI com anel, gauge semicircular, barras, alertas, ticker
   // =========================================================================
   const EMOJI_KPI = { "Patrimônio líquido": "💎", "Saldo bancário": "🏦", "Bolsa Líquido": "📈", "Receitas mês": "💰", "Despesas mês": "💸" };
-  function kpiCard(rotulo, valor, gaugePct, cor, deltaHtml, sub, chave) {
+  function kpiCard(rotulo, valor, gaugePct, cor, deltaHtml, sub, chave, subChave) {
     const clicavel = chave ? ` data-acao="explicar-kpi" data-kpi="${chave}" title="Ver como este percentual é calculado"` : "";
     const gauge = gaugePct == null ? "" :
       `<button class="kpi-gauge${chave ? " clicavel" : ""}"${clicavel}>${gaugeSVG(gaugePct, cor, 66)}<span class="kpi-gauge-txt">${Math.round(Math.max(0, Math.min(100, gaugePct)))}%</span></button>`;
@@ -2413,7 +2413,7 @@
         <div class="kpi-valor">${valor}</div>
         ${deltaHtml ? `<div class="kpi-delta">${deltaHtml}</div>` : ""}
       </div></div>
-      ${sub ? `<div class="kpi-sub">${sub}</div>` : ""}
+      ${sub ? (subChave ? `<button class="kpi-sub clicavel" data-acao="kpi-sub" data-kpi="${subChave}" title="Ver detalhes">${sub}</button>` : `<div class="kpi-sub">${sub}</div>`) : ""}
     </div>`;
   }
   function delta(v, texto, inverter) {
@@ -3045,6 +3045,35 @@
       }
     };
 
+    // receitas do mês anterior (o "Anterior: R$ …" do quadro Receitas mês)
+    paineis.receitasAnt = {
+      titulo: "Receitas do mês anterior",
+      conta: "soma das entradas pagas no mês anterior",
+      pct: F.variacaoPercentual(entradas, entradasAnt),
+      pctRotulo: "de variação deste mês em relação a ele",
+      linhas: (() => {
+        const itensR = listaEntradasTodasMes(d, mesAnt);
+        return cabecalhoColunasPainel() +
+          itensR.map((e) => linhaEditavel(e, linha(descPainel(e), `<span class="col-rep">${repColuna(e, e.data)}</span>` + seloStatusPainel(e.status, e) + bancoPainel(e.banco, e) + `<span class="col-valor valor-guia up">+${brl(e.valor)}</span>`))).join("") +
+          linhaTotalPainel(plural(itensR.filter((e) => e.status === "Pago").length, "Lançamento pago", "Lançamentos pagos"), `+${brl(entradasAnt)}`);
+      })(),
+      secao: "entradas"
+    };
+    // quanto das receitas do mês já foi gasto (o "N% Receitas" do quadro Despesas mês)
+    paineis.despesasReceitas = {
+      titulo: "Despesas × receitas do mês",
+      conta: "despesas pagas ÷ receitas pagas do mês atual",
+      pct: entradas > 0 ? (despesas / entradas) * 100 : 0,
+      pctRotulo: "das receitas do mês já foram gastas",
+      linhas: linha("+ Receitas pagas", "+" + brl(entradas), "up") +
+        (entradasPrev > 0 ? linha("Receitas previstas", "+" + brl(entradasPrev)) : "") +
+        linha("− Despesas pagas", "−" + brl(despesas), "down") +
+        (despesasPrev > 0 ? linha("Despesas previstas", "−" + brl(despesasPrev)) : "") +
+        linha("Sobra do mês", brlSinal(entradas - despesas), corSinal(entradas - despesas)) +
+        linha("Mês anterior: receitas", "+" + brl(entradasAnt)) +
+        linha("Mês anterior: despesas", "−" + brl(despesasAnt)),
+      secao: "despesas"
+    };
     const x = paineis[chave];
     if (!x) return;
     abrirModal(`
@@ -3912,11 +3941,11 @@
     return `
       ${faixaDemo(d)}
       <div class="kpi-row">
-        ${kpiCard("Patrimônio líquido", brlSinal(p.bancos + I.totalLiquidoOutros(d) + p.acoes + p.cripto - p.dividas), pctLivre, "var(--cy)", delta(F.variacaoPercentual(p.liquido, patrimonioAnt), "vs mês anterior"), `Dívidas: ${brl(p.dividas)}`, "patrimonio")}
-        ${kpiCard("Saldo bancário", brlSinal(p.bancos), pctBancos, "var(--cy)", delta(pctBancos, "do patrimônio"), `${bancos.length} ${bancos.length === 1 ? "Conta" : "Contas"}`, "bancos")}
-        ${kpiCard("Bolsa Líquido", brlSinal(I.totalLiquidoOutros(d) + p.acoes + p.cripto), pctInvestido, "var(--cy)", delta(rentCarteira, "rent. carteira"), `${pctInvestido.toFixed(0)}% Investido`, "investido")}
-        ${kpiCard("Receitas mês", "+" + brl(entradasMes), entradasMes + despesasMes > 0 ? (entradasMes / (entradasMes + despesasMes)) * 100 : 0, "var(--cy)", delta(F.variacaoPercentual(entradasMes, entradasAnt), "vs mês anterior"), `Anterior: ${brl(entradasAnt)}`, "receitas")}
-        ${kpiCard("Despesas mês", "−" + brl(despesasMes), pctDespesas, "var(--cy)", delta(F.variacaoPercentual(despesasMes, despesasAnt), "vs mês anterior", true), `${pctDespesas.toFixed(0)}% Receitas`, "despesas")}
+        ${kpiCard("Patrimônio líquido", brlSinal(p.bancos + I.totalLiquidoOutros(d) + p.acoes + p.cripto - p.dividas), pctLivre, "var(--cy)", delta(F.variacaoPercentual(p.liquido, patrimonioAnt), "vs mês anterior"), `Dívidas: ${brl(p.dividas)}`, "patrimonio", "dividas")}
+        ${kpiCard("Saldo bancário", brlSinal(p.bancos), pctBancos, "var(--cy)", delta(pctBancos, "do patrimônio"), `${bancos.length} ${bancos.length === 1 ? "Conta" : "Contas"}`, "bancos", "bancos")}
+        ${kpiCard("Bolsa Líquido", brlSinal(I.totalLiquidoOutros(d) + p.acoes + p.cripto), pctInvestido, "var(--cy)", delta(rentCarteira, "rent. carteira"), `${pctInvestido.toFixed(0)}% Investido`, "investido", "investido")}
+        ${kpiCard("Receitas mês", "+" + brl(entradasMes), entradasMes + despesasMes > 0 ? (entradasMes / (entradasMes + despesasMes)) * 100 : 0, "var(--cy)", delta(F.variacaoPercentual(entradasMes, entradasAnt), "vs mês anterior"), `Anterior: ${brl(entradasAnt)}`, "receitas", "receitasAnt")}
+        ${kpiCard("Despesas mês", "−" + brl(despesasMes), pctDespesas, "var(--cy)", delta(F.variacaoPercentual(despesasMes, despesasAnt), "vs mês anterior", true), `${pctDespesas.toFixed(0)}% Receitas`, "despesas", "despesasReceitas")}
       </div>
 
       <div class="grid">
@@ -9221,6 +9250,11 @@
         case "novo-ativo": abrirModalAcao(null); break;
         case "editar-acao": abrirModalAcao(id); break;
         case "explicar-kpi": explicarKPI(b.dataset.kpi); break;
+        // textos de baixo dos quadros do topo do Dashboard: cada um abre o seu quadro
+        case "kpi-sub":
+          if (b.dataset.kpi === "dividas") { origemHistorico = "patrimonio"; explicarHistoricoClasse("dividas"); }
+          else explicarKPI(b.dataset.kpi);
+          break;
         case "explicar-banco": explicarBanco(id); break;
         case "explicar-classe": explicarClasse(b.dataset.rotulo); break;
         case "explicar-composicao": explicarComposicao(); break;

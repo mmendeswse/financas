@@ -3237,3 +3237,6 @@ body.av-aberta { overflow: hidden; }
 .meta-rodape-3 .mv-ok { color: var(--up); }
 /* rodapé das metas: a letra vem do app.js (--esc-rod), medida para nada se sobrepor */
 .meta-item .meta-rodape.meta-rodape-3 { font-size: calc(13px * var(--esc-rod, 1)) !important; column-gap: .6em !important; }
+/* texto de baixo dos quadros do topo do Dashboard: toca e abre o quadro com os detalhes */
+button.kpi-sub { display: block; width: 100%; background: none; border: 0; padding: 0; font: inherit; font-size: 11px; color: var(--dim); text-align: left; cursor: pointer; }
+button.kpi-sub:hover, button.kpi-sub:focus-visible { color: var(--cy); text-decoration: underline; text-underline-offset: 2px; }
