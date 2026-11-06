@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.463";
+  const VERSAO_APP = "3.6.464";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -581,7 +581,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.463 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.464 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -955,16 +955,25 @@
       add({ chave: `pg:${x.id}:${x.data}`, titulo: `💸 ${x.descricao || "Conta"}${parcela(x.id, x.data)} — ${brl(x.valor)}`, data: x.data, hora: "09:00", duracao: 30, alertas: [0, 1440],
         descricao: ["Conta a pagar", x.categoria, x.banco && x.banco !== "—" ? x.banco : ""].filter(Boolean).join(" · "), cor: "11" });
     }));
-    if (itens.receitas) meses.forEach((m) => listaEntradasTodasMes(d, m).forEach((x) => {
-      if (x.status !== "Prevista") return;
-      add({ chave: `rc:${x.id}:${x.data}`, titulo: `💰 ${x.descricao || "Receita"}${parcela(x.id, x.data)} — ${brl(x.valor)}`, data: x.data, hora: "09:00", duracao: 30, alertas: [0],
-        descricao: ["Receita prevista", x.categoria, x.banco && x.banco !== "—" ? x.banco : ""].filter(Boolean).join(" · "), cor: "10" });
-    }));
+    // Bonificação no mesmo dia de um Pagamento: um evento só, "Pagamento",
+    // com a soma dos dois como total
+    const nomeNorm = (t) => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+    const ehPagamento = (x) => nomeNorm(x.descricao) === "pagamento", ehBonificacao = (x) => nomeNorm(x.descricao) === "bonificacao";
+    if (itens.receitas) meses.forEach((m) => {
+      const previstas = listaEntradasTodasMes(d, m).filter((x) => x.status === "Prevista");
+      previstas.forEach((x) => {
+        if (ehBonificacao(x) && previstas.some((p) => ehPagamento(p) && p.data === x.data)) return;   // somada no Pagamento
+        const bonus = ehPagamento(x) ? previstas.filter((b) => ehBonificacao(b) && b.data === x.data) : [];
+        const total = Number(x.valor || 0) + bonus.reduce((t, b) => t + Number(b.valor || 0), 0);
+        add({ chave: `rc:${x.id}:${x.data}`, titulo: `💰 ${x.descricao || "Receita"}${parcela(x.id, x.data)} — ${brl(total)}`, data: x.data, hora: "09:00", duracao: 30, alertas: [0],
+          descricao: ["Receita prevista", bonus.length ? `pagamento ${brl(x.valor)} + bonificação ${brl(total - Number(x.valor || 0))}` : "", x.categoria, x.banco && x.banco !== "—" ? x.banco : ""].filter(Boolean).join(" · "), cor: "10" });
+      });
+    });
     // depois da janela: as contas e receitas que se repetem sem fim (ou até
     // uma data / parcela distante) viram um evento que se repete no próprio
     // Google Agenda, então aparecem em qualquer mês futuro
     const depois = proximoMes(meses[meses.length - 1]);
-    const serie = (reg, tipo) => {
+    const serie = (reg, tipo, extra) => {
       if (!reg || reg.origemRecorrente || !dataReg(reg)) return;
       const freq = freqDe(reg);
       if (freq === FREQUENCIAS[0]) return;
@@ -985,12 +994,29 @@
         data = `${data.slice(0, 7)}-${String(escolhido).padStart(2, "0")}`;
       }
       const rotulo = tipo === "pg" ? "Conta a pagar" : "Receita prevista";
-      add({ chave: `${tipo}s:${reg.id}`, titulo: `${tipo === "pg" ? "💸" : "💰"} ${reg.descricao || (tipo === "pg" ? "Conta" : "Receita")} — ${brl(valorDoMes(reg, data.slice(0, 7)))}`,
+      if (extra && extra.pular && extra.pular(r, data)) return;
+      const somar = extra && extra.somar ? extra.somar(r, data) : 0;
+      add({ chave: `${tipo}s:${reg.id}`, titulo: `${tipo === "pg" ? "💸" : "💰"} ${reg.descricao || (tipo === "pg" ? "Conta" : "Receita")} — ${brl(valorDoMes(reg, data.slice(0, 7)) + somar)}`,
         data, hora: "09:00", duracao: 30, alertas: tipo === "pg" ? [0, 1440] : [0], rrule: r,
         descricao: [rotulo, reg.categoria, "repete " + (ROTULO_FREQ[freq] || freq).toLowerCase()].filter(Boolean).join(" · "), cor: tipo === "pg" ? "11" : "10" });
     };
     if (itens.contas) [...d.despesas, ...(d.contasPagar || []).map((c) => ({ ...c, data: c.vencimento }))].forEach((reg) => serie(reg, "pg"));
-    if (itens.receitas) d.entradas.forEach((reg) => serie(reg, "rc"));
+    if (itens.receitas) {
+      // séries que se repetem: a Bonificação que cai junto com o Pagamento
+      // (mesma regra e mesmo dia) também é somada nele
+      const inicioSerie = (reg) => {
+        if (!reg || reg.origemRecorrente || !dataReg(reg) || freqDe(reg) === FREQUENCIAS[0] || (reg.ateMes && reg.ateMes < depois)) return null;
+        let mes = depois, data = null;
+        for (let i = 0; i < 24 && !data; i++, mes = proximoMes(mes)) data = ocorrenciasNoMes(reg, mes)[0] || null;
+        const r = data && rruleSerie(reg, freqDe(reg), data);
+        return r ? { reg, r, data } : null;
+      };
+      const pags = d.entradas.filter(ehPagamento).map(inicioSerie).filter(Boolean);
+      const bons = d.entradas.filter(ehBonificacao).map(inicioSerie).filter(Boolean);
+      const junto = (a, b) => a.r === b.r && a.data === b.data;
+      d.entradas.forEach((reg) => serie(reg, "rc", ehBonificacao(reg) ? { pular: (r, data) => pags.some((p) => junto(p, { r, data })) }
+        : ehPagamento(reg) ? { somar: (r, data) => bons.filter((b) => junto(b, { r, data })).reduce((t, b) => t + valorDoMes(b.reg, data.slice(0, 7)), 0) } : null));
+    }
     if (itens.metas) (d.metas || []).forEach((mt) => {
       if (!mt.prazo || mt.prazo.slice(0, 7) < meses[0] || Number(mt.atual || 0) >= Number(mt.objetivo || 0)) return;
       add({ chave: `mt:${mt.id}:${mt.prazo}`, titulo: `🎯 Prazo Meta: ${mt.nome || "Meta"}`, data: mt.prazo, hora: "09:00", duracao: 30, alertas: [0, 10080],
