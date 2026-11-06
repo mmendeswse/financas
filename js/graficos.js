@@ -58,6 +58,9 @@
   function eixoX(extra) {
     return Object.assign({ grid: { display: false }, border: { display: false }, ticks: { color: CORES.texto, font: fonte(10.5) } }, extra || {});
   }
+  // eixo do valor sempre com a mesma largura nos gráficos mês a mês, para os
+  // meses de um gráfico ficarem bem embaixo dos do outro
+  function larguraEixoY(eixo) { eixo.width = 64; }
   function eixoY(extra) {
     return Object.assign({ grid: { color: CORES.grade }, border: { display: false, dash: [3, 3] }, ticks: { color: CORES.texto, font: fonte(10.5), callback: function (v) { return abreviaK(v); } } }, extra || {});
   }
@@ -340,7 +343,7 @@
         layout: { padding: { bottom: 4 } },
         scales: { x: eixoX({ ticks: { color: function (c) { return (c.tick ? c.tick.value : c.index) === mesAtualIdx ? "#FFC64A" : CORES.cy; }, font: fonte(10.5), maxRotation: 0, autoSkip: false, padding: 9, callback: function (v) { return nomeMesEixo(this, v); } } }),
           // folga em cima para o valor inclinado da barra mais alta (valoresRD)
-          y: eixoY(topoComFolga(0.12, 2)) },
+          y: eixoY(Object.assign(topoComFolga(0.12, 2), { afterFit: larguraEixoY })) },
         plugins: {
           legend: { display: !(opcoes && opcoes.semLegenda), position: "top", align: "end", labels: { color: CORES.texto, font: fonte(10.5), boxWidth: 8, boxHeight: 8, usePointStyle: true, pointStyle: "circle" } },
           tooltip: tooltipPadrao({ callbacks: { label: function (c) { return " " + c.dataset.label + ": " + moeda(c.parsed.y); } } })
@@ -481,10 +484,12 @@
         },
         // nomes dos meses como botões (botoesMesRD), o do mês atual em dourado;
         // folga à direita para o valor inclinado do último mês
-        layout: { padding: { bottom: 4, right: 40 } },
-        scales: { x: eixoX({ ticks: { color: function (c) { return (c.tick ? c.tick.value : c.index) === mesAtualIdx ? "#FFC64A" : CORES.cy; }, font: fonte(10.5), maxTicksLimit: 12, maxRotation: 0, padding: 9, callback: function (v) { return nomeMesEixo(this, v); } } }),
+        // meses no meio de cada coluna (offset), como no Receitas x despesas,
+        // e eixo do valor com a mesma largura: os meses dos dois gráficos ficam alinhados
+        layout: { padding: { bottom: 4 }, autoPadding: false },
+        scales: { x: eixoX({ offset: true, ticks: { color: function (c) { return (c.tick ? c.tick.value : c.index) === mesAtualIdx ? "#FFC64A" : CORES.cy; }, font: fonte(10.5), maxTicksLimit: 12, maxRotation: 0, padding: 9, callback: function (v) { return nomeMesEixo(this, v); } } }),
           // folga em cima para o valor inclinado do ponto mais alto (valoresEvolucao)
-          y: eixoY(topoComFolga(0.12, 1)) },
+          y: eixoY(Object.assign(topoComFolga(0.12, 1), { afterFit: larguraEixoY })) },
         plugins: { legend: { display: false }, tooltip: tooltipPadrao({ callbacks: {
           label: function (c) { return " Patrimônio: " + moeda(c.parsed.y) + (c.dataIndex === iPico ? "  🏆 pico" : ""); },
           afterLabel: function (c) {
