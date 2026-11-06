@@ -209,6 +209,18 @@
     }
   };
 
+  // Receitas x despesas: as duas colunas de cada mês juntinhas e no meio do
+  // mês (em cima do nome), em vez de cada uma no canto da sua metade.
+  // A largura do grupo é a de duas colunas mais um respiro de ~6 px.
+  var colunasJuntasRD = {
+    id: "colunasJuntasRD",
+    beforeUpdate: function (g) {
+      var n = Math.max(1, (g.data.labels || []).length), faixa = Math.max(1, ((g.width || 0) - 70) / n);
+      var cat = Math.min(0.8, (2 * 26 / 0.94 + 6) / faixa);
+      g.data.datasets.forEach(function (ds) { ds.barPercentage = 0.94; ds.categoryPercentage = cat; });
+    }
+  };
+
   // nome do mês no eixo: inteiro e com maiúscula (Janeiro) quando cabe; senão
   // a forma curta com maiúscula (Jan) — no celular, por exemplo
   var MESES_INTEIROS = { jan: "Janeiro", fev: "Fevereiro", mar: "Março", abr: "Abril", mai: "Maio", jun: "Junho", jul: "Julho", ago: "Agosto", set: "Setembro", out: "Outubro", nov: "Novembro", dez: "Dezembro" };
@@ -318,7 +330,7 @@
     var ctx = ctxOf(canvasId); if (!ctx) return;
     instancias[canvasId] = new Chart(ctx, {
       type: "bar",
-      plugins: [botoesMesRD, valoresRD],
+      plugins: [botoesMesRD, valoresRD, colunasJuntasRD],
       data: {
         labels: serie.map(function (s) { return s.rotulo; }),
         datasets: [
