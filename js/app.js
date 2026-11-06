@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.466";
+  const VERSAO_APP = "3.6.467";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -596,7 +596,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.466 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.467 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -2521,13 +2521,14 @@
   // conta do que falta até o prazo (sem prazo, basta ter um valor por mês)
   // quanto entrou na meta no mês corrente: soma dos depósitos feitos com "Depositar"
   // (metas sem nenhum depósito registrado usam a diferença do histórico de valores)
+  // quanto entrou na meta neste mês: o valor guardado hoje menos o do fim do
+  // mês passado (pelo histórico). Antes somava a lista de depósitos, que não
+  // acompanhava quando o valor guardado era editado — e aparecia "✅ guardou
+  // R$ 8.000" com R$ 0,00 guardado. Uma retirada no mês conta como zero.
   function guardadoNoMes(m) {
-    const mes = isoLocal(new Date()).slice(0, 7);
-    if (Array.isArray(m.depositos) && m.depositos.length) {
-      return m.depositos.filter((x) => String(x.data).slice(0, 7) === mes).reduce((t, x) => t + Number(x.valor || 0), 0);
-    }
     const h = new Date();
-    return Number(m.atual || 0) - valorMetaEm(m, isoLocal(new Date(h.getFullYear(), h.getMonth(), 0)));
+    const v = Number(m.atual || 0) - valorMetaEm(m, isoLocal(new Date(h.getFullYear(), h.getMonth(), 0)));
+    return Math.max(0, Math.round(v * 100) / 100);
   }
   // situação da meta pela bolinha, comparando o que entrou no mês com o "Guardar Mês":
   // verde = soma do mês igual ou maior (ou meta concluída), amarela = já houve depósito
