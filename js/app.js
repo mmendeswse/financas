@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.465";
+  const VERSAO_APP = "3.6.466";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -169,6 +169,21 @@
   }
   // selo extra quando, na regra de dia útil, contando também os sábados, o dia cai num sábado
   // (só para entradas — em despesas e contas a pagar o aviso não interessa)
+  // a data do sábado em que o dinheiro já pode ser resgatado (regra de dia útil
+  // contando os sábados), ou null — usado também no evento da Google Agenda
+  // x: o lançamento ou uma linha da lista do mês ({ id, data }) — a regra vem do cadastro
+  function sabadoDaEntrada(x, entradas) {
+    const data = x && (x.data || dataReg(x));
+    if (!data) return null;
+    let reg = ehPers(x) ? x : (entradas || DADOS.entradas || []).find((e) => e.id === x.id);
+    if (reg && !ehPers(reg) && reg.origemRecorrente) reg = (entradas || DADOS.entradas || []).find((e) => e.id === reg.origemRecorrente);
+    if (!ehPers(reg)) return null;
+    const regra = regraDe(reg);
+    if (regra.tipo !== "diaUtil") return null;
+    const [a, m] = data.split("-").map(Number);
+    const c = F.calcularDataRegra(a, m, regra);
+    return c.alertaSabado ? c.dataSabado : null;
+  }
   function seloSabado(reg) {
     if (!ehPers(reg) || !dataReg(reg)) return "";
     if (reg.id && !(DADOS.entradas || []).some((e) => e.id === reg.id)) return "";
@@ -581,7 +596,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.465 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.466 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -957,8 +972,10 @@
     }));
     if (itens.receitas) meses.forEach((m) => listaEntradasTodasMes(d, m).forEach((x) => {
       if (x.status !== "Prevista") return;
-      add({ chave: `rc:${x.id}:${x.data}`, titulo: `💰 ${x.descricao || "Receita"}${parcela(x.id, x.data)} — ${brl(x.valor)}`, data: x.data, hora: "09:00", duracao: 30, alertas: [0],
-        descricao: ["Receita prevista", x.categoria, x.banco && x.banco !== "—" ? x.banco : ""].filter(Boolean).join(" · "), cor: "10" });
+      // ⚠️ quando o dinheiro já pode ser resgatado no sábado (o mesmo aviso da guia Entradas)
+      const sab = sabadoDaEntrada(x, d.entradas);
+      add({ chave: `rc:${x.id}:${x.data}`, titulo: `${sab ? "⚠️ " : ""}💰 ${x.descricao || "Receita"}${parcela(x.id, x.data)} — ${brl(x.valor)}`, data: x.data, hora: "09:00", duracao: 30, alertas: [0],
+        descricao: [sab ? `⚠️ Sábado: é possível resgatar o dinheiro no sábado (${sab.slice(8, 10)}/${sab.slice(5, 7)})` : "", "Receita prevista", x.categoria, x.banco && x.banco !== "—" ? x.banco : ""].filter(Boolean).join(" · "), cor: "10" });
     }));
     // depois da janela: as contas e receitas que se repetem sem fim (ou até
     // uma data / parcela distante) viram um evento que se repete no próprio
