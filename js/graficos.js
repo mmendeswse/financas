@@ -214,7 +214,9 @@
     var chave = rot.toLowerCase();
     if (!MESES_INTEIROS[chave]) return rot;   // datas (dd/mm/aaaa) ficam como estão
     var g = eixo.chart, n = Math.max(1, Math.min(g.data.labels.length, eixo.options.ticks.maxTicksLimit || 99));
-    var espaco = ((g.chartArea && g.chartArea.right - g.chartArea.left) || g.width - 70) / n;
+    // pela largura atual do gráfico (g.width já vem certa no redimensionamento;
+    // a chartArea ainda é a do desenho anterior e deixava "Jan" na tela larga)
+    var espaco = Math.max(0, (g.width || 0) - 70) / n;
     return espaco >= 76 ? MESES_INTEIROS[chave] : chave.charAt(0).toUpperCase() + chave.slice(1);
   }
 
