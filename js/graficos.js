@@ -982,13 +982,38 @@
           c.beginPath(); c.moveTo(p.ca.left, p.y); c.lineTo(p.ca.right + 2, p.y); c.stroke();
           c.restore();
         },
+        // a caixa do valor é desenhada depois, por etiquetasNoEixo, que afasta
+        // as caixas quando os dois preços estão perto (não encavalam)
         afterDatasetsDraw: function (grafico) {
           var p = posicao(grafico); if (!p) return;
-          var c = grafico.ctx;
-          c.save(); etiqueta(c, p.ca, p.y, f4(valor), corLinha, "#0B1420"); c.restore();
+          (grafico.$etiquetas = grafico.$etiquetas || []).push({ ca: p.ca, y: p.y, linha: p.y, txt: f4(valor), cor: corLinha });
         }
       };
     }
+    var etiquetasNoEixo = {
+      id: "etiquetasNoEixo",
+      beforeDatasetsDraw: function (g) { g.$etiquetas = []; },
+      afterDatasetsDraw: function (g) {
+        var lista = (g.$etiquetas || []).slice().sort(function (a, b) { return a.y - b.y; });
+        g.$etiquetas = [];
+        if (!lista.length) return;
+        var ALT = 19, ca = lista[0].ca;
+        for (var i = 1; i < lista.length; i++) if (lista[i].y < lista[i - 1].y + ALT) lista[i].y = lista[i - 1].y + ALT;
+        var passou = lista[lista.length - 1].y + 9.5 - (ca.bottom + 9.5);
+        if (passou > 0) lista.forEach(function (e) { e.y -= passou; });
+        var c = g.ctx;
+        c.save();
+        lista.forEach(function (e) {
+          // a caixa saiu do lugar: um tracinho liga a linha à caixa
+          if (Math.abs(e.y - e.linha) > 0.5) {
+            c.strokeStyle = e.cor; c.lineWidth = 1; c.setLineDash([]);
+            c.beginPath(); c.moveTo(e.ca.right + 2, e.linha); c.lineTo(e.ca.right + 2, e.y); c.stroke();
+          }
+          etiqueta(c, e.ca, e.y, e.txt, e.cor, "#0B1420");
+        });
+        c.restore();
+      }
+    };
 
     var grafico = instancias[canvasId] = new Chart(ctx, {
       type: "bar",
@@ -1068,6 +1093,7 @@
       // Preço Compra em laranja; dólar = Valor Atual em amarelo
       linhaComEtiqueta("linhaValorAtual", opcoes.linhaAtual, corAtual, opcoes.corAtual ? [3, 4] : [6, 4]),
       linhaComEtiqueta("linhaCompra", opcoes.linhaCompra, CORES.laranja, [6, 4]),
+      etiquetasNoEixo,
       opcoes.linhaAtual > 0 && opcoes.linhaCompra > 0 ? {
         // Resultado: pontilhado entre o preço atual e o de compra, com a caixa do valor
         id: "diferencaCompraVelas",
