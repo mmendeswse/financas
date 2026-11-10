@@ -3240,3 +3240,19 @@ body.av-aberta { overflow: hidden; }
 /* texto de baixo dos quadros do topo do Dashboard: toca e abre o quadro com os detalhes */
 button.kpi-sub { display: block; width: 100%; background: none; border: 0; padding: 0; font: inherit; font-size: 11px; color: var(--dim); text-align: left; cursor: pointer; }
 button.kpi-sub:hover, button.kpi-sub:focus-visible { color: var(--cy); text-decoration: underline; text-underline-offset: 2px; }
+/* quadros do topo do Dashboard: seta + % e o texto ao lado numa linha só
+   ("↓ 10,7% VS MÊS ANTERIOR"), como "↑ 2,4% RENT. CARTEIRA" */
+.kpi .kpi-delta { display: flex; align-items: center; flex-wrap: nowrap; white-space: nowrap; min-width: 0; }
+.kpi .kpi-delta b { flex: none; }
+.kpi .kpi-delta .dim { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap !important; }
+.kpi .kpi-info { min-width: 0; }
+/* o texto ao lado da % diminui com a largura do quadro, para caber inteiro */
+.kpi { container-type: inline-size; }
+@container (max-width: 330px) {
+  .kpi .kpi-delta b { font-size: 10px; padding: 2px 6px; }
+  .kpi .kpi-delta .dim { font-size: 9px; letter-spacing: .01em; margin-left: 4px; }
+}
+@container (max-width: 290px) {
+  .kpi .kpi-delta b { font-size: 9.5px; padding: 2px 5px; }
+  .kpi .kpi-delta .dim { font-size: 8px; letter-spacing: 0; margin-left: 3px; }
+}
