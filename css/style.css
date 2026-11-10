@@ -3257,3 +3257,10 @@ button.kpi-sub:hover, button.kpi-sub:focus-visible { color: var(--cy); text-deco
   .kpi .kpi-delta b { padding: 3px 6px; letter-spacing: 0; }
   .kpi .kpi-delta .dim { letter-spacing: 0; margin-left: 5px; }
 }
+/* anel dos quadros do topo do Dashboard maior */
+.kpi .kpi-gauge, .kpi .kpi-gauge svg { width: 64px; height: 64px; }
+.kpi .kpi-gauge-txt { font-size: 12.5px; }
+@container (max-width: 330px) {
+  .kpi .kpi-gauge, .kpi .kpi-gauge svg { width: 60px !important; height: 60px !important; }
+  .kpi .kpi-gauge-txt { font-size: 12px !important; }
+}
