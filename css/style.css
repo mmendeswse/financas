@@ -3271,3 +3271,8 @@ button.kpi-sub:hover, button.kpi-sub:focus-visible { color: var(--cy); text-deco
   .kpi .kpi-delta b { font-size: 10.5px !important; padding: 2px 5px !important; }
   .kpi .kpi-delta .dim { font-size: 10px !important; margin-left: 4px !important; }
 }
+/* anel dos quadros do topo: aro um pouco mais fino e o "100%" menor, para o
+   texto não encostar na borda de dentro do círculo */
+.kpi .kpi-gauge circle { stroke-width: 6.5; }
+.kpi .kpi-gauge-txt { letter-spacing: -.03em; }
+.kpi .kpi-gauge-txt.txt-cem { font-size: 9.5px !important; }
