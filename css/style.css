@@ -3264,3 +3264,10 @@ button.kpi-sub:hover, button.kpi-sub:focus-visible { color: var(--cy); text-deco
   .kpi .kpi-gauge, .kpi .kpi-gauge svg { width: 60px !important; height: 60px !important; }
   .kpi .kpi-gauge-txt { font-size: 12px !important; }
 }
+/* quadros bem estreitos (iPad Air deitado, 1180 px): a % e o texto continuam
+   na mesma linha, com a letra um pouco menor */
+@container (max-width: 330px) { .kpi .kpi-delta { flex-wrap: nowrap !important; white-space: nowrap !important; } }
+@container (max-width: 200px) {
+  .kpi .kpi-delta b { font-size: 10.5px !important; padding: 2px 5px !important; }
+  .kpi .kpi-delta .dim { font-size: 10px !important; margin-left: 4px !important; }
+}
