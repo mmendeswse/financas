@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.478";
+  const VERSAO_APP = "3.6.479";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -596,7 +596,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.478 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.479 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -3960,7 +3960,7 @@
       ${faixaDemo(d)}
       <div class="kpi-row">
         ${kpiCard("Patrimônio líquido", brlSinal(p.bancos + I.totalLiquidoOutros(d) + p.acoes + p.cripto - p.dividas), pctLivre, "var(--cy)", delta(F.variacaoPercentual(p.liquido, patrimonioAnt), "vs mês anterior"), `Dívidas: ${brl(p.dividas)}`, "patrimonio", "dividas")}
-        ${kpiCard("Saldo bancário", brlSinal(p.bancos), pctBancos, "var(--cy)", delta(pctBancos, "do patrimônio"), `${bancos.length} ${bancos.length === 1 ? "Conta" : "Contas"}`, "bancos", "bancos")}
+        ${kpiCard("Saldo bancário", brlSinal(p.bancos), pctBancos, "var(--cy)", delta(pctBancos, "patrimônio"), `${bancos.length} ${bancos.length === 1 ? "Conta" : "Contas"}`, "bancos", "bancos")}
         ${kpiCard("Bolsa Líquido", brlSinal(I.totalLiquidoOutros(d) + p.acoes + p.cripto), pctInvestido, "var(--cy)", delta(rentCarteira, "rentabilidade carteira"), `${pctInvestido.toFixed(0)}% Investido`, "investido", "investido")}
         ${kpiCard("Receitas mês", "+" + brl(entradasMes), entradasMes + despesasMes > 0 ? (entradasMes / (entradasMes + despesasMes)) * 100 : 0, "var(--cy)", delta(F.variacaoPercentual(entradasMes, entradasAnt), "vs mês anterior"), `Anterior: ${brl(entradasAnt)}`, "receitas", "receitasAnt")}
         ${kpiCard("Despesas mês", "−" + brl(despesasMes), pctDespesas, "var(--cy)", delta(F.variacaoPercentual(despesasMes, despesasAnt), "vs mês anterior", true), `${pctDespesas.toFixed(0)}% Receitas`, "despesas", "despesasReceitas")}
