@@ -3276,3 +3276,8 @@ button.kpi-sub:hover, button.kpi-sub:focus-visible { color: var(--cy); text-deco
 .kpi .kpi-gauge circle { stroke-width: 6.5; }
 .kpi .kpi-gauge-txt { letter-spacing: -.03em; }
 .kpi .kpi-gauge-txt.txt-cem { font-size: 9.5px !important; }
+/* quadros do topo do Dashboard mais baixos: menos espaço em cima, embaixo e entre as linhas */
+.kpi-row .kpi { padding: 11px 16px 10px !important; }
+.kpi-row .kpi .kpi-rotulo { margin-bottom: 4px !important; }
+.kpi-row .kpi .kpi-sub { margin-top: 4px !important; }
+@container (max-width: 330px) { .kpi .kpi-corpo { row-gap: 2px !important; } }
