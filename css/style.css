@@ -3240,3 +3240,20 @@ body.av-aberta { overflow: hidden; }
 /* texto de baixo dos quadros do topo do Dashboard: toca e abre o quadro com os detalhes */
 button.kpi-sub { display: block; width: 100%; background: none; border: 0; padding: 0; font: inherit; font-size: 11px; color: var(--dim); text-align: left; cursor: pointer; }
 button.kpi-sub:hover, button.kpi-sub:focus-visible { color: var(--cy); text-decoration: underline; text-underline-offset: 2px; }
+/* quadros do topo do Dashboard em telas médias (5 lado a lado): anel menor e
+   menos espaço entre as letras, para a % e o texto ao lado ("VS MÊS ANTERIOR")
+   caberem inteiros numa linha, com a letra no tamanho normal */
+.kpi { container-type: inline-size; }
+/* o anel fica ao lado do valor e a linha da % usa a largura toda do quadro;
+   se ainda assim não couber, o texto quebra — nunca é cortado */
+@container (max-width: 330px) {
+  .kpi .kpi-corpo { display: grid !important; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 6px; row-gap: 4px; }
+  .kpi .kpi-info { display: contents; }
+  .kpi .kpi-valor { grid-column: 1; grid-row: 1; }
+  .kpi .kpi-gauge { grid-column: 2; grid-row: 1; }
+  .kpi .kpi-delta { grid-column: 1 / -1; grid-row: 2; margin-top: 0 !important; }
+  .kpi .kpi-gauge, .kpi .kpi-gauge svg { width: 38px !important; height: 38px !important; }
+  .kpi .kpi-gauge-txt { font-size: 8.5px !important; }
+  .kpi .kpi-delta b { padding: 3px 6px; letter-spacing: 0; }
+  .kpi .kpi-delta .dim { letter-spacing: 0; margin-left: 5px; }
+}
