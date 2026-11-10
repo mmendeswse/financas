@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.482";
+  const VERSAO_APP = "3.6.483";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -596,7 +596,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.482 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.483 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -2423,7 +2423,7 @@
   function kpiCard(rotulo, valor, gaugePct, cor, deltaHtml, sub, chave, subChave) {
     const clicavel = chave ? ` data-acao="explicar-kpi" data-kpi="${chave}" title="Ver como este percentual é calculado"` : "";
     const gauge = gaugePct == null ? "" :
-      `<button class="kpi-gauge${chave ? " clicavel" : ""}"${clicavel}>${gaugeSVG(gaugePct, cor, 66)}<span class="kpi-gauge-txt">${Math.round(Math.max(0, Math.min(100, gaugePct)))}%</span></button>`;
+      `<button class="kpi-gauge${chave ? " clicavel" : ""}"${clicavel}>${gaugeSVG(gaugePct, cor, 66)}<span class="kpi-gauge-txt${Math.round(Math.max(0, Math.min(100, gaugePct))) >= 100 ? " txt-cem" : ""}">${Math.round(Math.max(0, Math.min(100, gaugePct)))}%</span></button>`;
     return `<div class="kpi">
       <div class="kpi-rotulo">${EMOJI_KPI[rotulo] ? `<span class="kpi-emoji">${EMOJI_KPI[rotulo]}</span>` : ""}<span class="kpi-rotulo-txt">${rotulo}</span></div>
       <div class="kpi-corpo">${gauge}<div class="kpi-info">
