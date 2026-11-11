@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.495";
+  const VERSAO_APP = "3.6.496";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -596,7 +596,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.495 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.496 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -8749,7 +8749,7 @@
         <div class="c3">${metricCard("Rentabilidade", pct(I.rentabilidadeCarteiraAcoes(d)), ICONES_STRIP.melhorativo, "var(--vi)", ilustraRel("rentabilidade", I.rentabilidadeCarteiraAcoes(d), "Rentabilidade da carteira: " + pct(I.rentabilidadeCarteiraAcoes(d))), "Acumulada · Preço Médio", null, "0 0 24 24", "rel-rentabilidade")}</div>
         <div class="c3">${metricCard("Receitas", "+" + brl(entradasP), ICONES_STRIP.poupanca, "var(--up)", ilustraRel("receitas", entradasP, "Receitas: +" + brl(entradasP)), rotuloPeriodo, null, "0 0 24 24", "rel-receitas")}</div>
         <div class="c3">${metricCard("Despesas", "−" + brl(despesasP), ICONES_STRIP.maiorgasto, "var(--down)", ilustraRel("despesas", -despesasP, "Despesas: −" + brl(despesasP)), rotuloPeriodo, null, "0 0 24 24", "rel-despesas")}</div>
-        <div class="c3">${metricCard("Resultado", brlSinal(entradasP - despesasP), ICONES_STRIP.projecao, corSinal(entradasP - despesasP) !== "down" ? "var(--up)" : "var(--down)", ilustraRel("resultado", entradasP - despesasP, "Resultado: " + brlSinal(entradasP - despesasP)), rotuloPeriodo, null, "0 0 24 24", "rel-resultado")}</div>
+        <div class="c3">${metricCard("Resultado", brlSinal(entradasP - despesasP), ICONES_STRIP.projecao, "#00E5FF", ilustraRel("resultado", entradasP - despesasP, "Resultado: " + brlSinal(entradasP - despesasP)), rotuloPeriodo, null, "0 0 24 24", "rel-resultado")}</div>
       </div>
       <div class="grid">
         <div class="c12">${card("", "Receitas x despesas", `${rotulo(mesesRelA, anoRelA)}`, `<div class="filtro-mes">${LEGENDA_RD}${seletorAnoDash("anoRelA", anoRelA, anosDashboard(d))}${abasMeses("periodo-rel-a", mesesRelA, OPC)}</div>`, `<div class="rel-grafico rel-alto" style="padding:10px 16px;height:220px"><canvas id="graf-rel-mensal"></canvas></div>`)}</div>
