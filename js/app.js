@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.493";
+  const VERSAO_APP = "3.6.499";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -596,7 +596,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.493 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.499 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -8672,7 +8672,9 @@
     // atrás dando profundidade e um detalhe que muda com o valor
     const UP = ["#5BF5BE", "#14B87C"], DOWN = ["#FF8F9A", "#D63345"], CY = ["#5CEBFF", "#0AA8C9"];
     const neg = Number(valor) < 0;
-    const c = tipo === "despesas" ? DOWN : tipo === "receitas" ? UP : neg ? DOWN : UP;
+    // uma cor para cada quadro: rentabilidade roxo, receitas verde, despesas vermelho, resultado azul
+    const VI = ["#C59BFF", "#7C3AED"];
+    const c = { rentabilidade: VI, receitas: UP, despesas: DOWN, resultado: CY }[tipo] || CY;
     const id = "ir-" + tipo;
     const defs = `<defs>
       <linearGradient id="${id}-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c[0]}"/><stop offset="1" stop-color="${c[1]}"/></linearGradient>
@@ -8681,10 +8683,8 @@
       <linearGradient id="${id}-o" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE48A"/><stop offset="1" stop-color="#F2AE2A"/></linearGradient>
     </defs>`;
     // placa de vidro atrás + bloco colorido na frente
-    const base = `<ellipse cx="62" cy="30" rx="34" ry="26" fill="url(#${id}-b)"/>
-      <rect x="22" y="12" width="40" height="40" rx="12" fill="${c[1]}" fill-opacity=".22" stroke="${c[0]}" stroke-opacity=".35"/>
-      <rect x="22" y="12" width="40" height="40" rx="12" fill="url(#${id}-v)"/>
-      <rect x="40" y="4" width="46" height="46" rx="14" fill="url(#${id}-g)"/>
+    // só o ícone (sem a placa de trás e sem o brilho)
+    const base = `<rect x="40" y="4" width="46" height="46" rx="14" fill="url(#${id}-g)"/>
       <rect x="40" y="4" width="46" height="23" rx="14" fill="#FFFFFF" opacity=".12"/>`;
     const moeda = (x, y, r) => `<circle cx="${x}" cy="${y}" r="${r}" fill="url(#${id}-o)" stroke="#B57A10" stroke-width=".8"/><text x="${x}" y="${y + r * 0.4}" text-anchor="middle" font-size="${r * 1.1}" font-weight="800" fill="#8A5A06" font-family="Arial, sans-serif">$</text>`;
     const W = `stroke="#FFFFFF" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" fill="none"`;
@@ -8701,7 +8701,8 @@
       extra = moeda(30, 40, 7) + moeda(38, 34, 6);
     } else if (tipo === "despesas") {
       // cartão com a seta saindo
-      simbolo = `<rect x="49" y="17" width="28" height="20" rx="4" ${W}/><path d="M49 24 H77" ${W}/><path d="M54 32 H61" ${W}/>`;
+      // seta saindo da bandeja (o contrário das Receitas)
+      simbolo = `<path d="M63 30 V14" ${W}/><polyline points="56,20 63,13 70,20" ${W}/><path d="M50 30 V37 Q50 40 53 40 H73 Q76 40 76 37 V30" ${W}/>`;
       extra = `<path d="M24 40 L36 28" stroke="${c[0]}" stroke-width="3" stroke-linecap="round"/><polyline points="29,27 36,28 35,35" stroke="${c[0]}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`;
     } else {
       // balança, pendendo para o lado que pesa mais
@@ -8711,7 +8712,8 @@
         <path d="M50 ${21 - t} L46 ${30 - t} M50 ${21 - t} L54 ${30 - t} M76 ${21 + t} L72 ${30 + t} M76 ${21 + t} L80 ${30 + t}" stroke="#FFFFFF" stroke-width="1.4"/>`;
       extra = moeda(32, 38, 7);
     }
-    return `<span class="metric-mini metric-ilustra" aria-hidden="true" title="${esc(dica || "")}"><svg viewBox="0 0 96 56">${defs}${base}${extra}${simbolo}</svg></span>`;
+    extra = "";
+    return `<span class="metric-mini metric-ilustra" aria-hidden="true" title="${esc(dica || "")}"><svg viewBox="38 2 50 50">${defs}${base}${simbolo}</svg></span>`;
   }
 
 
@@ -8745,10 +8747,10 @@
 
     return `
       <div class="grid g-top rel-kpis">
-        <div class="c3">${metricCard("Rentabilidade", pct(I.rentabilidadeCarteiraAcoes(d)), ICONES_STRIP.melhorativo, "var(--vi)", ilustraRel("rentabilidade", I.rentabilidadeCarteiraAcoes(d), "Rentabilidade da carteira: " + pct(I.rentabilidadeCarteiraAcoes(d))), "Acumulada · Preço Médio", null, "0 0 24 24", "rel-rentabilidade")}</div>
-        <div class="c3">${metricCard("Receitas", "+" + brl(entradasP), ICONES_STRIP.poupanca, "var(--up)", ilustraRel("receitas", entradasP, "Receitas: +" + brl(entradasP)), rotuloPeriodo, null, "0 0 24 24", "rel-receitas")}</div>
-        <div class="c3">${metricCard("Despesas", "−" + brl(despesasP), ICONES_STRIP.maiorgasto, "var(--down)", ilustraRel("despesas", -despesasP, "Despesas: −" + brl(despesasP)), rotuloPeriodo, null, "0 0 24 24", "rel-despesas")}</div>
-        <div class="c3">${metricCard("Resultado", brlSinal(entradasP - despesasP), ICONES_STRIP.projecao, corSinal(entradasP - despesasP) !== "down" ? "var(--up)" : "var(--down)", ilustraRel("resultado", entradasP - despesasP, "Resultado: " + brlSinal(entradasP - despesasP)), rotuloPeriodo, null, "0 0 24 24", "rel-resultado")}</div>
+        <div class="c3">${metricCard("Rentabilidade", pct(I.rentabilidadeCarteiraAcoes(d)), I.rentabilidadeCarteiraAcoes(d) < 0 ? '<polyline points="3,7 10,14 14,10 21,17"/><polyline points="15,17 21,17 21,11"/>' : '<polyline points="3,17 10,10 14,14 21,7"/><polyline points="15,7 21,7 21,13"/>', "#A66BFF", ilustraRel("rentabilidade", I.rentabilidadeCarteiraAcoes(d), "Rentabilidade da carteira: " + pct(I.rentabilidadeCarteiraAcoes(d))), "Acumulada · Preço Médio", null, "0 0 24 24", "rel-rentabilidade")}</div>
+        <div class="c3">${metricCard("Receitas", "+" + brl(entradasP), '<path d="M12 3v11"/><polyline points="7.5,9.5 12,14 16.5,9.5"/><path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/>', "#2EE59D", ilustraRel("receitas", entradasP, "Receitas: +" + brl(entradasP)), rotuloPeriodo, null, "0 0 24 24", "rel-receitas")}</div>
+        <div class="c3">${metricCard("Despesas", "−" + brl(despesasP), '<path d="M12 14V3"/><polyline points="7.5,7.5 12,3 16.5,7.5"/><path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/>', "#FF5C6A", ilustraRel("despesas", -despesasP, "Despesas: −" + brl(despesasP)), rotuloPeriodo, null, "0 0 24 24", "rel-despesas")}</div>
+        <div class="c3">${metricCard("Resultado", brlSinal(entradasP - despesasP), '<path d="M12 4v15M8 20h8M5 7h14"/><path d="M5 7l-2.5 6a2.5 2.5 0 0 0 5 0L5 7zM19 7l-2.5 6a2.5 2.5 0 0 0 5 0L19 7z"/><circle cx="12" cy="4" r="1"/>', "#00E5FF", ilustraRel("resultado", entradasP - despesasP, "Resultado: " + brlSinal(entradasP - despesasP)), rotuloPeriodo, null, "0 0 24 24", "rel-resultado")}</div>
       </div>
       <div class="grid">
         <div class="c12">${card("", "Receitas x despesas", `${rotulo(mesesRelA, anoRelA)}`, `<div class="filtro-mes">${LEGENDA_RD}${seletorAnoDash("anoRelA", anoRelA, anosDashboard(d))}${abasMeses("periodo-rel-a", mesesRelA, OPC)}</div>`, `<div class="rel-grafico rel-alto" style="padding:10px 16px;height:220px"><canvas id="graf-rel-mensal"></canvas></div>`)}</div>
