@@ -3281,3 +3281,9 @@ button.kpi-sub:hover, button.kpi-sub:focus-visible { color: var(--cy); text-deco
 .kpi-row .kpi .kpi-rotulo { margin-bottom: 4px !important; }
 .kpi-row .kpi .kpi-sub { margin-top: 4px !important; }
 @container (max-width: 330px) { .kpi .kpi-corpo { row-gap: 2px !important; } }
+/* escolher foto/personagem: usa a largura toda da tela e cada fileira vira
+   uma grade que quebra em linhas — nenhum personagem fica cortado nos lados */
+.av-corpo-conteudo { max-width: none !important; }
+.av-trilho { grid-auto-flow: row !important; grid-auto-columns: auto !important; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); overflow: visible !important; scroll-snap-type: none !important; margin: 0 !important; padding: 6px 0 0 !important; gap: 16px 14px !important; }
+@media (min-width: 600px) { .av-trilho { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 18px 18px !important; } }
+.av-linha { contain-intrinsic-size: auto 420px; }
