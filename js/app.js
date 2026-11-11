@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.485";
+  const VERSAO_APP = "3.6.486";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -596,7 +596,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.485 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.486 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -9024,11 +9024,41 @@
   }
   window.addEventListener("resize", () => { ajustarAlturaGrafico(); ajustarAlturaConfig(); ajustarRolagemMetas(); ajustarTopoMetas(); });
 
+  // Valores em tabelas e listas: o sinal e o "R$" encostados à esquerda da
+  // coluna e o número encostado à direita (como num extrato), em todas as
+  // tabelas do programa. Feito depois de desenhar a tela, olhando só as
+  // células de valor (td, .cel-valor, .col-valor) que têm só o valor dentro.
+  const RE_VALOR_CEL = /^\s*([+−-]?)\s*R\$\s*([\d.,]+)\s*$/;
+  function alinharValoresTabelas(raiz) {
+    if (!raiz) return;
+    raiz.querySelectorAll("td, .cel-valor > span, .col-valor").forEach((cel) => {
+      if (cel.querySelector(".vm")) return;
+      let el = cel;
+      if (el.children.length === 1 && el.children[0].children.length === 0) el = el.children[0];
+      else if (el.children.length) return;
+      const m = el.textContent.replace(/\u00a0/g, " ").match(RE_VALOR_CEL);
+      if (!m) return;
+      el.innerHTML = `<span class="vm"><span class="vm-s">${m[1]}R$</span><span class="vm-n">${m[2]}</span></span>`;
+    });
+  }
+  // a tela e os quadros que abrem por cima mudam a todo momento (mês, cotações…)
+  const obsValores = "MutationObserver" in window ? new MutationObserver(() => {
+    if (obsValores._q) return;
+    obsValores._q = requestAnimationFrame(() => { obsValores._q = 0; alinharValoresTabelas(document.getElementById("conteudo")); alinharValoresTabelas(document.getElementById("modal")); });
+  }) : null;
+  function observarValores() {
+    if (!obsValores || obsValores._ligado) return;
+    ["conteudo", "modal"].forEach((id) => { const el = document.getElementById(id); if (el) obsValores.observe(el, { childList: true, subtree: true, characterData: true }); });
+    obsValores._ligado = true;
+  }
+
   function montarGraficosDaRota() {
     const d = DADOS;
     ajustarAlturaGrafico();   // antes de desenhar, para o gráfico já nascer no tamanho certo
     ajustarTopoMetas();
     observarMetas();
+    observarValores();
+    alinharValoresTabelas(document.getElementById("conteudo"));
     switch (ROTA.secao) {
       case "dashboard": {
         ajustarRolagemMetas();
