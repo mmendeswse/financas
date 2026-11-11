@@ -3288,6 +3288,8 @@ button.kpi-sub:hover, button.kpi-sub:focus-visible { color: var(--cy); text-deco
 @media (min-width: 600px) { .av-trilho { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 18px 18px !important; } }
 .av-linha { contain-intrinsic-size: auto 420px; }
 /* valores nas tabelas: sinal e R$ à esquerda, número à direita */
-.vm { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; width: 100%; }
+.vm { display: inline-flex; justify-content: space-between; align-items: baseline; gap: 4px; max-width: 100%; vertical-align: baseline; }
+.vm-s, .vm-n { white-space: nowrap; }
 .vm-n { text-align: right; font-variant-numeric: tabular-nums; }
-.cel-valor > span:has(> .vm), .col-valor:has(> .vm) { display: flex; width: 100%; }
+.cel-valor > span:has(> .vm), .col-valor:has(> .vm) { display: flex; width: 100%; justify-content: flex-end; }
+td:has(> .vm), td:has(> span > .vm) { text-align: right; }

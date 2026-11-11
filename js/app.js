@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.486";
+  const VERSAO_APP = "3.6.487";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -596,7 +596,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.486 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.487 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -9040,6 +9040,23 @@
       if (!m) return;
       el.innerHTML = `<span class="vm"><span class="vm-s">${m[1]}R$</span><span class="vm-n">${m[2]}</span></span>`;
     });
+    // cada coluna fica só da largura do maior valor dela (encostada à direita
+    // da célula): o R$ continua alinhado de cima a baixo, mas colado no número
+    const grupos = new Map();
+    raiz.querySelectorAll(".vm").forEach((vm) => {
+      const td = vm.closest("td");
+      const chave = td ? (td.closest("table") || raiz) : (vm.closest(".explica-lista, .card, .modal-corpo, #modal") || raiz);
+      const k2 = td ? td.cellIndex : "lista";
+      if (!grupos.has(chave)) grupos.set(chave, new Map());
+      const g = grupos.get(chave);
+      if (!g.has(k2)) g.set(k2, []);
+      g.get(k2).push(vm);
+    });
+    grupos.forEach((g) => g.forEach((lista) => {
+      lista.forEach((vm) => { vm.style.width = ""; });
+      const larg = Math.max(...lista.map((vm) => { const a = vm.children[0], b = vm.children[1]; return (a ? a.getBoundingClientRect().width : 0) + (b ? b.getBoundingClientRect().width : 0); }));
+      if (larg > 0) lista.forEach((vm) => { vm.style.width = Math.ceil(larg + 5) + "px"; });
+    }));
   }
   // a tela e os quadros que abrem por cima mudam a todo momento (mês, cotações…)
   const obsValores = "MutationObserver" in window ? new MutationObserver(() => {
