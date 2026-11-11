@@ -3296,3 +3296,4 @@ td:has(> .vm), td:has(> span > .vm) { text-align: right; }
 /* quadros de detalhes: o valor encostado à direita da sua coluna (antes ficava
    à esquerda, deixando um espaço vazio do lado direito) */
 .kv b .col-valor:has(> .vm), .kv .col-valor:has(> .vm) { text-align: right !important; }
+.explica-lista .col-banco, .explica-lista .col-banco * { white-space: nowrap !important; }
