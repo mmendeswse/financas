@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.489";
+  const VERSAO_APP = "3.6.490";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -596,7 +596,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.489 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.490 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -9056,6 +9056,22 @@
       lista.forEach((vm) => { vm.style.width = ""; });
       const larg = Math.max(...lista.map((vm) => { const a = vm.children[0], b = vm.children[1]; return (a ? a.getBoundingClientRect().width : 0) + (b ? b.getBoundingClientRect().width : 0); }));
       if (larg > 0) lista.forEach((vm) => { vm.style.width = Math.ceil(larg + 5) + "px"; });
+      // o título da coluna ("VALOR") começa onde começa o R$, como nas outras colunas
+      const w = Math.ceil(larg + 5), um = lista[0];
+      if (!(larg > 0) || !um) return;
+      const listaKV = um.closest(".explica-lista");
+      if (listaKV && um.closest(".col-valor")) {
+        // quadros de detalhes: a coluna do valor (título, linhas e total) fica com a largura do maior valor
+        listaKV.querySelectorAll(".col-valor").forEach((c) => { c.style.width = w + "px"; });
+        return;
+      }
+      const cel = um.closest(".cel-valor"), linha = cel && cel.closest(".rw");
+      if (linha) {
+        // guias (Entradas, Despesas…): o título fica alinhado ao começo do R$
+        const i = [...linha.children].indexOf(cel), cab = linha.parentElement && linha.parentElement.querySelector(":scope > .hd");
+        const tit = cab && cab.children[i];
+        if (tit) tit.style.paddingLeft = Math.max(0, cel.clientWidth - w) + "px";
+      }
     }));
   }
   // a tela e os quadros que abrem por cima mudam a todo momento (mês, cotações…)
