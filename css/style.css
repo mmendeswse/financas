@@ -3293,3 +3293,6 @@ button.kpi-sub:hover, button.kpi-sub:focus-visible { color: var(--cy); text-deco
 .vm-n { text-align: right; font-variant-numeric: tabular-nums; }
 .cel-valor > span:has(> .vm), .col-valor:has(> .vm) { display: flex; width: 100%; justify-content: flex-end; }
 td:has(> .vm), td:has(> span > .vm) { text-align: right; }
+/* quadros de detalhes: o valor encostado à direita da sua coluna (antes ficava
+   à esquerda, deixando um espaço vazio do lado direito) */
+.kv b .col-valor:has(> .vm), .kv .col-valor:has(> .vm) { text-align: right !important; }
