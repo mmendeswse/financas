@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.492";
+  const VERSAO_APP = "3.6.493";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -596,7 +596,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.492 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.493 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -8668,57 +8668,52 @@
   // por quadro, que preenche o espaço vazio e muda conforme o valor
   // (subindo/descendo, balança pendendo para o lado que pesa mais)
   function ilustraRel(tipo, valor, dica) {
-    const UP = "#2EE59D", DOWN = "#FF5C6A", id = "ir-" + tipo;
-    const neg = Number(valor) < 0, cor = tipo === "despesas" ? DOWN : tipo === "receitas" ? UP : neg ? DOWN : UP;
-    const grad = (g, c1, c2) => `<linearGradient id="${g}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient>`;
-    const brilho = `<radialGradient id="${id}-bg"><stop offset="0" stop-color="${cor}" stop-opacity=".22"/><stop offset="1" stop-color="${cor}" stop-opacity="0"/></radialGradient>`;
-    const moeda = (x, y, r) => `<g><circle cx="${x}" cy="${y}" r="${r}" fill="url(#${id}-ouro)" stroke="#B8860B" stroke-width=".8"/><circle cx="${x}" cy="${y}" r="${r * 0.68}" fill="none" stroke="#B8860B" stroke-width=".6" opacity=".7"/><text x="${x}" y="${y + r * 0.36}" text-anchor="middle" font-size="${r}" font-weight="800" fill="#8A6508">$</text></g>`;
-    const ouro = grad(id + "-ouro", "#FFE37A", "#F5B82E");
-    let corpo = "";
+    // ícone em "bloco" com degradê (como um ícone de app), uma placa de vidro
+    // atrás dando profundidade e um detalhe que muda com o valor
+    const UP = ["#5BF5BE", "#14B87C"], DOWN = ["#FF8F9A", "#D63345"], CY = ["#5CEBFF", "#0AA8C9"];
+    const neg = Number(valor) < 0;
+    const c = tipo === "despesas" ? DOWN : tipo === "receitas" ? UP : neg ? DOWN : UP;
+    const id = "ir-" + tipo;
+    const defs = `<defs>
+      <linearGradient id="${id}-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c[0]}"/><stop offset="1" stop-color="${c[1]}"/></linearGradient>
+      <linearGradient id="${id}-v" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF" stop-opacity=".18"/><stop offset="1" stop-color="#FFFFFF" stop-opacity=".02"/></linearGradient>
+      <radialGradient id="${id}-b"><stop offset="0" stop-color="${c[1]}" stop-opacity=".45"/><stop offset="1" stop-color="${c[1]}" stop-opacity="0"/></radialGradient>
+      <linearGradient id="${id}-o" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE48A"/><stop offset="1" stop-color="#F2AE2A"/></linearGradient>
+    </defs>`;
+    // placa de vidro atrás + bloco colorido na frente
+    const base = `<ellipse cx="62" cy="30" rx="34" ry="26" fill="url(#${id}-b)"/>
+      <rect x="22" y="12" width="40" height="40" rx="12" fill="${c[1]}" fill-opacity=".22" stroke="${c[0]}" stroke-opacity=".35"/>
+      <rect x="22" y="12" width="40" height="40" rx="12" fill="url(#${id}-v)"/>
+      <rect x="40" y="4" width="46" height="46" rx="14" fill="url(#${id}-g)"/>
+      <rect x="40" y="4" width="46" height="23" rx="14" fill="#FFFFFF" opacity=".12"/>`;
+    const moeda = (x, y, r) => `<circle cx="${x}" cy="${y}" r="${r}" fill="url(#${id}-o)" stroke="#B57A10" stroke-width=".8"/><text x="${x}" y="${y + r * 0.4}" text-anchor="middle" font-size="${r * 1.1}" font-weight="800" fill="#8A5A06" font-family="Arial, sans-serif">$</text>`;
+    const W = `stroke="#FFFFFF" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" fill="none"`;
+    let simbolo = "", extra = "";
     if (tipo === "rentabilidade") {
-      // colunas subindo (ou descendo) com a linha da tendência e a seta
-      const alts = neg ? [34, 27, 20, 12] : [12, 20, 27, 36];
-      const cols = alts.map((h, i) => `<rect x="${14 + i * 15}" y="${50 - h}" width="10" height="${h}" rx="2" fill="url(#${id}-col)" opacity="${0.55 + i * 0.15}"/>`).join("");
-      const pts = alts.map((h, i) => [19 + i * 15, 50 - h - 5]);
-      const [ux, uy] = pts[3], [px, py] = pts[2], ang = Math.atan2(uy - py, ux - px);
-      const ponta = [[ux + 7 * Math.cos(ang), uy + 7 * Math.sin(ang)], [ux + 7 * Math.cos(ang + 2.4), uy + 7 * Math.sin(ang + 2.4)], [ux + 7 * Math.cos(ang - 2.4), uy + 7 * Math.sin(ang - 2.4)]];
-      corpo = `<defs>${brilho}${ouro}${grad(id + "-col", cor, cor + "33")}</defs><ellipse cx="50" cy="30" rx="46" ry="28" fill="url(#${id}-bg)"/>
-        <line x1="8" x2="80" y1="50.5" y2="50.5" stroke="${cor}" stroke-opacity=".35" stroke-width="1"/>${cols}
-        <polyline points="${pts.map((q) => q.join(",")).join(" ")}" fill="none" stroke="${cor}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
-        <polygon points="${ponta.map((q) => q.map((n) => n.toFixed(1)).join(",")).join(" ")}" fill="${cor}"/>
-        ${pts.slice(0, 3).map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2" fill="#0B1220" stroke="${cor}" stroke-width="1.4"/>`).join("")}${moeda(86, neg ? 40 : 14, 7)}`;
+      // linha de tendência com seta, sobre colunas na placa de trás
+      simbolo = neg
+        ? `<polyline points="49,15 58,25 65,20 77,35" ${W}/><polyline points="70,36 77,35 77,28" ${W}/>`
+        : `<polyline points="49,37 58,27 65,32 77,17" ${W}/><polyline points="70,16 77,17 77,24" ${W}/>`;
+      extra = [0, 1, 2].map((i) => `<rect x="${27 + i * 9}" y="${neg ? 26 + i * 6 : 38 - i * 6}" width="6" height="${neg ? 20 - i * 6 : 8 + i * 6}" rx="2" fill="#FFFFFF" opacity="${0.25 + i * 0.12}"/>`).join("");
     } else if (tipo === "receitas") {
-      // carteira recebendo moedas, com a seta entrando
-      corpo = `<defs>${brilho}${ouro}${grad(id + "-cart", "#38F0AE", "#139A68")}${grad(id + "-aba", "#2BD592", "#0F7F55")}</defs><ellipse cx="54" cy="32" rx="44" ry="26" fill="url(#${id}-bg)"/>
-        ${moeda(26, 14, 7)}${moeda(40, 8, 6)}
-        <path d="M33 22 L33 30" stroke="${UP}" stroke-width="2.4" stroke-linecap="round"/><path d="M28.5 27 L33 32 L37.5 27" fill="none" stroke="${UP}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
-        <rect x="40" y="20" width="50" height="33" rx="6" fill="url(#${id}-cart)"/>
-        <path d="M40 27 Q40 20 47 20 L82 20 L86 14 L50 14 Q42 14 40 21 Z" fill="url(#${id}-aba)"/>
-        <rect x="70" y="30" width="22" height="13" rx="4" fill="#0F7F55" stroke="#0B5E40" stroke-width=".8"/><circle cx="77" cy="36.5" r="2.6" fill="#FFE37A" stroke="#B8860B" stroke-width=".6"/>
-        <path d="M44 48 L66 48" stroke="#0B5E40" stroke-opacity=".5" stroke-width="1.2" stroke-linecap="round"/>`;
+      // bandeja recebendo (seta para dentro) + moedas
+      simbolo = `<path d="M63 13 V29" ${W}/><polyline points="56,23 63,30 70,23" ${W}/><path d="M50 30 V37 Q50 40 53 40 H73 Q76 40 76 37 V30" ${W}/>`;
+      extra = moeda(30, 40, 7) + moeda(38, 34, 6);
     } else if (tipo === "despesas") {
-      // cartão de crédito com a seta saindo e uma moeda indo embora
-      corpo = `<defs>${brilho}${ouro}${grad(id + "-cart", "#FF7C88", "#C7303E")}</defs><ellipse cx="48" cy="32" rx="44" ry="26" fill="url(#${id}-bg)"/>
-        <g transform="rotate(-8 44 34)"><rect x="14" y="16" width="56" height="36" rx="6" fill="url(#${id}-cart)"/>
-        <rect x="14" y="23" width="56" height="7" fill="#7A1822" opacity=".75"/>
-        <rect x="21" y="35" width="11" height="8" rx="1.8" fill="#FFE37A" stroke="#B8860B" stroke-width=".6"/><path d="M21 39 H32 M26.5 35 V43" stroke="#B8860B" stroke-width=".5"/>
-        <path d="M38 41 H62 M38 46 H52" stroke="#FFFFFF" stroke-opacity=".55" stroke-width="2" stroke-linecap="round"/></g>
-        <path d="M66 22 L82 8" stroke="${DOWN}" stroke-width="2.6" stroke-linecap="round"/><path d="M73 8 L82 8 L82 17" fill="none" stroke="${DOWN}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
-        ${moeda(86, 30, 7)}`;
+      // cartão com a seta saindo
+      simbolo = `<rect x="49" y="17" width="28" height="20" rx="4" ${W}/><path d="M49 24 H77" ${W}/><path d="M54 32 H61" ${W}/>`;
+      extra = `<path d="M24 40 L36 28" stroke="${c[0]}" stroke-width="3" stroke-linecap="round"/><polyline points="29,27 36,28 35,35" stroke="${c[0]}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`;
     } else {
-      // balança: pende para o lado das receitas (resultado positivo) ou das despesas
-      const g = neg ? 9 : -9, rad = g * Math.PI / 180, cx = 50, cy = 15, L = 30;
-      const xl = cx - L * Math.cos(rad), yl = cy - L * Math.sin(rad), xr = cx + L * Math.cos(rad), yr = cy + L * Math.sin(rad);
-      const prato = (x, y, c, conteudo) => `<path d="M${x - 9} ${y + 13} L${x} ${y} L${x + 9} ${y + 13}" fill="none" stroke="#8FA3B8" stroke-width=".9"/>${conteudo}<path d="M${x - 13} ${y + 13} Q${x} ${y + 22} ${x + 13} ${y + 13} Z" fill="${c}"/>`;
-      corpo = `<defs>${brilho}${ouro}</defs><ellipse cx="50" cy="32" rx="46" ry="26" fill="url(#${id}-bg)"/>
-        <rect x="48.5" y="14" width="3" height="36" rx="1.5" fill="#8FA3B8"/><path d="M36 54 Q50 46 64 54 Z" fill="#6B7F94"/>
-        <line x1="${xl.toFixed(1)}" y1="${yl.toFixed(1)}" x2="${xr.toFixed(1)}" y2="${yr.toFixed(1)}" stroke="#C5D3E0" stroke-width="2.6" stroke-linecap="round"/>
-        <circle cx="${cx}" cy="${cy}" r="3.2" fill="${cor}"/>
-        ${prato(xl, yl, UP, moeda(xl - 4, yl + 9, 4.5) + moeda(xl + 4, yl + 9, 4.5) + moeda(xl, yl + 4, 4.5))}
-        ${prato(xr, yr, DOWN, moeda(xr, yr + 9, 4.5))}`;
+      // balança, pendendo para o lado que pesa mais
+      const t = neg ? 4 : -4;
+      simbolo = `<path d="M63 13 V39 M55 40 H71" ${W}/><path d="M50 ${21 - t} L76 ${21 + t}" ${W}/>
+        <path d="M46 ${30 - t} Q50 ${35 - t} 54 ${30 - t} Z" fill="#FFFFFF"/><path d="M72 ${30 + t} Q76 ${35 + t} 80 ${30 + t} Z" fill="#FFFFFF"/>
+        <path d="M50 ${21 - t} L46 ${30 - t} M50 ${21 - t} L54 ${30 - t} M76 ${21 + t} L72 ${30 + t} M76 ${21 + t} L80 ${30 + t}" stroke="#FFFFFF" stroke-width="1.4"/>`;
+      extra = moeda(32, 38, 7);
     }
-    return `<span class="metric-mini metric-ilustra" aria-hidden="true" title="${esc(dica || "")}"><svg viewBox="0 0 96 56">${corpo}</svg></span>`;
+    return `<span class="metric-mini metric-ilustra" aria-hidden="true" title="${esc(dica || "")}"><svg viewBox="0 0 96 56">${defs}${base}${extra}${simbolo}</svg></span>`;
   }
+
 
   function mesesDoPeriodoRel(d, fx) {
     const primeiraData = [...d.entradas.map((e) => e.data), ...d.despesas.map((x) => x.data), ...(d.contasPagar || []).map((c) => c.vencimento)]
