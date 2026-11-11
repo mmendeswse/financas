@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.497";
+  const VERSAO_APP = "3.6.498";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -596,7 +596,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.497 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.498 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -8746,9 +8746,9 @@
 
     return `
       <div class="grid g-top rel-kpis">
-        <div class="c3">${metricCard("Rentabilidade", pct(I.rentabilidadeCarteiraAcoes(d)), ICONES_STRIP.melhorativo, "var(--vi)", ilustraRel("rentabilidade", I.rentabilidadeCarteiraAcoes(d), "Rentabilidade da carteira: " + pct(I.rentabilidadeCarteiraAcoes(d))), "Acumulada · Preço Médio", null, "0 0 24 24", "rel-rentabilidade")}</div>
-        <div class="c3">${metricCard("Receitas", "+" + brl(entradasP), ICONES_STRIP.poupanca, "var(--up)", ilustraRel("receitas", entradasP, "Receitas: +" + brl(entradasP)), rotuloPeriodo, null, "0 0 24 24", "rel-receitas")}</div>
-        <div class="c3">${metricCard("Despesas", "−" + brl(despesasP), ICONES_STRIP.maiorgasto, "var(--down)", ilustraRel("despesas", -despesasP, "Despesas: −" + brl(despesasP)), rotuloPeriodo, null, "0 0 24 24", "rel-despesas")}</div>
+        <div class="c3">${metricCard("Rentabilidade", pct(I.rentabilidadeCarteiraAcoes(d)), I.rentabilidadeCarteiraAcoes(d) < 0 ? '<polyline points="3,7 10,14 14,10 21,17"/><polyline points="15,17 21,17 21,11"/>' : '<polyline points="3,17 10,10 14,14 21,7"/><polyline points="15,7 21,7 21,13"/>', "#A66BFF", ilustraRel("rentabilidade", I.rentabilidadeCarteiraAcoes(d), "Rentabilidade da carteira: " + pct(I.rentabilidadeCarteiraAcoes(d))), "Acumulada · Preço Médio", null, "0 0 24 24", "rel-rentabilidade")}</div>
+        <div class="c3">${metricCard("Receitas", "+" + brl(entradasP), '<path d="M12 3v11"/><polyline points="7.5,9.5 12,14 16.5,9.5"/><path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/>', "#2EE59D", ilustraRel("receitas", entradasP, "Receitas: +" + brl(entradasP)), rotuloPeriodo, null, "0 0 24 24", "rel-receitas")}</div>
+        <div class="c3">${metricCard("Despesas", "−" + brl(despesasP), '<rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="M3 10h18M7 15h4"/>', "#FF5C6A", ilustraRel("despesas", -despesasP, "Despesas: −" + brl(despesasP)), rotuloPeriodo, null, "0 0 24 24", "rel-despesas")}</div>
         <div class="c3">${metricCard("Resultado", brlSinal(entradasP - despesasP), '<path d="M12 4v15M8 20h8M5 7h14"/><path d="M5 7l-2.5 6a2.5 2.5 0 0 0 5 0L5 7zM19 7l-2.5 6a2.5 2.5 0 0 0 5 0L19 7z"/><circle cx="12" cy="4" r="1"/>', "#00E5FF", ilustraRel("resultado", entradasP - despesasP, "Resultado: " + brlSinal(entradasP - despesasP)), rotuloPeriodo, null, "0 0 24 24", "rel-resultado")}</div>
       </div>
       <div class="grid">
