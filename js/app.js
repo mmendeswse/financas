@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.494";
+  const VERSAO_APP = "3.6.495";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -596,7 +596,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.494 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.495 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -8672,7 +8672,9 @@
     // atrás dando profundidade e um detalhe que muda com o valor
     const UP = ["#5BF5BE", "#14B87C"], DOWN = ["#FF8F9A", "#D63345"], CY = ["#5CEBFF", "#0AA8C9"];
     const neg = Number(valor) < 0;
-    const c = tipo === "despesas" ? DOWN : tipo === "receitas" ? UP : neg ? DOWN : UP;
+    // uma cor para cada quadro: rentabilidade roxo, receitas verde, despesas vermelho, resultado azul
+    const VI = ["#C59BFF", "#7C3AED"];
+    const c = { rentabilidade: VI, receitas: UP, despesas: DOWN, resultado: CY }[tipo] || CY;
     const id = "ir-" + tipo;
     const defs = `<defs>
       <linearGradient id="${id}-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c[0]}"/><stop offset="1" stop-color="${c[1]}"/></linearGradient>
