@@ -3297,3 +3297,7 @@ td:has(> .vm), td:has(> span > .vm) { text-align: right; }
    à esquerda, deixando um espaço vazio do lado direito) */
 .kv b .col-valor:has(> .vm), .kv .col-valor:has(> .vm) { text-align: right !important; }
 .explica-lista .col-banco, .explica-lista .col-banco * { white-space: nowrap !important; }
+/* coluna Banco das guias: o nome do banco sempre numa linha só */
+.cel-banco, .cel-banco * { white-space: nowrap !important; }
+.cel-banco { max-width: 100%; min-width: 0; }
+.cel-banco > span:not(.marca-logo) { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
