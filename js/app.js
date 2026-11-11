@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.493";
+  const VERSAO_APP = "3.6.494";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -596,7 +596,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.493 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.494 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -8681,10 +8681,8 @@
       <linearGradient id="${id}-o" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE48A"/><stop offset="1" stop-color="#F2AE2A"/></linearGradient>
     </defs>`;
     // placa de vidro atrás + bloco colorido na frente
-    const base = `<ellipse cx="62" cy="30" rx="34" ry="26" fill="url(#${id}-b)"/>
-      <rect x="22" y="12" width="40" height="40" rx="12" fill="${c[1]}" fill-opacity=".22" stroke="${c[0]}" stroke-opacity=".35"/>
-      <rect x="22" y="12" width="40" height="40" rx="12" fill="url(#${id}-v)"/>
-      <rect x="40" y="4" width="46" height="46" rx="14" fill="url(#${id}-g)"/>
+    // só o ícone (sem a placa de trás e sem o brilho)
+    const base = `<rect x="40" y="4" width="46" height="46" rx="14" fill="url(#${id}-g)"/>
       <rect x="40" y="4" width="46" height="23" rx="14" fill="#FFFFFF" opacity=".12"/>`;
     const moeda = (x, y, r) => `<circle cx="${x}" cy="${y}" r="${r}" fill="url(#${id}-o)" stroke="#B57A10" stroke-width=".8"/><text x="${x}" y="${y + r * 0.4}" text-anchor="middle" font-size="${r * 1.1}" font-weight="800" fill="#8A5A06" font-family="Arial, sans-serif">$</text>`;
     const W = `stroke="#FFFFFF" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" fill="none"`;
@@ -8711,7 +8709,8 @@
         <path d="M50 ${21 - t} L46 ${30 - t} M50 ${21 - t} L54 ${30 - t} M76 ${21 + t} L72 ${30 + t} M76 ${21 + t} L80 ${30 + t}" stroke="#FFFFFF" stroke-width="1.4"/>`;
       extra = moeda(32, 38, 7);
     }
-    return `<span class="metric-mini metric-ilustra" aria-hidden="true" title="${esc(dica || "")}"><svg viewBox="0 0 96 56">${defs}${base}${extra}${simbolo}</svg></span>`;
+    extra = "";
+    return `<span class="metric-mini metric-ilustra" aria-hidden="true" title="${esc(dica || "")}"><svg viewBox="38 2 50 50">${defs}${base}${simbolo}</svg></span>`;
   }
 
 
