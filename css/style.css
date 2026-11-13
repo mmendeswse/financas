@@ -3316,3 +3316,4 @@ td:has(> .vm), td:has(> span > .vm) { text-align: right; }
 #modal .explica-lista .col-banco .marca-logo { width: 20px !important; height: 20px !important; }
 #modal .explica-lista .kv.kv-cab { min-height: 35px; box-sizing: border-box; align-items: center; }
 .extrato-linha > b:has(> .vm) { justify-self: stretch !important; width: 100% !important; box-sizing: border-box; }
+#modal .proj-periodo { margin: 4px 0 8px !important; }
