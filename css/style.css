@@ -3319,3 +3319,4 @@ td:has(> .vm), td:has(> span > .vm) { text-align: right; }
 #modal .proj-periodo { margin: 4px 0 8px !important; }
 /* quadros de detalhes: valores que não são em R$ (ex.: a % da Rentabilidade) alinhados à direita */
 #modal .explica-lista .kv > b:not(:has(.vm)) { text-align: right !important; }
+#modal .explica-lista .kv > b:has(> .vm) { display: flex !important; justify-content: flex-end !important; }
