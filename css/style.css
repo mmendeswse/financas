@@ -3311,3 +3311,7 @@ td:has(> .vm), td:has(> span > .vm) { text-align: right; }
 #modal .explica-lista .col-banco, #modal .explica-lista .col-banco * { white-space: nowrap !important; }
 #modal .explica-lista .col-banco { overflow: hidden; display: inline-flex; align-items: center; }
 #modal .explica-lista .col-banco > span:last-child { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+/* quadros de detalhes: mesmo espaçamento entre linhas do Histórico da conta (linha de ~35 px) */
+#modal .explica-lista .kv:not(.kv-cab) { padding-top: 4px !important; padding-bottom: 4px !important; min-height: 35px; box-sizing: border-box; align-items: center; }
+#modal .explica-lista .col-banco .marca-logo { width: 20px !important; height: 20px !important; }
+#modal .explica-lista .kv.kv-cab { min-height: 35px; box-sizing: border-box; align-items: center; }
