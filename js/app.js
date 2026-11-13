@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.500";
+  const VERSAO_APP = "3.6.501";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -596,7 +596,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.500 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.501 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -4418,7 +4418,9 @@
   // as duas pontas de cada transferência automática (sai de um, entra no outro)
   function movimentosTransfAuto(d, recebidas, ateMes) {
     const saida = [];
-    ocorrenciasTransfAuto(d, ateMes).filter((o) => o.recebida === recebidas && o.valor > 0).forEach((o) => {
+    // previstas: toda transferência programada aparece, mesmo com valor ainda
+    // zero (ex.: o salário do mês ainda sem valor) — só as puladas ficam de fora
+    ocorrenciasTransfAuto(d, ateMes).filter((o) => o.recebida === recebidas && (recebidas ? o.valor > 0 : !o.pulado && o.valor >= 0)).forEach((o) => {
       const auto = { id: o.regra.id, mes: o.mes }, obs = o.regra.obs ? " · " + o.regra.obs : "";
       saida.push({ bancoId: o.regra.deBancoId, valor: -o.valor, data: o.data, transferencia: true, auto, descricao: "Transferência", sub: "Para · " + F.nomeBanco(d, o.regra.paraBancoId) + obs });
       saida.push({ bancoId: o.regra.paraBancoId, valor: o.valor, data: o.data, transferencia: true, auto, descricao: "Transferência", sub: "De · " + F.nomeBanco(d, o.regra.deBancoId) + obs });
