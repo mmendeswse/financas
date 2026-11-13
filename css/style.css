@@ -3308,3 +3308,6 @@ td:has(> .vm), td:has(> span > .vm) { text-align: right; }
 .legenda-val:has(> .vm), .barlist-valor:has(> .vm) { display: flex; justify-content: flex-end; }
 /* histórico da conta: valor e saldo com R$ à esquerda e número à direita */
 .extrato-linha > b:has(> .vm) { display: flex; justify-content: flex-end; }
+#modal .explica-lista .col-banco, #modal .explica-lista .col-banco * { white-space: nowrap !important; }
+#modal .explica-lista .col-banco { overflow: hidden; display: inline-flex; align-items: center; }
+#modal .explica-lista .col-banco > span:last-child { overflow: hidden; text-overflow: ellipsis; min-width: 0; }

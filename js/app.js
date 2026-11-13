@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.504";
+  const VERSAO_APP = "3.6.505";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -596,7 +596,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.504 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.505 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -9081,20 +9081,15 @@
         if (tit) tit.style.paddingLeft = Math.max(0, cel.clientWidth - w) + "px";
       }
     }));
-    // quadros de detalhes: Recorrência, Status, Banco e Valor com a mesma
-    // distância entre elas — cada coluna com a largura do seu maior conteúdo
+    // quadros de detalhes: as colunas com as mesmas larguras e espaços do
+    // Histórico da conta (Recorrência 132 px, Status, Banco e Valor, 10 px entre elas)
     raiz.querySelectorAll(".explica-lista").forEach((lista) => {
-      const COLS = ["col-rep", "col-status", "col-banco"];
       if (!lista.querySelector(".col-status, .col-banco")) return;
-      const ESP = 28;
-      COLS.forEach((cls) => {
-        const cels = [...lista.querySelectorAll("." + cls)];
-        if (!cels.length) return;
-        cels.forEach((c) => { c.style.width = "max-content"; c.style.maxWidth = "none"; });
-        const larg = Math.max(...cels.map((c) => c.getBoundingClientRect().width));
-        cels.forEach((c) => { c.style.width = Math.ceil(larg) + "px"; c.style.marginLeft = ESP + "px"; c.style.flex = "none"; });
-      });
-      lista.querySelectorAll(".col-valor").forEach((c) => { c.style.marginLeft = ESP + "px"; });
+      const LARG = { "col-rep": 132, "col-status": 84, "col-banco": 124 };
+      Object.keys(LARG).forEach((cls) => lista.querySelectorAll("." + cls).forEach((c) => {
+        c.style.width = LARG[cls] + "px"; c.style.maxWidth = "none"; c.style.marginLeft = "10px"; c.style.flex = "none";
+      }));
+      lista.querySelectorAll(".col-valor").forEach((c) => { c.style.marginLeft = "10px"; });
     });
   }
   // a tela e os quadros que abrem por cima mudam a todo momento (mês, cotações…)
