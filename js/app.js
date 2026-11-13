@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.501";
+  const VERSAO_APP = "3.6.503";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -596,7 +596,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.501 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.503 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -3313,7 +3313,7 @@
       <div class="extrato-linha ${classe || ""}${previsto ? " linha-prevista" : ""}${ref || auto || transfId || ajusteId ? " clicavel" : ""}"${auto ? ` data-transf-auto="${esc(auto.id)}" data-mes="${auto.mes}" title="Mudar o valor deste mês"` : ""}${transfId ? ` data-transf-id="${esc(String(transfId))}" title="Editar a transferência"` : ""}${ajusteId ? ` data-ajuste-id="${esc(String(ajusteId))}" title="Ver o ajuste de saldo"` : ""}${ref ? ` data-ir-secao="${ref.secao}" data-ir-id="${esc(String(ref.id))}" data-ir-data="${esc(String(ref.data || ""))}" title="Ver na guia ${ref.secao === "entradas" ? "Entradas" : "Despesas"}"` : ""}>
         <span class="dim">${data}</span>
         <span class="desc">${desc}</span>
-        <span class="rep">${auto ? `<span class="selo-tag selo-cat" title="Transferência automática">Automática</span>` : ajusteId && !ref ? SELO_UNICA : celRep(repDe(ref))}</span>
+        <span class="rep">${auto ? `<span class="selo-tag selo-cat" title="Transferência automática">Automática</span>` : (ajusteId || transfId) && !ref ? SELO_UNICA : celRep(repDe(ref))}</span>
         <span class="status">${tipo ? seloStatus(tipo, previsto) : ""}${repDe(ref) ? `<span class="rep-movel">${repDe(ref)}</span>` : ""}</span>
         <b class="${valor === null ? "vazio" : corSinal(valor)}">${valor === null ? "" : brlSinal(valor)}</b>
         <b class="saldo${saldo < 0 ? " down" : ""}">${saldo === null ? '<span class="dim">—</span>' : brl(Math.abs(saldo))}</b>
@@ -9030,7 +9030,7 @@
   const RE_VALOR_CEL = /^\s*([+−-]?)\s*R\$\s*([\d.,]+)\s*$/;
   function alinharValoresTabelas(raiz) {
     if (!raiz) return;
-    raiz.querySelectorAll("td, .cel-valor > span, .col-valor, .legenda-val, .barlist-valor").forEach((cel) => {
+    raiz.querySelectorAll("td, .cel-valor > span, .col-valor, .legenda-val, .barlist-valor, .extrato-linha > b").forEach((cel) => {
       if (cel.querySelector(".vm")) return;
       let el = cel;
       if (el.children.length === 1 && el.children[0].children.length === 0) el = el.children[0];
@@ -9045,7 +9045,7 @@
     raiz.querySelectorAll(".vm").forEach((vm) => {
       const td = vm.closest("td");
       const chave = td ? (td.closest("table") || raiz) : (vm.closest(".legenda, .barlist, .explica-lista, .card, .modal-corpo, #modal") || raiz);
-      const k2 = td ? td.cellIndex : "lista";
+      const k2 = td ? td.cellIndex : vm.closest(".extrato-linha > b.saldo") ? "saldo" : "lista";
       if (!grupos.has(chave)) grupos.set(chave, new Map());
       const g = grupos.get(chave);
       if (!g.has(k2)) g.set(k2, []);
@@ -9062,6 +9062,15 @@
       if (listaKV && um.closest(".col-valor")) {
         // quadros de detalhes: a coluna do valor (título, linhas e total) fica com a largura do maior valor
         listaKV.querySelectorAll(".col-valor").forEach((c) => { c.style.width = w + "px"; });
+        return;
+      }
+      // histórico da conta (Bancos): títulos "Valor" e "Saldo" alinhados ao começo do R$
+      const celExt = um.closest(".extrato-linha > b");
+      if (celExt) {
+        const lin = celExt.parentElement, i = [...lin.children].indexOf(celExt);
+        const cab = (lin.closest(".modal, #modal, #conteudo") || raiz).querySelector(".extrato-cab");
+        const tit = cab && cab.children[i];
+        if (tit) { tit.style.textAlign = "left"; tit.style.paddingLeft = Math.max(0, celExt.clientWidth - w) + "px"; }
         return;
       }
       const cel = um.closest(".cel-valor"), linha = cel && cel.closest(".rw");
