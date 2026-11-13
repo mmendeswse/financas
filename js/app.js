@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.514";
+  const VERSAO_APP = "3.6.516";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -596,7 +596,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.514 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.516 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -3658,7 +3658,7 @@
           <button type="button" class="btn pequeno extrato-seta" data-proj-passo="1" title="Próximo mês" aria-label="Próximo mês">›</button>
         </div>`;
       abrirModal(`
-        <h3>Projeção de despesas · ${rot.charAt(0).toUpperCase() + rot.slice(1)}</h3>
+        <h3>Projeção despesas · ${rot.charAt(0).toUpperCase() + rot.slice(1)}</h3>
         <div class="explica-pct"><b>${Math.abs(saldo > 0 ? (aVir / saldo) * 100 : 0).toFixed(1).replace(".", ",")}%</b><span>do seu saldo em bancos já está comprometido</span></div>
         ${barra}
         <div class="explica-lista">${(itens.length
@@ -3692,7 +3692,7 @@
     if (chave === "maiorgasto") {
       const maior = maiorDespesaPaga(d, mes);
       if (!maior) { toast("Nenhuma despesa lançada neste mês."); return; }
-      painelSimples("Maior gasto do mês", despesas > 0 ? (Number(maior.valor) / despesas) * 100 : 0,
+      painelSimples("Maior gasto", despesas > 0 ? (Number(maior.valor) / despesas) * 100 : 0,
         "do total gasto no mês veio deste lançamento", "maior valor entre as despesas do mês",
         linha("Descrição", descEmoji(maior)) + linha("Valor", "−" + brl(maior.valor), "down") +
         linha("Categoria", esc(maior.categoria || "—")) + linha("Data", fmtData(maior.data)) +
