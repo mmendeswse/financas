@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.513";
+  const VERSAO_APP = "3.6.514";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -596,7 +596,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.513 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.514 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -9119,6 +9119,16 @@
         if (tit) tit.style.paddingLeft = Math.max(0, cel.clientWidth - w) + "px";
       }
     }));
+    // Histórico da conta (Bancos): o quadro alarga o quanto for preciso para a
+    // descrição aparecer inteira, sem "…" (até a largura da tela)
+    raiz.querySelectorAll(".extrato-banco").forEach((ext) => {
+      const modal = ext.closest(".modal");
+      if (!modal) return;
+      const falta = Math.max(0, ...[...ext.querySelectorAll(".extrato-linha .desc")].map((d) => d.scrollWidth - d.clientWidth));
+      if (falta <= 1) return;
+      const atual = modal.getBoundingClientRect().width, maximo = window.innerWidth - 24;
+      if (atual < maximo) modal.style.width = Math.min(maximo, Math.ceil(atual + falta + 6)) + "px";
+    });
     // quadros de detalhes: as colunas com as mesmas larguras e espaços do
     // Histórico da conta (Recorrência 132 px, Status, Banco e Valor, 10 px entre elas)
     raiz.querySelectorAll(".explica-lista").forEach((lista) => {
