@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.499";
+  const VERSAO_APP = "3.6.500";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -596,7 +596,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.499 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.500 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -9028,7 +9028,7 @@
   const RE_VALOR_CEL = /^\s*([+−-]?)\s*R\$\s*([\d.,]+)\s*$/;
   function alinharValoresTabelas(raiz) {
     if (!raiz) return;
-    raiz.querySelectorAll("td, .cel-valor > span, .col-valor").forEach((cel) => {
+    raiz.querySelectorAll("td, .cel-valor > span, .col-valor, .legenda-val, .barlist-valor").forEach((cel) => {
       if (cel.querySelector(".vm")) return;
       let el = cel;
       if (el.children.length === 1 && el.children[0].children.length === 0) el = el.children[0];
@@ -9042,7 +9042,7 @@
     const grupos = new Map();
     raiz.querySelectorAll(".vm").forEach((vm) => {
       const td = vm.closest("td");
-      const chave = td ? (td.closest("table") || raiz) : (vm.closest(".explica-lista, .card, .modal-corpo, #modal") || raiz);
+      const chave = td ? (td.closest("table") || raiz) : (vm.closest(".legenda, .barlist, .explica-lista, .card, .modal-corpo, #modal") || raiz);
       const k2 = td ? td.cellIndex : "lista";
       if (!grupos.has(chave)) grupos.set(chave, new Map());
       const g = grupos.get(chave);
