@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.503";
+  const VERSAO_APP = "3.6.504";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -596,7 +596,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.503 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.504 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -4207,11 +4207,11 @@
     return `
       ${faixaDemo(d)}
       <div class="grid g-top">
-        <div class="c12">${card("c12", "Meus bancos", `${bancos.length} ${bancos.length === 1 ? "Conta" : "Contas"}`, `${bancos.length ? `<span class="pill-periodo ${corSinal(total)}" title="Soma de todas as contas">TOTAL ${brlSinal(total)}</span>` : ""}${d.bancos.length > 1 ? `<button class="btn" data-acao="nova-transferencia" title="Passar dinheiro de um banco para outro">⇄ TRANSFERIR</button>` : ""}<button class="btn primario" data-acao="nova-banco"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`, listaHtml)}</div>
+        <div class="c12">${card("c12", "Meus bancos", `${bancos.length} ${bancos.length === 1 ? "Conta" : "Contas"}`, `${d.bancos.length > 1 ? `<button class="btn" data-acao="nova-transferencia" title="Passar dinheiro de um banco para outro">⇄ TRANSFERIR</button>` : ""}<button class="btn primario" data-acao="nova-banco"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`, listaHtml)}</div>
       </div>
       <div class="grid">
         <div class="c12">${card("", "Saldo bancos", mesesBancos ? `Movimentação · ${mesesBancos} ${mesesBancos === 1 ? "mês" : "meses"} de ${anoBancos}` : "comparação entre contas",
-          `<div class="filtro-mes">${seletorAnoDash("anoBancos", anoBancos, anosDashboard(d))}${abasMeses("periodo-bancos", mesesBancos, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }, { meses: 0, rotulo: "Tudo" }])}</div>`,
+          `<div class="filtro-mes">${bancos.length ? `<span class="pill-periodo ${corSinal(total)}" title="Soma de todas as contas">TOTAL ${brlSinal(total)}</span>` : ""}${seletorAnoDash("anoBancos", anoBancos, anosDashboard(d))}${abasMeses("periodo-bancos", mesesBancos, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }, { meses: 0, rotulo: "Tudo" }])}</div>`,
           `<div style="padding:8px 18px 10px;height:${Math.max(150, bancos.length * 40)}px"><canvas id="graf-saldo-bancos"></canvas></div>`)}</div>
       </div>
     `;
