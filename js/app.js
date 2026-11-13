@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.509";
+  const VERSAO_APP = "3.6.510";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -596,7 +596,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.509 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.510 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -3673,6 +3673,7 @@
       document.getElementById("btnIrPainel").onclick = () => { fecharModal(); navegarPara("despesas"); };
       document.getElementById("btnFecharPainel").onclick = fecharModal;
       const ini = document.getElementById("projIni"), fim = document.getElementById("projFim");
+      setTimeout(() => { if (document.activeElement === ini) ini.blur(); }, 80);   // sem a borda de foco ao abrir, como no Histórico da conta
       const ir = (nova) => explicarStrip("projecao", { faixa: nova });
       document.querySelectorAll("#modal [data-proj-passo]").forEach((bt) => {
         bt.onclick = (e) => {
