@@ -3315,3 +3315,6 @@ td:has(> .vm), td:has(> span > .vm) { text-align: right; }
 #modal .explica-lista .kv:not(.kv-cab) { padding-top: 4px !important; padding-bottom: 4px !important; min-height: 35px; box-sizing: border-box; align-items: center; }
 #modal .explica-lista .col-banco .marca-logo { width: 20px !important; height: 20px !important; }
 #modal .explica-lista .kv.kv-cab { min-height: 35px; box-sizing: border-box; align-items: center; }
+/* Despesas e Receitas (guias e quadros de detalhes): mesmo espaço à direita do valor que o Histórico da conta (~41 px até a borda) */
+#conteudo .rw:has(.cel-valor), #conteudo .rw:has(.cel-valor) ~ .hd, #conteudo .hd:has(~ .rw .cel-valor) { padding-right: 40px !important; }
+#modal .explica-lista .kv { padding-right: 40px !important; }
