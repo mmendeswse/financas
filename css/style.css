@@ -3304,3 +3304,5 @@ td:has(> .vm), td:has(> span > .vm) { text-align: right; }
 /* ícone dos quadros de Relatórios sem sombra */
 .rel-kpis .metric-ilustra svg { filter: none !important; }
 .rel-kpis .metric-mini.metric-ilustra { width: auto !important; aspect-ratio: 1; height: 62% !important; max-height: 52px !important; right: 14px !important; }
+/* legenda da Composição e lista do Saldo bancos: mesma regra das tabelas (R$ à esquerda, número à direita) */
+.legenda-val:has(> .vm), .barlist-valor:has(> .vm) { display: flex; justify-content: flex-end; }
