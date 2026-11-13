@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.508";
+  const VERSAO_APP = "3.6.509";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -596,7 +596,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.508 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.509 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -3608,7 +3608,7 @@
   }
 
 
-  function explicarStrip(chave) {
+  function explicarStrip(chave, opc) {
     const d = DADOS;
     const mes = F.mesAtual();
     const entradas = totalEntradasEfetivas(d, mes), despesas = totalDespesasPagasMes(d, mes);
@@ -3637,18 +3637,55 @@
       return;
     }
     if (chave === "projecao") {
-      // sempre as contas previstas do mês que vem
-      painelReabrir = () => explicarStrip("projecao");
-      const itens = despesasPrevistasMesQueVem(d);
+      // contas previstas do período escolhido (abre no mês que vem); as setas e
+      // os campos de data trocam o período e o título acompanha
+      const faixaMes = (mes) => { const [a1, m1] = mes.split("-").map(Number); return { ini: `${mes}-01`, fim: `${mes}-${String(new Date(a1, m1, 0).getDate()).padStart(2, "0")}` }; };
+      const fx = (opc && opc.faixa) || faixaMes(mesQueVem());
+      painelReabrir = () => explicarStrip("projecao", { faixa: fx });
+      const meses = [];
+      for (let m = fx.ini.slice(0, 7); m <= fx.fim.slice(0, 7) && meses.length < 240; m = proximoMes(m)) meses.push(m);
+      const itens = meses.flatMap((m) => listaDespesasTodasMes(d, m))
+        .filter((x) => x.status !== "Pago" && (x.data || "") >= fx.ini && (x.data || "") <= fx.fim)
+        .sort((a1, b1) => (a1.data || "").localeCompare(b1.data || ""));
       const aVir = itens.reduce((t, x) => t + Number(x.valor || 0), 0);
       const saldo = F.totalBancos(d);
-      painelSimples(`Projeção de despesas · ${nomeMesQueVem()}`, saldo > 0 ? (aVir / saldo) * 100 : 0,
-        "do seu saldo em bancos já está comprometido", "despesas previstas para o próximo mês",
-        (itens.length
+      const rot = rotuloPeriodoMeses(fx.ini, fx.fim);
+      const campo = (id, v) => `<span class="campo-data-curta"><span class="data-txt">${fmtDataISO(v)}</span><input type="date" id="${id}" value="${v}" aria-label="${id === "projIni" ? "Data inicial" : "Data final"}"></span>`;
+      const barra = `<div class="extrato-periodo proj-periodo">
+          <button type="button" class="btn pequeno extrato-seta" data-proj-passo="-1" title="Mês anterior" aria-label="Mês anterior">‹</button>
+          <label>${campo("projIni", fx.ini)}</label>
+          <label>Até ${campo("projFim", fx.fim)}</label>
+          <button type="button" class="btn pequeno extrato-seta" data-proj-passo="1" title="Próximo mês" aria-label="Próximo mês">›</button>
+        </div>`;
+      abrirModal(`
+        <h3>Projeção de despesas · ${rot.charAt(0).toUpperCase() + rot.slice(1)}</h3>
+        <div class="explica-pct"><b>${Math.abs(saldo > 0 ? (aVir / saldo) * 100 : 0).toFixed(1).replace(".", ",")}%</b><span>do seu saldo em bancos já está comprometido</span></div>
+        ${barra}
+        <div class="explica-lista">${(itens.length
           ? cabecalhoColunasPainel() + itens.map((x) => linhaEditavel(x, linha(descPainel(x),
               `<span class="col-rep">${repColuna(x, x.data)}</span>` + seloStatusPainel(x.status, x) + bancoPainel(x.banco, x) + `<span class="col-valor valor-guia down">−${brl(x.valor)}</span>`))).join("")
-          : `<div class="kv"><span class="dim">Nenhuma conta prevista para o mês que vem</span><b>—</b></div>`) +
-        linhaTotalPainel(plural(itens.length, "Lançamento"), "−" + brl(aVir)), "despesas");
+          : `<div class="kv"><span class="dim">Nenhuma conta prevista neste período</span><b>—</b></div>`) +
+          linhaTotalPainel(plural(itens.length, "Lançamento"), "−" + brl(aVir))}</div>
+        <div class="modal-acoes">
+          <button class="btn primario salvar" id="btnIrPainel">Abrir</button>
+          <button class="btn" id="btnFecharPainel">Fechar</button>
+        </div>`);
+      document.getElementById("btnIrPainel").onclick = () => { fecharModal(); navegarPara("despesas"); };
+      document.getElementById("btnFecharPainel").onclick = fecharModal;
+      const ini = document.getElementById("projIni"), fim = document.getElementById("projFim");
+      const ir = (nova) => explicarStrip("projecao", { faixa: nova });
+      document.querySelectorAll("#modal [data-proj-passo]").forEach((bt) => {
+        bt.onclick = (e) => {
+          e.stopPropagation();
+          const [a1, m1] = fx.ini.slice(0, 7).split("-").map(Number);
+          const alvo = new Date(a1, m1 - 1 + Number(bt.dataset.projPasso), 1);
+          ir(faixaMes(`${alvo.getFullYear()}-${String(alvo.getMonth() + 1).padStart(2, "0")}`));
+        };
+      });
+      [ini, fim].forEach((el) => {
+        el.addEventListener("change", () => { let a1 = ini.value, z = fim.value; if (!a1 || !z) return; if (a1 > z) [a1, z] = [z, a1]; ir({ ini: a1, fim: z }); });
+        el.addEventListener("click", () => { try { if (el.showPicker) el.showPicker(); } catch (e) { /* sem suporte */ } });
+      });
       return;
     }
     if (chave === "maiorgasto") {
