@@ -3320,3 +3320,7 @@ td:has(> .vm), td:has(> span > .vm) { text-align: right; }
 /* quadros de detalhes: valores que não são em R$ (ex.: a % da Rentabilidade) alinhados à direita */
 #modal .explica-lista .kv > b:not(:has(.vm)) { text-align: right !important; }
 #modal .explica-lista .kv > b:has(> .vm) { display: flex !important; justify-content: flex-end !important; }
+/* arrastar linhas de Despesas e Entradas para escolher a ordem */
+#conteudo .rw[data-lista] { touch-action: pan-y; }
+#conteudo .rw.rw-arrastando { position: relative; z-index: 5; background: var(--painel-2) !important; box-shadow: 0 6px 18px rgba(0,0,0,.45); cursor: grabbing; transition: none; }
+body.arrastando-linha, body.arrastando-linha * { user-select: none !important; -webkit-user-select: none !important; cursor: grabbing !important; }
