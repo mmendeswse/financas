@@ -78,7 +78,13 @@
   function cabeHorizontal(grafico, porMes) { return espacoPorValor(grafico, porMes) >= 34; }
   // escreve os valores na horizontal, centralizados em x; quando um encostaria
   // num já escrito, sobe uma linha (até 4 vezes)
-  function escreverSemEncostar(ctx, itens, area, alturaLinha) {
+  function escreverSemEncostar(ctx, itens, area, alturaLinha, colunas) {
+    // colunas: retângulos das barras; um valor também não pode ficar por cima
+    // da coluna vizinha (só da sua própria, que fica embaixo dele)
+    colunas = colunas || [];
+    var bateColuna = function (r, it) {
+      return colunas.some(function (c) { return c !== it.coluna && r.x0 < c.x1 && r.x1 > c.x0 && r.y0 < c.y1 && r.y1 > c.y0; });
+    };
     // 1º tenta tudo numa linha só: no lugar; depois afastando a receita e a
     // despesa do mesmo mês para lados opostos (na mesma altura); depois com a
     // letra um pouco menor. Só se nada disso couber, um valor sobe uma linha.
@@ -97,9 +103,15 @@
           esq.y = dir.y = y;
           esq.x = Math.min(esq.x, meio - 2 - esq.w / 2);
           dir.x = Math.max(dir.x, meio + 2 + dir.w / 2);
+          // sem passar da borda do gráfico (o par desliza junto para dentro)
+          var passa = dir.x + dir.w / 2 - (area.right - 1);
+          if (passa > 0) { dir.x -= passa; esq.x -= passa; }
+          var falta = (area.left + 1) - (esq.x - esq.w / 2);
+          if (falta > 0) { dir.x += falta; esq.x += falta; }
         });
       }
       var rets = pos.map(function (p) { return { x0: p.x - p.w / 2 - 1, x1: p.x + p.w / 2 + 1, y0: p.y - alturaLinha, y1: p.y }; });
+      for (var k = 0; k < rets.length; k++) if (bateColuna(rets[k], pos[k].it)) return null;
       for (var i = 0; i < rets.length; i++) for (var j = i + 1; j < rets.length; j++) {
         var r = rets[i], q = rets[j];
         if (r.x0 < q.x1 && r.x1 > q.x0 && r.y0 < q.y1 && r.y1 > q.y0) return null;
@@ -115,7 +127,7 @@
       var larg = ctx.measureText(it.txt).width, y = it.y;
       for (var k = 0; k < 5; k++) {
         var r = { x0: it.x - larg / 2 - 2, x1: it.x + larg / 2 + 2, y0: y - alturaLinha, y1: y };
-        var bate = postos.some(function (p) { return r.x0 < p.x1 && r.x1 > p.x0 && r.y0 < p.y1 && r.y1 > p.y0; });
+        var bate = postos.some(function (p) { return r.x0 < p.x1 && r.x1 > p.x0 && r.y0 < p.y1 && r.y1 > p.y0; }) || bateColuna(r, it);
         if (!bate) break;
         y -= alturaLinha + 1;
       }
@@ -187,7 +199,7 @@
       ctx.save();
       ctx.font = "700 " + (estreito || (deitado && espacoPorValor(grafico, 2) < 60) ? 9 : 10) + "px 'Segoe UI', Roboto, Inter, sans-serif";
       ctx.textBaseline = deitado ? "bottom" : "middle"; ctx.textAlign = deitado ? "center" : "left";
-      var itens = [];
+      var itens = [], colunas = [];
       [0, 1].forEach(function (ds) {
         var meta = grafico.getDatasetMeta(ds);
         if (!meta || meta.hidden) return;
@@ -196,15 +208,24 @@
         meta.data.forEach(function (b, i) {
           var v = Number(dados[i]);
           if (!b || !(v > 0)) return;
-          if (deitado) { itens.push({ x: b.x, y: Math.max(area.top + 12, b.y - 4), txt: valorCurto(v), cor: ds === 0 ? CORES.up : CORES.down, grupo: i }); return; }
+          if (deitado) {
+            var col = { x0: b.x - b.width / 2, x1: b.x + b.width / 2, y0: b.y, y1: b.base };
+            colunas.push(col);
+            itens.push({ x: b.x, y: Math.max(area.top + 12, b.y - 4), txt: valorCurto(v), cor: ds === 0 ? CORES.up : CORES.down, grupo: i, coluna: col });
+            return;
+          }
+          // inclinado: começa acima da coluna mais alta do mês, para o texto
+          // (que sobe para a direita) não passar por cima da coluna vizinha
+          var topoMes = b.y;
+          [0, 1].forEach(function (o) { var mo = grafico.getDatasetMeta(o), bo = mo && !mo.hidden && mo.data[i]; if (bo && Number((grafico.data.datasets[o].data || [])[i]) > 0) topoMes = Math.min(topoMes, bo.y); });
           ctx.save();
-          ctx.translate(b.x, Math.max(area.top + 2, b.y - 5));
+          ctx.translate(b.x, Math.max(area.top + 2, topoMes - 5));
           ctx.rotate(angulo);   // inclinado (60°; 75° em colunas estreitas)
           ctx.fillText(valorCurto(v), 0, 0);
           ctx.restore();
         });
       });
-      if (itens.length) escreverSemEncostar(ctx, itens, area, 11);
+      if (itens.length) escreverSemEncostar(ctx, itens, area, 11, colunas);
       ctx.restore();
     }
   };
