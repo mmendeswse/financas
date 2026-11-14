@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.516";
+  const VERSAO_APP = "3.6.517";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -370,6 +370,28 @@
     return `<button class="hd-ordem${ativo ? " ativo" : ""}${classe ? " " + classe : ""}" data-acao="${acao}" data-campo="${campo}" title="Ordenar por ${rotulo.toLowerCase()}">${rotulo}${seta}</button>`;
   }
 
+  // ordem escolhida pela pessoa (arrastando as linhas), por guia e por mês:
+  // DADOS.config.ordemManual = { despesas: { "2026-11": [chave…] }, entradas: {…} }
+  const chaveLinha = (x, lista) => `${lista === "entradas" ? "e" : x.origem || "d"}:${x.id}:${x.data}`;
+  function aplicarOrdemManual(lista, nome, mes) {
+    const salvo = (((DADOS.config || {}).ordemManual || {})[nome] || {})[mes];
+    if (!Array.isArray(salvo) || !salvo.length) return lista;
+    const pos = new Map(salvo.map((k, i) => [k, i]));
+    const conhecidos = lista.filter((x) => pos.has(chaveLinha(x, nome))).sort((a1, b1) => pos.get(chaveLinha(a1, nome)) - pos.get(chaveLinha(b1, nome)));
+    // lançamentos novos (ainda sem lugar escolhido) entram pela data
+    lista.filter((x) => !pos.has(chaveLinha(x, nome))).forEach((x) => {
+      const i = conhecidos.findIndex((y) => (y.data || "") > (x.data || ""));
+      conhecidos.splice(i < 0 ? conhecidos.length : i, 0, x);
+    });
+    return conhecidos;
+  }
+  function salvarOrdemManual(nome, mes, chaves) {
+    DADOS.config = DADOS.config || {};
+    const om = DADOS.config.ordemManual = DADOS.config.ordemManual || {};
+    (om[nome] = om[nome] || {})[mes] = chaves;
+    salvarEAtualizar();
+  }
+
   function comparar(a, b, campo, dir) {
     const mult = dir === "asc" ? 1 : -1;
     let x, y;
@@ -596,7 +618,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.516 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.517 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -5596,6 +5618,8 @@
         if (ordemEntradas.campo === "cronologica") return (a.data || "").localeCompare(b.data || "") || F.ordemNoDia(a) - F.ordemNoDia(b);
         return comparar(a, b, ordemEntradas.campo, ordemEntradas.dir) || (ordemEntradas.campo === "data" ? F.ordemNoDia(a) - F.ordemNoDia(b) : 0);
       });
+    const listaOrd = ordemEntradas.campo === "cronologica" ? aplicarOrdemManual(lista, "entradas", mesEntradas) : lista;
+    lista.splice(0, lista.length, ...listaOrd);
     const totalMes = totalEntradasEfetivas(d, mesEntradas);
     const totalPrevisto = previstasEnt.filter((e) => !e.recebidaNoMes).reduce((t, e) => t + Number(e.valor || 0), 0) + F.totalEntradasPrevistasMes(d, mesEntradas);
     const grid = GRID_LANCAMENTOS;
@@ -5608,7 +5632,7 @@
     } else {
       corpo = `<div class="hd" style="${grid}">${thOrdem("ordenar-entradas", "data", "Data", ordemEntradas)}${thOrdem("ordenar-entradas", "descricao", "Descrição", ordemEntradas)}<i>Recorrência</i>${thOrdem("ordenar-entradas", "status", "Status", ordemEntradas)}${thOrdem("ordenar-entradas", "banco", "Banco", ordemEntradas)}${thOrdem("ordenar-entradas", "valor", "Valor", ordemEntradas, "hd-valor")}</div>` +
         listaTabela.map((e) => `
-        <div class="rw clicavel${e.prevista ? " linha-prevista" : ""}" style="${grid}" data-acao="${e.prevista ? "editar-previsao-entrada" : "editar-entrada"}" data-id="${e.id}" data-data="${e.data}" title="${e.prevista ? "Abre este mês para edição (o valor muda só aqui)" : "Abrir para editar"}">
+        <div class="rw clicavel${e.prevista ? " linha-prevista" : ""}" style="${grid}" data-acao="${e.prevista ? "editar-previsao-entrada" : "editar-entrada"}" data-id="${e.id}" data-data="${e.data}" data-lista="entradas" data-mes="${mesEntradas}" data-chave="${esc(chaveLinha(e, "entradas"))}" title="${e.prevista ? "Abre este mês para edição (o valor muda só aqui)" : "Abrir para editar"}">
           <div class="dim cel-data" style="font-size:12px">${fmtDataCurta(e.data)}${seloSabado(e)}</div>
           <div><div class="nm">${descEmoji(e)}</div><div class="sub">${esc(e.categoria)} · ${esc(e.tipo || "")}</div></div>
           <div class="cel-rep">${celRep(seloFreq(e, true), true)}</div>
@@ -5820,6 +5844,7 @@
         return comparar(a, b, ordemDespesas.campo, ordemDespesas.dir);
       });
 
+    if (ordemDespesas.campo === "cronologica") { const o = aplicarOrdemManual(lista, "despesas", mesDespesas); lista.splice(0, lista.length, ...o); }
     // "Pagas" soma as despesas lançadas e as contas já quitadas do mês;
     // "em aberto" soma o que ainda está pendente ou atrasado no mês
     const somaStatus = (st) => lista.filter((x) => x.status === st).reduce((t, x) => t + Number(x.valor || 0), 0);
@@ -5838,7 +5863,7 @@
     } else {
       corpo = `<div class="hd" style="${gridD}">${thOrdem("ordenar-despesas", "data", "Data", ordemDespesas)}${thOrdem("ordenar-despesas", "descricao", "Descrição", ordemDespesas)}<i>Recorrência</i>${thOrdem("ordenar-despesas", "status", "Status", ordemDespesas)}${thOrdem("ordenar-despesas", "pagoCom", "Banco", ordemDespesas)}${thOrdem("ordenar-despesas", "valor", "Valor", ordemDespesas, "hd-valor")}</div>` +
         listaTabela.map((x) => `
-        <div class="rw clicavel${x.prevista ? " linha-prevista" : ""}" style="${gridD}" data-acao="${x.prevista ? (x.origem === "conta" ? "editar-previsao-conta" : "editar-previsao") : (x.origem === "despesa" ? "editar-despesa" : "editar-conta")}" data-id="${x.id}" data-data="${x.data}" title="${x.prevista ? "Abre este mês para edição (o valor muda só aqui)" : "Abrir para editar"}">
+        <div class="rw clicavel${x.prevista ? " linha-prevista" : ""}" style="${gridD}" data-acao="${x.prevista ? (x.origem === "conta" ? "editar-previsao-conta" : "editar-previsao") : (x.origem === "despesa" ? "editar-despesa" : "editar-conta")}" data-id="${x.id}" data-data="${x.data}" data-lista="despesas" data-mes="${mesDespesas}" data-chave="${esc(chaveLinha(x, "despesas"))}" title="${x.prevista ? "Abre este mês para edição (o valor muda só aqui)" : "Abrir para editar"}">
           <div class="dim cel-data" style="font-size:12px">${fmtData(x.data)}</div>
           <div><div class="nm">${descEmoji(x)}</div><div class="sub">${esc(x.categoria || "—")} · ${esc(x.tipo || "Variável")}</div></div>
           <div class="cel-rep">${celRep(seloFreq({ ...(registrosSerie("despesa").find((y) => y.id === x.id) || {}), recorrencia: x.recorrencia, data: x.data }, true), true)}</div>
@@ -9154,6 +9179,77 @@
     ["conteudo", "modal"].forEach((id) => { const el = document.getElementById(id); if (el) obsValores.observe(el, { childList: true, subtree: true, characterData: true }); });
     obsValores._ligado = true;
   }
+
+  // Arrastar as linhas de Despesas e Entradas para escolher a ordem.
+  // Mouse: segura e arrasta. Toque (iPad/celular): segura um instante e arrasta
+  // (um toque rápido continua abrindo a linha, e deslizar continua rolando a tela).
+  let arrasteFeito = 0;
+  (function ligarArrasteLinhas() {
+    let est = null;
+    const linhasDe = (rw) => [...rw.parentElement.querySelectorAll(`:scope > .rw[data-lista="${rw.dataset.lista}"]`)];
+    const comecar = () => {
+      est.ativo = true;
+      est.rw.classList.add("rw-arrastando");
+      document.body.classList.add("arrastando-linha");
+    };
+    // a linha acompanha o ponteiro; quando passa do meio da vizinha, troca de lugar com ela
+    const mover = (y) => {
+      const rw = est.rw;
+      const naturalTop = () => { const t = rw.style.transform; rw.style.transform = ""; const v = rw.getBoundingClientRect().top; rw.style.transform = t; return v; };
+      const centro = y - est.off + rw.offsetHeight / 2;
+      const outras = linhasDe(rw).filter((r) => r !== rw);
+      let alvo = null;
+      for (const r of outras) { const bb = r.getBoundingClientRect(); if (centro < bb.top + bb.height / 2) { alvo = r; break; } }
+      if (alvo) { if (alvo.previousElementSibling !== rw) rw.parentElement.insertBefore(rw, alvo); }
+      else { const ult = outras[outras.length - 1]; if (ult && ult.nextElementSibling !== rw) ult.after(rw); }
+      rw.style.transform = `translateY(${y - est.off - naturalTop()}px)`;
+    };
+    const terminar = (salvar) => {
+      if (!est) return;
+      clearTimeout(est.timer);
+      const { rw, ativo } = est;
+      if (ativo) {
+        rw.classList.remove("rw-arrastando"); rw.style.transform = ""; document.body.classList.remove("arrastando-linha");
+        arrasteFeito = Date.now();
+        if (salvar) {
+          const nome = rw.dataset.lista, mes = rw.dataset.mes;
+          const visiveis = linhasDe(rw).map((r) => r.dataset.chave);
+          // com filtro ligado, só as linhas visíveis mudam de lugar entre si
+          const atual = (((DADOS.config || {}).ordemManual || {})[nome] || {})[mes];
+          let todas = Array.isArray(atual) ? atual.slice() : [];
+          visiveis.forEach((k) => { if (!todas.includes(k)) todas.push(k); });
+          const vis = new Set(visiveis); let i = 0;
+          todas = todas.map((k) => (vis.has(k) ? visiveis[i++] : k));
+          salvarOrdemManual(nome, mes, todas);
+        }
+      }
+      est = null;
+    };
+    document.addEventListener("pointerdown", (e) => {
+      const rw = e.target.closest("#conteudo .rw[data-lista][data-chave]");
+      if (!rw || e.button > 0 || e.target.closest("button, a, input, select, label")) return;
+      // só na ordem "do mês" (com uma coluna escolhida para ordenar, a ordem é a da coluna)
+      if ((rw.dataset.lista === "despesas" ? ordemDespesas : ordemEntradas).campo !== "cronologica") return;
+      est = { rw, y0: e.clientY, x0: e.clientX, off: e.clientY - rw.getBoundingClientRect().top, id: e.pointerId, toque: e.pointerType !== "mouse", ativo: false };
+      if (est.toque) est.timer = setTimeout(() => { if (est && !est.ativo) { comecar(); if (navigator.vibrate) navigator.vibrate(15); } }, 350);
+    });
+    document.addEventListener("pointermove", (e) => {
+      if (!est || e.pointerId !== est.id) return;
+      const dy = e.clientY - est.y0, dx = e.clientX - est.x0;
+      if (!est.ativo) {
+        if (est.toque) { if (Math.abs(dy) > 8 || Math.abs(dx) > 8) terminar(false); return; }   // deslizou antes da hora: é rolagem
+        if (Math.abs(dy) < 6) return;
+        comecar();
+      }
+      e.preventDefault();
+      mover(e.clientY);
+    }, { passive: false });
+    document.addEventListener("touchmove", (e) => { if (est && est.ativo) e.preventDefault(); }, { passive: false });
+    document.addEventListener("pointerup", () => terminar(true));
+    document.addEventListener("pointercancel", () => terminar(false));
+    // o clique que vem logo depois de soltar não abre a linha
+    document.addEventListener("click", (e) => { if (Date.now() - arrasteFeito < 400 && e.target.closest(".rw[data-lista]")) { e.stopPropagation(); e.preventDefault(); } }, true);
+  })();
 
   function montarGraficosDaRota() {
     const d = DADOS;
