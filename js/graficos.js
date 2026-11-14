@@ -99,12 +99,11 @@
         Object.keys(grupos).forEach(function (g) {
           var par = grupos[g]; if (par.length !== 2) return;
           par.sort(function (a, b) { return a.x - b.x; });
-          var esq = par[0], dir = par[1], meio = (esq.x + dir.x) / 2, y = Math.min(esq.y, dir.y);
-          esq.y = dir.y = y;
+          var esq = par[0], dir = par[1], meio = (esq.x + dir.x) / 2;   // cada valor continua no topo da sua coluna
           esq.x = Math.min(esq.x, meio - 2 - esq.w / 2);
           dir.x = Math.max(dir.x, meio + 2 + dir.w / 2);
           // sem passar da borda do gráfico (o par desliza junto para dentro)
-          var passa = dir.x + dir.w / 2 - (area.right - 1);
+          var passa = dir.x + dir.w / 2 - (area.right + 20);
           if (passa > 0) { dir.x -= passa; esq.x -= passa; }
           var falta = (area.left + 1) - (esq.x - esq.w / 2);
           if (falta > 0) { dir.x += falta; esq.x += falta; }
@@ -211,16 +210,23 @@
           if (deitado) {
             var col = { x0: b.x - b.width / 2, x1: b.x + b.width / 2, y0: b.y, y1: b.base };
             colunas.push(col);
-            itens.push({ x: b.x, y: Math.max(area.top + 12, b.y - 4), txt: valorCurto(v), cor: ds === 0 ? CORES.up : CORES.down, grupo: i, coluna: col });
+            // no topo da própria coluna; quando o texto é mais largo que ela,
+            // sobra para o lado de fora do par (receita para a esquerda, despesa
+            // para a direita), sem passar por cima da coluna vizinha
+            var w = ctx.measureText(valorCurto(v)).width, cx = b.x;
+            if (w > b.width) cx = ds === 0 ? b.x + b.width / 2 - w / 2 : b.x - b.width / 2 + w / 2;
+            cx = Math.max(area.left + w / 2, Math.min(grafico.width - 2 - w / 2, cx));   // sem passar da borda do quadro
+            itens.push({ x: cx, y: Math.max(area.top + 12, b.y - 4), txt: valorCurto(v), cor: ds === 0 ? CORES.up : CORES.down, grupo: i, coluna: col });
             return;
           }
-          // inclinado: começa acima da coluna mais alta do mês, para o texto
-          // (que sobe para a direita) não passar por cima da coluna vizinha
-          var topoMes = b.y;
-          [0, 1].forEach(function (o) { var mo = grafico.getDatasetMeta(o), bo = mo && !mo.hidden && mo.data[i]; if (bo && Number((grafico.data.datasets[o].data || [])[i]) > 0) topoMes = Math.min(topoMes, bo.y); });
+          // inclinado, no topo da própria coluna. O texto sobe para a direita;
+          // a receita mais baixa que a despesa do lado sobe para a esquerda,
+          // para não atravessar a coluna da despesa
+          var mDesp = grafico.getDatasetMeta(1), bDesp = ds === 0 && mDesp && !mDesp.hidden && mDesp.data[i];
+          var paraEsquerda = bDesp && Number((grafico.data.datasets[1].data || [])[i]) > 0 && bDesp.y < b.y;
           ctx.save();
-          ctx.translate(b.x, Math.max(area.top + 2, topoMes - 5));
-          ctx.rotate(angulo);   // inclinado (60°; 75° em colunas estreitas)
+          ctx.translate(b.x, Math.max(area.top + 2, b.y - 5));
+          if (paraEsquerda) { ctx.rotate(-angulo); ctx.textAlign = "right"; } else ctx.rotate(angulo);   // inclinado (60°; 75° em colunas estreitas)
           ctx.fillText(valorCurto(v), 0, 0);
           ctx.restore();
         });
@@ -372,8 +378,9 @@
         onHover: function (evt, elementos, grafico) {
           if (evt && evt.native && evt.native.target) evt.native.target.style.cursor = (opcoes.aoClicar && alvoRD(evt, grafico || this)) ? "pointer" : "default";
         },
-        // nomes dos meses como botões (ver botoesMesRD): na horizontal, com espaço em volta
-        layout: { padding: { bottom: 4 } },
+        // nomes dos meses como botões (ver botoesMesRD): na horizontal, com espaço em volta;
+        // folga à direita para o valor da despesa do último mês caber no topo da coluna
+        layout: { padding: { bottom: 4, right: 22 } },
         scales: { x: eixoX({ ticks: { color: function (c) { return (c.tick ? c.tick.value : c.index) === mesAtualIdx ? "#FFC64A" : CORES.cy; }, font: fonte(10.5), maxRotation: 0, autoSkip: false, padding: 9, callback: function (v) { return nomeMesEixo(this, v); } } }),
           // folga em cima para o valor inclinado da barra mais alta (valoresRD)
           y: eixoY(Object.assign(topoComFolga(0.12, 2), { afterFit: larguraEixoY })) },
@@ -519,7 +526,7 @@
         // folga à direita para o valor inclinado do último mês
         // meses no meio de cada coluna (offset), como no Receitas x despesas,
         // e eixo do valor com a mesma largura: os meses dos dois gráficos ficam alinhados
-        layout: { padding: { bottom: 4 }, autoPadding: false },
+        layout: { padding: { bottom: 4, right: 22 }, autoPadding: false },   // mesma folga à direita do Receitas x despesas (meses alinhados)
         scales: { x: eixoX({ offset: true, ticks: { color: function (c) { return (c.tick ? c.tick.value : c.index) === mesAtualIdx ? "#FFC64A" : CORES.cy; }, font: fonte(10.5), maxTicksLimit: 12, maxRotation: 0, padding: 9, callback: function (v) { return nomeMesEixo(this, v); } } }),
           // folga em cima para o valor inclinado do ponto mais alto (valoresEvolucao)
           y: eixoY(Object.assign(topoComFolga(0.12, 1), { afterFit: larguraEixoY })) },
