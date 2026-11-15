@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.528";
+  const VERSAO_APP = "3.6.529";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -618,7 +618,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.528 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.529 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -2304,6 +2304,72 @@
     const f = m || { cor: "var(--linha-2)", letra: (chave[0] || "?").toUpperCase() };
     const fonte = f.letra.length > 1 ? t * 0.42 : t * 0.52;
     return `<span class="marca-banco" style="width:${t}px;height:${t}px;background:${f.cor};color:${f.texto || "#fff"};font-size:${fonte}px" aria-hidden="true">${esc(f.letra)}</span>`;
+  }
+
+  // Listas de bancos (campos <select>): o <select> do navegador não mostra
+  // imagens, então ele fica escondido e no lugar aparece uma lista nossa com
+  // o logo de cada banco na frente do nome. O <select> continua valendo
+  // (value e evento "change"), então os formulários não mudam.
+  function ehSelectDeBancos(sel) {
+    const nomes = new Set((DADOS.bancos || []).map((b) => String(b.nome || "").trim().toLowerCase()));
+    const ops = [...sel.options].filter((o) => o.textContent.trim() && !/^[—–-]+$/.test(o.textContent.trim()));
+    const deBanco = ops.filter((o) => nomes.has(o.textContent.trim().toLowerCase()));
+    return deBanco.length >= 2 && deBanco.length >= ops.length * 0.6;
+  }
+  function melhorarSelectsBanco(raiz) {
+    (raiz || document).querySelectorAll("select:not([data-sel-banco])").forEach((sel) => {
+      if (!ehSelectDeBancos(sel)) return;
+      sel.dataset.selBanco = "1";
+      const caixa = document.createElement("div");
+      caixa.className = "sel-banco";
+      const btn = document.createElement("button");
+      btn.type = "button"; btn.className = "sel-banco-btn";
+      if (sel.id) btn.setAttribute("aria-labelledby", sel.id);
+      caixa.appendChild(btn);
+      sel.after(caixa);
+      sel.classList.add("sel-banco-nativo");
+      const itemHtml = (o) => {
+        const txt = o.textContent.trim();
+        const banco = (DADOS.bancos || []).some((b) => String(b.nome || "").trim().toLowerCase() === txt.toLowerCase());
+        return `${banco ? marcaBanco(txt, 20) : `<span class="sel-banco-vazio"></span>`}<span class="sel-banco-txt">${esc(txt)}</span>`;
+      };
+      const pintar = () => { sel._ultimo = sel.value; const o = sel.options[sel.selectedIndex]; btn.innerHTML = (o ? itemHtml(o) : "") + `<span class="sel-banco-seta">▾</span>`; btn.disabled = sel.disabled; caixa.hidden = sel.hidden || sel.closest("[hidden]") !== null; };
+      sel._pintar = pintar;
+      pintar();
+      sel.addEventListener("change", pintar);
+      let lista = null;
+      const fechar = () => { if (lista) { lista.remove(); lista = null; document.removeEventListener("pointerdown", fora, true); } };
+      const fora = (e) => { if (lista && !lista.contains(e.target) && !btn.contains(e.target)) fechar(); };
+      btn.addEventListener("click", (e) => {
+        e.preventDefault(); e.stopPropagation();
+        if (lista) { fechar(); return; }
+        lista = document.createElement("div");
+        lista.className = "sel-banco-lista";
+        lista.innerHTML = [...sel.options].map((o, i) => `<button type="button" class="sel-banco-op${i === sel.selectedIndex ? " ativo" : ""}" data-i="${i}"${o.disabled ? " disabled" : ""}>${itemHtml(o)}</button>`).join("");
+        document.body.appendChild(lista);
+        const r = btn.getBoundingClientRect(), alt = Math.min(lista.scrollHeight, 320);
+        const embaixo = window.innerHeight - r.bottom > alt + 8 || r.top < alt + 8;
+        Object.assign(lista.style, { left: r.left + "px", width: r.width + "px", top: (embaixo ? r.bottom + 4 : r.top - alt - 4) + "px" });
+        lista.addEventListener("click", (ev) => {
+          const op = ev.target.closest(".sel-banco-op"); if (!op) return;
+          ev.stopPropagation();
+          sel.selectedIndex = Number(op.dataset.i);
+          sel.dispatchEvent(new Event("input", { bubbles: true }));
+          sel.dispatchEvent(new Event("change", { bubbles: true }));
+          fechar(); btn.focus();
+        });
+        setTimeout(() => document.addEventListener("pointerdown", fora, true), 0);
+      });
+      btn.addEventListener("keydown", (e) => { if (e.key === "Escape") fechar(); });
+      window.addEventListener("scroll", fechar, true);
+    });
+  }
+  // valor trocado pelo próprio app (sem evento "change"): a lista acompanha
+  setInterval(() => document.querySelectorAll("select[data-sel-banco]").forEach((sel) => { if (sel._pintar && sel.value !== sel._ultimo) sel._pintar(); }), 700);
+  if ("MutationObserver" in window) {
+    let fila = 0;
+    new MutationObserver(() => { if (fila) return; fila = requestAnimationFrame(() => { fila = 0; melhorarSelectsBanco(document); }); })
+      .observe(document.documentElement, { childList: true, subtree: true });
   }
 
   const ICONES_REL = {
