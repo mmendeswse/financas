@@ -3327,3 +3327,7 @@ body.arrastando-linha, body.arrastando-linha * { user-select: none !important; -
 /* quadro do banco: Alterar, Editar e Fechar do mesmo tamanho, ocupando a largura toda */
 .modal-acoes.acoes-iguais { display: flex; gap: 10px; }
 .modal-acoes.acoes-iguais > .btn { flex: 1 1 0 !important; justify-content: center; min-width: 0; height: 44px; }
+/* Patrimônio no período: a variação de cada mês numa coluna própria, alinhada */
+.kv .kv-rot-delta { display: flex; align-items: center; gap: 10px; width: 100%; padding-right: 18px; }
+.kv .kv-rot-delta .delta-mes { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.kv:has(.kv-rot-delta) > span:first-child { flex: 1 1 auto; min-width: 0; }
