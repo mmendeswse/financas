@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.522";
+  const VERSAO_APP = "3.6.523";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -618,7 +618,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.522 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.523 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -3387,7 +3387,7 @@
   }
 
   // quadro do banco: só o histórico da conta, com o período De/Até e os atalhos
-  // numa linha, e os botões Depositar / Editar / Fechar
+  // numa linha, e os botões Alterar / Editar / Fechar (o Depositar fica no quadro Meus bancos)
   function explicarBanco(id) {
     const d = DADOS;
     const b = bancosDoPeriodo(d).find((x) => x.id === id);
@@ -3397,13 +3397,11 @@
       <h3 class="extrato-cab-banco"><span>${esc(b.nome)}</span><b class="${corSinal(b.saldoAtual)}">${brlSinal(b.saldoAtual)}</b></h3>
       ${extratoBancoHtml(d, b)}
       <div class="modal-acoes">
-        <button class="btn primario salvar" id="btnIrPainel">Depositar</button>
         <button class="btn" id="btnSaldoReal" title="Alterar o saldo do banco">Alterar</button>
         <button class="btn btn-com-icone" id="btnEditarBanco" title="Editar os dados do banco">${ICONE_EDITAR}Editar</button>
         <button class="btn" id="btnFecharPainel">Fechar</button>
       </div>`);
     document.getElementById("modal").classList.add("modal-extrato");
-    document.getElementById("btnIrPainel").onclick = () => { fecharModal(); abrirModalValorBanco(b.id); };
     document.getElementById("btnEditarBanco").onclick = () => { fecharModal(); abrirModalBanco(b.id); };
     document.getElementById("btnSaldoReal").onclick = () => { fecharModal(); informarSaldoBanco(b.id, { depois: () => explicarBanco(b.id) }); };
     document.getElementById("btnFecharPainel").onclick = fecharModal;
@@ -4267,7 +4265,7 @@
     return `
       ${faixaDemo(d)}
       <div class="grid g-top">
-        <div class="c12">${card("c12", "Meus bancos", `${bancos.length} ${bancos.length === 1 ? "Conta" : "Contas"}`, `${d.bancos.length > 1 ? `<button class="btn" data-acao="nova-transferencia" title="Passar dinheiro de um banco para outro">⇄ TRANSFERIR</button>` : ""}<button class="btn primario" data-acao="nova-banco"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`, listaHtml)}</div>
+        <div class="c12">${card("c12", "Meus bancos", `${bancos.length} ${bancos.length === 1 ? "Conta" : "Contas"}`, `${d.bancos.length ? `<button class="btn" data-acao="depositar-banco" title="Somar um valor a um banco (entra em Entradas)">DEPOSITAR</button>` : ""}${d.bancos.length > 1 ? `<button class="btn" data-acao="nova-transferencia" title="Passar dinheiro de um banco para outro">⇄ TRANSFERIR</button>` : ""}<button class="btn primario" data-acao="nova-banco"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICONES.mais}</svg>NOVO</button>`, listaHtml)}</div>
       </div>
       <div class="grid">
         <div class="c12">${card("", "Saldo bancos", mesesBancos ? `Movimentação · ${mesesBancos} ${mesesBancos === 1 ? "mês" : "meses"} de ${anoBancos}` : "comparação entre contas",
@@ -5653,17 +5651,22 @@
 
   // Janela simples para somar um valor à conta, no mesmo formato da que
   // adiciona valor a uma meta. O lançamento entra em Entradas.
+  // sem banco (botão DEPOSITAR do quadro Meus bancos): escolhe o banco na janela
   function abrirModalValorBanco(bancoId) {
-    const b = achar(DADOS.bancos, bancoId);
-    if (!b) return;
+    const fixo = bancoId ? achar(DADOS.bancos, bancoId) : null;
+    if (bancoId && !fixo) return;
+    if (!fixo && !DADOS.bancos.length) { toast("Cadastre um banco primeiro."); return; }
     abrirModal(`
-      <h3>Depositar — ${esc(b.nome)}</h3>
+      <h3>Depositar${fixo ? ` — ${esc(fixo.nome)}` : ""}</h3>
+      ${fixo ? "" : `<div class="campo"><label for="f_banco">Banco</label><select id="f_banco">${DADOS.bancos.map((x) => `<option value="${esc(x.id)}">${esc(x.nome)}</option>`).join("")}</select></div>`}
       <div class="campo"><label for="f_valor">Quanto você quer depositar?</label>${campoMoeda("f_valor", "")}</div>
       <div class="campo"><label for="f_desc">Descrição</label><input id="f_desc" value="Depósito" placeholder="Depósito"></div>
       <div class="modal-acoes"><button class="btn primario salvar" id="btnSalvar">Depositar</button></div>`);
     document.getElementById("btnSalvar").onclick = () => {
       const v = numIn(document.getElementById("f_valor").value);
       if (!(v > 0)) { toast("Informe um valor maior que zero."); return; }
+      const b = fixo || achar(DADOS.bancos, document.getElementById("f_banco").value);
+      if (!b) { toast("Escolha o banco."); return; }
       DADOS.entradas.push({
         id: A.novoId(), data: hojeISO(),
         descricao: (document.getElementById("f_desc").value || "Depósito").trim(),
@@ -9513,6 +9516,7 @@
         case "novo-ativo": abrirModalAcao(null); break;
         case "editar-acao": abrirModalAcao(id); break;
         case "explicar-kpi": explicarKPI(b.dataset.kpi); break;
+        case "depositar-banco": abrirModalValorBanco(); break;
         case "explicar-periodo-evo": explicarPeriodoEvo(Number(b.dataset.meses) || 0, b.dataset.ano, b.dataset.anotodo === "1"); break;
         // textos de baixo dos quadros do topo do Dashboard: cada um abre o seu quadro
         case "kpi-sub":
