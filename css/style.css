@@ -3342,3 +3342,10 @@ select.sel-banco-nativo { display: none !important; }
 .sel-banco-lista { position: fixed; z-index: 2000; max-height: 320px; overflow-y: auto; padding: 4px; border: 1px solid var(--linha-2); border-radius: 10px; background: var(--painel); box-shadow: 0 12px 30px rgba(0,0,0,.5); }
 .sel-banco-op { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; border: 0; border-radius: 8px; background: none; color: var(--texto); font: inherit; text-align: left; cursor: pointer; }
 .sel-banco-op:hover, .sel-banco-op.ativo { background: rgba(0,229,255,.12); }
+/* histórico da conta: o banco de origem/destino da transferência com o logo na frente */
+.desc-sub .sub-banco { display: inline-flex; align-items: center; gap: 4px; vertical-align: middle; }
+.desc-sub .sub-banco .marca-logo, .desc-sub .sub-banco .marca-banco { flex: none; border-radius: 3px; }
+/* ícone de De (entrou) / Para (saiu) nas transferências do histórico */
+.ic-de-para { width: 14px; height: 14px; flex: none; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.ic-de-para.up { color: var(--up); }
+.ic-de-para.down { color: var(--down); }

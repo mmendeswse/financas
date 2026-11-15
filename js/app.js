@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.529";
+  const VERSAO_APP = "3.6.533";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -618,7 +618,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.529 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.533 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -3433,7 +3433,17 @@
     // o emoji do lançamento (o escolhido ou o da categoria) na frente da descrição
     // embaixo da descrição, "Categoria · Tipo" como nas guias Entradas e Despesas
     // transferência: "Para · Banco" (ou "De · Banco") embaixo, como o "Categoria · Tipo" dos lançamentos
-    const subItem = (i) => i.tipo === "transferencia" ? (i.sub ? `<span class="desc-sub sem-quebra">${esc(i.sub)}</span>` : "")
+    // transferência: ícone de "De"/"Para" e o logo do outro banco na frente do nome
+    const subTransf = (sub) => {
+      const m = /^(De|Para) · ([^·]+?)( · .*)?$/.exec(String(sub || ""));
+      if (!m) return esc(sub);
+      // ícone no lugar do texto: "De" = seta entrando na bandeja (verde), "Para" = seta saindo (vermelho)
+      const ic = m[1] === "De"
+        ? `<svg class="ic-de-para up" viewBox="0 0 24 24" aria-label="De" role="img"><title>De</title><path d="M12 3v11"/><polyline points="7.5,9.5 12,14 16.5,9.5"/><path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>`
+        : `<svg class="ic-de-para down" viewBox="0 0 24 24" aria-label="Para" role="img"><title>Para</title><path d="M12 14V3"/><polyline points="7.5,7.5 12,3 16.5,7.5"/><path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>`;
+      return `<span class="sub-banco">${ic}<span class="sub-ponto">·</span>${marcaBanco(m[2].trim(), 14)}${esc(m[2].trim())}</span>${m[3] ? esc(m[3]) : ""}`;
+    };
+    const subItem = (i) => i.tipo === "transferencia" ? (i.sub ? `<span class="desc-sub sem-quebra">${subTransf(i.sub)}</span>` : "")
       : i.ref ? `<span class="desc-sub">${subDe({ id: i.ref.id, categoria: i.categoria })}</span>` : "";
     const doItem = (i) => linha(fmtDataCurta(i.data), descEmoji(i) + subItem(i), i.valor, i.saldo, "", i.ref, i.tipo, i.previsto, i.auto, i.transfId, i.ajusteId);
     let corpo;
