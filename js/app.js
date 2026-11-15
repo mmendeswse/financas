@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.527";
+  const VERSAO_APP = "3.6.528";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -618,7 +618,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.527 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.528 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -8519,7 +8519,9 @@
     if (hist.length < 2) return;
     const ini = hist[0], fim = hist[hist.length - 1], dif = fim.valor - ini.valor;
     const linha = (r, v, c) => `<div class="kv"><span class="dim">${r}</span><b class="${c || ""}">${v}</b></div>`;
-    const nome = (h) => { const t = new Date(String(h.data).slice(0, 10) + "T12:00:00").toLocaleDateString("pt-BR", { month: "long", year: "numeric" }); return t.charAt(0).toUpperCase() + t.slice(1) + (h.hoje ? " (hoje)" : ""); };
+    // só o nome do mês ("Fevereiro"); o ano aparece apenas se o período passar de um ano
+    const umAno = new Set(hist.map((h) => String(h.data).slice(0, 4))).size === 1;
+    const nome = (h) => { const t = new Date(String(h.data).slice(0, 10) + "T12:00:00").toLocaleDateString("pt-BR", umAno ? { month: "long" } : { month: "long", year: "numeric" }); return t.charAt(0).toUpperCase() + t.slice(1) + (h.hoje ? " (hoje)" : ""); };
     const linhas = linha("Começo · " + fmtData(String(ini.data).slice(0, 10)), brlSinal(ini.valor)) +
       hist.slice(1).map((h, i) => { const d1 = h.valor - hist[i].valor; return linha(`<span class="kv-rot-delta"><span>${nome(h)}</span><span class="delta-mes ${corSinal(d1)}"><span class="seta-delta">${d1 >= 0 ? "▲" : "▼"}</span><span class="col-delta">${brlSinal(d1)}</span></span></span>`, brlSinal(h.valor)); }).join("") +
       linha("Variação no período", brlSinal(dif), corSinal(dif));
