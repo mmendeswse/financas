@@ -62,12 +62,15 @@
           ctx.save();
           ctx.font = fonte.string; ctx.textBaseline = "middle";
           var self = this;
+          // o R$ fica logo antes do número mais largo (4 px), não na borda do eixo
+          var maxNum = Math.max.apply(null, partes.map(function (m) { return ctx.measureText(m[2]).width; }));
+          var xRS = Math.max(x0, x1 - maxNum - 4);
           ticks.forEach(function (t, i) {
             var y = self.getPixelForTick(i);
             if (y < area.top - 8 || y > area.bottom + 8) return;
             var cor = typeof op.color === "function" ? op.color({ tick: t, index: i, scale: self }) : op.color;
             ctx.fillStyle = cor || CORES.texto;
-            ctx.textAlign = "left"; ctx.fillText(partes[i][1].replace(/\s+/g, ""), x0, y);
+            ctx.textAlign = "right"; ctx.fillText(partes[i][1].replace(/\s+/g, ""), xRS, y);
             ctx.textAlign = "right"; ctx.fillText(partes[i][2], x1, y);
           });
           ctx.restore();
