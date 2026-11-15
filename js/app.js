@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.526";
+  const VERSAO_APP = "3.6.527";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -618,7 +618,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.526 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.527 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -1996,9 +1996,27 @@
   }
 
   function ligarSidebar() {
-    document.getElementById("navPrincipal").addEventListener("click", (e) => {
+    // Troca de guia ao soltar o dedo/botão sobre a guia em que se encostou.
+    // Antes dependia só do "click", que o navegador descarta quando a barra
+    // se reorganiza entre apertar e soltar (relógio, data, sincronização ao
+    // voltar para o app) — e aí era preciso clicar duas vezes.
+    const nav = document.getElementById("navPrincipal");
+    let toqueGuia = null, navegouEm = 0;
+    nav.addEventListener("pointerdown", (e) => {
       const b = e.target.closest("button[data-secao]");
-      if (b) navegarPara(b.dataset.secao);
+      toqueGuia = b && e.button <= 0 ? { secao: b.dataset.secao, x: e.clientX, y: e.clientY } : null;
+    });
+    nav.addEventListener("pointerup", (e) => {
+      const t = toqueGuia; toqueGuia = null;
+      if (!t || Math.abs(e.clientX - t.x) > 12 || Math.abs(e.clientY - t.y) > 12) return;   // arrastou a barra: não troca
+      navegouEm = Date.now();
+      navegarPara(t.secao);
+    });
+    nav.addEventListener("pointercancel", () => { toqueGuia = null; });
+    nav.addEventListener("click", (e) => {
+      const b = e.target.closest("button[data-secao]");
+      if (!b || Date.now() - navegouEm < 600) return;   // já trocou no pointerup
+      navegarPara(b.dataset.secao);   // teclado (Enter/Espaço) e leitores de tela
     });
     const logo = document.getElementById("btnLogo");
     if (logo) logo.addEventListener("click", () => navegarPara("dashboard"));
