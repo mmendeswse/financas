@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.520";
+  const VERSAO_APP = "3.6.521";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -618,7 +618,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.520 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.521 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -8483,7 +8483,7 @@
     const varPer = hist.length >= 2 ? hist[hist.length - 1].valor - hist[0].valor : 0;
     const periodo = cfg.meses ? cfg.meses + " meses de " + cfg.ano : cfg.idAno ? "ano inteiro de " + cfg.ano : "todo histórico";
     return card("", "Evolução patrimonial", `patrimônio líquido · ${periodo}`,
-      (hist.length >= 2 ? `<span class="pill-periodo ${corSinal(varPer)}">PERÍODO ${brlSinal(varPer)}</span>` : "") +
+      (hist.length >= 2 ? `<button class="pill-periodo clicavel ${corSinal(varPer)}" data-acao="explicar-periodo-evo" data-meses="${cfg.meses || 0}" data-ano="${esc(String(cfg.ano || ""))}" data-anotodo="${cfg.idAno ? 1 : 0}" title="Ver como o patrimônio mudou no período">PERÍODO ${brlSinal(varPer)}</button>` : "") +
       `<div class="filtro-mes">${cfg.idAno ? seletorAnoDash(cfg.idAno, cfg.ano, anosDashboard(d)) : ""}${abasMeses(cfg.acao, cfg.meses, [{ meses: 3, rotulo: "3m" }, { meses: 6, rotulo: "6m" }, { meses: 12, rotulo: "12m" }])}</div>`,
       hist.length >= 2
         ? `<div${cfg.classe ? ` class="${cfg.classe}"` : ""} style="padding:8px 16px 12px;height:280px"><canvas id="${cfg.canvas}"></canvas></div>`
@@ -8491,6 +8491,22 @@
   }
 
   function historicoEvo(d) { return histEvolucao(d, mesesEvo, anoEvo); }
+  // PERÍODO da Evolução patrimonial: o patrimônio no começo e no fim do período
+  // e quanto mudou em cada registro, do mais antigo ao mais novo
+  function explicarPeriodoEvo(meses, ano, anoTodo) {
+    const hist = histEvolucao(DADOS, meses, ano, anoTodo);
+    if (hist.length < 2) return;
+    const ini = hist[0], fim = hist[hist.length - 1], dif = fim.valor - ini.valor;
+    const linha = (r, v, c) => `<div class="kv"><span class="dim">${r}</span><b class="${c || ""}">${v}</b></div>`;
+    const nome = (h) => { const t = new Date(String(h.data).slice(0, 10) + "T12:00:00").toLocaleDateString("pt-BR", { month: "long", year: "numeric" }); return t.charAt(0).toUpperCase() + t.slice(1) + (h.hoje ? " (hoje)" : ""); };
+    const linhas = linha("Começo · " + fmtData(String(ini.data).slice(0, 10)), brlSinal(ini.valor)) +
+      hist.slice(1).map((h, i) => { const d1 = h.valor - hist[i].valor; return linha(`${nome(h)} <span class="${corSinal(d1)}">${d1 >= 0 ? "▲" : "▼"} ${brlSinal(d1)}</span>`, brlSinal(h.valor)); }).join("") +
+      linha("Variação no período", brlSinal(dif), corSinal(dif));
+    const rot = meses ? `${meses} meses de ${ano}` : anoTodo ? `ano inteiro de ${ano}` : "todo histórico";
+    painelSimples(`Patrimônio no período · ${rot}`, ini.valor ? (dif / Math.abs(ini.valor)) * 100 : 0,
+      dif >= 0 ? "de crescimento do patrimônio no período" : "de queda do patrimônio no período", "patrimônio no fim − patrimônio no começo do período",
+      linhas, "relatorios");
+  }
 
 
   // Lista de anos dos seletores: do ano mais antigo com dados (ou do ano
@@ -9497,6 +9513,7 @@
         case "novo-ativo": abrirModalAcao(null); break;
         case "editar-acao": abrirModalAcao(id); break;
         case "explicar-kpi": explicarKPI(b.dataset.kpi); break;
+        case "explicar-periodo-evo": explicarPeriodoEvo(Number(b.dataset.meses) || 0, b.dataset.ano, b.dataset.anotodo === "1"); break;
         // textos de baixo dos quadros do topo do Dashboard: cada um abre o seu quadro
         case "kpi-sub":
           if (b.dataset.kpi === "dividas") { origemHistorico = "patrimonio"; explicarHistoricoClasse("dividas"); }
