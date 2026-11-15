@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.525";
+  const VERSAO_APP = "3.6.526";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -618,7 +618,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.525 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.526 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -8503,7 +8503,7 @@
     const linha = (r, v, c) => `<div class="kv"><span class="dim">${r}</span><b class="${c || ""}">${v}</b></div>`;
     const nome = (h) => { const t = new Date(String(h.data).slice(0, 10) + "T12:00:00").toLocaleDateString("pt-BR", { month: "long", year: "numeric" }); return t.charAt(0).toUpperCase() + t.slice(1) + (h.hoje ? " (hoje)" : ""); };
     const linhas = linha("Começo · " + fmtData(String(ini.data).slice(0, 10)), brlSinal(ini.valor)) +
-      hist.slice(1).map((h, i) => { const d1 = h.valor - hist[i].valor; return linha(`${nome(h)} <span class="${corSinal(d1)}">${d1 >= 0 ? "▲" : "▼"} ${brlSinal(d1)}</span>`, brlSinal(h.valor)); }).join("") +
+      hist.slice(1).map((h, i) => { const d1 = h.valor - hist[i].valor; return linha(`<span class="kv-rot-delta"><span>${nome(h)}</span><span class="delta-mes ${corSinal(d1)}"><span class="seta-delta">${d1 >= 0 ? "▲" : "▼"}</span><span class="col-delta">${brlSinal(d1)}</span></span></span>`, brlSinal(h.valor)); }).join("") +
       linha("Variação no período", brlSinal(dif), corSinal(dif));
     const rot = meses ? `${meses} meses de ${ano}` : anoTodo ? `ano inteiro de ${ano}` : "todo histórico";
     painelSimples(`Patrimônio no período · ${rot}`, ini.valor ? (dif / Math.abs(ini.valor)) * 100 : 0,
@@ -9112,7 +9112,7 @@
   const RE_VALOR_CEL = /^\s*([+−-]?)\s*R\$\s*([\d.,]+)\s*$/;
   function alinharValoresTabelas(raiz) {
     if (!raiz) return;
-    raiz.querySelectorAll("td, .cel-valor > span, .col-valor, .legenda-val, .barlist-valor, .extrato-linha > b, .kv > b").forEach((cel) => {
+    raiz.querySelectorAll("td, .cel-valor > span, .col-valor, .legenda-val, .barlist-valor, .extrato-linha > b, .kv > b, .col-delta").forEach((cel) => {
       if (cel.querySelector(".vm")) return;
       let el = cel;
       if (el.children.length === 1 && el.children[0].children.length === 0) el = el.children[0];
@@ -9127,7 +9127,7 @@
     raiz.querySelectorAll(".vm").forEach((vm) => {
       const td = vm.closest("td");
       const chave = td ? (td.closest("table") || raiz) : (vm.closest(".legenda, .barlist, .explica-lista, .card, .modal-corpo, #modal") || raiz);
-      const k2 = td ? td.cellIndex : vm.closest(".extrato-linha > b.saldo") ? "saldo" : "lista";
+      const k2 = td ? td.cellIndex : vm.closest(".extrato-linha > b.saldo") ? "saldo" : vm.closest(".col-delta") ? "delta" : "lista";
       if (!grupos.has(chave)) grupos.set(chave, new Map());
       const g = grupos.get(chave);
       if (!g.has(k2)) g.set(k2, []);
