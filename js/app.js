@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.523";
+  const VERSAO_APP = "3.6.525";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -618,7 +618,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.523 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.525 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -3396,7 +3396,7 @@
     abrirModal(`
       <h3 class="extrato-cab-banco"><span>${esc(b.nome)}</span><b class="${corSinal(b.saldoAtual)}">${brlSinal(b.saldoAtual)}</b></h3>
       ${extratoBancoHtml(d, b)}
-      <div class="modal-acoes">
+      <div class="modal-acoes acoes-iguais">
         <button class="btn" id="btnSaldoReal" title="Alterar o saldo do banco">Alterar</button>
         <button class="btn btn-com-icone" id="btnEditarBanco" title="Editar os dados do banco">${ICONE_EDITAR}Editar</button>
         <button class="btn" id="btnFecharPainel">Fechar</button>
