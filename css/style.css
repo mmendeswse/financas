@@ -3324,3 +3324,6 @@ td:has(> .vm), td:has(> span > .vm) { text-align: right; }
 #conteudo .rw[data-lista] { touch-action: pan-y; }
 #conteudo .rw.rw-arrastando { position: relative; z-index: 5; background: var(--painel-2) !important; box-shadow: 0 6px 18px rgba(0,0,0,.45); cursor: grabbing; transition: none; }
 body.arrastando-linha, body.arrastando-linha * { user-select: none !important; -webkit-user-select: none !important; cursor: grabbing !important; }
+/* quadro do banco: Alterar, Editar e Fechar do mesmo tamanho, ocupando a largura toda */
+.modal-acoes.acoes-iguais { display: flex; gap: 10px; }
+.modal-acoes.acoes-iguais > .btn { flex: 1 1 0 !important; justify-content: center; min-width: 0; height: 44px; }
