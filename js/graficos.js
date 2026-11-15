@@ -41,6 +41,41 @@
     return "R$ " + Math.round(v);
   }
 
+  // Eixo dos valores em R$ (todos os gráficos): o "R$" alinhado à esquerda,
+  // um embaixo do outro, e o número à direita ("R$   13k", "R$  -5k")
+  var RE_RS_EIXO = /^([+−-]?\s*R\$)\s*(.+)$/;
+  if (global.Chart && Chart.register) Chart.register({
+    id: "rsAlinhadoEixo",
+    afterLayout: function (grafico) {
+      Object.keys(grafico.scales || {}).forEach(function (k) {
+        var sc = grafico.scales[k];
+        if (!sc || sc.axis !== "y" || sc._rsAlinhado) return;
+        sc._rsAlinhado = true;
+        var original = sc.drawLabels;
+        sc.drawLabels = function (area) {
+          var op = this.options.ticks || {}, ticks = this.ticks || [];
+          var partes = ticks.map(function (t) { return RE_RS_EIXO.exec(String(t.label == null ? "" : t.label)); });
+          if (!op.display && op.display !== undefined || !ticks.length || partes.some(function (m) { return !m; })) return original.call(this, area);
+          var ctx = this.ctx, pad = op.padding != null ? op.padding : 3, esq = this.position === "right";
+          var x0 = esq ? this.left + pad : this.left + 2, x1 = esq ? this.right - 2 : this.right - pad;
+          var fonte = Chart.helpers && Chart.helpers.toFont ? Chart.helpers.toFont(op.font) : { string: "10.5px sans-serif" };
+          ctx.save();
+          ctx.font = fonte.string; ctx.textBaseline = "middle";
+          var self = this;
+          ticks.forEach(function (t, i) {
+            var y = self.getPixelForTick(i);
+            if (y < area.top - 8 || y > area.bottom + 8) return;
+            var cor = typeof op.color === "function" ? op.color({ tick: t, index: i, scale: self }) : op.color;
+            ctx.fillStyle = cor || CORES.texto;
+            ctx.textAlign = "left"; ctx.fillText(partes[i][1].replace(/\s+/g, ""), x0, y);
+            ctx.textAlign = "right"; ctx.fillText(partes[i][2], x1, y);
+          });
+          ctx.restore();
+        };
+      });
+    }
+  });
+
   function destruir(id) {
     if (instancias[id]) { instancias[id].destroy(); delete instancias[id]; }
   }
