@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.530";
+  const VERSAO_APP = "3.6.531";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -618,7 +618,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.530 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.531 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -3433,11 +3433,11 @@
     // o emoji do lançamento (o escolhido ou o da categoria) na frente da descrição
     // embaixo da descrição, "Categoria · Tipo" como nas guias Entradas e Despesas
     // transferência: "Para · Banco" (ou "De · Banco") embaixo, como o "Categoria · Tipo" dos lançamentos
-    // transferência: no lugar de "De ·" / "Para ·", o logo do outro banco na frente do nome
+    // transferência: "De ·" / "Para ·" e o logo do outro banco na frente do nome
     const subTransf = (sub) => {
       const m = /^(De|Para) · ([^·]+?)( · .*)?$/.exec(String(sub || ""));
       if (!m) return esc(sub);
-      return `<span class="sub-banco">${marcaBanco(m[2].trim(), 14)}${esc(m[2].trim())}</span>${m[3] ? esc(m[3]) : ""}`;
+      return `${m[1]} · <span class="sub-banco">${marcaBanco(m[2].trim(), 14)}${esc(m[2].trim())}</span>${m[3] ? esc(m[3]) : ""}`;
     };
     const subItem = (i) => i.tipo === "transferencia" ? (i.sub ? `<span class="desc-sub sem-quebra">${subTransf(i.sub)}</span>` : "")
       : i.ref ? `<span class="desc-sub">${subDe({ id: i.ref.id, categoria: i.categoria })}</span>` : "";
