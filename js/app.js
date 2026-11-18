@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.536";
+  const VERSAO_APP = "3.6.537";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -618,7 +618,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.536 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.537 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -2526,6 +2526,19 @@
   // WIDGETS — KPI com anel, gauge semicircular, barras, alertas, ticker
   // =========================================================================
   const EMOJI_KPI = { "Patrimônio líquido": "💎", "Saldo bancário": "🏦", "Bolsa Líquido": "📈", "Receitas mês": "💰", "Despesas mês": "💸" };
+  // valores dos KPIs do topo: o maior tamanho (até 24px) em que todos cabem sem encostar no anel
+  function ajustarValoresKpi() {
+    document.querySelectorAll(".kpi-row").forEach(linha => {
+      const vals = [...linha.querySelectorAll(".kpi .kpi-valor")];
+      if (!vals.length || !linha.offsetParent) return;
+      const MAX = 24, MIN = 13;
+      vals.forEach(v => v.style.setProperty("font-size", MAX + "px", "important"));
+      let fator = 1;
+      vals.forEach(v => { if (v.scrollWidth > 0) fator = Math.min(fator, v.clientWidth / v.scrollWidth); });
+      const tam = fator >= 1 ? MAX : Math.max(MIN, Math.floor(MAX * fator * 0.98 * 4) / 4);
+      vals.forEach(v => v.style.setProperty("font-size", tam + "px", "important"));
+    });
+  }
   function kpiCard(rotulo, valor, gaugePct, cor, deltaHtml, sub, chave, subChave) {
     const clicavel = chave ? ` data-acao="explicar-kpi" data-kpi="${chave}" title="Ver como este percentual é calculado"` : "";
     const gauge = gaugePct == null ? "" :
@@ -9199,7 +9212,7 @@
     obsMetas.disconnect();
     document.querySelectorAll("#conteudo .metas-lista .meta-item").forEach((el) => { el._largMeta = el.getBoundingClientRect().width; obsMetas.observe(el); });
   }
-  window.addEventListener("resize", () => { ajustarAlturaGrafico(); ajustarAlturaConfig(); ajustarRolagemMetas(); ajustarTopoMetas(); });
+  window.addEventListener("resize", () => { ajustarAlturaGrafico(); ajustarAlturaConfig(); ajustarRolagemMetas(); ajustarTopoMetas(); ajustarValoresKpi(); });
 
   // Valores em tabelas e listas: o sinal e o "R$" encostados à esquerda da
   // coluna e o número encostado à direita (como num extrato), em todas as
@@ -9370,6 +9383,8 @@
     const d = DADOS;
     ajustarAlturaGrafico();   // antes de desenhar, para o gráfico já nascer no tamanho certo
     ajustarTopoMetas();
+    ajustarValoresKpi();
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(ajustarValoresKpi);
     observarMetas();
     observarValores();
     alinharValoresTabelas(document.getElementById("conteudo"));
