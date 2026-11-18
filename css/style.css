@@ -3349,3 +3349,5 @@ select.sel-banco-nativo { display: none !important; }
 .ic-de-para { width: 14px; height: 14px; flex: none; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
 .ic-de-para.up { color: var(--up); }
 .ic-de-para.down { color: var(--down); }
+/* quadros do topo do Dashboard: valor maior e em negrito, crescendo com a largura do quadro */
+.kpi-row .kpi .kpi-valor { font-size: clamp(14px, calc((100cqi - 64px) / 8), 24px) !important; font-weight: 800 !important; letter-spacing: -.01em; white-space: nowrap; }
