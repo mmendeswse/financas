@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.535";
+  const VERSAO_APP = "3.6.536";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -618,7 +618,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.535 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.536 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -3759,8 +3759,7 @@
       const meses = [];
       for (let m = fx.ini.slice(0, 7); m <= fx.fim.slice(0, 7) && meses.length < 240; m = proximoMes(m)) meses.push(m);
       const itens = meses.flatMap((m) => listaDespesasTodasMes(d, m))
-        .filter((x) => x.status !== "Pago" && (x.data || "") >= fx.ini && (x.data || "") <= fx.fim)
-        .sort((a1, b1) => (a1.data || "").localeCompare(b1.data || ""));
+        .filter((x) => x.status !== "Pago" && (x.data || "") >= fx.ini && (x.data || "") <= fx.fim);   // mês a mês, na ordem escolhida em Despesas
       const aVir = itens.reduce((t, x) => t + Number(x.valor || 0), 0);
       const saldo = F.totalBancos(d);
       const rot = rotuloPeriodoMeses(fx.ini, fx.fim);
@@ -3974,8 +3973,7 @@
     const d = DADOS, mes = ponto.mes, ehRec = tipo === "receitas";
     painelReabrir = () => explicarMesTipo(ponto, tipo);   // redesenha depois de trocar status/banco
     const linha = (r, v, c) => `<div class="kv"><span class="dim">${rotuloPainel(r)}</span><b class="${c || ""}">${v}</b></div>`;
-    const itens = (ehRec ? listaEntradasTodasMes(d, mes) : listaDespesasTodasMes(d, mes))
-      .sort((a, b) => String(a.data || "").localeCompare(String(b.data || "")) || (ehRec ? F.ordemNoDia(a) - F.ordemNoDia(b) : 0));
+    const itens = ehRec ? listaEntradasTodasMes(d, mes) : listaDespesasTodasMes(d, mes);   // na ordem escolhida nas guias
     const sinal = ehRec ? "+" : "−", cor = ehRec ? "up" : "down";
     const linhaItem = (it) => linhaEditavel(it, linha(descPainel(it),
       `<span class="col-rep">${repColuna(it, it.data)}</span>` + seloStatusPainel(it.status, it) + bancoPainel(it.banco, it) + `<span class="col-valor valor-guia ${cor}">${sinal}${brl(it.valor)}</span>`));
@@ -5268,25 +5266,26 @@
 
   function listaDespesasTodasMes(d, mes) {
     const lancadas = d.despesas.filter((x) => String(x.data || "").slice(0, 7) === mes)
-      .map((x) => ({ descricao: x.descricao, emoji: x.emoji, categoria: x.categoria, valor: Number(x.valor || 0), data: x.data, status: "Pago", acao: "tornar-pendente", id: x.id, banco: bancoDoLancamento(d, x), acaoBanco: "trocar-banco", acaoEditar: "editar-despesa" }));
+      .map((x) => ({ descricao: x.descricao, emoji: x.emoji, categoria: x.categoria, valor: Number(x.valor || 0), data: x.data, status: "Pago", acao: "tornar-pendente", id: x.id, origem: "despesa", banco: bancoDoLancamento(d, x), acaoBanco: "trocar-banco", acaoEditar: "editar-despesa" }));
     const contasDoMes = (d.contasPagar || []).filter((c) => String(c.vencimento || "").slice(0, 7) === mes);
     const contasMapeadas = contasDoMes.map((c) => {
       const st = F.statusReal(c);
-      return { descricao: c.descricao, emoji: c.emoji, categoria: c.categoria, valor: Number(c.valor || 0), data: c.vencimento, status: st === "Pendente" ? "Prevista" : st, acao: "alternar-pago", id: c.id, banco: c.bancoId ? F.nomeBanco(d, c.bancoId) : "—", acaoBanco: "trocar-banco-conta", acaoEditar: "editar-conta" };
+      return { descricao: c.descricao, emoji: c.emoji, categoria: c.categoria, valor: Number(c.valor || 0), data: c.vencimento, status: st === "Pendente" ? "Prevista" : st, acao: "alternar-pago", id: c.id, origem: "conta", banco: c.bancoId ? F.nomeBanco(d, c.bancoId) : "—", acaoBanco: "trocar-banco-conta", acaoEditar: "editar-conta" };
     });
     const contasComoLista = (d.contasPagar || []).map((c) => ({ ...c, data: c.vencimento }));
     const repDespesas = repeticoesPrevistas(d.despesas, mes, (reg, data) => ({
       descricao: reg.descricao, emoji: reg.emoji, categoria: reg.categoria, valor: valorDoMes(reg, data.slice(0, 7)), data,
       status: mesQuitado(reg, data.slice(0, 7)) ? "Pago" : "Prevista",
-      acao: "quitar-mes", id: reg.id, mes: data.slice(0, 7), banco: bancoDoLancamento(d, { ...reg, bancoId: bancoDoMes(reg, data.slice(0, 7)) }), acaoBanco: "trocar-banco", acaoEditar: "editar-previsao"
+      acao: "quitar-mes", id: reg.id, origem: "despesa", mes: data.slice(0, 7), banco: bancoDoLancamento(d, { ...reg, bancoId: bancoDoMes(reg, data.slice(0, 7)) }), acaoBanco: "trocar-banco", acaoEditar: "editar-previsao"
     }), contasDoMes);
     const repContas = repeticoesPrevistas(contasComoLista, mes, (reg, data) => ({
       descricao: reg.descricao, emoji: reg.emoji, categoria: reg.categoria, valor: valorDoMes(reg, data.slice(0, 7)), data,
       status: mesQuitado(reg, data.slice(0, 7)) ? "Pago" : "Prevista",
-      acao: "quitar-mes-conta", id: reg.id, mes: data.slice(0, 7), banco: bancoDoMes(reg, data.slice(0, 7)) ? F.nomeBanco(d, bancoDoMes(reg, data.slice(0, 7))) : "—", acaoBanco: "trocar-banco-conta", acaoEditar: "editar-previsao-conta"
+      acao: "quitar-mes-conta", id: reg.id, origem: "conta", mes: data.slice(0, 7), banco: bancoDoMes(reg, data.slice(0, 7)) ? F.nomeBanco(d, bancoDoMes(reg, data.slice(0, 7))) : "—", acaoBanco: "trocar-banco-conta", acaoEditar: "editar-previsao-conta"
     }), []);
-    return [...lancadas, ...contasMapeadas, ...repDespesas, ...repContas]
-      .sort((a, b) => (a.data || "").localeCompare(b.data || ""));
+    // na ordem que a pessoa escolheu na guia Despesas (arrastando as linhas)
+    return aplicarOrdemManual([...lancadas, ...contasMapeadas, ...repDespesas, ...repContas]
+      .sort((a, b) => (a.data || "").localeCompare(b.data || "")), "despesas", mes);
   }
 
   // Lista, ordenada por data, de todas as entradas do mês (recebidas ou
@@ -5299,7 +5298,8 @@
       status: mesQuitado(reg, data.slice(0, 7)) ? "Pago" : "Prevista",
       acao: "quitar-mes-entrada", id: reg.id, mes: data.slice(0, 7), banco: F.nomeBanco(d, reg.bancoId), acaoBanco: "trocar-banco-entrada", acaoEditar: "editar-previsao-entrada"
     }));
-    return [...reais, ...recorrentes].sort((a, b) => (a.data || "").localeCompare(b.data || ""));
+    // na ordem que a pessoa escolheu na guia Entradas (arrastando as linhas)
+    return aplicarOrdemManual([...reais, ...recorrentes].sort((a, b) => (a.data || "").localeCompare(b.data || "")), "entradas", mes);
   }
 
   // Despesas PAGAS do mês com a mesma regra da guia Despesas: lançadas,
