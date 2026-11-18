@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.540";
+  const VERSAO_APP = "3.6.541";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -1733,7 +1733,12 @@
       relatorios: renderRelatorios, metas: renderMetas, configuracoes: renderConfiguracoes
     };
     const fn = mapa[ROTA.secao] || renderDashboard;
-    document.getElementById("conteudo").innerHTML = fn(DADOS, ROTA.param);
+    const cont = document.getElementById("conteudo"), chaveTela = ROTA.secao + "|" + (ROTA.param || "");
+    // a animação de entrada só ao abrir a guia: nos redesenhos (cotações,
+    // sincronização) os quadros ficam parados no lugar
+    cont.classList.toggle("redesenho", cont.dataset.tela === chaveTela);
+    cont.dataset.tela = chaveTela;
+    cont.innerHTML = fn(DADOS, ROTA.param);
     if (ROTA.secao === "configuracoes") montarAreaBiometria();
     if (ROTA.secao === "configuracoes" && A.ehDesktop) A.caminhoBanco().then((c) => { const el = document.getElementById("caminhoBanco"); if (el) el.textContent = "Local do banco: " + c; });
     montarGraficosDaRota();
@@ -7154,7 +7159,7 @@
       if (!b3 && !nq) return;
       listasBolsa = { b3: b3 || listasBolsa.b3, nasdaq: nq || listasBolsa.nasdaq, em: Date.now() };
       try { localStorage.setItem("listas1", JSON.stringify(listasBolsa)); } catch (e) { /* sem espaço */ }
-      if (ROTA.secao === "nasdaq") manterRolagemCotacao(renderRota);
+      redesenharBolsa();
     }).finally(() => { buscandoListas = false; });
   }
   let mercado = (() => {
@@ -7184,7 +7189,7 @@
           try { localStorage.setItem(CHAVE_MERCADO, JSON.stringify({ ...mercado, carregando: false })); } catch (e) { /* sem espaço */ }
         }
       })
-      .then(() => { noticiasMercado.buscando = false; if (ROTA.secao === "nasdaq") renderRota(); });
+      .then(() => { noticiasMercado.buscando = false; redesenharBolsa(); });
   }
   // Com a guia Bolsa aberta, tudo se atualiza sozinho: cotações a cada 10
   // minutos e notícias a cada 15 (sem notícias, nova tentativa a cada 2 minutos)
@@ -7261,7 +7266,6 @@
     setTimeout(desenhar, 30);
   }
 
-  let redesenhoMercado = null;
   // CDI, Selic e IPCA direto do Banco Central (séries do SGS), para as caixas
   // da guia Bolsa funcionarem sem o relatório: 12 = CDI diário (% a.d.),
   // 432 = Selic meta (% a.a.), 433 = IPCA mensal (% a.m.). Atualiza a cada 6 h.
@@ -7309,7 +7313,7 @@
       mercado.bcb = bcb;
       try { localStorage.setItem(CHAVE_MERCADO, JSON.stringify({ ...mercado, carregando: false })); } catch (e) { /* sem espaço */ }
       try { if (bcb.cdi || bcb.selic || bcb.ipca) localStorage.setItem("bcb1", JSON.stringify(bcb)); } catch (e) { /* sem espaço */ }
-    }).catch(() => {}).then(() => { buscandoBCB = false; if (ROTA.secao === "nasdaq") renderRota(); });
+    }).catch(() => {}).then(() => { buscandoBCB = false; redesenharBolsa(); });
   }
 
   function atualizarMercado(forcar, silencioso) {
@@ -7327,7 +7331,7 @@
         const ant = mercado.cotacoes[sim];
         if (ant && !cot.historico.length) cot.historico = ant.historico || [];
         mercado.cotacoes = { ...mercado.cotacoes, [sim]: cot };
-        if (ROTA.secao === "nasdaq" && !redesenhoMercado) redesenhoMercado = setTimeout(() => { redesenhoMercado = null; if (ROTA.secao === "nasdaq") renderRota(); }, 1500);
+        redesenharBolsa();
       }),
       C.buscarSerieDolar(90).catch(() => null),
       // ouro pela AwesomeAPI (reserva do Yahoo/Stooq): cotação e série de 90 dias
@@ -7336,7 +7340,7 @@
         const atual = mercado.cotacoes["GC=F"];
         if (o[0] && !(atual && atual.preco > 0 && atual.fonte !== "awesome")) {
           mercado.cotacoes = { ...mercado.cotacoes, "GC=F": { ...o[0], nome: "Ouro", moeda: "USD", fonte: "awesome", historico: (o[1] || []).map((p) => ({ data: p.data, preco: p.preco, abertura: p.abertura, maxima: p.maxima, minima: p.minima })) } };
-          if (ROTA.secao === "nasdaq") renderRota();
+          redesenharBolsa();
         }
         return o;
       }).catch(() => null),
@@ -7361,7 +7365,7 @@
       try { localStorage.setItem(CHAVE_MERCADO, JSON.stringify({ ...mercado, carregando: false })); } catch (e) { /* sem espaço */ }
       if (forcar && !silencioso) toast(achou ? "Cotações de mercado atualizadas." : "Não foi possível buscar as cotações agora.");
     }).catch(() => { mercado.carregando = false; if (forcar && !silencioso) toast("Não foi possível buscar as cotações agora."); })
-      .then(() => { if (ROTA.secao === "nasdaq") renderRota(); });
+      .then(() => redesenharBolsa());
   }
   // variação % da série nos últimos "dias" corridos (ponto de partida: o
   // último fechamento até aquela data)
@@ -7641,6 +7645,10 @@
       marca.insertAdjacentHTML("beforebegin", lote.map(g.linha).join(""));
       if (filtroCot) aplicarFiltroCot();
       encurtarNomesCot(true); observarSemHistorico();
+      if (rolagemCotDesejada != null) {
+        const l = document.querySelector(".prof-cot .term-rolar");
+        if (l) { l.scrollTop = rolagemCotDesejada; if (l.scrollTop >= rolagemCotDesejada - 1) rolagemCotDesejada = null; }
+      }
       if (!g.itens.length) { marca.remove(); fila.shift(); }
       else marca.firstElementChild.textContent = `carregando ${g.itens.length} ativos…`;
       setTimeout(passo, 30);
@@ -7648,12 +7656,32 @@
     setTimeout(passo, 60);
   }
   // redesenha a guia sem perder a rolagem da página nem a da lista Cotação
+  // (a lista volta inteira em lotes: a posição é reaplicada a cada lote)
+  let rolagemCotDesejada = null;
   function manterRolagemCotacao(fn) {
     const lista = document.querySelector(".prof-cot .term-rolar"), topo = lista ? lista.scrollTop : 0, y = window.scrollY;
     fn();
     const nova = document.querySelector(".prof-cot .term-rolar");
     if (nova) nova.scrollTop = topo;
+    rolagemCotDesejada = topo > 0 && nova && nova.scrollTop < topo - 1 ? topo : null;
     window.scrollTo(0, y);
+  }
+  // atualizações automáticas da guia Bolsa (cotações chegando, notícias,
+  // Banco Central, listas): juntas num só redesenho a cada poucos segundos,
+  // sem a tabela voltar ao topo, e esperando o usuário parar de rolar/tocar
+  let tRedesenhoBolsa = 0, mexendoBolsaAte = 0;
+  ["pointerdown", "wheel", "touchmove", "keydown"].forEach((ev) => window.addEventListener(ev, () => { mexendoBolsaAte = Date.now() + 1500; }, { passive: true, capture: true }));
+  window.addEventListener("scroll", () => { mexendoBolsaAte = Date.now() + 1500; }, { passive: true, capture: true });
+  function redesenharBolsa() {
+    if (ROTA.secao !== "nasdaq" || tRedesenhoBolsa) return;
+    const tentar = () => {
+      if (ROTA.secao !== "nasdaq") { tRedesenhoBolsa = 0; return; }
+      const falta = mexendoBolsaAte - Date.now();
+      if (falta > 0) { tRedesenhoBolsa = setTimeout(tentar, falta + 50); return; }
+      tRedesenhoBolsa = 0;
+      manterRolagemCotacao(renderRota);
+    };
+    tRedesenhoBolsa = setTimeout(tentar, 2500);
   }
   // indicadores do gráfico (como no Profit): médias móveis e Bollinger sobre
   // as velas e um oscilador embaixo (IFR, MACD ou volume)
