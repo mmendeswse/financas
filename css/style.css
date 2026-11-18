@@ -3364,3 +3364,10 @@ select.sel-banco-nativo { display: none !important; }
 #conteudo.redesenho .grid > div, #conteudo.redesenho .kpi, #conteudo.redesenho .strip, #conteudo.redesenho .cartao-item { animation: none !important; }
 /* números da lista de cotações com largura fixa: as colunas não pulam quando o preço muda */
 .prof-tab td, .tab-pregao td { font-variant-numeric: tabular-nums; }
+/* lista Cotação: Resultado, Último e Variação com largura fixa — as colunas
+   não mudam de tamanho quando chegam cotações novas ou mais linhas */
+@media (min-width: 701px) {
+  .prof-cot .prof-tab th.prof-posc, .prof-cot .prof-tab td.prof-posc { width: 214px; min-width: 214px; white-space: nowrap; }
+  .prof-cot .prof-tab thead th:nth-child(3), .prof-cot .prof-tab td.t-preco { width: 96px; min-width: 96px; white-space: nowrap; }
+  .prof-cot .prof-tab thead th:nth-child(4), .prof-cot .prof-tab td.prof-var { width: 132px; min-width: 132px; white-space: nowrap; }
+}
