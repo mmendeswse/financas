@@ -618,7 +618,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.540 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.399 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
