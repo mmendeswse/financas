@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.538";
+  const VERSAO_APP = "3.6.539";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -618,7 +618,7 @@
     S.agendar(2000);
   }
 
-  // versões até 3.6.538 guardavam o token e o cofre (sem criptografia) nos
+  // versões até 3.6.539 guardavam o token e o cofre (sem criptografia) nos
   // dados: o primeiro aparelho atualizado transforma o cofre na conta nova;
   // nos outros, é preciso entrar com o código da conta
   let migrando = null;
@@ -2526,16 +2526,16 @@
   // WIDGETS — KPI com anel, gauge semicircular, barras, alertas, ticker
   // =========================================================================
   const EMOJI_KPI = { "Patrimônio líquido": "💎", "Saldo bancário": "🏦", "Bolsa Líquido": "📈", "Receitas mês": "💰", "Despesas mês": "💸" };
-  // valores dos KPIs do topo: ~92% do maior tamanho em que todos cabem (até 22px), com folga até o anel
+  // valores dos KPIs do topo: ~85% do maior tamanho em que todos cabem (até 18,5px), com folga até o anel
   function ajustarValoresKpi() {
     document.querySelectorAll(".kpi-row").forEach(linha => {
       const vals = [...linha.querySelectorAll(".kpi .kpi-valor")];
       if (!vals.length || !linha.offsetParent) return;
-      const MAX = 22, MIN = 13;
+      const MAX = 20, MIN = 12;
       vals.forEach(v => v.style.setProperty("font-size", MAX + "px", "important"));
       let fator = 1;
       vals.forEach(v => { if (v.scrollWidth > 0) fator = Math.min(fator, v.clientWidth / v.scrollWidth); });
-      const tam = Math.max(MIN, Math.min(MAX, Math.floor(MAX * Math.min(1, fator) * 0.92 * 4) / 4));
+      const tam = fator >= 1 ? 18.5 : Math.max(MIN, Math.min(18.5, Math.floor(MAX * fator * 0.85 * 4) / 4));
       vals.forEach(v => v.style.setProperty("font-size", tam + "px", "important"));
     });
   }
