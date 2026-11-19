@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.542";
+  const VERSAO_APP = "3.6.543";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -2547,6 +2547,15 @@
       vals.forEach(v => v.style.setProperty("font-size", tam + "px", "important"));
     });
   }
+  // formatadores de número guardados (criar um a cada valor deixava a guia Bolsa lenta)
+  const cacheFmtBR = new Map();
+  function fmtBR(min, max, inteiros) {
+    const k = min + "|" + max + "|" + (inteiros || 0);
+    let f = cacheFmtBR.get(k);
+    if (!f) { f = new Intl.NumberFormat("pt-BR", inteiros ? { minimumFractionDigits: min, maximumFractionDigits: max, minimumIntegerDigits: inteiros } : { minimumFractionDigits: min, maximumFractionDigits: max }); cacheFmtBR.set(k, f); }
+    return f;
+  }
+  let fontesKpiPedidas = false;
   function kpiCard(rotulo, valor, gaugePct, cor, deltaHtml, sub, chave, subChave) {
     const clicavel = chave ? ` data-acao="explicar-kpi" data-kpi="${chave}" title="Ver como este percentual é calculado"` : "";
     const gauge = gaugePct == null ? "" :
@@ -7379,8 +7388,8 @@
   }
   const pctMercado = (v) => v == null ? "—" : (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toFixed(2).replace(".", ",") + "%";
   const celPct = (v) => v == null ? '<span class="dim">—</span>' : `<span class="${v >= 0 ? "up" : "down"}">${pctMercado(v)}</span>`;
-  const fmtPontos = (v) => Number(v || 0).toLocaleString("pt-BR", { maximumFractionDigits: 0 });
-  const usd = (v) => "US$ " + Number(v || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fmtPontos = (v) => fmtBR(0, 0).format(Number(v || 0));
+  const usd = (v) => "US$ " + fmtBR(2, 2).format(Number(v || 0));
 
   function tabelaMercado(lista, sufixo, moeda) {
     const q = mercado.cotacoes;
@@ -7438,8 +7447,8 @@
 
   const corMov = (v) => v == null ? "" : v > 0 ? "t-up" : v < 0 ? "t-down" : "t-zero";
   const setaMov = (v) => v == null ? "" : v > 0 ? "▲" : v < 0 ? "▼" : "►";
-  const tPct = (v, casas) => v == null ? "—" : (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toLocaleString("pt-BR", { minimumFractionDigits: casas == null ? 2 : casas, maximumFractionDigits: casas == null ? 2 : casas }) + "%";
-  const tNum = (v, taxa) => v == null ? "—" : taxa ? tPct(v).replace("+", "") : v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const tPct = (v, casas) => v == null ? "—" : (v > 0 ? "+" : v < 0 ? "−" : "") + fmtBR(casas == null ? 2 : casas, casas == null ? 2 : casas).format(Math.abs(v)) + "%";
+  const tNum = (v, taxa) => v == null ? "—" : taxa ? tPct(v).replace("+", "") : fmtBR(2, 2).format(v);
   // célula de variação "acesa" (fundo colorido) quando o movimento é forte
   const celVar = (v, forte) => `<td class="r ${corMov(v)}${forte && v != null && Math.abs(v) >= forte ? " t-aceso" : ""}">${tPct(v)} <i>${setaMov(v)}</i></td>`;
   // símbolo do Yahoo/brapi para um ativo da tabela do relatório (para o minigráfico de 3 meses)
@@ -7923,7 +7932,7 @@
     // ouro sem cotação nem relatório: última referência conhecida (relatório ICL de 07/10/2026)
     const REF_OURO = { atual: 4303.48, dia: 0.37, mes: -3.27, ano: -0.81 };
     const pts = (v) => fmtPontos(v);
-    const moeda2 = (v) => Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const moeda2 = (v) => fmtBR(2, 2).format(Number(v));
     const comSimbolo = (sim) => q[sim] ? { ...q[sim], simbolo: sim } : null;
     // índice dos EUA que veio pela reserva (ETF da B3): mostra o nome do ETF e o preço em R$
     const caixaIndiceEUA = (nome, sim, chaveRel) => {
@@ -8069,7 +8078,7 @@
       const mo = !x ? f : x.eua ? usd : brl;   // índices, dólar e ouro: no formato da própria linha
       // valor sem "R$" e com zeros à esquerda (0.005,47) para todos terem a mesma
       // largura e os ícones ficarem alinhados entre as linhas
-      const curto = (vv) => Math.abs(vv).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2, minimumIntegerDigits: 4 });
+      const curto = (vv) => fmtBR(2, 2, 4).format(Math.abs(vv));
       const cel = (ics, rot, vv) => vv == null ? '<span class="pp-c"></span>' : `<span class="pp-c" title="${rot}: ${vv == null ? "—" : `${vv >= 0 ? "+" : "−"}${mo(Math.abs(vv))}`}"><i>${vv > 0 ? ics[0] : vv < 0 ? ics[1] : ics[2]}</i>${vv == null ? '<b class="t-zero">—</b>' : `<b class="${vv > 0 ? "t-up" : vv < 0 ? "t-down" : "t-zero"}">${vv > 0 ? "+" : vv < 0 ? "−" : ""}${curto(vv)}</b>`}</span>`;
       if (minha && Number(minha.quantidade) > 0) {
         const qtd = Number(minha.quantidade), pm = Number(minha.precoMedio) || 0;
@@ -8105,7 +8114,7 @@
       <thead><tr>${thOrd("nome", "Ativo")}<th class="prof-posc" title="Ganho ou perda de hoje e total (carteira) ou do último mês (por ação)">Resultado</th>${thOrd("ultimo", "Último", 1)}${thOrd("pct", "Variação", 1)}<th class="prof-opc" title="Mínima e máxima do dia, com o preço atual marcado">Faixa do dia</th>${thOrd("volume", "Volume", 1).replace('class="r ', 'class="r prof-cel-oculta ')}${thOrd("m1", "1 mês", 1).replace('class="r ', 'class="r prof-opc prof-opc2 ')}${thOrd("m3", "3 meses", 1)}<th class="prof-opc prof-opc2" title="Minigráfico dos últimos 3 meses">Tendência</th></tr></thead>
       <tbody>${grupos.map(([g, itens], gi) => {
         // as primeiras 150 linhas na hora (na ordem escolhida); o resto em lotes
-        const ja = itens.slice(0, 150), depois = itens.slice(150);
+        const ja = itens.slice(0, 40), depois = itens.slice(40);
         if (depois.length) linhasPendentes.push({ id: "pend-" + gi, itens: depois, linha: linhaCot });
         return `<tr class="prof-grupo"><td colspan="9">${g}${gi ? ` <em class="prof-grupo-hora">${horaCot !== "—" ? "atualizado às " + horaCot : ""}</em>` : ""}</td></tr>${ja.map(linhaCot).join("")}${depois.length ? `<tr class="prof-pend" id="pend-${gi}"><td colspan="9">carregando ${depois.length.toLocaleString("pt-BR")} ativos…</td></tr>` : ""}`;
       }).join("")}</tbody></table></div>`, buscaCot);
@@ -9410,12 +9419,14 @@
     document.addEventListener("click", (e) => { if (Date.now() - arrasteFeito < 400 && e.target.closest(".rw[data-lista]")) { e.stopPropagation(); e.preventDefault(); } }, true);
   })();
 
+  let vezGrafBolsa = 0;
   function montarGraficosDaRota() {
     const d = DADOS;
     ajustarAlturaGrafico();   // antes de desenhar, para o gráfico já nascer no tamanho certo
     ajustarTopoMetas();
     ajustarValoresKpi();
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(ajustarValoresKpi);
+    // uma vez só: ler document.fonts.ready força o navegador a calcular a página inteira
+    if (!fontesKpiPedidas && document.fonts && document.fonts.ready) { fontesKpiPedidas = true; document.fonts.ready.then(ajustarValoresKpi); }
     observarMetas();
     observarValores();
     alinharValoresTabelas(document.getElementById("conteudo"));
@@ -9429,7 +9440,12 @@
         break;
       }
       case "nasdaq": {
-        montarGraficoMercado(); inserirLinhasPendentes();
+        // ao abrir a guia, a tabela aparece primeiro e o gráfico logo em seguida
+        // (criar o gráfico obriga o navegador a calcular a página toda)
+        const vezGraf = ++vezGrafBolsa;
+        if (document.getElementById("conteudo").classList.contains("redesenho")) montarGraficoMercado();
+        else requestAnimationFrame(() => setTimeout(() => { if (vezGraf === vezGrafBolsa && ROTA.secao === "nasdaq") montarGraficoMercado(); }, 0));
+        inserirLinhasPendentes();
         if (filtroCot || filtroRapido !== "todos") aplicarFiltroCot();
         encurtarNomesCot(); observarSemHistorico(); vigiarEscadaAtivo();
         const campo = document.getElementById("cotBusca");
