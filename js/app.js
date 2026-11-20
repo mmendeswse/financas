@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.568";
+  const VERSAO_APP = "3.6.570";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -1817,19 +1817,27 @@
     A.exportarDados(); toast("Backup exportado — verifique seus downloads.");
     [500, 1500, 3000].forEach((ms) => setTimeout(ajustarBarraGuias, ms));
   }
+  // onde o backup vai no Drive (na primeira vez com o seletor, a pessoa escolhe a pasta)
+  function textoPastaDrive() {
+    if (Drive.usaSeletor() && !Drive.pastaEscolhida()) return "na primeira vez você escolhe a pasta do seu Drive (ex.: Backups › Finanças)";
+    return `o arquivo vai para a pasta “${Drive.nomePasta()}” do seu Drive`;
+  }
   // Exportar (quadro Backup Dados): baixar o arquivo ou salvar direto no Google Drive
   function abrirEscolhaExportar() {
     if (window.Drive) Drive.preparar();
     const op = (id, icone, titulo, texto) => `<button class="imp-opcao" id="${id}"><span class="imp-ic">${icone}</span><span><b>${titulo}</b><small>${texto}</small></span></button>`;
     abrirModal(`<h3>Exportar</h3>
       <div class="imp-opcoes">
-        ${op("exp_drive", "☁️", "Salvar no Google Drive", `o arquivo vai para a pasta “${Drive.NOME_PASTA}” do seu Drive`)}
+        ${op("exp_drive", "☁️", "Salvar no Google Drive", textoPastaDrive())}
         ${op("exp_arquivo", "💾", "Baixar arquivo", "salva o arquivo .json neste aparelho")}
       </div>
+      ${Drive.usaSeletor() && Drive.pastaEscolhida() ? `<p class="campo ajuda" style="margin:6px 0 0">Pasta do Drive: <b>${esc(Drive.nomePasta())}</b> · <button class="link-acao" id="exp_trocar">trocar pasta</button></p>` : ""}
       <p class="sy-erro" role="alert"></p>
       <div class="modal-acoes"><button class="btn" id="exp_cancelar">Cancelar</button></div>`);
     const m = document.getElementById("modal"), err = m.querySelector(".sy-erro");
     m.querySelector("#exp_cancelar").onclick = fecharModal;
+    const bTrocar = m.querySelector("#exp_trocar");
+    if (bTrocar) bTrocar.onclick = () => { err.textContent = ""; Drive.escolherPasta().then(() => abrirEscolhaExportar()).catch((e) => { err.textContent = e.message; }); };
     m.querySelector("#exp_arquivo").onclick = () => { fecharModal(); exportarArquivo(); };
     const bDrive = m.querySelector("#exp_drive");
     bDrive.onclick = () => {
@@ -1856,7 +1864,7 @@
     abrirModal(`<h3>Importar</h3>
       <div class="imp-opcoes">
         ${op("inputImportarBackup", "💾", "Backup", "arquivo .json exportado pelo sistema — substitui os dados atuais (pede confirmação)")}
-        ${window.Drive && Drive.disponivel() ? op("drive", "☁️", "Google Drive", `um backup salvo pelo sistema na pasta “${Drive.NOME_PASTA}” do seu Drive — substitui os dados atuais (pede confirmação)`) : ""}
+        ${window.Drive && Drive.disponivel() ? op("drive", "☁️", "Google Drive", `um backup salvo pelo sistema na pasta “${Drive.nomePasta()}” do seu Drive — substitui os dados atuais (pede confirmação)`) : ""}
         ${op("inputImportarPdf", "🟣", "Nubank", "Extrato de Custódia (PDF): investimentos e ações")}
         ${op("inputImportarRelatorio", "🟠", "ICL", "relatório do Instituto Conhecimento Liberta (PDF): atualiza a guia Bolsa")}
       </div>
@@ -1872,7 +1880,7 @@
   // lista os backups da pasta do sistema no Google Drive e importa o escolhido
   function abrirImportarDrive() {
     abrirModal(`<h3>Importar do Google Drive</h3>
-      <p class="campo ajuda" style="margin-top:0">Backups na pasta “${esc(Drive.NOME_PASTA)}” do seu Drive.</p>
+      <p class="campo ajuda" style="margin-top:0" id="imp_drive_pasta">Backups na pasta “${esc(Drive.nomePasta())}” do seu Drive.</p>
       <div class="imp-opcoes" id="imp_drive_lista"><p class="dim">Buscando os backups…</p></div>
       <p class="sy-erro" role="alert"></p>
       <div class="modal-acoes"><button class="btn" id="imp_cancelar">Cancelar</button></div>`);
@@ -1884,6 +1892,7 @@
       if (e.linkAtivar) err.insertAdjacentHTML("beforeend", ` <a href="${esc(e.linkAtivar)}" target="_blank" rel="noopener">Abrir a página para ativar</a>`);
     };
     Drive.listarBackups().then((arqs) => {
+      const pp = m.querySelector("#imp_drive_pasta"); if (pp) pp.textContent = `Backups na pasta “${Drive.nomePasta()}” do seu Drive.`;
       if (!arqs.length) { lista.innerHTML = `<p class="dim">Nenhum backup no Drive ainda. Use Exportar → Salvar no Google Drive.</p>`; return; }
       const quando = (iso) => new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
       const tam = (b) => { const n = Number(b) || 0; return n >= 1048576 ? (n / 1048576).toFixed(1).replace(".", ",") + " MB" : Math.max(1, Math.round(n / 1024)) + " KB"; };
