@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.544";
+  const VERSAO_APP = "3.6.549";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -1779,6 +1779,20 @@
     timerToast = setTimeout(() => el.classList.remove("on"), 2400);
   }
 
+  // Importar (quadro Backup Dados): backup do sistema, extrato do Nubank ou relatório ICL
+  function abrirEscolhaImportar() {
+    const op = (id, icone, titulo, texto) => `<button class="imp-opcao" data-input="${id}"><span class="imp-ic">${icone}</span><span><b>${titulo}</b><small>${texto}</small></span></button>`;
+    abrirModal(`<h3>Importar</h3>
+      <div class="imp-opcoes">
+        ${op("inputImportarBackup", "💾", "Backup", "arquivo .json exportado pelo sistema — substitui os dados atuais (pede confirmação)")}
+        ${op("inputImportarPdf", "🟣", "Nubank", "Extrato de Custódia (PDF): investimentos e ações")}
+        ${op("inputImportarRelatorio", "🟠", "ICL", "relatório do Instituto Conhecimento Liberta (PDF): atualiza a guia Bolsa")}
+      </div>
+      <div class="modal-acoes"><button class="btn" id="imp_cancelar">Cancelar</button></div>`);
+    const m = document.getElementById("modal");
+    m.querySelector("#imp_cancelar").onclick = fecharModal;
+    m.querySelectorAll(".imp-opcao").forEach((b) => { b.onclick = () => { const inp = document.getElementById(b.dataset.input); fecharModal(); if (inp) inp.click(); }; });
+  }
   function abrirModal(html, largo) {
     const m = document.getElementById("modal");
     m.className = "modal on" + (largo ? " largo" : "");
@@ -9034,22 +9048,20 @@
     const comSenha = window.Bloqueio && Bloqueio.ativo();
     return `
       <div class="grid g-top cfg-grid">
-        <div class="cfg-backup">${card("", "Backup Dados", A.ehDesktop ? "arquivo do programa, com cópia automática (dados.bak.json)" : "Todas informações são armazenadas exclusivamente neste navegador", "", `
+        <div class="cfg-backup">${card("", "Backup Dados", A.ehDesktop ? "arquivo do programa · cópia automática" : "dados salvos somente neste navegador", "", `
           <div class="body pad">
             ${A.ehDesktop ? `<p class="cfg-texto" id="caminhoBanco">Local do banco: carregando…</p>` : ""}
             <p class="cfg-texto"${opc(4)}>Guarde uma cópia dos seus dados de vez em quando. O arquivo de backup leva bancos, lançamentos, investimentos, ações e metas (sem o token da sincronização).</p>
             ${lista([
-              ["<b>Exportar Backup</b> baixa um arquivo <b>.json</b> com todos os dados.", 6],
-              ["<b>Importar Backup</b> substitui todos os dados atuais pelos do arquivo — o sistema pede confirmação antes.", 1],
-              ["<b>Importar Nubank</b> lê o Extrato de Custódia do Nubank e traz os investimentos e as ações (nada é enviado para a internet).", 5],
-              ["<b>Importar ICL</b> lê o relatório do Instituto Conhecimento Liberta (PDF) e atualiza toda a guia Nasdaq: cotações, altas e quedas, CDI, IPCA, resumo e análises.", 3]
+              ["<b>Exportar</b> baixa um arquivo <b>.json</b> com todos os dados.", 6],
+              ["<b>Importar → Backup</b> substitui todos os dados atuais pelos do arquivo — o sistema pede confirmação antes.", 1],
+              ["<b>Importar → Nubank</b> lê o Extrato de Custódia do Nubank e traz os investimentos e as ações (nada é enviado para a internet).", 5],
+              ["<b>Importar → ICL</b> lê o relatório do Instituto Conhecimento Liberta (PDF) e atualiza toda a guia Nasdaq: cotações, altas e quedas, CDI, IPCA, resumo e análises.", 3]
             ])}
             <p class="cfg-info"${opc(2)}>Último backup exportado: <b>${ultimoBackup || "nenhum ainda"}</b></p>
             ${acoes(`${A.ehDesktop ? `<button class="btn" data-acao="abrir-pasta-banco">Abrir pasta</button>` : ""}
-              <button class="btn primario" data-acao="exportar-backup">Exportar Backup</button>
-              <button class="btn primario" data-acao="importar-backup">Importar Backup</button>
-              <button class="btn btn-pdf" data-acao="importar-pdf">Importar Nubank</button>
-              <button class="btn btn-icl" data-acao="importar-relatorio">Importar ICL</button>`)}
+              <button class="btn primario" data-acao="exportar-backup">Exportar</button>
+              <button class="btn primario" data-acao="importar-escolher">Importar</button>`)}
           </div>`)}</div>
         <div class="cfg-senha">${card("", "Senha Acesso", "protege sistema neste aparelho", "", `
           <div class="body pad">
@@ -9081,7 +9093,7 @@
             ${acoes(`<button class="btn primario" data-acao="salvar-cotacoes">Salvar</button>`)}
           </div>`)}</div>
         <div class="cfg-zona"><div class="card" style="border-color:rgba(255,84,104,.3)">
-          <header><div><h2 class="down">Zona Risco</h2><div class="sub">Atenção: esta ação é permanente e não pode ser desfeita</div></div></header>
+          <header><div><h2 class="down">Zona Risco</h2><div class="sub">Ação permanente</div></div></header>
           <div class="body"><div class="body pad">
             <p class="cfg-texto cfg-opc" data-opc="6">Apaga todos os dados deste aparelho de uma vez.</p>
             ${lista([
@@ -9844,6 +9856,8 @@
         case "exportar-backup": A.exportarDados(); toast("Backup exportado — verifique seus downloads."); break;
         case "importar-pdf": document.getElementById("inputImportarPdf").click(); break;
         case "importar-backup": document.getElementById("inputImportarBackup").click(); break;
+        // quadro Backup Dados: um botão Importar que pergunta o que importar
+        case "importar-escolher": abrirEscolhaImportar(); break;
 
         case "apagar-tudo":
           confirmarExclusao("Isso vai apagar TODOS os seus dados permanentemente. Essa ação não pode ser desfeita. Deseja continuar?", () => {
