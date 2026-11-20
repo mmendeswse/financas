@@ -3404,3 +3404,13 @@ select.sel-banco-nativo { display: none !important; }
 .leg-ind .leg-n { width: 13px; height: 13px; border: 0; border-radius: 50%; background: #1E88FF; color: #fff; font: 800 8.5px 'Segoe UI', Roboto, sans-serif; font-style: normal; display: inline-flex; align-items: center; justify-content: center; }
 .leg-ind:not(.ativo) .leg-n { background: #1E88FF; }
 .leg-ind:focus:not(:focus-visible):not(:hover) { background: none; box-shadow: none; outline: none; }
+/* botão só com o ícone (o texto fica para leitores de tela) */
+.btn.btn-icone { padding-left: 0; padding-right: 0; width: 38px; justify-content: center; gap: 0; }
+.btn-icone .rot-oculto { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+/* cabeçalho do gráfico (ação/dólar/cripto) numa linha só em telas médias (iPad deitado) */
+@media (max-width: 1300px) {
+  .card header:has(.leg-velas) .leg-velas { gap: 0; margin-right: 4px; }
+  .card header:has(.leg-velas) .leg-ind { padding: 3px 5px; font-size: 11px; gap: 4px; }
+  .card header:has(.leg-velas) .abas-periodo button { padding-left: 8px; padding-right: 8px; }
+  .card header:has(.leg-velas) > div:first-child { flex: 0 1 auto; min-width: 0; }
+}
