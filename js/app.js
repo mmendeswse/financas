@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.549";
+  const VERSAO_APP = "3.6.550";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -9076,7 +9076,7 @@
               <button class="btn perigo" data-acao="remover-senha">Remover senha</button>`
               : `<button class="btn primario" data-acao="criar-senha">Criar</button>`)}
           </div>`)}</div>
-        <div class="cfg-agenda">${card("", "Google Agenda", "alertas mesmo com o sistema fechado", "", `
+        <div class="cfg-agenda">${card("", "Google Agenda", "Alertas", "", `
           <div class="body pad" id="agendaCorpo">${corpoCartaoAgenda()}</div>`)}</div>
         <div class="cfg-sync">${card("", "Sincronização", "conta com código · celular, iPad e computador", "", `
           <div class="body pad" id="syncCorpo">${corpoCartaoSync()}</div>`)}</div>
