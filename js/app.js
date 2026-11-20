@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.550";
+  const VERSAO_APP = "3.6.551";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -9281,7 +9281,7 @@
     obsMetas.disconnect();
     document.querySelectorAll("#conteudo .metas-lista .meta-item").forEach((el) => { el._largMeta = el.getBoundingClientRect().width; obsMetas.observe(el); });
   }
-  window.addEventListener("resize", () => { ajustarAlturaGrafico(); ajustarAlturaConfig(); ajustarRolagemMetas(); ajustarTopoMetas(); ajustarValoresKpi(); });
+  window.addEventListener("resize", () => { ajustarAlturaGrafico(); ajustarAlturaConfig(); ajustarRolagemMetas(); ajustarTopoMetas(); ajustarValoresKpi(); igualarBotaoNovoMeses(); });
 
   // Valores em tabelas e listas: o sinal e o "R$" encostados à esquerda da
   // coluna e o número encostado à direita (como num extrato), em todas as
@@ -9448,12 +9448,28 @@
     document.addEventListener("click", (e) => { if (Date.now() - arrasteFeito < 400 && e.target.closest(".rw[data-lista]")) { e.stopPropagation(); e.preventDefault(); } }, true);
   })();
 
+  // botão NOVO (ou só "+", em telas menores) ao lado dos meses: mesma altura
+  // da faixa dos meses e, quando é só o "+", quadrado
+  function igualarBotaoNovoMeses() {
+    document.querySelectorAll(".filtro-mes").forEach((fm) => {
+      const abas = fm.querySelector(".abas-mes"), b = fm.nextElementSibling;
+      if (!abas || !b || !b.matches(".btn.primario")) return;
+      b.style.height = ""; b.style.width = ""; b.style.minHeight = "";
+      const alt = abas.getBoundingClientRect().height;
+      if (!(alt > 0)) return;
+      b.style.height = b.style.minHeight = alt + "px";
+      b.style.paddingTop = b.style.paddingBottom = "0";
+      if (b.getBoundingClientRect().width < 52) { b.style.width = alt + "px"; b.style.paddingLeft = b.style.paddingRight = "0"; b.style.justifyContent = "center"; }
+      else b.style.paddingLeft = b.style.paddingRight = "";
+    });
+  }
   let vezGrafBolsa = 0;
   function montarGraficosDaRota() {
     const d = DADOS;
     ajustarAlturaGrafico();   // antes de desenhar, para o gráfico já nascer no tamanho certo
     ajustarTopoMetas();
     ajustarValoresKpi();
+    igualarBotaoNovoMeses();
     // uma vez só: ler document.fonts.ready força o navegador a calcular a página inteira
     if (!fontesKpiPedidas && document.fonts && document.fonts.ready) { fontesKpiPedidas = true; document.fonts.ready.then(ajustarValoresKpi); }
     observarMetas();
