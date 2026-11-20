@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.563";
+  const VERSAO_APP = "3.6.564";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -1149,6 +1149,7 @@
   }
 
   function ajustarBarraGuias() {
+    if (document.visibilityState === "hidden") return;   // escondida, as medidas saem erradas
     const barra = document.getElementById("sidebar");
     const nav = document.getElementById("navPrincipal");
     if (!barra || !nav) return;
@@ -1632,6 +1633,14 @@
     }
     window.addEventListener("resize", ajustarBarraGuias);
     if (window.visualViewport) window.visualViewport.addEventListener("resize", ajustarBarraGuias);
+    // voltar para o app (depois de exportar o backup o iPad abre a janela do
+    // arquivo e a tela encolhe por um instante): mede a barra de novo, para as
+    // guias não ficarem apertadas como estavam com a janela aberta
+    const remedirBarra = () => [0, 300, 1000].forEach((ms) => setTimeout(() => { if (document.visibilityState !== "hidden") ajustarBarraGuias(); }, ms));
+    document.addEventListener("visibilitychange", remedirBarra);
+    window.addEventListener("focus", remedirBarra);
+    window.addEventListener("pageshow", remedirBarra);
+    window.remedirBarraGuias = remedirBarra;
     window.addEventListener("orientationchange", () => setTimeout(ajustarBarraGuias, 300));
 
     navegarPara("dashboard");
@@ -9909,7 +9918,7 @@
           else toast("Código: " + b.dataset.cofre);
           break;
         case "abrir-pasta-banco": A.abrirPastaBanco(); break;
-        case "exportar-backup": A.exportarDados(); toast("Backup exportado — verifique seus downloads."); break;
+        case "exportar-backup": A.exportarDados(); toast("Backup exportado — verifique seus downloads."); [500, 1500, 3000].forEach((ms) => setTimeout(ajustarBarraGuias, ms)); break;
         case "importar-pdf": document.getElementById("inputImportarPdf").click(); break;
         case "importar-backup": document.getElementById("inputImportarBackup").click(); break;
         // quadro Backup Dados: um botão Importar que pergunta o que importar
