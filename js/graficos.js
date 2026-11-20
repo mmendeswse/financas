@@ -1106,18 +1106,16 @@
       };
       return {
         id: id,
-        beforeDatasetsDraw: function (grafico) {
+        // a linha vai por cima das velas, de ponta a ponta (antes ficava atrás
+        // delas e parecia interrompida); a caixa do valor é desenhada depois,
+        // por etiquetasNoEixo, que afasta as caixas quando os preços estão perto
+        afterDatasetsDraw: function (grafico) {
           var p = posicao(grafico); if (!p || oculto[chave]) return;
           var c = grafico.ctx;
           c.save();
           c.strokeStyle = corLinha; c.lineWidth = 1; c.setLineDash(traco);
           c.beginPath(); c.moveTo(p.ca.left, p.y); c.lineTo(p.ca.right + 2, p.y); c.stroke();
           c.restore();
-        },
-        // a caixa do valor é desenhada depois, por etiquetasNoEixo, que afasta
-        // as caixas quando os dois preços estão perto (não encavalam)
-        afterDatasetsDraw: function (grafico) {
-          var p = posicao(grafico); if (!p || oculto[chave]) return;
           (grafico.$etiquetas = grafico.$etiquetas || []).push({ ca: p.ca, y: p.y, linha: p.y, txt: f4(valor), cor: corLinha });
         }
       };
