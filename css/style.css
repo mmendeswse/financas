@@ -3383,3 +3383,14 @@ select.sel-banco-nativo { display: none !important; }
 .imp-opcao .imp-ic { font-size: 20px; line-height: 1; flex: none; }
 .imp-opcao b { display: block; font-size: 14px; }
 .imp-opcao small { display: block; margin-top: 2px; color: var(--dim); font-size: 12px; line-height: 1.35; }
+/* MME 9 / MMA 21 / Bollinger como legenda: bolinha na cor da linha, apagada quando desligada */
+.leg-ind { display: inline-flex; align-items: center; gap: 5px; background: none; border: 0; padding: 3px 6px; border-radius: 6px; font: 600 11.5px Inter, system-ui, sans-serif; color: var(--texto); cursor: pointer; white-space: nowrap; opacity: .45; transition: opacity .15s, background .15s; }
+.leg-ind:hover { background: rgba(255,255,255,.06); opacity: .8; }
+.leg-ind.ativo { opacity: 1; }
+.leg-ind i { width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid var(--cor); background: color-mix(in srgb, var(--cor) 28%, transparent); flex: none; }
+.leg-ind:not(.ativo) i { background: transparent; }
+.ind-acao { gap: 6px; }
+.leg-graf .leg-saldo { background: rgba(255,214,51,.28); border-color: #FFD633; }
+.leg-graf .leg-media { background: transparent; border-color: #B0B6C0; border-style: dashed; }
+/* desligado: apagado e com a bolinha vazia (mesmo jeito do MME 9 da tela da ação) */
+.leg-graf > button.off { opacity: .45; text-decoration: none; }

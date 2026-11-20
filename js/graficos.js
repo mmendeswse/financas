@@ -386,6 +386,12 @@
     tela.addEventListener("mouseleave", tela._bmSai);
   }
 
+  // média mensal do período (só os meses que já tiveram algum lançamento)
+  function mediaRD(serie, campo) {
+    var meses = serie.filter(function (s) { return (Number(s.entradas) || 0) + (Number(s.despesas) || 0) > 0; });
+    if (!meses.length) return 0;
+    return meses.reduce(function (t, s) { return t + (Number(s[campo]) || 0); }, 0) / meses.length;
+  }
   function renderReceitasDespesas(canvasId, serie, opcoes) {
     opcoes = opcoes || {};
     // posição do mês atual no gráfico (o botão dele fica em dourado)
@@ -400,7 +406,15 @@
         labels: serie.map(function (s) { return s.rotulo; }),
         datasets: [
           { label: "Receitas", data: serie.map(function (s) { return s.entradas; }), backgroundColor: "rgba(46,229,157,0.28)", borderColor: CORES.up, borderWidth: 1.5, borderRadius: 2, maxBarThickness: 26 },
-          { label: "Despesas", data: serie.map(function (s) { return s.despesas; }), backgroundColor: "rgba(255,92,106,0.28)", borderColor: CORES.down, borderWidth: 1.5, borderRadius: 2, maxBarThickness: 26 }
+          { label: "Despesas", data: serie.map(function (s) { return s.despesas; }), backgroundColor: "rgba(255,92,106,0.28)", borderColor: CORES.down, borderWidth: 1.5, borderRadius: 2, maxBarThickness: 26 },
+          // linhas extras, ligadas pela legenda do quadro (começam escondidas):
+          // Saldo do mês (receitas − despesas) e a Média de receitas e de despesas do período
+          { type: "line", label: "Saldo", order: -1, hidden: true, data: serie.map(function (s) { return (Number(s.entradas) || 0) - (Number(s.despesas) || 0); }),
+            borderColor: "#FFD633", backgroundColor: "#FFD633", borderWidth: 2, cubicInterpolationMode: "monotone", pointRadius: 3, pointHoverRadius: 5, pointBackgroundColor: "#FFD633", fill: false },
+          { type: "line", label: "Média receitas", order: -1, hidden: true, data: serie.map(function () { return mediaRD(serie, "entradas"); }),
+            borderColor: CORES.up, borderDash: [6, 4], borderWidth: 1.4, pointRadius: 0, pointHoverRadius: 0, fill: false },
+          { type: "line", label: "Média despesas", order: -1, hidden: true, data: serie.map(function () { return mediaRD(serie, "despesas"); }),
+            borderColor: CORES.down, borderDash: [6, 4], borderWidth: 1.4, pointRadius: 0, pointHoverRadius: 0, fill: false }
         ]
       },
       options: {
