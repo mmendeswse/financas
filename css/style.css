@@ -3371,3 +3371,8 @@ select.sel-banco-nativo { display: none !important; }
   .prof-cot .prof-tab thead th:nth-child(3), .prof-cot .prof-tab td.t-preco { width: 96px; min-width: 96px; white-space: nowrap; }
   .prof-cot .prof-tab thead th:nth-child(4), .prof-cot .prof-tab td.prof-var { width: 132px; min-width: 132px; white-space: nowrap; }
 }
+/* legenda Receitas/Despesas no cabeçalho: botões que mostram/escondem a série */
+.leg-graf > button { display: inline-flex; align-items: center; gap: 5px; background: none; border: 0; padding: 2px 4px; margin: 0 -4px; border-radius: 6px; font: inherit; color: inherit; cursor: pointer; transition: opacity .15s; }
+.leg-graf > button:hover { background: rgba(255,255,255,.06); }
+.leg-graf > button.off { opacity: .4; text-decoration: line-through; }
+.leg-graf > button.off i { background: transparent !important; }

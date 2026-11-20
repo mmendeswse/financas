@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.543";
+  const VERSAO_APP = "3.6.544";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -313,7 +313,24 @@
   }
 
   // legenda dos gráficos Receitas x despesas, no cabeçalho do quadro (no celular fica no gráfico)
-  const LEGENDA_RD = `<span class="leg-graf"><span><i class="leg-receitas"></i>Receitas</span><span><i class="leg-despesas"></i>Despesas</span></span>`;
+  // tocar em "Receitas" ou "Despesas" mostra/esconde aquelas colunas no gráfico do quadro
+  const LEGENDA_RD = `<span class="leg-graf"><button type="button" data-acao="leg-graf" data-id="0" title="Mostrar/esconder as receitas no gráfico"><i class="leg-receitas"></i>Receitas</button><button type="button" data-acao="leg-graf" data-id="1" title="Mostrar/esconder as despesas no gráfico"><i class="leg-despesas"></i>Despesas</button></span>`;
+  const ocultosGraf = new Map();   // id do gráfico → séries escondidas pela legenda (vale até fechar o app)
+  function aplicarOcultosGraf(idCanvas) {
+    const cv = document.getElementById(idCanvas), ch = cv && window.Chart && Chart.getChart(cv);
+    const ocultos = ocultosGraf.get(idCanvas) || new Set();
+    if (ch) { ch.data.datasets.forEach((_, i) => ch.setDatasetVisibility(i, !ocultos.has(i))); ch.update(); }
+    const card = cv && cv.closest(".card");
+    if (card) card.querySelectorAll('[data-acao="leg-graf"]').forEach((b) => { const off = ocultos.has(Number(b.dataset.id)); b.classList.toggle("off", off); b.setAttribute("aria-pressed", off ? "false" : "true"); });
+  }
+  function alternarLegendaGraf(botao) {
+    const card = botao.closest(".card"), cv = card && card.querySelector("canvas[id]");
+    if (!cv) return;
+    const i = Number(botao.dataset.id), ocultos = ocultosGraf.get(cv.id) || new Set();
+    if (ocultos.has(i)) ocultos.delete(i); else ocultos.add(i);
+    ocultosGraf.set(cv.id, ocultos);
+    aplicarOcultosGraf(cv.id);
+  }
   const COR_META_PADRAO = "#00E5FF";
 
   // Estado da interface (não persistido — só a sessão atual)
@@ -6909,6 +6926,7 @@
     const salvar = (dia, itens) => gravarNoticiasDia(chave, dia, guardar(dia, itens).slice(0, 8));
     // primeiro o que já está guardado no aparelho (aparece na hora); os dias
     // dos últimos 3 dias são consultados de novo mesmo assim (notícias novas)
+    const isoLocal = (q) => { const d = new Date(q); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
     const limiteRecente = (() => { const d = new Date(); d.setDate(d.getDate() - 3); return isoLocal(d); })();
     const faltam = [];
     ordem.forEach((i) => {
@@ -6921,7 +6939,6 @@
     busca.mostrar();
     // depois busca na internet: primeiro UMA busca para o período todo (mostra
     // a maior parte dos "N" de uma vez), depois dia a dia só os que faltarem
-    const isoLocal = (q) => { const d = new Date(q); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
     const vespera = (dia) => { const d = new Date(dia + "T12:00:00"); d.setDate(d.getDate() - 1); return isoLocal(d); };
     const fila = faltam.slice();
     // um dia de cada vez; dia que falhar volta para o fim da fila (até 3
@@ -9097,7 +9114,7 @@
     const historicoP = histEvolucao(d, mesesRelB, anoRelB, true);
     if (historicoP.length >= 2) G.renderEvolucaoPatrimonio("graf-rel-evolucao", historicoP, { aoClicar: explicarPatrimonio });
     // "Tudo" é o ano escolhido inteiro (janeiro a dezembro)
-    G.renderReceitasDespesas("graf-rel-mensal", serieMensalPeriodo(d, fxA.ini, fxA.fim), { aoClicar: explicarMes, semLegenda: window.innerWidth > 600 });   // a legenda fica no cabeçalho, ao lado do ano (no celular, no gráfico)
+    G.renderReceitasDespesas("graf-rel-mensal", serieMensalPeriodo(d, fxA.ini, fxA.fim), { aoClicar: explicarMes, semLegenda: window.innerWidth > 600 }); aplicarOcultosGraf("graf-rel-mensal");   // a legenda fica no cabeçalho, ao lado do ano (no celular, no gráfico)
   }
 
 
@@ -9435,7 +9452,7 @@
         ajustarRolagemMetas();
         if (!anoRD) anoRD = String(new Date().getFullYear());
         // Evolução patrimonial saiu do Dashboard (continua em Relatórios)
-        G.renderReceitasDespesas("graf-receitas-despesas", serieRD(d), { aoClicar: explicarMes, semLegenda: window.innerWidth > 600 });   // a legenda fica no cabeçalho
+        G.renderReceitasDespesas("graf-receitas-despesas", serieRD(d), { aoClicar: explicarMes, semLegenda: window.innerWidth > 600 }); aplicarOcultosGraf("graf-receitas-despesas");   // a legenda fica no cabeçalho
         if (itensPatrimonio(d).length) G.renderDoughnutGenerico("graf-dash-composicao", itensPatrimonio(d), { semLegenda: true, aoClicar: (item) => explicarClasse(item.rotulo) });
         break;
       }
@@ -9674,6 +9691,7 @@
         case "novo-ativo": abrirModalAcao(null); break;
         case "editar-acao": abrirModalAcao(id); break;
         case "explicar-kpi": explicarKPI(b.dataset.kpi); break;
+        case "leg-graf": alternarLegendaGraf(b); break;
         case "depositar-banco": abrirModalValorBanco(); break;
         case "explicar-periodo-evo": explicarPeriodoEvo(Number(b.dataset.meses) || 0, b.dataset.ano, b.dataset.anotodo === "1"); break;
         // textos de baixo dos quadros do topo do Dashboard: cada um abre o seu quadro
