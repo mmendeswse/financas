@@ -3414,3 +3414,14 @@ select.sel-banco-nativo { display: none !important; }
   .card header:has(.leg-velas) .abas-periodo button { padding-left: 8px; padding-right: 8px; }
   .card header:has(.leg-velas) > div:first-child { flex: 0 1 auto; min-width: 0; }
 }
+/* tela de bloqueio com a digital ativada: só a digital, como nos outros apps
+   (a senha aparece em "Usar senha") */
+.bio-tela { display: none; flex-direction: column; align-items: center; gap: 14px; margin-top: 18px; }
+.tela-bloqueio.so-digital .bio-tela { display: flex; }
+.tela-bloqueio.so-digital #bloqueioTexto, .tela-bloqueio.so-digital .bolinhas, .tela-bloqueio.so-digital .teclado, .tela-bloqueio.so-digital .btn-bio { display: none; }
+.tela-bloqueio.so-digital { cursor: pointer; }
+.bio-digital { width: 92px; height: 92px; border-radius: 50%; border: 1.5px solid rgba(255, 92, 140, .55); background: radial-gradient(circle, rgba(255, 92, 140, .16), rgba(255, 92, 140, .04)); color: #FF5C8A; display: flex; align-items: center; justify-content: center; cursor: pointer; animation: bioPulsar 2.2s ease-in-out infinite; }
+.bio-digital svg { width: 52px; height: 52px; }
+@keyframes bioPulsar { 0%, 100% { box-shadow: 0 0 0 0 rgba(255, 92, 140, .35); } 50% { box-shadow: 0 0 0 12px rgba(255, 92, 140, 0); } }
+#bioTexto { margin: 0; font-size: 14px; color: var(--texto); }
+.bio-senha { background: none; border: 0; color: var(--cy); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; padding: 6px 10px; }
