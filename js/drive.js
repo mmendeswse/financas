@@ -17,6 +17,10 @@
   const idCliente = () => global.MM_DRIVE_CLIENT_ID || CLIENT_ID_PADRAO;
   const ESCOPO = "https://www.googleapis.com/auth/drive.file";
   const CHAVE = "mullerMendes:drive";
+  // seletor de pasta do Google (Picker): chave de API e número do projeto
+  const API_KEY_PADRAO = "";
+  const apiKey = () => global.MM_DRIVE_API_KEY || API_KEY_PADRAO;
+  const APP_ID = "951379835330";
   const NOME_PASTA = "Muller Mendes Finanças";
 
   const lerLocal = () => { try { return JSON.parse(localStorage.getItem(CHAVE)) || {}; } catch (e) { return {}; } };
@@ -83,9 +87,58 @@
         throw e;
       }));
   }
+  // ---------------------------------------------------------------------
+  // pasta escolhida pela pessoa no seletor do Google Drive (ex.: Backups >
+  // Finanças). Com a permissão drive.file, o sistema passa a acessar só ela.
+  // ---------------------------------------------------------------------
+  let pickerP = null;
+  function carregarPicker() {
+    if (pickerP) return pickerP;
+    pickerP = new Promise((ok, erro) => {
+      const pronto = () => global.gapi.load("picker", { callback: ok, onerror: () => { pickerP = null; erro(new Error("Não consegui abrir o seletor do Google Drive.")); } });
+      if (global.gapi && global.gapi.load) { pronto(); return; }
+      const t = document.createElement("script");
+      t.src = "https://apis.google.com/js/api.js"; t.async = true;
+      t.onload = pronto; t.onerror = () => { pickerP = null; erro(new Error("Não consegui abrir o seletor do Google Drive. Verifique a internet.")); };
+      document.head.appendChild(t);
+    });
+    return pickerP;
+  }
+  const pastaEscolhida = () => { const s = lerLocal(); return s.escolhidaId ? { id: s.escolhidaId, nome: s.escolhidaNome || "pasta escolhida" } : null; };
+  const nomePasta = () => { const e = pastaEscolhida(); return e ? e.nome : NOME_PASTA; };
+  const usaSeletor = () => !!apiKey();
+  function escolherPasta() {
+    return pedirToken().then((token) => carregarPicker().then(() => new Promise((ok, erro) => {
+      const G = global.google.picker;
+      const vista = new G.DocsView(G.ViewId.FOLDERS).setIncludeFolders(true).setSelectFolderEnabled(true)
+        .setMimeTypes("application/vnd.google-apps.folder").setParent("root");
+      const seletor = new G.PickerBuilder()
+        .setTitle("Escolha a pasta dos backups")
+        .addView(vista).setOAuthToken(token).setDeveloperKey(apiKey()).setAppId(APP_ID).setLocale("pt-BR")
+        .setCallback((d) => {
+          if (d[G.Response.ACTION] === G.Action.PICKED) {
+            const doc = d[G.Response.DOCUMENTS][0];
+            gravarLocal(Object.assign(lerLocal(), { escolhidaId: doc[G.Document.ID], escolhidaNome: doc[G.Document.NAME] }));
+            ok({ id: doc[G.Document.ID], nome: doc[G.Document.NAME] });
+          } else if (d[G.Response.ACTION] === G.Action.CANCEL) erro(new Error("Nenhuma pasta escolhida."));
+        }).build();
+      seletor.setVisible(true);
+    })));
+  }
+
   // pasta do sistema no Drive (criada na primeira vez)
   function pasta(token) {
     const s = lerLocal();
+    // com o seletor: a pasta que a pessoa escolheu (escolhe na primeira vez)
+    if (usaSeletor()) {
+      if (!s.escolhidaId) return escolherPasta().then((p) => p.id);
+      return api(token, `https://www.googleapis.com/drive/v3/files/${s.escolhidaId}?fields=id,trashed,name`)
+        .then((j) => {
+          if (j && !j.trashed) { if (j.name && j.name !== s.escolhidaNome) gravarLocal(Object.assign(lerLocal(), { escolhidaNome: j.name })); return j.id; }
+          gravarLocal(Object.assign(lerLocal(), { escolhidaId: null })); return escolherPasta().then((p) => p.id);
+        })
+        .catch((e) => { if (e.status === 404 || e.status === 403) { gravarLocal(Object.assign(lerLocal(), { escolhidaId: null })); return escolherPasta().then((p) => p.id); } throw e; });
+    }
     const criar = () => api(token, "https://www.googleapis.com/drive/v3/files?fields=id", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: NOME_PASTA, mimeType: "application/vnd.google-apps.folder" })
@@ -109,14 +162,14 @@
       const corpo = `--${limite}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n--${limite}\r\nContent-Type: application/json\r\n\r\n${texto}\r\n--${limite}--`;
       return api(token, "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink", {
         method: "POST", headers: { "Content-Type": `multipart/related; boundary=${limite}` }, body: corpo
-      }).then((j) => ({ nome: j.name, link: j.webViewLink, pasta: NOME_PASTA }));
+      }).then((j) => ({ nome: j.name, link: j.webViewLink, pasta: nomePasta() }));
     }));
   }
 
   // backups na pasta do sistema (os mais novos primeiro)
   function listarBackups() {
     return pedirToken().then((token) => pasta(token).then((idPasta) => {
-      const q = encodeURIComponent(`'${idPasta}' in parents and trashed=false`);
+      const q = encodeURIComponent(`'${idPasta}' in parents and trashed=false and mimeType='application/json'`);
       return api(token, `https://www.googleapis.com/drive/v3/files?q=${q}&orderBy=createdTime desc&pageSize=50&fields=files(id,name,createdTime,size)&spaces=drive`)
         .then((j) => (j && j.files) || []);
     }));
@@ -127,5 +180,5 @@
       .then((obj) => JSON.stringify(obj));
   }
 
-  global.Drive = { disponivel, preparar, salvarArquivo, listarBackups, baixarBackup, NOME_PASTA };
+  global.Drive = { disponivel, preparar, salvarArquivo, listarBackups, baixarBackup, escolherPasta, nomePasta, usaSeletor, pastaEscolhida, NOME_PASTA };
 })(window);
