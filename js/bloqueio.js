@@ -157,6 +157,7 @@
       '<div class="bolinhas" id="bloqueioBolinhas"></div>' +
       '<div class="teclado">' + teclas + '</div>' +
       '<p class="bloqueio-aviso" id="bloqueioAviso"></p>' +
+      (modo === "entrar" && biometriaAtiva() ? '<div class="bio-tela" id="bioTela"><button class="bio-digital" id="bioDigital" aria-label="Usar o Touch ID ou o Face ID"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5c-2 0-3.9.7-5.4 1.9M19.4 7.6A9 9 0 0 0 17 5.1"/><path d="M3.6 10.4A8.6 8.6 0 0 1 12 6.5a8.6 8.6 0 0 1 8.4 3.9"/><path d="M5.6 14.8c.5-1 .8-2.1.8-3.3A5.6 5.6 0 0 1 12 6.5c3.1 0 5.6 2.3 5.6 5v1.8"/><path d="M9 11.2a3 3 0 0 1 6 0v5.2M12 11.5v6.2"/><path d="M17.4 16.6c-.2 1.3-.7 2.5-1.4 3.6M6.8 18.9c.7-1 1.1-2.1 1.2-3.3"/></svg></button><p id="bioTexto">Use o Touch ID ou o Face ID para continuar</p><button class="bio-senha" id="bioSenha">Usar senha</button></div>' : "") +
       (modo === "entrar" && biometriaAtiva() ? '<button class="btn-bio" id="btnBio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5c-2 0-3.9.7-5.4 1.9M19.4 7.6A9 9 0 0 0 17 5.1"/><path d="M3.6 10.4A8.6 8.6 0 0 1 12 6.5a8.6 8.6 0 0 1 8.4 3.9"/><path d="M5.6 14.8c.5-1 .8-2.1.8-3.3A5.6 5.6 0 0 1 12 6.5c3.1 0 5.6 2.3 5.6 5v1.8"/><path d="M9 11.2a3 3 0 0 1 6 0v5.2M12 11.5v6.2"/><path d="M17.4 16.6c-.2 1.3-.7 2.5-1.4 3.6M6.8 18.9c.7-1 1.1-2.1 1.2-3.3"/></svg>Desbloquear com digital ou Face ID</button>' : "") +
       '</div>';
   }
@@ -235,20 +236,32 @@
     tela.addEventListener("click", function (e) {
       var b = e.target.closest("[data-tecla]");
       if (b) { tecla(b.dataset.tecla); return; }
-      if (e.target.closest("#btnBio")) tentarBiometria();
+      if (e.target.closest("#bioSenha")) { tela.classList.remove("so-digital"); return; }
+      // na tela da digital, tocar em qualquer lugar chama o Touch ID / Face ID
+      if (e.target.closest("#btnBio") || (tela.classList.contains("so-digital") && e.target.closest("#bioTela, .bloqueio-caixa"))) tentarBiometria(false);
     });
-    if (modo === "entrar" && biometriaAtiva()) setTimeout(tentarBiometria, 250);
+    // como nos outros apps: com a digital ativada, a tela mostra só a digital
+    // e o pedido do Touch ID / Face ID aparece na hora (a senha fica em "Usar senha")
+    if (modo === "entrar" && biometriaAtiva()) { tela.classList.add("so-digital"); tentarBiometria(true); }
     document.addEventListener("keydown", pelaTeclado);
   }
 
-  function tentarBiometria() {
-    if (!biometriaAtiva()) return;
-    avisar("Aguardando a digital ou o Face ID…");
+  var pedindoBio = false;
+  function tentarBiometria(automatico) {
+    if (!biometriaAtiva() || pedindoBio) return;
+    pedindoBio = true;
+    var txt = document.getElementById("bioTexto");
+    avisar("");
     pedirBiometria().then(function () {
+      pedindoBio = false;
       fechar();
       if (aoDesbloquear) aoDesbloquear(true);
     }).catch(function () {
-      avisar("Não reconhecido. Use a senha ou toque no botão para tentar de novo.", true);
+      pedindoBio = false;
+      // o iPad pode exigir um toque antes do primeiro pedido: fica o convite
+      if (txt) txt.textContent = "Toque para usar o Touch ID ou o Face ID";
+      // o pedido automático (ao abrir) pode ser barrado só por falta de toque: aí não é "não reconhecido"
+      if (!automatico) avisar("Não reconhecido. Toque na digital para tentar de novo ou use a senha.", false);
     });
   }
 
@@ -267,6 +280,13 @@
 
   // exibe a tela logo de cara, antes de qualquer dado aparecer
   function protegerAoAbrir() { if (ativo()) abrir({ modo: "entrar" }); }
+  // voltou para o app depois de 1 minuto ou mais fora: pede a digital/senha de novo
+  var saiuEm = 0, MIN_FORA = 60 * 1000;
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "hidden") { saiuEm = Date.now(); return; }
+    if (saiuEm && Date.now() - saiuEm >= MIN_FORA && ativo() && !document.getElementById("telaBloqueio")) abrir({ modo: "entrar" });
+    saiuEm = 0;
+  });
 
   global.Bloqueio = {
     ativo: ativo,
