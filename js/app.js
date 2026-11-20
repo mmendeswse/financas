@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.551";
+  const VERSAO_APP = "3.6.552";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -8732,11 +8732,16 @@
       `<button class="${atual === op.meses ? "ativo" : ""}" data-acao="${acao}" data-meses="${op.meses}">${op.rotulo}</button>`).join("")}</div>`;
   }
 
+  // MME 9, MMA 21 e Bollinger como legenda (bolinha na cor da linha, igual a
+  // Receitas/Despesas): tocar liga/desliga a linha no gráfico de velas
+  const IND_LEGENDA = [["mm9", "MME 9", "#FFD633"], ["mm21", "MMA 21", "#3B82F6"], ["bb", "Bollinger", "#B0B6C0"]];
+  function legendaIndicadores(estado, acao) {
+    return IND_LEGENDA.map(([k, rot, cor]) => `<button class="leg-ind${estado[k] ? " ativo" : ""}" data-acao="${acao}" data-id="${k}" style="--cor:${cor}" aria-pressed="${estado[k] ? "true" : "false"}" title="${estado[k] ? "Esconder" : "Mostrar"} ${rot} no gráfico"><i></i>${rot}</button>`).join("");
+  }
   // indicadores do gráfico de velas das telas de ação (MME 9, MMA 21, Bollinger)
   const indAcao = { mm9: false, mm21: false, bb: false };
   function botoesIndicadores() {
-    return `<div class="ind-acao">${[["mm9", "MME 9"], ["mm21", "MMA 21"], ["bb", "Bollinger"]].map(([k, rot]) =>
-      `<button class="prof-bt${indAcao[k] ? " ativo" : ""}" data-acao="ind-acao" data-id="${k}" title="Mostrar ${rot} no gráfico de velas">${rot}</button>`).join("")}</div>`;
+    return `<div class="ind-acao">${legendaIndicadores(indAcao, "ind-acao")}</div>`;
   }
   // linhas dos indicadores ligados, alinhadas com as velas
   function sobreposicoesAcao(velas) {
