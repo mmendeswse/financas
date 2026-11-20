@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.553";
+  const VERSAO_APP = "3.6.554";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -8741,19 +8741,25 @@
 
   // MME 9, MMA 21 e Bollinger como legenda (bolinha na cor da linha, igual a
   // Receitas/Despesas): tocar liga/desliga a linha no gráfico de velas
-  const IND_LEGENDA = [["mm9", "MME 9", "#FFD633"], ["mm21", "MMA 21", "#3B82F6"], ["bb", "Bollinger", "#B0B6C0"]];
+  const IND_LEGENDA = [["mm9", "MME 9", "#FFD633"], ["mm21", "MMA 21", "#3B82F6"], ["bb", "Bollinger", "#C084FC"]];
   function legendaIndicadores(estado, acao) {
     return IND_LEGENDA.map(([k, rot, cor]) => `<button class="leg-ind${estado[k] ? " ativo" : ""}" data-acao="${acao}" data-id="${k}" style="--cor:${cor}" aria-pressed="${estado[k] ? "true" : "false"}" title="${estado[k] ? "Esconder" : "Mostrar"} ${rot} no gráfico"><i></i>${rot}</button>`).join("");
   }
   // indicadores do gráfico de velas das telas de ação (MME 9, MMA 21, Bollinger)
   const indAcao = { mm9: false, mm21: false, bb: false };
-  function botoesIndicadores() {
-    return `<div class="ind-acao">${legendaIndicadores(indAcao, "ind-acao")}</div>`;
+  // agora ficam na legenda do próprio gráfico de velas (ver indicadoresVelas)
+  function botoesIndicadores() { return ""; }
+  // MME 9, MMA 21 e Bollinger na legenda do gráfico de velas: tocar liga/desliga
+  function indicadoresVelas() {
+    return {
+      indicadores: IND_LEGENDA.map(([k, rot, cor]) => ({ chave: k, rotulo: rot, curto: rot.replace(" ", ""), cor, ativo: !!indAcao[k] })),
+      aoAlternarIndicador: (k) => { indAcao[k] = !indAcao[k]; manterRolagemCotacao(renderRota); }
+    };
   }
   // linhas dos indicadores ligados, alinhadas com as velas
   function sobreposicoesAcao(velas) {
     const fech = velas.map((p) => p.preco), sob = [];
-    if (indAcao.bb) { const b = IND.bollinger(fech, 20, 2); sob.push({ valores: b.sup, cor: "#B0B6C0", largura: 1, traco: [4, 3], rotulo: "Bollinger 20,2" }, { valores: b.inf, cor: "#B0B6C0", largura: 1, traco: [4, 3] }); }
+    if (indAcao.bb) { const b = IND.bollinger(fech, 20, 2); sob.push({ valores: b.sup, cor: "#C084FC", largura: 1, traco: [4, 3], rotulo: "Bollinger 20,2" }, { valores: b.inf, cor: "#C084FC", largura: 1, traco: [4, 3] }); }
     if (indAcao.mm9) sob.push({ valores: IND.mme(fech, 9), cor: "#FFD633", rotulo: "MME 9" });
     if (indAcao.mm21) sob.push({ valores: IND.mms(fech, 21), cor: "#3B82F6", rotulo: "MMA 21" });
     return sob;
@@ -9558,7 +9564,7 @@
         }
         const alternar = () => { velasDolar = !velasDolar; renderRota(); };
         const vd = velasDolarPeriodo();
-        if (velasDolar && vd.velas.length >= 2) G.renderVelas("graf-dolar", vd.velas, { visiveis: vd.visiveis, linhaAtual: atualDolar, corAtual: "#FFD633", rotuloAtual: "Valor Atual", sobreposicoes: sobreposicoesAcao(vd.velas), aoClicar: alternar, aoMudarJanela: marcarPeriodoDoZoom });
+        if (velasDolar && vd.velas.length >= 2) G.renderVelas("graf-dolar", vd.velas, { visiveis: vd.visiveis, linhaAtual: atualDolar, corAtual: "#FFD633", rotuloAtual: "Valor Atual", sobreposicoes: sobreposicoesAcao(vd.velas), ...indicadoresVelas(), aoClicar: alternar, aoMudarJanela: marcarPeriodoDoZoom });
         else if (serie.length >= 2) G.renderPrecoAcao("graf-dolar", serie, 0, 0, { linhaAtual: atualDolar, aoClicar: alternar });
         // notícias: a busca já começa na visão de linha, para estar pronta ao trocar para velas
         noticiasDoDolar(true);   // gráfico aberto: tem prioridade sobre o segundo plano
@@ -9577,7 +9583,7 @@
         }
         const alternar = () => { velasDolar = !velasDolar; renderRota(); };
         const vc = velasCriptoPeriodo(m);
-        if (velasDolar && vc.velas.length >= 2) G.renderVelas("graf-cripto", vc.velas, { visiveis: vc.visiveis, casas: 2, linhaAtual: atual, corAtual: "#FFD633", rotuloAtual: "Valor Atual", sobreposicoes: sobreposicoesAcao(vc.velas), aoClicar: alternar, aoMudarJanela: marcarPeriodoDoZoom });
+        if (velasDolar && vc.velas.length >= 2) G.renderVelas("graf-cripto", vc.velas, { visiveis: vc.visiveis, casas: 2, linhaAtual: atual, corAtual: "#FFD633", rotuloAtual: "Valor Atual", sobreposicoes: sobreposicoesAcao(vc.velas), ...indicadoresVelas(), aoClicar: alternar, aoMudarJanela: marcarPeriodoDoZoom });
         else if (serie.length >= 2) G.renderPrecoAcao("graf-cripto", serie, 0, 0, { linhaAtual: atual, aoClicar: alternar });
         noticiasDaCripto(m, true);
         break;
@@ -9593,7 +9599,7 @@
         const a = achar(d.acoes, ROTA.param);
         const alternarAcao = () => { velasAcao = !velasAcao; renderRota(); };
         const va = a ? velasPeriodo(a.historicoPrecos, Number(a.precoAtual) || 0) : { velas: [] };
-        if (velasAcao && va.velas.length >= 2) G.renderVelas("graf-preco-acao", va.velas, { visiveis: va.visiveis, linhaAtual: Number(a.precoAtual) || 0, linhaCompra: Number(a.precoMedio) || 0, quantidade: Number(a.quantidade) || 0, casas: 2, sobreposicoes: sobreposicoesAcao(va.velas), aoClicar: alternarAcao, aoMudarJanela: marcarPeriodoDoZoom });
+        if (velasAcao && va.velas.length >= 2) G.renderVelas("graf-preco-acao", va.velas, { visiveis: va.visiveis, linhaAtual: Number(a.precoAtual) || 0, linhaCompra: Number(a.precoMedio) || 0, quantidade: Number(a.quantidade) || 0, casas: 2, sobreposicoes: sobreposicoesAcao(va.velas), ...indicadoresVelas(), aoClicar: alternarAcao, aoMudarJanela: marcarPeriodoDoZoom });
         else if (a && a.historicoPrecos.length) G.renderPrecoAcao("graf-preco-acao", filtrarPeriodo(a.historicoPrecos, periodoGrafico), a.precoMedio, Number(a.precoAtual) || 0, { quantidade: Number(a.quantidade) || 0, aoClicar: alternarAcao });
         // notícias: a busca já começa na visão de linha
         if (a) noticiasDaAcao(a, true);   // gráfico aberto: tem prioridade sobre o segundo plano
@@ -9605,7 +9611,7 @@
         if (!a) break;
         const alternar = () => { velasAcao = !velasAcao; renderRota(); };
         const va = velasPeriodo(a.historicoPrecos, Number(a.precoAtual) || 0);
-        if (velasAcao && va.velas.length >= 2) G.renderVelas("graf-preco-acao", va.velas, { visiveis: va.visiveis, linhaAtual: Number(a.precoAtual) || 0, linhaCompra: 0, quantidade: 0, casas: 2, sobreposicoes: sobreposicoesAcao(va.velas), aoClicar: alternar, aoMudarJanela: marcarPeriodoDoZoom });
+        if (velasAcao && va.velas.length >= 2) G.renderVelas("graf-preco-acao", va.velas, { visiveis: va.visiveis, linhaAtual: Number(a.precoAtual) || 0, linhaCompra: 0, quantidade: 0, casas: 2, sobreposicoes: sobreposicoesAcao(va.velas), ...indicadoresVelas(), aoClicar: alternar, aoMudarJanela: marcarPeriodoDoZoom });
         else if (a.historicoPrecos.length) G.renderPrecoAcao("graf-preco-acao", filtrarPeriodo(a.historicoPrecos, periodoGrafico), 0, Number(a.precoAtual) || 0, { quantidade: 0, aoClicar: alternar });
         if (va.velas.length >= 2) {
           const termos = NOMES_INDICES[ROTA.param] ? { google: `"${NOMES_INDICES[ROTA.param]}"`, gdelt: `"${NOMES_INDICES[ROTA.param]}"` } : termosNoticiasAcao(a);

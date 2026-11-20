@@ -3394,3 +3394,7 @@ select.sel-banco-nativo { display: none !important; }
 .leg-graf .leg-media { background: transparent; border-color: #B0B6C0; border-style: dashed; }
 /* desligado: apagado e com a bolinha vazia (mesmo jeito do MME 9 da tela da ação) */
 .leg-graf > button.off { opacity: .45; text-decoration: none; }
+/* gráfico da ação/dólar/cripto: a linha Abertura…/legenda fica no meio da faixa
+   entre o cabeçalho do quadro e a primeira linha do gráfico */
+.grafico-acao-area { padding-top: 0; }
+.grafico-acao-area canvas { inset: 0 16px 14px; height: calc(100% - 14px) !important; }
