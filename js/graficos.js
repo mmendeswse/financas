@@ -796,11 +796,18 @@
         }
         if (melhor) { xs = melhor.x; yt = Math.round(melhor.y); }
       }
-      // pontilhado vertical entre as duas linhas, com um ponto em cada ponta
-      c.strokeStyle = cor; c.lineWidth = 1.2; c.setLineDash([3, 3]);
-      c.beginPath(); c.moveTo(xs, topo); c.lineTo(xs, base); c.stroke(); c.setLineDash([]);
+      // pontilhado vertical entre as duas linhas, com um ponto em cada ponta.
+      // Com as linhas perto uma da outra a caixa cobria o pontilhado inteiro:
+      // aí ele passa ao lado da caixa (à direita), sempre à vista
+      var xl = xs;
+      if (base - topo < 26) {
+        xl = Math.round(xs + lt / 2 + 5) + 0.5;
+        if (xl > ca.right - 2) { xl = Math.round(xs - lt / 2 - 5) + 0.5; }
+      }
+      c.strokeStyle = cor; c.lineWidth = 1.4; c.setLineDash([2, 2]);
+      c.beginPath(); c.moveTo(xl, topo); c.lineTo(xl, base); c.stroke(); c.setLineDash([]);
       c.fillStyle = cor;
-      [topo, base].forEach(function (yy) { c.beginPath(); c.arc(xs, yy, 2.5, 0, Math.PI * 2); c.fill(); });
+      [topo, base].forEach(function (yy) { c.beginPath(); c.arc(xl, yy, 2.5, 0, Math.PI * 2); c.fill(); });
       // caixa cheia na cor do resultado, texto escuro (como "36.42" e "33.10" no eixo)
       c.fillRect(Math.round(xs - lt / 2), yt - 9, lt, 18);
       c.fillStyle = "#0B1420"; c.textBaseline = "middle"; c.textAlign = "center"; c.fillText(total, xs, yt + 0.5);
