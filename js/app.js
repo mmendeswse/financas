@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.554";
+  const VERSAO_APP = "3.6.555";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -8748,12 +8748,13 @@
   // indicadores do gráfico de velas das telas de ação (MME 9, MMA 21, Bollinger)
   const indAcao = { mm9: false, mm21: false, bb: false };
   // agora ficam na legenda do próprio gráfico de velas (ver indicadoresVelas)
-  function botoesIndicadores() { return ""; }
+  function botoesIndicadores() { return `<div class="leg-velas" id="legVelas"></div>`; }
   // MME 9, MMA 21 e Bollinger na legenda do gráfico de velas: tocar liga/desliga
   function indicadoresVelas() {
     return {
       indicadores: IND_LEGENDA.map(([k, rot, cor]) => ({ chave: k, rotulo: rot, curto: rot.replace(" ", ""), cor, ativo: !!indAcao[k] })),
-      aoAlternarIndicador: (k) => { indAcao[k] = !indAcao[k]; manterRolagemCotacao(renderRota); }
+      aoAlternarIndicador: (k) => { indAcao[k] = !indAcao[k]; manterRolagemCotacao(renderRota); },
+      legendaEm: "legVelas"   // legenda no cabeçalho, ao lado dos períodos
     };
   }
   // linhas dos indicadores ligados, alinhadas com as velas

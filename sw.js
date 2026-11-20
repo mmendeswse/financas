@@ -1,12 +1,12 @@
 /* Service worker — deixa o app abrir sem internet no iPad/iPhone.
    Arquivos do app: cache primeiro. Cotações (APIs): sempre rede. */
-const CACHE = "muller-mendes-v773";
+const CACHE = "muller-mendes-v774";
 const ARQUIVOS = [
-  "./", "./index.html", "./css/style.css?v=3.6.554", "./manifest.json", "./manifest.webmanifest",
+  "./", "./index.html", "./css/style.css?v=3.6.555", "./manifest.json", "./manifest.webmanifest",
   "./js/vendor/chart.umd.min.js",
-  "./js/bloqueio.js?v=3.6.554", "./js/armazenamento.js?v=3.6.554", "./js/financeiro.js?v=3.6.554", "./js/investimentos.js?v=3.6.554",
-  "./js/graficos.js?v=3.6.554", "./js/extrato.js?v=3.6.554", "./js/relatorio.js?v=3.6.554", "./js/vendor/pdf.min.js", "./js/vendor/pdf.worker.min.js", "./js/cotacoes.js?v=3.6.554", "./js/sincronizacao.js?v=3.6.554", "./js/avatar.js?v=3.6.554", "./js/agenda.js?v=3.6.554", "./js/vendor/qrcode.js", "./js/vendor/jsQR.js", "./assets/dados/personagens.json", "./js/emojis.js?v=3.6.554", "./js/app.js?v=3.6.554",
-  "./assets/icons/bancos/nubank.svg?v=3.6.554", "./assets/icons/bancos/itau.svg?v=3.6.554", "./assets/icons/bancos/inter.svg?v=3.6.554", "./assets/icons/bancos/banco-do-brasil.svg?v=3.6.554", "./assets/icons/bancos/caixa.svg?v=3.6.554", "./assets/icons/bancos/mercado-pago.svg?v=3.6.554", "./assets/icons/bancos/alelo.svg?v=3.6.554",
+  "./js/bloqueio.js?v=3.6.555", "./js/armazenamento.js?v=3.6.555", "./js/financeiro.js?v=3.6.555", "./js/investimentos.js?v=3.6.555",
+  "./js/graficos.js?v=3.6.555", "./js/extrato.js?v=3.6.555", "./js/relatorio.js?v=3.6.555", "./js/vendor/pdf.min.js", "./js/vendor/pdf.worker.min.js", "./js/cotacoes.js?v=3.6.555", "./js/sincronizacao.js?v=3.6.555", "./js/avatar.js?v=3.6.555", "./js/agenda.js?v=3.6.555", "./js/vendor/qrcode.js", "./js/vendor/jsQR.js", "./assets/dados/personagens.json", "./js/emojis.js?v=3.6.555", "./js/app.js?v=3.6.555",
+  "./assets/icons/bancos/nubank.svg?v=3.6.555", "./assets/icons/bancos/itau.svg?v=3.6.555", "./assets/icons/bancos/inter.svg?v=3.6.555", "./assets/icons/bancos/banco-do-brasil.svg?v=3.6.555", "./assets/icons/bancos/caixa.svg?v=3.6.555", "./assets/icons/bancos/mercado-pago.svg?v=3.6.555", "./assets/icons/bancos/alelo.svg?v=3.6.555",
   "./assets/icons/icon-192.png", "./assets/icons/icon-512.png", "./assets/icons/icon-maskable-192.png", "./assets/icons/icon-maskable-512.png",
   "./favicon.ico", "./favicon.svg", "./favicon-32.png", "./apple-touch-icon.png", "./apple-touch-icon-180.png", "./apple-touch-icon-167.png", "./apple-touch-icon-152.png", "./apple-touch-icon-precomposed.png"
 ];
