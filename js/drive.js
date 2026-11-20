@@ -23,7 +23,8 @@
   const gravarLocal = (s) => { try { localStorage.setItem(CHAVE, JSON.stringify(s)); } catch (e) { /* ignora */ } };
   // o login do Google não funciona no programa do Windows (abre de um arquivo)
   const disponivel = () => !!idCliente() && /^https?:$/.test(location.protocol) && !(global.bancoDados && global.bancoDados.ehDesktop);
-  const tokenValido = () => { const s = lerLocal(); return s.token && s.exp && s.exp > Date.now() + 60000 ? s.token : null; };
+  // token guardado só vale se foi pedido com o ID de cliente atual
+  const tokenValido = () => { const s = lerLocal(); return s.token && s.cliente === idCliente() && s.exp && s.exp > Date.now() + 60000 ? s.token : null; };
 
   let gisP = null, cliente = null, pedido = null;
   function carregarGIS() {
@@ -53,7 +54,7 @@
           callback: (r) => {
             const p = pedido; pedido = null; if (!p) return;
             if (r && r.access_token) {
-              gravarLocal(Object.assign(lerLocal(), { token: r.access_token, exp: Date.now() + (Number(r.expires_in) || 3600) * 1000, autorizado: true }));
+              gravarLocal(Object.assign(lerLocal(), { token: r.access_token, exp: Date.now() + (Number(r.expires_in) || 3600) * 1000, autorizado: true, cliente: idCliente() }));
               p.ok(r.access_token);
             } else p.erro(new Error(r && r.error === "access_denied" ? "Você não autorizou o acesso ao Google Drive." : "O Google não liberou o acesso ao Drive."));
           },
@@ -61,7 +62,8 @@
         });
       }
       pedido = { ok, erro };
-      cliente.requestAccessToken({ prompt: lerLocal().autorizado ? "" : "consent" });
+      const s = lerLocal();
+      cliente.requestAccessToken({ prompt: s.autorizado && s.cliente === idCliente() ? "" : "consent" });
     });
   }
 
