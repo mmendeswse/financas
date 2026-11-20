@@ -956,8 +956,17 @@
   // Cada vela é uma barra flutuante [abertura, fechamento]; o pavio
   // (mínima → máxima) é desenhado por um plugin antes das barras.
   // ---------------------------------------------------------------------
+  // itens escondidos pela legenda de cada gráfico de velas (Preço Atual, Preço
+  // Compra, Resultado, Notícias e indicadores): continua valendo nos redesenhos
+  var OCULTOS_VELAS = {};
   function renderVelas(canvasId, serieTotal, opcoes) {
     opcoes = opcoes || {};
+    var oculto = OCULTOS_VELAS[canvasId] = OCULTOS_VELAS[canvasId] || {};
+    var legHits = [];   // onde cada item da legenda foi desenhado (para o toque)
+    function legendaEm(x, y) {
+      for (var k = 0; k < legHits.length; k++) { var h = legHits[k]; if (x >= h.x1 && x <= h.x2 && y >= h.y1 && y <= h.y2) return h; }
+      return null;
+    }
     destruir(canvasId);
     var ctx = ctxOf(canvasId); if (!ctx) return;
     var canvas = ctx.canvas;
@@ -969,9 +978,9 @@
     // mesma ordem do gráfico de linha: Preço Atual, Preço Compra, Resultado
     // ("curto" é usado quando a legenda inteira não cabe ao lado do Abr/Máx/Mín/Fch)
     var legenda = [];
-    if (opcoes.linhaAtual > 0) legenda.push({ rotulo: opcoes.rotuloAtual || "Preço Atual", curto: "Atual", cor: corAtual });
-    if (opcoes.linhaCompra > 0) legenda.push({ rotulo: "Preço Compra", curto: "Compra", cor: CORES.laranja });
-    if (opcoes.linhaAtual > 0 && opcoes.linhaCompra > 0) legenda.push({ rotulo: "Resultado", curto: "Result.", cor: opcoes.linhaAtual >= opcoes.linhaCompra ? CORES.up : CORES.down });
+    if (opcoes.linhaAtual > 0) legenda.push({ chave: "atual", rotulo: opcoes.rotuloAtual || "Preço Atual", curto: "Atual", cor: corAtual });
+    if (opcoes.linhaCompra > 0) legenda.push({ chave: "compra", rotulo: "Preço Compra", curto: "Compra", cor: CORES.laranja });
+    if (opcoes.linhaAtual > 0 && opcoes.linhaCompra > 0) legenda.push({ chave: "resultado", rotulo: "Resultado", curto: "Result.", cor: opcoes.linhaAtual >= opcoes.linhaCompra ? CORES.up : CORES.down });
     var fimOHLC = 0;   // onde termina o texto Abr/Máx/Mín/Fch (a legenda não pode passar dele)
     // em telas estreitas (iPad em pé) o cabeçalho vira duas linhas:
     // Abr/Máx/Mín/Fch em cima e a legenda + Notícias embaixo
@@ -1032,7 +1041,7 @@
       c.fillStyle = fundo; c.fillRect(ca.right + 2, y - 9.5, larg, 18);
       c.fillStyle = texto; c.textBaseline = "middle"; c.fillText(txt, ca.right + 7, y);
     }
-    function linhaComEtiqueta(id, valor, corLinha, traco) {
+    function linhaComEtiqueta(id, valor, corLinha, traco, chave) {
       if (!(valor > 0)) return { id: id };
       var posicao = function (grafico) {
         var ca = grafico.chartArea, y = Math.round(grafico.scales.y.getPixelForValue(valor)) + 0.5;
@@ -1041,7 +1050,7 @@
       return {
         id: id,
         beforeDatasetsDraw: function (grafico) {
-          var p = posicao(grafico); if (!p) return;
+          var p = posicao(grafico); if (!p || oculto[chave]) return;
           var c = grafico.ctx;
           c.save();
           c.strokeStyle = corLinha; c.lineWidth = 1; c.setLineDash(traco);
@@ -1051,7 +1060,7 @@
         // a caixa do valor é desenhada depois, por etiquetasNoEixo, que afasta
         // as caixas quando os dois preços estão perto (não encavalam)
         afterDatasetsDraw: function (grafico) {
-          var p = posicao(grafico); if (!p) return;
+          var p = posicao(grafico); if (!p || oculto[chave]) return;
           (grafico.$etiquetas = grafico.$etiquetas || []).push({ ca: p.ca, y: p.y, linha: p.y, txt: f4(valor), cor: corLinha });
         }
       };
@@ -1093,13 +1102,16 @@
         layout: { padding: { top: 22 } },   // espaço para o cabeçalho Abr/Máx/Mín/Fch
         onClick: function (evt, el, ch) {
           if (arrastou) return;
+          // tocar num item da legenda mostra/esconde aquela linha (ou as notícias)
+          var lg = legendaEm(evt.x, evt.y);
+          if (lg) { oculto[lg.chave] = !oculto[lg.chave]; if (lg.chave === "noticias" && popover) fecharNoticia(); ch.draw(); return; }
           var m = marcaEm(evt.x, evt.y);
           // tocar no "N" abre o resumo; tocar de novo no mesmo "N" fecha
           if (m) { if (popover && popoverIdx === m.idx) fecharNoticia(); else abrirNoticia(m); return; }
           if (popover) { fecharNoticia(); return; }
           if (opcoes.aoClicar && dentroDaArea(ch, evt)) opcoes.aoClicar();
         },
-        onHover: function (evt, el, ch) { evt.native.target.style.cursor = marcaEm(evt.x, evt.y) ? "pointer" : (dentroDaArea(ch, evt) ? "crosshair" : "default"); },
+        onHover: function (evt, el, ch) { evt.native.target.style.cursor = marcaEm(evt.x, evt.y) || legendaEm(evt.x, evt.y) ? "pointer" : (dentroDaArea(ch, evt) ? "crosshair" : "default"); },
         scales: {
           x: eixoX({ ticks: { color: CORES.texto, font: fonte(10.5), maxTicksLimit: 8, maxRotation: 0 } }),
           y: eixoY({ position: "right", beginAtZero: false,
@@ -1157,13 +1169,14 @@
       // valor atual em azul e, nas ações, o preço de compra em laranja
       // mesmas cores do gráfico de linha: ação = Preço Atual em ciano e
       // Preço Compra em laranja; dólar = Valor Atual em amarelo
-      linhaComEtiqueta("linhaValorAtual", opcoes.linhaAtual, corAtual, opcoes.corAtual ? [3, 4] : [6, 4]),
-      linhaComEtiqueta("linhaCompra", opcoes.linhaCompra, CORES.laranja, [6, 4]),
+      linhaComEtiqueta("linhaValorAtual", opcoes.linhaAtual, corAtual, opcoes.corAtual ? [3, 4] : [6, 4], "atual"),
+      linhaComEtiqueta("linhaCompra", opcoes.linhaCompra, CORES.laranja, [6, 4], "compra"),
       etiquetasNoEixo,
       opcoes.linhaAtual > 0 && opcoes.linhaCompra > 0 ? {
         // Resultado: pontilhado entre o preço atual e o de compra, com a caixa do valor
         id: "diferencaCompraVelas",
         afterDatasetsDraw: function (g) {
+          if (oculto.resultado) return;
           var y = g.scales.y, ca = g.chartArea;
           var yA = y.getPixelForValue(opcoes.linhaAtual), yC = y.getPixelForValue(opcoes.linhaCompra);
           // só quando ao menos uma das linhas está na tela (com zoom, podem sair)
@@ -1185,11 +1198,27 @@
         }
       } : { id: "semDiferenca" },
       {
+        id: "zerarLegendaVelas",
+        beforeDraw: function () { legHits = []; },
+        // a legenda fica fora da área do gráfico, onde o Chart.js não chama o
+        // onClick/onHover: o toque nela é tratado aqui
+        afterEvent: function (g, args) {
+          var e = args.event, lg = legendaEm(e.x, e.y);
+          if (e.type === "mousemove" && !args.inChartArea) g.canvas.style.cursor = lg ? "pointer" : "default";
+          if (e.type === "click" && lg && !args.inChartArea) {
+            oculto[lg.chave] = !oculto[lg.chave];
+            if (lg.chave === "noticias" && popover) fecharNoticia();
+            g.draw();
+          }
+        }
+      },
+      {
         // indicadores sobre as velas: médias móveis e Bandas de Bollinger
         // (valores alinhados com a série toda; null onde não há cálculo)
         id: "sobreposicoes",
         afterDatasetsDraw: function (g) {
-          var lista = opcoes.sobreposicoes || []; if (!lista.length) return;
+          var todos = opcoes.sobreposicoes || []; if (!todos.length) return;
+          var lista = todos.filter(function (o) { return !(o.rotulo && oculto["ind:" + o.rotulo]); });
           var meta = g.getDatasetMeta(0), y = g.scales.y, c = g.ctx, ca = g.chartArea;
           c.save();
           c.beginPath(); c.rect(ca.left, ca.top, ca.right - ca.left, ca.bottom - ca.top); c.clip();
@@ -1207,10 +1236,19 @@
           // legenda dos indicadores no canto inferior esquerdo
           c.setLineDash([]); c.font = "700 10px 'Segoe UI', Roboto, sans-serif"; c.textBaseline = "middle";
           var x = ca.left + 6, yl = ca.bottom - 10;
-          lista.filter(function (o) { return o.rotulo; }).forEach(function (o) {
+          c.restore(); c.save();   // a legenda fica fora do recorte da área
+          c.font = "700 10px 'Segoe UI', Roboto, sans-serif"; c.textBaseline = "middle";
+          todos.filter(function (o) { return o.rotulo; }).forEach(function (o) {
+            var x0 = x, off = !!oculto["ind:" + o.rotulo];
+            c.globalAlpha = off ? 0.4 : 1;
             c.fillStyle = o.cor; c.fillRect(x, yl - 1, 10, 2); x += 14;
-            c.fillText(o.rotulo, x, yl); x += c.measureText(o.rotulo).width + 12;
+            var lt = c.measureText(o.rotulo).width;
+            c.fillText(o.rotulo, x, yl);
+            if (off) c.fillRect(x, yl, lt, 1);   // riscado: escondido
+            legHits.push({ chave: "ind:" + o.rotulo, x1: x0 - 3, x2: x + lt + 3, y1: yl - 9, y2: yl + 9 });
+            x += lt + 12;
           });
+          c.globalAlpha = 1;
           c.restore();
         }
       },
@@ -1225,6 +1263,7 @@
           meta.data.forEach(function (barra, i) {
             var lista = noticiasPorVela[ini + i]; if (!lista) return;
             algum = true;
+            if (oculto.noticias) return;
             var x = Math.round(barra.x), y = Math.max(ca.top - 6, g.scales.y.getPixelForValue(serie[i].maxima) - 14);
             c.fillStyle = "#1E88FF"; c.beginPath(); c.arc(x, y, 7.5, 0, Math.PI * 2); c.fill();
             c.fillStyle = "#FFFFFF"; c.fillText("N", x, y + 0.5);
@@ -1237,11 +1276,15 @@
             var xr = ca.right, yl = ca.top - 12;
             var txt = "Notícias" + (status ? " · " + status : "");
             c.font = "600 10.5px 'Segoe UI', Roboto, sans-serif"; c.textAlign = "right";
+            c.globalAlpha = oculto.noticias ? 0.4 : 1;
             c.fillStyle = CORES.texto; c.fillText(txt, xr, yl);
-            var xc = xr - c.measureText(txt).width - 11;
+            var ltN = c.measureText(txt).width, xc = xr - ltN - 11;
+            if (oculto.noticias) c.fillRect(xr - ltN, yl, ltN, 1);
             c.fillStyle = "#1E88FF"; c.beginPath(); c.arc(xc, yl, 6.5, 0, Math.PI * 2); c.fill();
             c.font = "800 8.5px 'Segoe UI', Roboto, sans-serif"; c.textAlign = "center";
             c.fillStyle = "#FFFFFF"; c.fillText("N", xc, yl + 0.5);
+            c.globalAlpha = 1;
+            if (algum) legHits.push({ chave: "noticias", x1: xc - 8, x2: xr + 2, y1: yl - 9, y2: yl + 9 });
             xLeg = xc - 6.5 - 14;
           }
           // Preço Atual · Preço Compra · Resultado, no mesmo estilo da legenda
@@ -1253,13 +1296,17 @@
           var chave = largura("rotulo") <= xLeg - limite ? "rotulo" : "curto";
           for (var k = legenda.length - 1; k >= 0; k--) {
             var it = { rotulo: legenda[k][chave], cor: legenda[k].cor }, lt = c.measureText(it.rotulo).width;
-            var xTexto = xLeg - lt, xBola = xTexto - 9;
+            var xTexto = xLeg - lt, xBola = xTexto - 9, off = !!oculto[legenda[k].chave];
             if (xBola - 5 < limite) break;
+            c.globalAlpha = off ? 0.4 : 1;
             c.textAlign = "left"; c.fillStyle = CORES.texto; c.fillText(it.rotulo, xTexto, yLeg);
+            if (off) c.fillRect(xTexto, yLeg, lt, 1);   // riscado: escondido
+            legHits.push({ chave: legenda[k].chave, x1: xBola - 6, x2: xTexto + lt + 3, y1: yLeg - 9, y2: yLeg + 9 });
             var m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(it.cor);
             c.fillStyle = m ? "rgba(" + parseInt(m[1], 16) + "," + parseInt(m[2], 16) + "," + parseInt(m[3], 16) + ",0.28)" : it.cor;
             c.strokeStyle = it.cor; c.lineWidth = 1.5;
             c.beginPath(); c.arc(xBola, yLeg, 4, 0, Math.PI * 2); c.fill(); c.stroke();
+            c.globalAlpha = 1;
             xLeg = xBola - 5 - 14;
           }
           c.restore();
