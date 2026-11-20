@@ -108,5 +108,19 @@
     }));
   }
 
-  global.Drive = { disponivel, preparar, salvarArquivo, NOME_PASTA };
+  // backups na pasta do sistema (os mais novos primeiro)
+  function listarBackups() {
+    return pedirToken().then((token) => pasta(token).then((idPasta) => {
+      const q = encodeURIComponent(`'${idPasta}' in parents and trashed=false`);
+      return api(token, `https://www.googleapis.com/drive/v3/files?q=${q}&orderBy=createdTime desc&pageSize=50&fields=files(id,name,createdTime,size)&spaces=drive`)
+        .then((j) => (j && j.files) || []);
+    }));
+  }
+  // conteúdo de um backup (texto JSON)
+  function baixarBackup(id) {
+    return pedirToken().then((token) => api(token, `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(id)}?alt=media`))
+      .then((obj) => JSON.stringify(obj));
+  }
+
+  global.Drive = { disponivel, preparar, salvarArquivo, listarBackups, baixarBackup, NOME_PASTA };
 })(window);
