@@ -2,16 +2,19 @@
  * drive.js
  * -----------------------------------------------------------------------
  * Salva o backup direto no Google Drive da pessoa, numa pasta
- * "Muller Mendes Finanças". Usa o mesmo login do Google do Google Agenda
- * (mesmo ID de cliente), com a permissão "drive.file": o sistema só enxerga
+ * "Muller Mendes Finanças". Usa o login do Google com um ID de cliente
+ * próprio (projeto onde a Drive API está ativada), com a permissão
+ * "drive.file": o sistema só enxerga
  * os arquivos e pastas que ele mesmo criou — não tem acesso ao resto do Drive.
  * -----------------------------------------------------------------------
  */
 (function (global) {
   "use strict";
 
-  const CLIENT_ID_PADRAO = "415282972688-krpcv51t9tjkmd70ntibsag1pobri2av.apps.googleusercontent.com";
-  const idCliente = () => global.MM_GOOGLE_CLIENT_ID || CLIENT_ID_PADRAO;
+  // ID de cliente próprio do Drive: projeto "Google Agendas" (nº 951379835330),
+  // onde a Google Drive API está ativada. O Google Agenda segue com o dele.
+  const CLIENT_ID_PADRAO = "951379835330-gng7lqjlqbp75v119e9e7o582h3k2b3h.apps.googleusercontent.com";
+  const idCliente = () => global.MM_DRIVE_CLIENT_ID || CLIENT_ID_PADRAO;
   const ESCOPO = "https://www.googleapis.com/auth/drive.file";
   const CHAVE = "mullerMendes:drive";
   const NOME_PASTA = "Muller Mendes Finanças";
