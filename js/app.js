@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.552";
+  const VERSAO_APP = "3.6.553";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -314,21 +314,28 @@
 
   // legenda dos gráficos Receitas x despesas, no cabeçalho do quadro (no celular fica no gráfico)
   // tocar em "Receitas" ou "Despesas" mostra/esconde aquelas colunas no gráfico do quadro
-  const LEGENDA_RD = `<span class="leg-graf"><button type="button" data-acao="leg-graf" data-id="0" title="Mostrar/esconder as receitas no gráfico"><i class="leg-receitas"></i>Receitas</button><button type="button" data-acao="leg-graf" data-id="1" title="Mostrar/esconder as despesas no gráfico"><i class="leg-despesas"></i>Despesas</button></span>`;
-  const ocultosGraf = new Map();   // id do gráfico → séries escondidas pela legenda (vale até fechar o app)
+  // Saldo e Média começam desligados (bolinha vazia), como o MME 9 da tela da ação
+  const LEGENDA_RD = `<span class="leg-graf"><button type="button" data-acao="leg-graf" data-id="0" title="Mostrar/esconder as receitas no gráfico"><i class="leg-receitas"></i>Receitas</button><button type="button" data-acao="leg-graf" data-id="1" title="Mostrar/esconder as despesas no gráfico"><i class="leg-despesas"></i>Despesas</button><button type="button" data-acao="leg-graf" data-id="2" title="Saldo do mês (receitas − despesas)"><i class="leg-saldo"></i>Saldo</button><button type="button" data-acao="leg-graf" data-id="3,4" title="Média mensal de receitas e de despesas do período"><i class="leg-media"></i>Média</button></span>`;
+  const visGraf = new Map();   // id do gráfico → { série: visível? } escolhido pela legenda (vale até fechar o app)
   function aplicarOcultosGraf(idCanvas) {
     const cv = document.getElementById(idCanvas), ch = cv && window.Chart && Chart.getChart(cv);
-    const ocultos = ocultosGraf.get(idCanvas) || new Set();
-    if (ch) { ch.data.datasets.forEach((_, i) => ch.setDatasetVisibility(i, !ocultos.has(i))); ch.update(); }
-    const card = cv && cv.closest(".card");
-    if (card) card.querySelectorAll('[data-acao="leg-graf"]').forEach((b) => { const off = ocultos.has(Number(b.dataset.id)); b.classList.toggle("off", off); b.setAttribute("aria-pressed", off ? "false" : "true"); });
+    if (!ch) return;
+    const vis = visGraf.get(idCanvas) || {};
+    Object.keys(vis).forEach((i) => { if (ch.data.datasets[i]) ch.setDatasetVisibility(Number(i), vis[i]); });
+    ch.update();
+    const card = cv.closest(".card");
+    if (card) card.querySelectorAll('[data-acao="leg-graf"]').forEach((b) => {
+      const on = b.dataset.id.split(",").some((i) => ch.data.datasets[i] && ch.isDatasetVisible(Number(i)));
+      b.classList.toggle("off", !on); b.setAttribute("aria-pressed", on ? "true" : "false");
+    });
   }
   function alternarLegendaGraf(botao) {
-    const card = botao.closest(".card"), cv = card && card.querySelector("canvas[id]");
-    if (!cv) return;
-    const i = Number(botao.dataset.id), ocultos = ocultosGraf.get(cv.id) || new Set();
-    if (ocultos.has(i)) ocultos.delete(i); else ocultos.add(i);
-    ocultosGraf.set(cv.id, ocultos);
+    const card = botao.closest(".card"), cv = card && card.querySelector("canvas[id]"), ch = cv && window.Chart && Chart.getChart(cv);
+    if (!ch) return;
+    const idx = botao.dataset.id.split(",").map(Number), vis = visGraf.get(cv.id) || {};
+    const ligar = !idx.some((i) => ch.data.datasets[i] && ch.isDatasetVisible(i));
+    idx.forEach((i) => { vis[i] = ligar; });
+    visGraf.set(cv.id, vis);
     aplicarOcultosGraf(cv.id);
   }
   const COR_META_PADRAO = "#00E5FF";
