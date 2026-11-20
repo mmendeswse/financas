@@ -3376,3 +3376,10 @@ select.sel-banco-nativo { display: none !important; }
 .leg-graf > button:hover { background: rgba(255,255,255,.06); }
 .leg-graf > button.off { opacity: .4; text-decoration: line-through; }
 .leg-graf > button.off i { background: transparent !important; }
+/* escolha do que importar (quadro Backup Dados) */
+.imp-opcoes { display: grid; gap: 8px; margin: 6px 0 4px; }
+.imp-opcao { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--linha-2); background: var(--painel-2); color: var(--texto); font: inherit; cursor: pointer; transition: border-color .15s, background .15s; }
+.imp-opcao:hover, .imp-opcao:focus-visible { border-color: var(--cy); background: rgba(0,229,255,.06); }
+.imp-opcao .imp-ic { font-size: 20px; line-height: 1; flex: none; }
+.imp-opcao b { display: block; font-size: 14px; }
+.imp-opcao small { display: block; margin-top: 2px; color: var(--dim); font-size: 12px; line-height: 1.35; }
