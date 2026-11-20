@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.562";
+  const VERSAO_APP = "3.6.563";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -1760,12 +1760,30 @@
     const cont = document.getElementById("conteudo"), chaveTela = ROTA.secao + "|" + (ROTA.param || "");
     // a animação de entrada só ao abrir a guia: nos redesenhos (cotações,
     // sincronização) os quadros ficam parados no lugar
-    cont.classList.toggle("redesenho", cont.dataset.tela === chaveTela);
+    const mesmaTela = cont.dataset.tela === chaveTela;
+    cont.classList.toggle("redesenho", mesmaTela);
     cont.dataset.tela = chaveTela;
+    // redesenho da mesma guia (trocar 3m/6m/12m, ano, filtros…): a página fica
+    // onde estava. Sem isso, ao trocar o conteúdo a página encolhia por um
+    // instante e o navegador (no iPad principalmente) voltava para o topo
+    const area = mesmaTela ? document.querySelector(".scroll") : null;
+    const rolagem = mesmaTela ? { area: area ? area.scrollTop : 0, janela: window.scrollY } : null;
+    if (mesmaTela) {
+      cont.style.minHeight = cont.offsetHeight + "px";
+      // o botão tocado some no redesenho: no Safari, perder o foco assim pode rolar a página
+      if (document.activeElement && cont.contains(document.activeElement)) document.activeElement.blur();
+    }
     cont.innerHTML = fn(DADOS, ROTA.param);
     if (ROTA.secao === "configuracoes") montarAreaBiometria();
     if (ROTA.secao === "configuracoes" && A.ehDesktop) A.caminhoBanco().then((c) => { const el = document.getElementById("caminhoBanco"); if (el) el.textContent = "Local do banco: " + c; });
     montarGraficosDaRota();
+    if (rolagem) {
+      if (area) area.scrollTop = rolagem.area;
+      if (window.scrollY !== rolagem.janela) window.scrollTo(0, rolagem.janela);
+      cont.style.minHeight = "";
+      // os gráficos que terminam de montar no próximo quadro não podem puxar a página
+      requestAnimationFrame(() => { if (area && Math.abs(area.scrollTop - rolagem.area) > 1) area.scrollTop = rolagem.area; if (Math.abs(window.scrollY - rolagem.janela) > 1) window.scrollTo(0, rolagem.janela); });
+    }
     atualizarBadgeNotificacoes();
     atualizarTicker();
     atualizarSidebarMeta();
