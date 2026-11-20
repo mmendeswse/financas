@@ -301,15 +301,19 @@
   // ---------------------------------------------------------------------
   // backup
   // ---------------------------------------------------------------------
-  function exportarDados() {
+  // conteúdo do arquivo de backup (marca a data do último backup)
+  function backupTexto() {
     var dados = carregarDados();
     dados.config.ultimoBackup = new Date().toISOString();
     salvarDados(dados);
-    var carimboArq = isoLocal(new Date());
     // o arquivo de backup não leva o token de sincronização deste aparelho
     var copia = JSON.parse(JSON.stringify(dados));
     if (copia.config) delete copia.config.sync;
-    var texto = JSON.stringify(copia, null, 2);
+    return { nome: "muller-mendes-backup-" + isoLocal(new Date()) + ".json", texto: JSON.stringify(copia, null, 2) };
+  }
+  function exportarDados() {
+    var b = backupTexto(), texto = b.texto;
+    var carimboArq = isoLocal(new Date());
     if (BD && BD.salvarArquivo) { BD.salvarArquivo("muller-mendes-backup-" + carimboArq + ".json", texto); return; }
     var blob = new Blob([texto], { type: "application/json" });
     var url = URL.createObjectURL(blob);
@@ -357,6 +361,7 @@
     limparDados: limparDados,
     carregarExemplo: carregarExemplo,
     exportarDados: exportarDados,
+    backupTexto: backupTexto,
     importarDados: importarDados,
     novoId: novoId,
     hoje: hoje,

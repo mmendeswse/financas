@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.564";
+  const VERSAO_APP = "3.6.565";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -1783,7 +1783,7 @@
       if (document.activeElement && cont.contains(document.activeElement)) document.activeElement.blur();
     }
     cont.innerHTML = fn(DADOS, ROTA.param);
-    if (ROTA.secao === "configuracoes") montarAreaBiometria();
+    if (ROTA.secao === "configuracoes") { montarAreaBiometria(); if (window.Drive) Drive.preparar(); }
     if (ROTA.secao === "configuracoes" && A.ehDesktop) A.caminhoBanco().then((c) => { const el = document.getElementById("caminhoBanco"); if (el) el.textContent = "Local do banco: " + c; });
     montarGraficosDaRota();
     if (rolagem) {
@@ -1813,6 +1813,41 @@
     timerToast = setTimeout(() => el.classList.remove("on"), 2400);
   }
 
+  function exportarArquivo() {
+    A.exportarDados(); toast("Backup exportado — verifique seus downloads.");
+    [500, 1500, 3000].forEach((ms) => setTimeout(ajustarBarraGuias, ms));
+  }
+  // Exportar (quadro Backup Dados): baixar o arquivo ou salvar direto no Google Drive
+  function abrirEscolhaExportar() {
+    if (window.Drive) Drive.preparar();
+    const op = (id, icone, titulo, texto) => `<button class="imp-opcao" id="${id}"><span class="imp-ic">${icone}</span><span><b>${titulo}</b><small>${texto}</small></span></button>`;
+    abrirModal(`<h3>Exportar</h3>
+      <div class="imp-opcoes">
+        ${op("exp_drive", "☁️", "Salvar no Google Drive", `o arquivo vai para a pasta “${Drive.NOME_PASTA}” do seu Drive`)}
+        ${op("exp_arquivo", "💾", "Baixar arquivo", "salva o arquivo .json neste aparelho")}
+      </div>
+      <p class="sy-erro" role="alert"></p>
+      <div class="modal-acoes"><button class="btn" id="exp_cancelar">Cancelar</button></div>`);
+    const m = document.getElementById("modal"), err = m.querySelector(".sy-erro");
+    m.querySelector("#exp_cancelar").onclick = fecharModal;
+    m.querySelector("#exp_arquivo").onclick = () => { fecharModal(); exportarArquivo(); };
+    const bDrive = m.querySelector("#exp_drive");
+    bDrive.onclick = () => {
+      if (bDrive.disabled) return;
+      bDrive.disabled = true; err.textContent = "";
+      const titulo = bDrive.querySelector("b"), antes = titulo.textContent;
+      titulo.textContent = "Salvando no Google Drive…";
+      const b = A.backupTexto();
+      Drive.salvarArquivo(b.nome, b.texto).then((r) => {
+        fecharModal();
+        toast(`Backup salvo no Google Drive (pasta ${r.pasta}).`);
+        renderRota();   // "Último backup exportado" atualizado
+      }).catch((e) => {
+        bDrive.disabled = false; titulo.textContent = antes;
+        err.textContent = e.message || "Não deu certo salvar no Google Drive.";
+      });
+    };
+  }
   // Importar (quadro Backup Dados): backup do sistema, extrato do Nubank ou relatório ICL
   function abrirEscolhaImportar() {
     const op = (id, icone, titulo, texto) => `<button class="imp-opcao" data-input="${id}"><span class="imp-ic">${icone}</span><span><b>${titulo}</b><small>${texto}</small></span></button>`;
@@ -9102,7 +9137,7 @@
             ${A.ehDesktop ? `<p class="cfg-texto" id="caminhoBanco">Local do banco: carregando…</p>` : ""}
             <p class="cfg-texto"${opc(4)}>Guarde uma cópia dos seus dados de vez em quando. O arquivo de backup leva bancos, lançamentos, investimentos, ações e metas (sem o token da sincronização).</p>
             ${lista([
-              ["<b>Exportar</b> baixa um arquivo <b>.json</b> com todos os dados.", 6],
+              ["<b>Exportar</b> salva um arquivo <b>.json</b> com todos os dados: no aparelho ou direto no seu <b>Google Drive</b>.", 6],
               ["<b>Importar → Backup</b> substitui todos os dados atuais pelos do arquivo — o sistema pede confirmação antes.", 1],
               ["<b>Importar → Nubank</b> lê o Extrato de Custódia do Nubank e traz os investimentos e as ações (nada é enviado para a internet).", 5],
               ["<b>Importar → ICL</b> lê o relatório do Instituto Conhecimento Liberta (PDF) e atualiza toda a guia Nasdaq: cotações, altas e quedas, CDI, IPCA, resumo e análises.", 3]
@@ -9918,7 +9953,11 @@
           else toast("Código: " + b.dataset.cofre);
           break;
         case "abrir-pasta-banco": A.abrirPastaBanco(); break;
-        case "exportar-backup": A.exportarDados(); toast("Backup exportado — verifique seus downloads."); [500, 1500, 3000].forEach((ms) => setTimeout(ajustarBarraGuias, ms)); break;
+        case "exportar-backup":
+          // com o Google disponível, pergunta: baixar o arquivo ou salvar no Google Drive
+          if (window.Drive && Drive.disponivel()) abrirEscolhaExportar();
+          else exportarArquivo();
+          break;
         case "importar-pdf": document.getElementById("inputImportarPdf").click(); break;
         case "importar-backup": document.getElementById("inputImportarBackup").click(); break;
         // quadro Backup Dados: um botão Importar que pergunta o que importar
