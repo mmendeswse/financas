@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.545";
+  const VERSAO_APP = "3.6.546";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -9048,7 +9048,7 @@
     const comSenha = window.Bloqueio && Bloqueio.ativo();
     return `
       <div class="grid g-top cfg-grid">
-        <div class="cfg-backup">${card("", "Backup Dados", A.ehDesktop ? "arquivo do programa, com cópia automática (dados.bak.json)" : "Todas informações são armazenadas exclusivamente neste navegador", "", `
+        <div class="cfg-backup">${card("", "Backup Dados", A.ehDesktop ? "arquivo do programa · cópia automática" : "dados salvos só neste navegador", "", `
           <div class="body pad">
             ${A.ehDesktop ? `<p class="cfg-texto" id="caminhoBanco">Local do banco: carregando…</p>` : ""}
             <p class="cfg-texto"${opc(4)}>Guarde uma cópia dos seus dados de vez em quando. O arquivo de backup leva bancos, lançamentos, investimentos, ações e metas (sem o token da sincronização).</p>
