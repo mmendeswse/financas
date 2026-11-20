@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.547";
+  const VERSAO_APP = "3.6.548";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -9093,7 +9093,7 @@
             ${acoes(`<button class="btn primario" data-acao="salvar-cotacoes">Salvar</button>`)}
           </div>`)}</div>
         <div class="cfg-zona"><div class="card" style="border-color:rgba(255,84,104,.3)">
-          <header><div><h2 class="down">Zona Risco</h2><div class="sub">Atenção: ação permanente, sem volta</div></div></header>
+          <header><div><h2 class="down">Zona Risco</h2><div class="sub">Ação permanente</div></div></header>
           <div class="body"><div class="body pad">
             <p class="cfg-texto cfg-opc" data-opc="6">Apaga todos os dados deste aparelho de uma vez.</p>
             ${lista([
