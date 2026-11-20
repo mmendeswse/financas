@@ -992,6 +992,8 @@
     // mesma ordem do gráfico de linha: Preço Atual, Preço Compra, Resultado
     // ("curto" é usado quando a legenda inteira não cabe ao lado do Abr/Máx/Mín/Fch)
     var legenda = [];
+    // MME 9, MMA 21, Bollinger: ficam na legenda (à esquerda) e ligam/desligam a linha
+    (opcoes.indicadores || []).forEach(function (ind) { legenda.push({ chave: "sel:" + ind.chave, rotulo: ind.rotulo, curto: ind.curto || ind.rotulo, cor: ind.cor, desligado: !ind.ativo }); });
     if (opcoes.linhaAtual > 0) legenda.push({ chave: "atual", rotulo: opcoes.rotuloAtual || "Preço Atual", curto: "Atual", cor: corAtual });
     if (opcoes.linhaCompra > 0) legenda.push({ chave: "compra", rotulo: "Preço Compra", curto: "Compra", cor: CORES.laranja });
     if (opcoes.linhaAtual > 0 && opcoes.linhaCompra > 0) legenda.push({ chave: "resultado", rotulo: "Resultado", curto: "Result.", cor: opcoes.linhaAtual >= opcoes.linhaCompra ? CORES.up : CORES.down });
@@ -1166,7 +1168,7 @@
         afterDatasetsDraw: function (g) {
           var i = cursor ? g.scales.x.getValueForPixel(cursor.x) : serie.length - 1;
           var p = serie[Math.max(0, Math.min(serie.length - 1, Math.round(i)))]; if (!p) return;
-          var c = g.ctx, x = g.chartArea.left + 4, y = g.chartArea.top - (duasLinhas ? 30 : 12);
+          var c = g.ctx, x = g.chartArea.left + 4, y = duasLinhas ? g.chartArea.top - 30 : Math.round(g.chartArea.top / 2);
           var partes = [["Abertura", p.abertura], ["Máxima", p.maxima], ["Mínima", p.minima], ["Fechamento", p.preco]];
           c.save();
           c.textBaseline = "middle";
@@ -1220,6 +1222,7 @@
           var e = args.event, lg = legendaEm(e.x, e.y);
           if (e.type === "mousemove" && !args.inChartArea) g.canvas.style.cursor = lg ? "pointer" : "default";
           if (e.type === "click" && lg && !args.inChartArea) {
+            if (lg.chave.indexOf("sel:") === 0) { if (opcoes.aoAlternarIndicador) opcoes.aoAlternarIndicador(lg.chave.slice(4)); return; }
             oculto[lg.chave] = !oculto[lg.chave];
             if (lg.chave === "noticias" && popover) fecharNoticia();
             g.draw();
@@ -1252,7 +1255,7 @@
           var x = ca.left + 6, yl = ca.bottom - 10;
           c.restore(); c.save();   // a legenda fica fora do recorte da área
           c.font = "700 10px 'Segoe UI', Roboto, sans-serif"; c.textBaseline = "middle";
-          todos.filter(function (o) { return o.rotulo; }).forEach(function (o) {
+          todos.filter(function (o) { return o.rotulo && !(opcoes.indicadores && opcoes.indicadores.length); }).forEach(function (o) {
             var x0 = x, off = !!oculto["ind:" + o.rotulo];
             c.globalAlpha = off ? 0.4 : 1;
             c.fillStyle = o.cor; c.fillRect(x, yl - 1, 10, 2); x += 14;
@@ -1287,13 +1290,12 @@
           var xLeg = ca.right;   // onde a legenda das linhas termina (à direita)
           if (algum || status) {
             // legenda "Notícias" no canto direito do cabeçalho
-            var xr = ca.right, yl = ca.top - 12;
+            var xr = ca.right, yl = duasLinhas ? ca.top - 12 : Math.round(ca.top / 2);
             var txt = "Notícias" + (status ? " · " + status : "");
             c.font = "600 10.5px 'Segoe UI', Roboto, sans-serif"; c.textAlign = "right";
-            c.globalAlpha = oculto.noticias ? 0.4 : 1;
+            c.globalAlpha = oculto.noticias ? 0.45 : 1;
             c.fillStyle = CORES.texto; c.fillText(txt, xr, yl);
             var ltN = c.measureText(txt).width, xc = xr - ltN - 11;
-            if (oculto.noticias) c.fillRect(xr - ltN, yl, ltN, 1);
             c.fillStyle = "#1E88FF"; c.beginPath(); c.arc(xc, yl, 6.5, 0, Math.PI * 2); c.fill();
             c.font = "800 8.5px 'Segoe UI', Roboto, sans-serif"; c.textAlign = "center";
             c.fillStyle = "#FFFFFF"; c.fillText("N", xc, yl + 0.5);
@@ -1303,23 +1305,22 @@
           }
           // Preço Atual · Preço Compra · Resultado, no mesmo estilo da legenda
           // do gráfico de linha (bolinha translúcida com contorno na cor)
-          var yLeg = ca.top - 12, limite = duasLinhas ? ca.left : Math.max(ca.left, fimOHLC + 6);   // não cobre o Abr/Máx/Mín/Fch
+          var yLeg = duasLinhas ? ca.top - 12 : Math.round(ca.top / 2), limite = duasLinhas ? ca.left : Math.max(ca.left, fimOHLC + 6);   // não cobre o Abr/Máx/Mín/Fch
           c.font = "600 10.5px 'Segoe UI', Roboto, sans-serif"; c.textBaseline = "middle";
           // se os nomes completos não couberem, usa os curtos (Result., Atual, Compra)
           var largura = function (chave) { return legenda.reduce(function (t, it) { return t + c.measureText(it[chave]).width + 9 + 5 + 14; }, 0); };
           var chave = largura("rotulo") <= xLeg - limite ? "rotulo" : "curto";
           for (var k = legenda.length - 1; k >= 0; k--) {
             var it = { rotulo: legenda[k][chave], cor: legenda[k].cor }, lt = c.measureText(it.rotulo).width;
-            var xTexto = xLeg - lt, xBola = xTexto - 9, off = !!oculto[legenda[k].chave];
+            var xTexto = xLeg - lt, xBola = xTexto - 9, off = legenda[k].desligado || !!oculto[legenda[k].chave];
             if (xBola - 5 < limite) break;
-            c.globalAlpha = off ? 0.4 : 1;
+            c.globalAlpha = off ? 0.45 : 1;
             c.textAlign = "left"; c.fillStyle = CORES.texto; c.fillText(it.rotulo, xTexto, yLeg);
-            if (off) c.fillRect(xTexto, yLeg, lt, 1);   // riscado: escondido
             legHits.push({ chave: legenda[k].chave, x1: xBola - 6, x2: xTexto + lt + 3, y1: yLeg - 9, y2: yLeg + 9 });
             var m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(it.cor);
             c.fillStyle = m ? "rgba(" + parseInt(m[1], 16) + "," + parseInt(m[2], 16) + "," + parseInt(m[3], 16) + ",0.28)" : it.cor;
             c.strokeStyle = it.cor; c.lineWidth = 1.5;
-            c.beginPath(); c.arc(xBola, yLeg, 4, 0, Math.PI * 2); c.fill(); c.stroke();
+            c.beginPath(); c.arc(xBola, yLeg, 4, 0, Math.PI * 2); if (!off) c.fill(); c.stroke();   // desligado: bolinha vazia
             c.globalAlpha = 1;
             xLeg = xBola - 5 - 14;
           }
