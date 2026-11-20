@@ -70,9 +70,12 @@
         if (r.status === 401) { gravarLocal(Object.assign(lerLocal(), { token: null, exp: 0 })); }
         const motivo = j && j.error && j.error.message ? j.error.message : "";
         const e = new Error(r.status === 401 ? "O acesso ao Google Drive expirou. Tente de novo." :
-          r.status === 403 && /has not been used|is disabled/i.test(motivo) ? "A API do Google Drive não está ativada no projeto do Google Cloud deste sistema." :
+          r.status === 403 && /has not been used|is disabled/i.test(motivo) ? "A API do Google Drive não está ativada no projeto do Google Cloud deste sistema" + (/project (\d+)/.exec(motivo) ? " (projeto nº " + /project (\d+)/.exec(motivo)[1] + ")" : "") + ". Se acabou de ativar, espere alguns minutos e tente de novo." :
           r.status === 403 ? "O Google Drive recusou (permissão ou limite de uso)." : "O Google Drive respondeu com erro " + r.status + ".");
-        e.status = r.status; throw e;
+        e.status = r.status;
+        const proj = /project (\d+)/.exec(motivo);
+        if (proj && /has not been used|is disabled/i.test(motivo)) e.linkAtivar = "https://console.cloud.google.com/apis/library/drive.googleapis.com?project=" + proj[1];
+        throw e;
       }));
   }
   // pasta do sistema no Drive (criada na primeira vez)
@@ -105,5 +108,19 @@
     }));
   }
 
-  global.Drive = { disponivel, preparar, salvarArquivo, NOME_PASTA };
+  // backups na pasta do sistema (os mais novos primeiro)
+  function listarBackups() {
+    return pedirToken().then((token) => pasta(token).then((idPasta) => {
+      const q = encodeURIComponent(`'${idPasta}' in parents and trashed=false`);
+      return api(token, `https://www.googleapis.com/drive/v3/files?q=${q}&orderBy=createdTime desc&pageSize=50&fields=files(id,name,createdTime,size)&spaces=drive`)
+        .then((j) => (j && j.files) || []);
+    }));
+  }
+  // conteúdo de um backup (texto JSON)
+  function baixarBackup(id) {
+    return pedirToken().then((token) => api(token, `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(id)}?alt=media`))
+      .then((obj) => JSON.stringify(obj));
+  }
+
+  global.Drive = { disponivel, preparar, salvarArquivo, listarBackups, baixarBackup, NOME_PASTA };
 })(window);

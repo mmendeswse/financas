@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.565";
+  const VERSAO_APP = "3.6.567";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -1845,6 +1845,8 @@
       }).catch((e) => {
         bDrive.disabled = false; titulo.textContent = antes;
         err.textContent = e.message || "Não deu certo salvar no Google Drive.";
+        // o Google diz em qual projeto a API precisa ser ativada: link direto para ele
+        if (e.linkAtivar) err.insertAdjacentHTML("beforeend", ` <a href="${esc(e.linkAtivar)}" target="_blank" rel="noopener">Abrir a página para ativar</a>`);
       });
     };
   }
@@ -1854,13 +1856,49 @@
     abrirModal(`<h3>Importar</h3>
       <div class="imp-opcoes">
         ${op("inputImportarBackup", "💾", "Backup", "arquivo .json exportado pelo sistema — substitui os dados atuais (pede confirmação)")}
+        ${window.Drive && Drive.disponivel() ? op("drive", "☁️", "Google Drive", `um backup salvo pelo sistema na pasta “${Drive.NOME_PASTA}” do seu Drive — substitui os dados atuais (pede confirmação)`) : ""}
         ${op("inputImportarPdf", "🟣", "Nubank", "Extrato de Custódia (PDF): investimentos e ações")}
         ${op("inputImportarRelatorio", "🟠", "ICL", "relatório do Instituto Conhecimento Liberta (PDF): atualiza a guia Bolsa")}
       </div>
       <div class="modal-acoes"><button class="btn" id="imp_cancelar">Cancelar</button></div>`);
     const m = document.getElementById("modal");
     m.querySelector("#imp_cancelar").onclick = fecharModal;
-    m.querySelectorAll(".imp-opcao").forEach((b) => { b.onclick = () => { const inp = document.getElementById(b.dataset.input); fecharModal(); if (inp) inp.click(); }; });
+    if (window.Drive) Drive.preparar();
+    m.querySelectorAll(".imp-opcao").forEach((b) => { b.onclick = () => {
+      if (b.dataset.input === "drive") { abrirImportarDrive(); return; }
+      const inp = document.getElementById(b.dataset.input); fecharModal(); if (inp) inp.click();
+    }; });
+  }
+  // lista os backups da pasta do sistema no Google Drive e importa o escolhido
+  function abrirImportarDrive() {
+    abrirModal(`<h3>Importar do Google Drive</h3>
+      <p class="campo ajuda" style="margin-top:0">Backups na pasta “${esc(Drive.NOME_PASTA)}” do seu Drive.</p>
+      <div class="imp-opcoes" id="imp_drive_lista"><p class="dim">Buscando os backups…</p></div>
+      <p class="sy-erro" role="alert"></p>
+      <div class="modal-acoes"><button class="btn" id="imp_cancelar">Cancelar</button></div>`);
+    const m = document.getElementById("modal"), lista = m.querySelector("#imp_drive_lista"), err = m.querySelector(".sy-erro");
+    m.querySelector("#imp_cancelar").onclick = fecharModal;
+    const erro = (e) => {
+      lista.innerHTML = "";
+      err.textContent = e.message || "Não deu certo falar com o Google Drive.";
+      if (e.linkAtivar) err.insertAdjacentHTML("beforeend", ` <a href="${esc(e.linkAtivar)}" target="_blank" rel="noopener">Abrir a página para ativar</a>`);
+    };
+    Drive.listarBackups().then((arqs) => {
+      if (!arqs.length) { lista.innerHTML = `<p class="dim">Nenhum backup no Drive ainda. Use Exportar → Salvar no Google Drive.</p>`; return; }
+      const quando = (iso) => new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+      const tam = (b) => { const n = Number(b) || 0; return n >= 1048576 ? (n / 1048576).toFixed(1).replace(".", ",") + " MB" : Math.max(1, Math.round(n / 1024)) + " KB"; };
+      lista.innerHTML = arqs.map((f) => `<button class="imp-opcao" data-id="${esc(f.id)}"><span class="imp-ic">📄</span><span><b>${esc(quando(f.createdTime))}</b><small>${esc(f.name)} · ${tam(f.size)}</small></span></button>`).join("");
+      lista.querySelectorAll("[data-id]").forEach((b) => { b.onclick = () => {
+        if (!window.confirm("Importar este backup vai substituir TODOS os dados atuais por completo. Deseja continuar?")) return;
+        err.textContent = "";
+        lista.querySelectorAll("button").forEach((x) => { x.disabled = true; });
+        b.querySelector("b").textContent = "Importando…";
+        Drive.baixarBackup(b.dataset.id)
+          .then((texto) => A.importarDados(new Blob([texto], { type: "application/json" })))
+          .then(() => { fecharModal(); toast("Backup do Google Drive importado com sucesso."); agendarEnvioSync(); })
+          .catch((e) => { lista.querySelectorAll("button").forEach((x) => { x.disabled = false; }); b.querySelector("b").textContent = "Tentar de novo"; err.textContent = e.message || "Não deu certo importar."; });
+      }; });
+    }).catch(erro);
   }
   function abrirModal(html, largo) {
     const m = document.getElementById("modal");
@@ -9138,7 +9176,7 @@
             <p class="cfg-texto"${opc(4)}>Guarde uma cópia dos seus dados de vez em quando. O arquivo de backup leva bancos, lançamentos, investimentos, ações e metas (sem o token da sincronização).</p>
             ${lista([
               ["<b>Exportar</b> salva um arquivo <b>.json</b> com todos os dados: no aparelho ou direto no seu <b>Google Drive</b>.", 6],
-              ["<b>Importar → Backup</b> substitui todos os dados atuais pelos do arquivo — o sistema pede confirmação antes.", 1],
+              ["<b>Importar → Backup</b> ou <b>Google Drive</b> substitui todos os dados atuais pelos do backup — o sistema pede confirmação antes.", 1],
               ["<b>Importar → Nubank</b> lê o Extrato de Custódia do Nubank e traz os investimentos e as ações (nada é enviado para a internet).", 5],
               ["<b>Importar → ICL</b> lê o relatório do Instituto Conhecimento Liberta (PDF) e atualiza toda a guia Nasdaq: cotações, altas e quedas, CDI, IPCA, resumo e análises.", 3]
             ])}
