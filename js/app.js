@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.556";
+  const VERSAO_APP = "3.6.557";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -8781,7 +8781,7 @@
       <button class="voltar" data-acao="ir" data-secao="acoes"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONES.voltar}</svg>Voltar para Ações</button>
       <div class="grid g-top">
         <div class="c12">${card("", `${esc(a.ticker)} <span class="selo-tag ${classeSelo(a.categoria)}">${esc(a.categoria)}</span>`, esc(a.empresa),
-          `${botoesIndicadores()}${abasPeriodo()}<button class="btn primario" data-acao="editar-acao" data-id="${a.id}">✎ Editar</button>`,
+          `${botoesIndicadores()}${abasPeriodo()}<button class="btn primario btn-icone" data-acao="editar-acao" data-id="${a.id}" title="Editar ação" aria-label="Editar ação"><span class="rot-oculto">Editar</span></button>`,
           `<div class="grafico-acao-area grafico-tela-cheia"><canvas id="graf-preco-acao"></canvas></div>`)}</div>
       </div>
     `;
