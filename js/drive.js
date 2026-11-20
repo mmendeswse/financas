@@ -2,16 +2,19 @@
  * drive.js
  * -----------------------------------------------------------------------
  * Salva o backup direto no Google Drive da pessoa, numa pasta
- * "Muller Mendes Finanças". Usa o mesmo login do Google do Google Agenda
- * (mesmo ID de cliente), com a permissão "drive.file": o sistema só enxerga
+ * "Muller Mendes Finanças". Usa o login do Google com um ID de cliente
+ * próprio (projeto onde a Drive API está ativada), com a permissão
+ * "drive.file": o sistema só enxerga
  * os arquivos e pastas que ele mesmo criou — não tem acesso ao resto do Drive.
  * -----------------------------------------------------------------------
  */
 (function (global) {
   "use strict";
 
-  const CLIENT_ID_PADRAO = "415282972688-krpcv51t9tjkmd70ntibsag1pobri2av.apps.googleusercontent.com";
-  const idCliente = () => global.MM_GOOGLE_CLIENT_ID || CLIENT_ID_PADRAO;
+  // ID de cliente próprio do Drive: projeto "Google Agendas" (nº 951379835330),
+  // onde a Google Drive API está ativada. O Google Agenda segue com o dele.
+  const CLIENT_ID_PADRAO = "951379835330-gng7lqjlqbp75v119e9e7o582h3k2b3h.apps.googleusercontent.com";
+  const idCliente = () => global.MM_DRIVE_CLIENT_ID || CLIENT_ID_PADRAO;
   const ESCOPO = "https://www.googleapis.com/auth/drive.file";
   const CHAVE = "mullerMendes:drive";
   const NOME_PASTA = "Muller Mendes Finanças";
@@ -20,7 +23,8 @@
   const gravarLocal = (s) => { try { localStorage.setItem(CHAVE, JSON.stringify(s)); } catch (e) { /* ignora */ } };
   // o login do Google não funciona no programa do Windows (abre de um arquivo)
   const disponivel = () => !!idCliente() && /^https?:$/.test(location.protocol) && !(global.bancoDados && global.bancoDados.ehDesktop);
-  const tokenValido = () => { const s = lerLocal(); return s.token && s.exp && s.exp > Date.now() + 60000 ? s.token : null; };
+  // token guardado só vale se foi pedido com o ID de cliente atual
+  const tokenValido = () => { const s = lerLocal(); return s.token && s.cliente === idCliente() && s.exp && s.exp > Date.now() + 60000 ? s.token : null; };
 
   let gisP = null, cliente = null, pedido = null;
   function carregarGIS() {
@@ -50,7 +54,7 @@
           callback: (r) => {
             const p = pedido; pedido = null; if (!p) return;
             if (r && r.access_token) {
-              gravarLocal(Object.assign(lerLocal(), { token: r.access_token, exp: Date.now() + (Number(r.expires_in) || 3600) * 1000, autorizado: true }));
+              gravarLocal(Object.assign(lerLocal(), { token: r.access_token, exp: Date.now() + (Number(r.expires_in) || 3600) * 1000, autorizado: true, cliente: idCliente() }));
               p.ok(r.access_token);
             } else p.erro(new Error(r && r.error === "access_denied" ? "Você não autorizou o acesso ao Google Drive." : "O Google não liberou o acesso ao Drive."));
           },
@@ -58,7 +62,8 @@
         });
       }
       pedido = { ok, erro };
-      cliente.requestAccessToken({ prompt: lerLocal().autorizado ? "" : "consent" });
+      const s = lerLocal();
+      cliente.requestAccessToken({ prompt: s.autorizado && s.cliente === idCliente() ? "" : "consent" });
     });
   }
 
