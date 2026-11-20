@@ -796,11 +796,18 @@
         }
         if (melhor) { xs = melhor.x; yt = Math.round(melhor.y); }
       }
-      // pontilhado vertical entre as duas linhas, com um ponto em cada ponta
-      c.strokeStyle = cor; c.lineWidth = 1.2; c.setLineDash([3, 3]);
-      c.beginPath(); c.moveTo(xs, topo); c.lineTo(xs, base); c.stroke(); c.setLineDash([]);
+      // pontilhado vertical entre as duas linhas, com um ponto em cada ponta.
+      // Com as linhas perto uma da outra a caixa cobria o pontilhado inteiro:
+      // aí ele passa ao lado da caixa (à direita), sempre à vista
+      var xl = xs;
+      if (base - topo < 26) {
+        xl = Math.round(xs + lt / 2 + 5) + 0.5;
+        if (xl > ca.right - 2) { xl = Math.round(xs - lt / 2 - 5) + 0.5; }
+      }
+      c.strokeStyle = cor; c.lineWidth = 1.4; c.setLineDash([2, 2]);
+      c.beginPath(); c.moveTo(xl, topo); c.lineTo(xl, base); c.stroke(); c.setLineDash([]);
       c.fillStyle = cor;
-      [topo, base].forEach(function (yy) { c.beginPath(); c.arc(xs, yy, 2.5, 0, Math.PI * 2); c.fill(); });
+      [topo, base].forEach(function (yy) { c.beginPath(); c.arc(xl, yy, 2.5, 0, Math.PI * 2); c.fill(); });
       // caixa cheia na cor do resultado, texto escuro (como "36.42" e "33.10" no eixo)
       c.fillRect(Math.round(xs - lt / 2), yt - 9, lt, 18);
       c.fillStyle = "#0B1420"; c.textBaseline = "middle"; c.textAlign = "center"; c.fillText(total, xs, yt + 0.5);
@@ -977,6 +984,16 @@
     opcoes = opcoes || {};
     var oculto = OCULTOS_VELAS[canvasId] = OCULTOS_VELAS[canvasId] || {};
     var legHits = [];   // onde cada item da legenda foi desenhado (para o toque)
+    // altura do meio da faixa entre a borda de baixo do cabeçalho do quadro e a
+    // primeira linha do gráfico (o canvas começa um pouco abaixo da borda)
+    function meioFaixaTopo(g) {
+      if (g.$offW !== g.width) {
+        g.$offW = g.width; g.$off = 0;
+        var cab = g.canvas.closest(".card"), h = cab && cab.querySelector(":scope > header");
+        if (h) g.$off = Math.max(0, Math.min(20, g.canvas.getBoundingClientRect().top - h.getBoundingClientRect().bottom));
+      }
+      return Math.max(7, Math.round((g.chartArea.top - g.$off) / 2));
+    }
     // legenda no cabeçalho do quadro (ao lado dos períodos), em vez de dentro do gráfico
     var legExterna = opcoes.legendaEm ? document.getElementById(opcoes.legendaEm) : null, chaveLegExt = null;
     function montarLegendaExterna(temNoticias, status) {
@@ -1192,7 +1209,7 @@
         afterDatasetsDraw: function (g) {
           var i = cursor ? g.scales.x.getValueForPixel(cursor.x) : serie.length - 1;
           var p = serie[Math.max(0, Math.min(serie.length - 1, Math.round(i)))]; if (!p) return;
-          var c = g.ctx, x = g.chartArea.left + 4, y = duasLinhas ? g.chartArea.top - 30 : Math.round(g.chartArea.top / 2);
+          var c = g.ctx, x = g.chartArea.left + 4, y = duasLinhas ? g.chartArea.top - 30 : meioFaixaTopo(g);
           var partes = [["Abertura", p.abertura], ["Máxima", p.maxima], ["Mínima", p.minima], ["Fechamento", p.preco]];
           c.save();
           c.textBaseline = "middle";
@@ -1315,7 +1332,7 @@
           var xLeg = ca.right;   // onde a legenda das linhas termina (à direita)
           if (algum || status) {
             // legenda "Notícias" no canto direito do cabeçalho
-            var xr = ca.right, yl = duasLinhas ? ca.top - 12 : Math.round(ca.top / 2);
+            var xr = ca.right, yl = duasLinhas ? ca.top - 12 : meioFaixaTopo(g);
             var txt = "Notícias" + (status ? " · " + status : "");
             c.font = "600 10.5px 'Segoe UI', Roboto, sans-serif"; c.textAlign = "right";
             c.globalAlpha = oculto.noticias ? 0.45 : 1;
@@ -1330,7 +1347,7 @@
           }
           // Preço Atual · Preço Compra · Resultado, no mesmo estilo da legenda
           // do gráfico de linha (bolinha translúcida com contorno na cor)
-          var yLeg = duasLinhas ? ca.top - 12 : Math.round(ca.top / 2), limite = duasLinhas ? ca.left : Math.max(ca.left, fimOHLC + 6);   // não cobre o Abr/Máx/Mín/Fch
+          var yLeg = duasLinhas ? ca.top - 12 : meioFaixaTopo(g), limite = duasLinhas ? ca.left : Math.max(ca.left, fimOHLC + 6);   // não cobre o Abr/Máx/Mín/Fch
           c.font = "600 10.5px 'Segoe UI', Roboto, sans-serif"; c.textBaseline = "middle";
           // se os nomes completos não couberem, usa os curtos (Result., Atual, Compra)
           var largura = function (chave) { return legenda.reduce(function (t, it) { return t + c.measureText(it[chave]).width + 9 + 5 + 14; }, 0); };
