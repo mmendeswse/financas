@@ -18,7 +18,8 @@
   const ESCOPO = "https://www.googleapis.com/auth/drive.file";
   const CHAVE = "mullerMendes:drive";
   // seletor de pasta do Google (Picker): chave de API e número do projeto
-  const API_KEY_PADRAO = "";
+  // chave restrita ao site do app (mmendeswse.github.io) e à Google Picker API
+  const API_KEY_PADRAO = "AIzaSyDWy8r34Mo2g0-Zp4qBDIGhPXY9EhpJm5g";
   const apiKey = () => global.MM_DRIVE_API_KEY || API_KEY_PADRAO;
   const APP_ID = "951379835330";
   const NOME_PASTA = "Muller Mendes Finanças";
