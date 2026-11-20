@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.565";
+  const VERSAO_APP = "3.6.566";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -1845,6 +1845,8 @@
       }).catch((e) => {
         bDrive.disabled = false; titulo.textContent = antes;
         err.textContent = e.message || "Não deu certo salvar no Google Drive.";
+        // o Google diz em qual projeto a API precisa ser ativada: link direto para ele
+        if (e.linkAtivar) err.insertAdjacentHTML("beforeend", ` <a href="${esc(e.linkAtivar)}" target="_blank" rel="noopener">Abrir a página para ativar</a>`);
       });
     };
   }
