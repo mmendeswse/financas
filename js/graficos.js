@@ -386,6 +386,25 @@
     tela.addEventListener("mouseleave", tela._bmSai);
   }
 
+  // as linhas da Média vão de uma ponta à outra do gráfico (a linha do
+  // Chart.js parava no meio do primeiro e do último mês)
+  var mediasRD = {
+    id: "mediasRD",
+    beforeDatasetsDraw: function (g) {   // atrás das colunas e dos valores escritos nelas
+      var ca = g.chartArea, c = g.ctx;
+      g.data.datasets.forEach(function (ds, i) {
+        if (!ds.mediaRD || !g.isDatasetVisible(i)) return;
+        var v = Number((ds.data || [])[0]); if (!isFinite(v)) return;
+        var y = Math.round(g.scales.y.getPixelForValue(v)) + 0.5;
+        if (y < ca.top || y > ca.bottom) return;
+        c.save();
+        c.strokeStyle = ds.borderColor; c.lineWidth = 1.4;
+        c.setLineDash(ds.borderDash || [6, 6]); c.lineDashOffset = ds.borderDashOffset || 0;
+        c.beginPath(); c.moveTo(ca.left, y); c.lineTo(ca.right, y); c.stroke();
+        c.restore();
+      });
+    }
+  };
   // média mensal do período (só os meses que já tiveram algum lançamento)
   function mediaRD(serie, campo) {
     var meses = serie.filter(function (s) { return (Number(s.entradas) || 0) + (Number(s.despesas) || 0) > 0; });
@@ -401,7 +420,7 @@
     var ctx = ctxOf(canvasId); if (!ctx) return;
     instancias[canvasId] = new Chart(ctx, {
       type: "bar",
-      plugins: [botoesMesRD, valoresRD, colunasJuntasRD],
+      plugins: [botoesMesRD, valoresRD, colunasJuntasRD, mediasRD],
       data: {
         labels: serie.map(function (s) { return s.rotulo; }),
         datasets: [
@@ -412,11 +431,11 @@
           { type: "line", label: "Saldo", order: -1, hidden: true, data: serie.map(function (s) { return (Number(s.entradas) || 0) - (Number(s.despesas) || 0); }),
             borderColor: "#FFD633", backgroundColor: "#FFD633", borderWidth: 2, cubicInterpolationMode: "monotone", pointRadius: 3, pointHoverRadius: 5, pointBackgroundColor: "#FFD633", fill: false },
           { type: "line", label: "Média receitas", order: -1, hidden: true, data: serie.map(function () { return mediaRD(serie, "entradas"); }),
-            borderColor: CORES.up, borderDash: [6, 6], borderWidth: 1.4, pointRadius: 0, pointHoverRadius: 0, fill: false },
+            borderColor: CORES.up, borderDash: [6, 6], borderWidth: 0, pointRadius: 0, pointHoverRadius: 0, fill: false, mediaRD: true },
           { type: "line", label: "Média despesas", order: -1, hidden: true, data: serie.map(function () { return mediaRD(serie, "despesas"); }),
             // tracinhos defasados dos da receita: com as duas médias iguais (uma linha
             // em cima da outra) aparecem verde e vermelho alternados, em vez de só uma cor
-            borderColor: CORES.down, borderDash: [6, 6], borderDashOffset: 6, borderWidth: 1.4, pointRadius: 0, pointHoverRadius: 0, fill: false }
+            borderColor: CORES.down, borderDash: [6, 6], borderDashOffset: 6, borderWidth: 0, pointRadius: 0, pointHoverRadius: 0, fill: false, mediaRD: true }
         ]
       },
       options: {
@@ -1108,16 +1127,18 @@
       };
       return {
         id: id,
-        // a linha vai por cima das velas, de ponta a ponta (antes ficava atrás
-        // delas e parecia interrompida); a caixa do valor é desenhada depois,
-        // por etiquetasNoEixo, que afasta as caixas quando os preços estão perto
-        afterDatasetsDraw: function (grafico) {
+        beforeDatasetsDraw: function (grafico) {
           var p = posicao(grafico); if (!p || oculto[chave]) return;
           var c = grafico.ctx;
           c.save();
           c.strokeStyle = corLinha; c.lineWidth = 1; c.setLineDash(traco);
           c.beginPath(); c.moveTo(p.ca.left, p.y); c.lineTo(p.ca.right + 2, p.y); c.stroke();
           c.restore();
+        },
+        // a caixa do valor é desenhada depois, por etiquetasNoEixo, que afasta
+        // as caixas quando os dois preços estão perto (não encavalam)
+        afterDatasetsDraw: function (grafico) {
+          var p = posicao(grafico); if (!p || oculto[chave]) return;
           (grafico.$etiquetas = grafico.$etiquetas || []).push({ ca: p.ca, y: p.y, linha: p.y, txt: f4(valor), cor: corLinha });
         }
       };
