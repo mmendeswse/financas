@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.570";
+  const VERSAO_APP = "3.6.571";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -553,6 +553,25 @@
   }
 
 
+  // logo depois de criar a senha: oferece entrar com a digital (Touch ID) ou o
+  // Face ID, se o aparelho tiver. O pedido precisa vir de um toque (botão).
+  function oferecerBiometria() {
+    if (!window.Bloqueio || Bloqueio.biometriaAtiva()) return;
+    Bloqueio.biometriaDisponivel().then((tem) => {
+      if (!tem) return;
+      abrirModal(`<h3>Entrar com a digital</h3>
+        <p class="cfg-texto" style="margin:0 0 6px">Quer usar a <b>digital (Touch ID)</b> ou o <b>Face ID</b> para abrir o sistema neste aparelho, em vez de digitar a senha?</p>
+        <p class="campo ajuda" style="margin:0">A senha continua valendo se a digital não for reconhecida.</p>
+        <div class="modal-acoes"><button class="btn" id="bio_depois">Agora não</button><button class="btn primario salvar" id="bio_ativar">Ativar digital</button></div>`);
+      const m = document.getElementById("modal");
+      m.querySelector("#bio_depois").onclick = fecharModal;
+      m.querySelector("#bio_ativar").onclick = () => {
+        Bloqueio.ativarBiometria()
+          .then(() => { fecharModal(); toast("Pronto: na próxima abertura, é só usar a digital."); montarAreaBiometria(); })
+          .catch((err) => toast("Não consegui ativar: " + (err && err.name === "NotAllowedError" ? "pedido cancelado" : (err.message || "erro"))));
+      };
+    });
+  }
   function montarAreaBiometria() {
     const area = document.getElementById("areaBiometria");
     if (!area || !window.Bloqueio) return;
@@ -9985,7 +10004,7 @@
           });
           break;
         case "criar-senha":
-          Bloqueio.abrir({ modo: "criar", aoDesbloquear: () => { renderRota(); toast("Senha criada. Ela será pedida na próxima abertura."); } });
+          Bloqueio.abrir({ modo: "criar", aoDesbloquear: () => { renderRota(); toast("Senha criada. Ela será pedida na próxima abertura."); oferecerBiometria(); } });
           break;
         case "trocar-senha":
           Bloqueio.abrir({ modo: "criar", aoDesbloquear: () => { renderRota(); toast("Senha alterada."); } });
