@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.555";
+  const VERSAO_APP = "3.6.556";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -8296,9 +8296,9 @@
     }
     const v = velasPeriodo(c.historico, c.preco), fech = v.velas.map((p) => p.preco);
     const sob = [];
-    if (indBolsa.bb) { const b = IND.bollinger(fech, 20, 2); sob.push({ valores: b.sup, cor: "#B0B6C0", largura: 1, traco: [4, 3], rotulo: "Bollinger 20,2" }, { valores: b.inf, cor: "#B0B6C0", largura: 1, traco: [4, 3] }); }
-    if (indBolsa.mm9) sob.push({ valores: IND.mme(fech, 9), cor: "#FFD633", rotulo: "MME 9" });
-    if (indBolsa.mm21) sob.push({ valores: IND.mms(fech, 21), cor: "#3B82F6", rotulo: "MMA 21" });
+    if (indBolsa.bb) { const b = IND.bollinger(fech, 20, 2); sob.push({ valores: b.sup, cor: COR_IND.bb, largura: 1, traco: [4, 3], rotulo: "Bollinger 20,2" }, { valores: b.inf, cor: COR_IND.bb, largura: 1, traco: [4, 3] }); }
+    if (indBolsa.mm9) sob.push({ valores: IND.mme(fech, 9), cor: COR_IND.mm9, rotulo: "MME 9" });
+    if (indBolsa.mm21) sob.push({ valores: IND.mms(fech, 21), cor: COR_IND.mm21, rotulo: "MMA 21" });
     const visiveis = Math.min(v.velas.length, 60);
     G.renderVelas("graf-bolsa-velas", v.velas, { visiveis, casas: 2, linhaAtual: c.preco, corAtual: "#FFD633", rotuloAtual: "Último", linhaCompra: compra, quantidade: qtdCompra, sobreposicoes: sob, aoClicar: () => { linhaBolsa = true; montarVelasBolsa(); },
       aoMudarJanela: (d1, d2) => montarOsciladorBolsa(v.velas, d1, d2) });
@@ -8741,7 +8741,10 @@
 
   // MME 9, MMA 21 e Bollinger como legenda (bolinha na cor da linha, igual a
   // Receitas/Despesas): tocar liga/desliga a linha no gráfico de velas
-  const IND_LEGENDA = [["mm9", "MME 9", "#FFD633"], ["mm21", "MMA 21", "#3B82F6"], ["bb", "Bollinger", "#C084FC"]];
+  // cores bem diferentes das outras linhas do gráfico (Preço Atual ciano ou amarelo,
+  // Preço Compra laranja, Resultado verde/vermelho, Notícias azul)
+  const COR_IND = { mm9: "#FF4FD8", mm21: "#F5F5F5", bb: "#8B5CF6" };   // rosa, branco, violeta
+  const IND_LEGENDA = [["mm9", "MME 9", COR_IND.mm9], ["mm21", "MMA 21", COR_IND.mm21], ["bb", "Bollinger", COR_IND.bb]];
   function legendaIndicadores(estado, acao) {
     return IND_LEGENDA.map(([k, rot, cor]) => `<button class="leg-ind${estado[k] ? " ativo" : ""}" data-acao="${acao}" data-id="${k}" style="--cor:${cor}" aria-pressed="${estado[k] ? "true" : "false"}" title="${estado[k] ? "Esconder" : "Mostrar"} ${rot} no gráfico"><i></i>${rot}</button>`).join("");
   }
@@ -8760,9 +8763,9 @@
   // linhas dos indicadores ligados, alinhadas com as velas
   function sobreposicoesAcao(velas) {
     const fech = velas.map((p) => p.preco), sob = [];
-    if (indAcao.bb) { const b = IND.bollinger(fech, 20, 2); sob.push({ valores: b.sup, cor: "#C084FC", largura: 1, traco: [4, 3], rotulo: "Bollinger 20,2" }, { valores: b.inf, cor: "#C084FC", largura: 1, traco: [4, 3] }); }
-    if (indAcao.mm9) sob.push({ valores: IND.mme(fech, 9), cor: "#FFD633", rotulo: "MME 9" });
-    if (indAcao.mm21) sob.push({ valores: IND.mms(fech, 21), cor: "#3B82F6", rotulo: "MMA 21" });
+    if (indAcao.bb) { const b = IND.bollinger(fech, 20, 2); sob.push({ valores: b.sup, cor: COR_IND.bb, largura: 1, traco: [4, 3], rotulo: "Bollinger 20,2" }, { valores: b.inf, cor: COR_IND.bb, largura: 1, traco: [4, 3] }); }
+    if (indAcao.mm9) sob.push({ valores: IND.mme(fech, 9), cor: COR_IND.mm9, rotulo: "MME 9" });
+    if (indAcao.mm21) sob.push({ valores: IND.mms(fech, 21), cor: COR_IND.mm21, rotulo: "MMA 21" });
     return sob;
   }
   function abasPeriodo() {
