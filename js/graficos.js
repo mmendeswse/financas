@@ -977,6 +977,30 @@
     opcoes = opcoes || {};
     var oculto = OCULTOS_VELAS[canvasId] = OCULTOS_VELAS[canvasId] || {};
     var legHits = [];   // onde cada item da legenda foi desenhado (para o toque)
+    // legenda no cabeçalho do quadro (ao lado dos períodos), em vez de dentro do gráfico
+    var legExterna = opcoes.legendaEm ? document.getElementById(opcoes.legendaEm) : null, chaveLegExt = null;
+    function montarLegendaExterna(temNoticias, status) {
+      if (!legExterna || !legExterna.isConnected) return;
+      var itens = legenda.slice();
+      if (temNoticias || status) itens.push({ chave: "noticias", rotulo: "Notícias" + (status ? " · " + status : ""), cor: "#1E88FF", noticias: true });
+      var desl = function (it) { return it.desligado || !!oculto[it.chave]; };
+      var chaveNova = itens.map(function (it) { return it.chave + (desl(it) ? "0" : "1") + it.rotulo; }).join("|");
+      if (chaveNova === chaveLegExt) return;
+      chaveLegExt = chaveNova;
+      legExterna.innerHTML = itens.map(function (it) {
+        return '<button type="button" class="leg-ind' + (desl(it) ? "" : " ativo") + (it.noticias ? " leg-noticias" : "") + '" data-chave="' + it.chave + '" style="--cor:' + it.cor + '" aria-pressed="' + (desl(it) ? "false" : "true") + '">' +
+          (it.noticias ? '<i class="leg-n">N</i>' : "<i></i>") + it.rotulo + "</button>";
+      }).join("");
+      legExterna.onclick = function (e) {
+        var b = e.target.closest("[data-chave]"); if (!b) return;
+        var k = b.dataset.chave;
+        if (k.indexOf("sel:") === 0) { if (opcoes.aoAlternarIndicador) opcoes.aoAlternarIndicador(k.slice(4)); return; }
+        oculto[k] = !oculto[k];
+        if (k === "noticias" && popover) fecharNoticia();
+        chaveLegExt = null;
+        if (instancias[canvasId]) instancias[canvasId].draw();
+      };
+    }
     function legendaEm(x, y) {
       for (var k = 0; k < legHits.length; k++) { var h = legHits[k]; if (x >= h.x1 && x <= h.x2 && y >= h.y1 && y <= h.y2) return h; }
       return null;
@@ -1142,7 +1166,7 @@
         // decide se o cabeçalho cabe numa linha só, pela largura do gráfico
         id: "cabecalhoDuasLinhas",
         beforeLayout: function (g) {
-          duasLinhas = g.width < 720;
+          duasLinhas = !legExterna && g.width < 720;
           g.options.layout.padding = { top: duasLinhas ? 40 : 22 };
         }
       }, {
@@ -1287,6 +1311,7 @@
             marcas.push({ x: x, y: y, idx: ini + i });
           });
           var status = g.$statusNoticias || "";
+          if (legExterna) { montarLegendaExterna(algum, status); c.restore(); return; }
           var xLeg = ca.right;   // onde a legenda das linhas termina (à direita)
           if (algum || status) {
             // legenda "Notícias" no canto direito do cabeçalho

@@ -3398,3 +3398,9 @@ select.sel-banco-nativo { display: none !important; }
    entre o cabeçalho do quadro e a primeira linha do gráfico */
 .grafico-acao-area { padding-top: 0; }
 .grafico-acao-area canvas { inset: 0 16px 14px; height: calc(100% - 14px) !important; }
+/* legenda do gráfico de velas no cabeçalho do quadro, ao lado dos períodos */
+.leg-velas { display: inline-flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 2px 4px; margin-right: 8px; }
+.leg-velas:empty { display: none; }
+.leg-ind .leg-n { width: 13px; height: 13px; border: 0; border-radius: 50%; background: #1E88FF; color: #fff; font: 800 8.5px 'Segoe UI', Roboto, sans-serif; font-style: normal; display: inline-flex; align-items: center; justify-content: center; }
+.leg-ind:not(.ativo) .leg-n { background: #1E88FF; }
+.leg-ind:focus:not(:focus-visible):not(:hover) { background: none; box-shadow: none; outline: none; }
