@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.572";
+  const VERSAO_APP = "3.6.573";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -9447,7 +9447,9 @@
       else if (el.children.length) return;
       const m = el.textContent.replace(/\u00a0/g, " ").match(RE_VALOR_CEL);
       if (!m) return;
-      el.innerHTML = `<span class="vm"><span class="vm-s">${m[1]}R$</span><span class="vm-n">${m[2]}</span></span>`;
+      // o sinal (+/−) fica numa caixinha própria: as linhas sem sinal ganham o mesmo
+      // espaço (ver abaixo) e o "R$" fica alinhado de cima a baixo
+      el.innerHTML = `<span class="vm"><span class="vm-s"><span class="vm-sinal">${m[1]}</span>R$</span><span class="vm-n">${m[2]}</span></span>`;
     });
     // cada coluna fica só da largura do maior valor dela (encostada à direita
     // da célula): o R$ continua alinhado de cima a baixo, mas colado no número
@@ -9463,6 +9465,11 @@
     });
     grupos.forEach((g) => g.forEach((lista) => {
       lista.forEach((vm) => { vm.style.width = ""; });
+      // mesma largura de sinal em toda a coluna (zero quando nenhuma linha tem sinal)
+      const sinais = lista.map((vm) => vm.querySelector(".vm-sinal")).filter(Boolean);
+      sinais.forEach((x) => { x.style.width = ""; });
+      const lSinal = Math.max(0, ...sinais.map((x) => x.getBoundingClientRect().width));
+      sinais.forEach((x) => { x.style.width = lSinal > 0 ? Math.ceil(lSinal) + "px" : ""; });
       const larg = Math.max(...lista.map((vm) => { const a = vm.children[0], b = vm.children[1]; return (a ? a.getBoundingClientRect().width : 0) + (b ? b.getBoundingClientRect().width : 0); }));
       if (larg > 0) lista.forEach((vm) => { vm.style.width = Math.ceil(larg + 5) + "px"; });
       // o título da coluna ("VALOR") começa onde começa o R$, como nas outras colunas
