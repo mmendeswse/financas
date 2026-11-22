@@ -174,14 +174,24 @@
       .catch((e) => { if (e.status === 404) return procurar(); throw e; });
   }
   // envia o arquivo; devolve { nome, link }
+  // salva o backup na pasta: se já existe um backup do sistema lá, ele é
+  // SUBSTITUÍDO pelo novo (mesmo arquivo, conteúdo e nome atualizados), em vez
+  // de criar um arquivo a cada vez
   function salvarArquivo(nome, texto) {
     return pedirToken().then((token) => pasta(token).then((idPasta) => {
-      const limite = "mm" + Math.random().toString(36).slice(2);
-      const meta = { name: nome, mimeType: "application/json", parents: [idPasta] };
-      const corpo = `--${limite}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n--${limite}\r\nContent-Type: application/json\r\n\r\n${texto}\r\n--${limite}--`;
-      return api(token, "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink", {
-        method: "POST", headers: { "Content-Type": `multipart/related; boundary=${limite}` }, body: corpo
-      }).then((j) => ({ nome: j.name, link: j.webViewLink, pasta: nomePasta() }));
+      const q = encodeURIComponent(`'${idPasta}' in parents and trashed=false and mimeType='application/json' and name contains 'muller-mendes-backup'`);
+      return api(token, `https://www.googleapis.com/drive/v3/files?q=${q}&orderBy=modifiedTime desc&pageSize=1&fields=files(id)&spaces=drive`)
+        .then((j) => {
+          const existente = j && j.files && j.files[0] ? j.files[0].id : null;
+          const limite = "mm" + Math.random().toString(36).slice(2);
+          const meta = existente ? { name: nome, mimeType: "application/json" } : { name: nome, mimeType: "application/json", parents: [idPasta] };
+          const corpo = `--${limite}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n--${limite}\r\nContent-Type: application/json\r\n\r\n${texto}\r\n--${limite}--`;
+          const url = existente
+            ? `https://www.googleapis.com/upload/drive/v3/files/${encodeURIComponent(existente)}?uploadType=multipart&fields=id,name,webViewLink`
+            : "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink";
+          return api(token, url, { method: existente ? "PATCH" : "POST", headers: { "Content-Type": `multipart/related; boundary=${limite}` }, body: corpo })
+            .then((r) => ({ nome: r.name, link: r.webViewLink, pasta: nomePasta(), substituido: !!existente }));
+        });
     }));
   }
 

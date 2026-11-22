@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.578";
+  const VERSAO_APP = "3.6.579";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -1885,7 +1885,7 @@
       const b = A.backupTexto();
       Drive.salvarArquivo(b.nome, b.texto).then((r) => {
         fecharModal();
-        toast(`Backup salvo no Google Drive (pasta ${r.pasta}).`);
+        toast(r.substituido ? `Backup atualizado no Google Drive (pasta ${r.pasta}).` : `Backup salvo no Google Drive (pasta ${r.pasta}).`);
         renderRota();   // "Último backup exportado" atualizado
       }).catch((e) => {
         bDrive.disabled = false; titulo.textContent = antes;
