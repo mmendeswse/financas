@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.575";
+  const VERSAO_APP = "3.6.576";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -1614,6 +1614,11 @@
     A.salvarDados(DADOS, true, true);   // automático: não conta como alteração sua
     A.aoMudar(() => { DADOS = A.carregarDados(); migrarRecorrenciasAntigas(); renderRota(); atualizarPerfilTopo(); agendarAgenda(); });
 
+    // pasta do Google Drive para os backups: guardada nos dados (vale em todos os aparelhos sincronizados)
+    if (window.Drive) Drive.configurar({
+      ler: () => (DADOS && DADOS.config && DADOS.config.drivePasta) || null,
+      gravar: (p) => { DADOS.config = DADOS.config || {}; DADOS.config.drivePasta = p; A.salvarDados(DADOS); agendarEnvioSync(); }
+    });
     ligarTopbar();
     ligarPerfilTopo();
     ligarSidebar();
@@ -1836,6 +1841,18 @@
     A.exportarDados(); toast("Backup exportado — verifique seus downloads.");
     [500, 1500, 3000].forEach((ms) => setTimeout(ajustarBarraGuias, ms));
   }
+  // linha "Pasta do Drive: X · trocar pasta" (ou "escolher pasta") nas janelas de Exportar e Importar
+  function linhaPastaDrive(idBotao) {
+    if (!(window.Drive && Drive.usaSeletor())) return "";
+    const p = Drive.pastaEscolhida();
+    return `<p class="campo ajuda" style="margin:8px 0 0">${p ? `Pasta do Drive: <b>${esc(p.nome)}</b>` : "Nenhuma pasta do Drive escolhida"} · <button class="link-acao" id="${idBotao}">${p ? "trocar pasta" : "escolher pasta"}</button></p>`;
+  }
+  function trocarPastaDrive(err, depois) {
+    if (err) err.textContent = "";
+    Drive.escolherPasta()
+      .then((p) => { toast(`Pasta dos backups: ${p.nome}.`); depois(); })
+      .catch((e) => { if (err) err.textContent = e.message || "Não consegui abrir o seletor do Google Drive."; });
+  }
   // onde o backup vai no Drive (na primeira vez com o seletor, a pessoa escolhe a pasta)
   function textoPastaDrive() {
     if (Drive.usaSeletor() && !Drive.pastaEscolhida()) return "na primeira vez você escolhe a pasta do seu Drive (ex.: Backups › Finanças)";
@@ -1850,13 +1867,13 @@
         ${op("exp_drive", "☁️", "Salvar no Google Drive", textoPastaDrive())}
         ${op("exp_arquivo", "💾", "Baixar arquivo", "salva o arquivo .json neste aparelho")}
       </div>
-      ${Drive.usaSeletor() && Drive.pastaEscolhida() ? `<p class="campo ajuda" style="margin:6px 0 0">Pasta do Drive: <b>${esc(Drive.nomePasta())}</b> · <button class="link-acao" id="exp_trocar">trocar pasta</button></p>` : ""}
+      ${linhaPastaDrive("exp_trocar")}
       <p class="sy-erro" role="alert"></p>
       <div class="modal-acoes"><button class="btn" id="exp_cancelar">Cancelar</button></div>`);
     const m = document.getElementById("modal"), err = m.querySelector(".sy-erro");
     m.querySelector("#exp_cancelar").onclick = fecharModal;
     const bTrocar = m.querySelector("#exp_trocar");
-    if (bTrocar) bTrocar.onclick = () => { err.textContent = ""; Drive.escolherPasta().then(() => abrirEscolhaExportar()).catch((e) => { err.textContent = e.message; }); };
+    if (bTrocar) bTrocar.onclick = () => trocarPastaDrive(err, abrirEscolhaExportar);
     m.querySelector("#exp_arquivo").onclick = () => { fecharModal(); exportarArquivo(); };
     const bDrive = m.querySelector("#exp_drive");
     bDrive.onclick = () => {
@@ -1901,10 +1918,13 @@
     abrirModal(`<h3>Importar do Google Drive</h3>
       <p class="campo ajuda" style="margin-top:0" id="imp_drive_pasta">Backups na pasta “${esc(Drive.nomePasta())}” do seu Drive.</p>
       <div class="imp-opcoes" id="imp_drive_lista"><p class="dim">Buscando os backups…</p></div>
+      ${linhaPastaDrive("imp_trocar")}
       <p class="sy-erro" role="alert"></p>
       <div class="modal-acoes"><button class="btn" id="imp_cancelar">Cancelar</button></div>`);
     const m = document.getElementById("modal"), lista = m.querySelector("#imp_drive_lista"), err = m.querySelector(".sy-erro");
     m.querySelector("#imp_cancelar").onclick = fecharModal;
+    const bTrocarImp = m.querySelector("#imp_trocar");
+    if (bTrocarImp) bTrocarImp.onclick = () => trocarPastaDrive(m.querySelector(".sy-erro"), abrirImportarDrive);
     const erro = (e) => {
       lista.innerHTML = "";
       err.textContent = e.message || "Não deu certo falar com o Google Drive.";

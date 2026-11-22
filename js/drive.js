@@ -105,7 +105,24 @@
     });
     return pickerP;
   }
-  const pastaEscolhida = () => { const s = lerLocal(); return s.escolhidaId ? { id: s.escolhidaId, nome: s.escolhidaNome || "pasta escolhida" } : null; };
+  // a pasta escolhida fica nos dados do sistema (o app passa os ganchos): assim é a
+  // mesma no iPad, no computador e no celular sincronizados. Sem os ganchos, fica no aparelho.
+  const ganchos = { ler: null, gravar: null };
+  function configurar(o) { Object.assign(ganchos, o || {}); }
+  function lerPasta() {
+    const g = ganchos.ler ? ganchos.ler() : null;
+    if (g && g.id) return g;
+    const s = lerLocal();   // escolha antiga, guardada só neste aparelho: passa para os dados
+    if (!s.escolhidaId) return null;
+    const p = { id: s.escolhidaId, nome: s.escolhidaNome || "" };
+    if (ganchos.gravar) ganchos.gravar(p);
+    return p;
+  }
+  function gravarPasta(p) {
+    if (ganchos.gravar) ganchos.gravar(p && p.id ? { id: p.id, nome: p.nome || "" } : null);
+    gravarLocal(Object.assign(lerLocal(), { escolhidaId: p && p.id ? p.id : null, escolhidaNome: p && p.nome ? p.nome : null }));
+  }
+  const pastaEscolhida = () => { const p = lerPasta(); return p && p.id ? { id: p.id, nome: p.nome || "pasta escolhida" } : null; };
   const nomePasta = () => { const e = pastaEscolhida(); return e ? e.nome : NOME_PASTA; };
   const usaSeletor = () => !!apiKey();
   function escolherPasta() {
@@ -119,7 +136,7 @@
         .setCallback((d) => {
           if (d[G.Response.ACTION] === G.Action.PICKED) {
             const doc = d[G.Response.DOCUMENTS][0];
-            gravarLocal(Object.assign(lerLocal(), { escolhidaId: doc[G.Document.ID], escolhidaNome: doc[G.Document.NAME] }));
+            gravarPasta({ id: doc[G.Document.ID], nome: doc[G.Document.NAME] });
             ok({ id: doc[G.Document.ID], nome: doc[G.Document.NAME] });
           } else if (d[G.Response.ACTION] === G.Action.CANCEL) erro(new Error("Nenhuma pasta escolhida."));
         }).build();
@@ -132,13 +149,14 @@
     const s = lerLocal();
     // com o seletor: a pasta que a pessoa escolheu (escolhe na primeira vez)
     if (usaSeletor()) {
-      if (!s.escolhidaId) return escolherPasta().then((p) => p.id);
-      return api(token, `https://www.googleapis.com/drive/v3/files/${s.escolhidaId}?fields=id,trashed,name`)
+      const esc = pastaEscolhida();
+      if (!esc) return escolherPasta().then((p) => p.id);
+      return api(token, `https://www.googleapis.com/drive/v3/files/${esc.id}?fields=id,trashed,name`)
         .then((j) => {
-          if (j && !j.trashed) { if (j.name && j.name !== s.escolhidaNome) gravarLocal(Object.assign(lerLocal(), { escolhidaNome: j.name })); return j.id; }
-          gravarLocal(Object.assign(lerLocal(), { escolhidaId: null })); return escolherPasta().then((p) => p.id);
+          if (j && !j.trashed) { if (j.name && j.name !== esc.nome) gravarPasta({ id: j.id, nome: j.name }); return j.id; }
+          gravarPasta(null); return escolherPasta().then((p) => p.id);
         })
-        .catch((e) => { if (e.status === 404 || e.status === 403) { gravarLocal(Object.assign(lerLocal(), { escolhidaId: null })); return escolherPasta().then((p) => p.id); } throw e; });
+        .catch((e) => { if (e.status === 404 || e.status === 403) { gravarPasta(null); return escolherPasta().then((p) => p.id); } throw e; });
     }
     const criar = () => api(token, "https://www.googleapis.com/drive/v3/files?fields=id", {
       method: "POST", headers: { "Content-Type": "application/json" },
@@ -181,5 +199,5 @@
       .then((obj) => JSON.stringify(obj));
   }
 
-  global.Drive = { disponivel, preparar, salvarArquivo, listarBackups, baixarBackup, escolherPasta, nomePasta, usaSeletor, pastaEscolhida, NOME_PASTA };
+  global.Drive = { configurar, disponivel, preparar, salvarArquivo, listarBackups, baixarBackup, escolherPasta, nomePasta, usaSeletor, pastaEscolhida, NOME_PASTA };
 })(window);
