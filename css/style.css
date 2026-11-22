@@ -3454,3 +3454,10 @@ select.sel-banco-nativo { display: none !important; }
 .nav button:hover { background: rgba(255,255,255,.05); }
 .nav button.ativo { background: rgba(0,229,255,.13); border-color: rgba(0,229,255,.45); color: var(--cy); box-shadow: 0 0 14px rgba(0,229,255,.18); }
 .nav button.ativo:hover { background: rgba(0,229,255,.18); }
+/* janela de sucesso (backup salvo / importado) */
+.sucesso-caixa { text-align: center; padding: 6px 4px 2px; }
+.sucesso-ic { width: 64px; height: 64px; margin: 4px auto 12px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--up); background: rgba(46,229,157,.12); border: 1.5px solid rgba(46,229,157,.5); animation: sucessoEntra .35s ease-out; }
+.sucesso-ic svg { width: 34px; height: 34px; }
+.sucesso-caixa h3 { margin: 0 0 8px; }
+.sucesso-caixa p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--texto); }
+@keyframes sucessoEntra { from { transform: scale(.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }

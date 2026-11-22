@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.579";
+  const VERSAO_APP = "3.6.581";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -1838,8 +1838,20 @@
     timerToast = setTimeout(() => el.classList.remove("on"), 2400);
   }
 
+  // janela de confirmação (backup salvo / importado), com um OK para fechar
+  function mostrarSucesso(titulo, texto) {
+    abrirModal(`<div class="sucesso-caixa">
+        <div class="sucesso-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+        <h3>${titulo}</h3>
+        <p>${texto}</p>
+      </div>
+      <div class="modal-acoes" style="justify-content:center"><button class="btn primario salvar" id="sucesso_ok">OK</button></div>`);
+    const b = document.getElementById("sucesso_ok");
+    if (b) { b.onclick = fecharModal; setTimeout(() => b.focus(), 30); }
+  }
   function exportarArquivo() {
-    A.exportarDados(); toast("Backup exportado — verifique seus downloads.");
+    A.exportarDados();
+    mostrarSucesso("Backup salvo com sucesso", "O arquivo do backup foi baixado para este aparelho. Confira na pasta de downloads (no iPad, em Arquivos › Downloads).");
     [500, 1500, 3000].forEach((ms) => setTimeout(ajustarBarraGuias, ms));
   }
   // linha "Pasta do Drive: X · trocar pasta" (ou "escolher pasta") nas janelas de Exportar e Importar
@@ -1885,7 +1897,7 @@
       const b = A.backupTexto();
       Drive.salvarArquivo(b.nome, b.texto).then((r) => {
         fecharModal();
-        toast(r.substituido ? `Backup atualizado no Google Drive (pasta ${r.pasta}).` : `Backup salvo no Google Drive (pasta ${r.pasta}).`);
+        mostrarSucesso("Backup salvo com sucesso", `${r.substituido ? "O backup foi atualizado" : "O backup foi salvo"} no seu Google Drive, na pasta <b>${esc(r.pasta)}</b>${r.nome ? ` (arquivo <b>${esc(r.nome)}</b>)` : ""}.`);
         renderRota();   // "Último backup exportado" atualizado
       }).catch((e) => {
         bDrive.disabled = false; titulo.textContent = antes;
@@ -1944,7 +1956,7 @@
         b.querySelector("b").textContent = "Importando…";
         Drive.baixarBackup(b.dataset.id)
           .then((texto) => A.importarDados(new Blob([texto], { type: "application/json" })))
-          .then(() => { fecharModal(); toast("Backup do Google Drive importado com sucesso."); agendarEnvioSync(); })
+          .then(() => { agendarEnvioSync(); mostrarSucesso("Backup importado com sucesso", "Os dados do backup do Google Drive já estão no sistema."); })
           .catch((e) => { lista.querySelectorAll("button").forEach((x) => { x.disabled = false; }); b.querySelector("b").textContent = "Tentar de novo"; err.textContent = e.message || "Não deu certo importar."; });
       }; });
     }).catch(erro);
@@ -2101,7 +2113,7 @@
   // =========================================================================
   function ligarTopbar() {
     const btnExp = document.getElementById("btnBackupExportar");
-    if (btnExp) btnExp.addEventListener("click", () => { A.exportarDados(); toast("Backup exportado — verifique seus downloads."); });
+    if (btnExp) btnExp.addEventListener("click", () => { if (window.Drive && Drive.disponivel()) abrirEscolhaExportar(); else exportarArquivo(); });
 
     const btnNotif = document.getElementById("btnNotificacoes");
     const dropNotif = document.getElementById("dropdownNotificacoes");
@@ -2615,6 +2627,8 @@
     voltar: svgIc('<path d="M19 12H5.5"/><path d="M11 6l-6 6 6 6"/>'),
     sincronizar: svgIc('<path d="M20 11a8 8 0 0 0-14.5-4.5L4 8"/><path d="M4 4v4h4"/><path d="M4 13a8 8 0 0 0 14.5 4.5L20 16"/><path d="M20 20v-4h-4"/>'),
     desligar: svgIc('<path d="M12 3.5v8"/><path d="M6.8 6.5a7.5 7.5 0 1 0 10.4 0"/>'),
+    // desconectar: corrente partida (as duas metades afastadas, com os risquinhos do corte)
+    desconectar: svgIc('<path d="M18.8 12.3l1.7-1.7a5 5 0 0 0-7.1-7.1l-1.7 1.7"/><path d="M5.2 11.7l-1.7 1.7a5 5 0 0 0 7.1 7.1l1.7-1.7"/><path d="M8 2v3M2 8h3M16 19v3M19 16h3"/>'),
     exportar: svgIc('<path d="M12 15V3.5M7.5 8L12 3.5 16.5 8"/><path d="M4 14.5V19a1.5 1.5 0 0 0 1.5 1.5h13A1.5 1.5 0 0 0 20 19v-4.5"/>'),
     importar: svgIc('<path d="M12 3.5V15M7.5 10.5L12 15l4.5-4.5"/><path d="M4 14.5V19a1.5 1.5 0 0 0 1.5 1.5h13A1.5 1.5 0 0 0 20 19v-4.5"/>'),
     pdf: svgIc('<path d="M14 3.5H6.5A1.5 1.5 0 0 0 5 5v14a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 19V8.5z"/><path d="M14 3.5v5h5"/><path d="M8.5 13h7M8.5 16.5h5"/>'),
@@ -2644,6 +2658,7 @@
     [(b, t) => /^editar\b/.test(t), "editar"],
     [(b, t) => /^(buscar|atualizar)\b/.test(t), "buscar"],
     [(b, t) => /^transferir\b/.test(t), "transferir"],
+    [(b, t) => /^desconectar\b/.test(t), "desconectar"],
     [(b, t) => /^desligar\b/.test(t), "desligar"],
     [(b, t) => /^(sincronizar|ligar)\b/.test(t), "sincronizar"],
     [(b, t) => /^exportar/.test(t), "exportar"],
@@ -10122,7 +10137,7 @@
       if (!arquivo) return;
       if (!window.confirm("Importar este backup vai substituir TODOS os dados atuais por completo. Deseja continuar?")) return;
       A.importarDados(arquivo)
-        .then(() => { toast("Backup importado com sucesso."); agendarEnvioSync(); })
+        .then(() => { agendarEnvioSync(); mostrarSucesso("Backup importado com sucesso", "Os dados do arquivo de backup já estão no sistema."); })
         .catch((err) => toast(err.message));
     });
 
