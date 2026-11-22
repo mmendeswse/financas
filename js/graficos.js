@@ -899,7 +899,8 @@
       options: {
         responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
         // gráfico do dólar: tocar na área do gráfico troca para a visão em velas
-        onClick: opcoes.aoClicar ? function (evt, el, ch) { if (dentroDaArea(ch, evt)) opcoes.aoClicar(); } : undefined,
+        // depois do clique (o redesenho apaga este gráfico; dentro do clique o Chart.js ainda desenhava nele)
+        onClick: opcoes.aoClicar ? function (evt, el, ch) { if (dentroDaArea(ch, evt)) setTimeout(opcoes.aoClicar, 0); } : undefined,
         onHover: opcoes.aoClicar ? function (evt, el, ch) { evt.native.target.style.cursor = dentroDaArea(ch, evt) ? "pointer" : "default"; } : undefined,
         scales: { x: eixoX({ ticks: { color: CORES.texto, font: fonte(10.5), maxTicksLimit: 6 } }), y: eixoY({ ticks: { color: CORES.texto, font: fonte(10.5), maxTicksLimit: 14, callback: function (v) { return "R$ " + v.toFixed(2); } } }) },
         plugins: {
@@ -1187,7 +1188,7 @@
           // tocar no "N" abre o resumo; tocar de novo no mesmo "N" fecha
           if (m) { if (popover && popoverIdx === m.idx) fecharNoticia(); else abrirNoticia(m); return; }
           if (popover) { fecharNoticia(); return; }
-          if (opcoes.aoClicar && dentroDaArea(ch, evt)) opcoes.aoClicar();
+          if (opcoes.aoClicar && dentroDaArea(ch, evt)) setTimeout(opcoes.aoClicar, 0);   // depois do clique: o redesenho apaga este gráfico
         },
         onHover: function (evt, el, ch) { evt.native.target.style.cursor = marcaEm(evt.x, evt.y) || legendaEm(evt.x, evt.y) ? "pointer" : (dentroDaArea(ch, evt) ? "crosshair" : "default"); },
         scales: {
