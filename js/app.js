@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.577";
+  const VERSAO_APP = "3.6.578";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -832,8 +832,8 @@
       <div class="campo"><label for="sy_cod">Código da conta</label><textarea id="sy_cod" rows="3" spellcheck="false" autocomplete="off" placeholder="MF1.…">${esc(codigoInicial || "")}</textarea></div>
       <div class="campo"><label for="sy_nome">Nome deste aparelho</label><input id="sy_nome" value="${esc(S.nomeAparelho())}" maxlength="40"></div>
       ${temDados ? `<span class="sy-rot">Este aparelho já tem dados</span>
-        <div class="sy-modos"><label><input type="radio" name="sy_modo" value="juntar" checked><span><b>Juntar</b><small>Fica tudo: os dados deste aparelho e os da conta.</small></span></label>
-        <label><input type="radio" name="sy_modo" value="conta"><span><b>Usar só os da conta</b><small>Os dados deste aparelho são substituídos (antes, baixe um backup se quiser guardar).</small></span></label></div>` : ""}
+        <div class="sy-modos"><label><input type="radio" name="sy_modo" value="conta" checked><span><b>Buscar os dados da conta (recomendado)</b><small>Este aparelho fica igual aos outros: os dados daqui são trocados pelos do cofre.</small></span></label>
+        <label><input type="radio" name="sy_modo" value="juntar"><span><b>Juntar</b><small>Mistura os dados deste aparelho com os da conta (pode repetir lançamentos ou trazer de volta o que foi apagado).</small></span></label></div>` : ""}
       <p class="sy-erro" role="alert"></p>
       <div class="modal-acoes"><button class="btn" id="sy_cancelar">Cancelar</button><button class="btn primario salvar" id="sy_ok">Entrar</button></div>`, true);
     const m = document.getElementById("modal");
@@ -851,7 +851,8 @@
       if (!S.lerCodigo(cod.value)) { err.textContent = "Código inválido. Confira se copiou inteiro (começa com MF1.)."; return; }
       const modoEl = m.querySelector("input[name=sy_modo]:checked");
       b.disabled = true; b.textContent = "Entrando…"; err.textContent = ""; S.pararLeitor();
-      S.entrar(cod.value, modoEl ? modoEl.value : "juntar", m.querySelector("#sy_nome").value.trim()).then(() => {
+      // aparelho adicionado busca os dados do cofre (só junta se a pessoa escolher "Juntar")
+      S.entrar(cod.value, modoEl ? modoEl.value : "conta", m.querySelector("#sy_nome").value.trim()).then(() => {
         definirAvisoSync("");
         fecharModal(); renderRota(); toast("Pronto! Este aparelho agora sincroniza com a sua conta.");
       }).catch((e) => { b.disabled = false; b.textContent = "Entrar"; err.textContent = e.message; });
