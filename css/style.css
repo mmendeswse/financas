@@ -3443,3 +3443,8 @@ select.sel-banco-nativo { display: none !important; }
 /* relógio do topo com números de largura fixa: a caixa não muda de tamanho a
    cada segundo (antes isso fazia a barra de guias ser recalculada sem parar) */
 #relogioTopbar, #dataTopbar { font-variant-numeric: tabular-nums; }
+/* cabeçalho do gráfico (ação/dólar/cripto) em telas estreitas: os botões quebram
+   linha em vez de passar da borda do quadro (o Editar ficava cortado) */
+.card > header:has(.leg-velas) .acoes { flex-wrap: wrap; justify-content: flex-end; row-gap: 6px; max-width: 100%; min-width: 0; }
+.btn-icone { position: relative; }
+.btn-icone .rot-oculto { left: 0; top: 0; }
