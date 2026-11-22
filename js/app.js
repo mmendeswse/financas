@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.573";
+  const VERSAO_APP = "3.6.575";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -9613,7 +9613,7 @@
       if (!abas || !b || !b.matches(".btn.primario")) return;
       b.style.height = ""; b.style.width = ""; b.style.minHeight = "";
       const alt = abas.getBoundingClientRect().height;
-      if (!(alt > 0)) return;
+      if (!(alt > 0) || alt > 48) return;   // faixa dos meses em mais de uma linha: o botão fica no tamanho normal
       b.style.height = b.style.minHeight = alt + "px";
       b.style.paddingTop = b.style.paddingBottom = "0";
       if (b.getBoundingClientRect().width < 52) { b.style.width = alt + "px"; b.style.paddingLeft = b.style.paddingRight = "0"; b.style.justifyContent = "center"; }

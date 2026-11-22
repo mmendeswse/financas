@@ -3428,3 +3428,23 @@ select.sel-banco-nativo { display: none !important; }
 /* sinal do valor (+/−) com largura fixa por coluna: o R$ fica sempre alinhado */
 .vm-sinal { display: inline-block; text-align: right; }
 .vm-sinal:empty { width: 0; }
+/* celular: botões do aviso de demonstração e abas de período dos cabeçalhos quebram linha
+   em vez de passar da largura da tela */
+.faixa-demo .acoes { flex-wrap: wrap; max-width: 100%; }
+.faixa-demo .acoes .btn { white-space: normal; }
+@media (max-width: 600px) {
+  .card > header { flex-wrap: wrap; }
+  .card > header .acoes, .card > header .filtro-mes { flex-wrap: wrap; max-width: 100%; min-width: 0; }
+  .card > header .abas-periodo:not(.abas-mes) { flex-wrap: wrap; max-width: 100%; }
+  .card > header .abas-mes { flex-wrap: nowrap; }
+  /* tabelas largas (Entradas, Despesas…): rolam para o lado dentro do quadro, em vez de cortar as colunas */
+  .card > .body:has(> .hd) { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+}
+/* relógio do topo com números de largura fixa: a caixa não muda de tamanho a
+   cada segundo (antes isso fazia a barra de guias ser recalculada sem parar) */
+#relogioTopbar, #dataTopbar { font-variant-numeric: tabular-nums; }
+/* cabeçalho do gráfico (ação/dólar/cripto) em telas estreitas: os botões quebram
+   linha em vez de passar da borda do quadro (o Editar ficava cortado) */
+.card > header:has(.leg-velas) .acoes { flex-wrap: wrap; justify-content: flex-end; row-gap: 6px; max-width: 100%; min-width: 0; }
+.btn-icone { position: relative; }
+.btn-icone .rot-oculto { left: 0; top: 0; }
