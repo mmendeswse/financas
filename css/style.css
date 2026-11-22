@@ -3448,3 +3448,9 @@ select.sel-banco-nativo { display: none !important; }
 .card > header:has(.leg-velas) .acoes { flex-wrap: wrap; justify-content: flex-end; row-gap: 6px; max-width: 100%; min-width: 0; }
 .btn-icone { position: relative; }
 .btn-icone .rot-oculto { left: 0; top: 0; }
+/* guia selecionada: pílula arredondada (sem a barra embaixo nem o bloco da altura toda) */
+.nav { align-items: center; }
+.nav button { height: clamp(28px, 2.5vw, 40px); border-radius: 999px; border: 1px solid transparent; transition: background .15s, color .15s, border-color .15s; }
+.nav button:hover { background: rgba(255,255,255,.05); }
+.nav button.ativo { background: rgba(0,229,255,.13); border-color: rgba(0,229,255,.45); color: var(--cy); box-shadow: 0 0 14px rgba(0,229,255,.18); }
+.nav button.ativo:hover { background: rgba(0,229,255,.18); }
