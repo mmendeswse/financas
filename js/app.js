@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.589";
+  const VERSAO_APP = "3.6.590";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -6792,7 +6792,7 @@
         </tr></thead>
         <tbody>${linhas}</tbody>
         <tfoot><tr>
-          <td>TOTAL</td><td class="col-contratada"></td><td></td><td></td>
+          <td><span class="logo-acao logo-espaco" aria-hidden="true"></span>TOTAL</td><td class="col-contratada"></td><td></td><td></td>
           <td class="r creme">${brl(t.aplicado)}</td>
           <td class="r ${corSinal(t.resultado)}">${brlSinal(t.resultado)}</td>
           <td class="r creme">${brl(t.bruto)}</td>
@@ -8704,7 +8704,7 @@
         </tr></thead>
         <tbody>${linhas}</tbody>
         <tfoot><tr>
-          <td>CARTEIRA</td><td class="r">${brl(tInv)}</td><td></td><td></td><td></td><td></td>
+          <td><span class="logo-acao logo-espaco" aria-hidden="true"></span>CARTEIRA</td><td class="r">${brl(tInv)}</td><td></td><td></td><td></td><td></td>
           <td class="col-oculta"></td><td class="r creme col-oculta">${brl(tAt)}</td>
           <td class="r">${fp(I.rentabilidadeCarteiraAcoes(d))}</td>
           <td></td><td></td><td></td><td></td>
