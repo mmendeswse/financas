@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.582";
+  const VERSAO_APP = "3.6.583";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -6725,6 +6725,8 @@
 
   // nome na tabela sem os detalhes entre parênteses que vêm do extrato importado
   // (ex.: "RDB Resgate Imediato (Caixinha Turbo Croma)" → "RDB Resgate Imediato")
+  // nome da caixinha do Nubank que vem no nome importado ("… (Caixinha Reserva)" → "Reserva")
+  const caixinhaDe = (nome) => { const m = /\(Caixinha\s+["“”]?([^)"“”]+)["“”]?\)/i.exec(String(nome || "")); return m ? m[1].trim() : ""; };
   const nomeCurtoInvestimento = (nome) => String(nome || "").replace(/\s*\([^)]*\)/g, "").replace(/\s{2,}/g, " ").trim() || String(nome || "");
   function renderInvestimentos(d) {
     const lista = I.listaInvestimentosComCalculo(d);
@@ -6740,7 +6742,7 @@
     } else {
       const linhas = lista.map((inv) => `
         <tr data-acao="ir" data-secao="detalhe-investimento" data-id="${inv.id}">
-          <td class="papel" title="${esc(inv.nome)}">${esc(nomeCurtoInvestimento(inv.nome))}<small>${esc([inv.tipoAtivo || inv.categoria, inv.banco || inv.emissor].filter(Boolean).join(" · "))}</small></td>
+          <td class="papel" title="${esc(inv.nome)}">${esc(nomeCurtoInvestimento(inv.nome))}${caixinhaDe(inv.nome) ? `<span class="chip-caixinha" title="Caixinha ${esc(caixinhaDe(inv.nome))}">${esc(caixinhaDe(inv.nome))}</span>` : ""}<small>${esc([inv.tipoAtivo || inv.categoria, inv.banco || inv.emissor].filter(Boolean).join(" · "))}</small></td>
           <td class="col-contratada">${esc(inv.indexador || "—")}${inv.taxaContratada ? " " + f2(inv.taxaContratada) + "%" : ""}</td>
           <td class="r">${fmtData(inv.dataAplicacao)}</td>
           <td class="r">${inv.quantidade ? f2(inv.quantidade) : "—"}</td>
