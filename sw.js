@@ -1,21 +1,32 @@
 /* Service worker — deixa o app abrir sem internet no iPad/iPhone.
    Arquivos do app: cache primeiro. Cotações (APIs): sempre rede. */
-const CACHE = "muller-mendes-v815";
+const CACHE = "muller-mendes-v816";
+// cache só dos logos: não é apagado a cada versão nova do app
+const CACHE_LOGOS = "muller-mendes-logos-1";
 const ARQUIVOS = [
-  "./", "./index.html", "./css/style.css?v=3.6.596", "./manifest.json", "./manifest.webmanifest",
+  "./", "./index.html", "./css/style.css?v=3.6.597", "./manifest.json", "./manifest.webmanifest",
   "./js/vendor/chart.umd.min.js",
-  "./js/bloqueio.js?v=3.6.596", "./js/armazenamento.js?v=3.6.596", "./js/financeiro.js?v=3.6.596", "./js/investimentos.js?v=3.6.596",
-  "./js/graficos.js?v=3.6.596", "./js/extrato.js?v=3.6.596", "./js/relatorio.js?v=3.6.596", "./js/vendor/pdf.min.js", "./js/vendor/pdf.worker.min.js", "./js/cotacoes.js?v=3.6.596", "./js/sincronizacao.js?v=3.6.596", "./js/avatar.js?v=3.6.596", "./js/agenda.js?v=3.6.596", "./js/drive.js?v=3.6.596", "./js/vendor/qrcode.js", "./js/vendor/jsQR.js", "./assets/dados/personagens.json", "./js/emojis.js?v=3.6.596", "./js/app.js?v=3.6.596",
-  "./assets/icons/bancos/nubank.svg?v=3.6.596", "./assets/icons/bancos/itau.svg?v=3.6.596", "./assets/icons/bancos/inter.svg?v=3.6.596", "./assets/icons/bancos/banco-do-brasil.svg?v=3.6.596", "./assets/icons/bancos/caixa.svg?v=3.6.596", "./assets/icons/bancos/mercado-pago.svg?v=3.6.596", "./assets/icons/bancos/alelo.svg?v=3.6.596",
+  "./js/bloqueio.js?v=3.6.597", "./js/armazenamento.js?v=3.6.597", "./js/financeiro.js?v=3.6.597", "./js/investimentos.js?v=3.6.597",
+  "./js/graficos.js?v=3.6.597", "./js/extrato.js?v=3.6.597", "./js/relatorio.js?v=3.6.597", "./js/vendor/pdf.min.js", "./js/vendor/pdf.worker.min.js", "./js/cotacoes.js?v=3.6.597", "./js/sincronizacao.js?v=3.6.597", "./js/avatar.js?v=3.6.597", "./js/agenda.js?v=3.6.597", "./js/drive.js?v=3.6.597", "./js/vendor/qrcode.js", "./js/vendor/jsQR.js", "./assets/dados/personagens.json", "./js/emojis.js?v=3.6.597", "./js/app.js?v=3.6.597",
+  "./assets/icons/bancos/nubank.svg?v=3.6.597", "./assets/icons/bancos/itau.svg?v=3.6.597", "./assets/icons/bancos/inter.svg?v=3.6.597", "./assets/icons/bancos/banco-do-brasil.svg?v=3.6.597", "./assets/icons/bancos/caixa.svg?v=3.6.597", "./assets/icons/bancos/mercado-pago.svg?v=3.6.597", "./assets/icons/bancos/alelo.svg?v=3.6.597",
   "./assets/icons/icon-192.png", "./assets/icons/icon-512.png", "./assets/icons/icon-maskable-192.png", "./assets/icons/icon-maskable-512.png",
   "./favicon.ico", "./favicon.svg", "./favicon-32.png", "./apple-touch-icon.png", "./apple-touch-icon-180.png", "./apple-touch-icon-167.png", "./apple-touch-icon-152.png", "./apple-touch-icon-precomposed.png"
 ];
 // cache: "reload" baixa direto do servidor — sem isso o navegador podia entregar
 // a versão antiga guardada no cache HTTP e o app novo nunca aparecia
 self.addEventListener("install", (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ARQUIVOS.map((u) => new Request(u, { cache: "reload" })))).then(() => self.skipWaiting())); });
-self.addEventListener("activate", (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim())); });
+self.addEventListener("activate", (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE && k !== CACHE_LOGOS).map((k) => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
+  // logos das ações e dos investimentos (brapi e ícones de sites): ficam guardados
+  // no aparelho — aparecem na hora ao abrir a guia, e até sem internet
+  if (url.hostname === "icons.brapi.dev" || (url.hostname === "www.google.com" && url.pathname.indexOf("/s2/favicons") === 0)) {
+    e.respondWith(caches.open(CACHE_LOGOS).then((c) => c.match(e.request).then((r) => r || fetch(e.request).then((resp) => {
+      if (resp && (resp.ok || resp.type === "opaque")) c.put(e.request, resp.clone());
+      return resp;
+    }))));
+    return;
+  }
   if (url.origin !== location.origin) return; // APIs de cotação: rede normal
   const ehPagina = e.request.mode === "navigate" || (e.request.destination === "document");
   if (ehPagina) { // página: rede primeiro, sem o cache HTTP (cai no cache do app se estiver offline)
