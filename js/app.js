@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.581";
+  const VERSAO_APP = "3.6.586";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -1349,6 +1349,18 @@
       .catch((e) => toast("Não consegui ler o PDF: " + (e && e.message ? e.message : e)));
   }
 
+  // investimentos/ações que vieram do Nubank (banco ou importação de extrato)
+  const doNubank = (x) => /nubank/i.test(x.banco || "") || /^Importado do extrato/.test(x.obs || "");
+  // o que é do Nubank e não aparece mais no extrato (resgatado/vendido): sai na atualização
+  function foraDoExtrato(r, dataRef) {
+    const nomes = new Set(r.investimentos.map((i) => i.nome.toLowerCase()));
+    const tickers = new Set(r.acoes.map((a) => a.ticker.toUpperCase()));
+    const ultima = (h, campo) => (h || []).reduce((m, p) => (p.data > m ? p.data : m), "");
+    return {
+      investimentos: (DADOS.investimentos || []).filter((x) => doNubank(x) && !nomes.has(String(x.nome).toLowerCase()) && ultima(x.historicoValores) <= dataRef),
+      acoes: (DADOS.acoes || []).filter((x) => doNubank(x) && !tickers.has(String(x.ticker).toUpperCase()) && ultima(x.historicoPrecos) <= dataRef)
+    };
+  }
   function mostrarPreviaExtrato(r) {
     if (r.avisos.length && !r.investimentos.length && !r.acoes.length) { toast(r.avisos[0]); return; }
     const dataRef = r.data || hojeISO();
@@ -1361,7 +1373,13 @@
         ${r.acoes.map((a) => linha(`${esc(a.ticker)} · ${a.quantidade} un.`, brlSinal(a.valorAtual))).join("")}
         ${linha("Total do extrato", brlSinal(total), corSinal(total))}
       </div>
-      <p class="campo ajuda" style="margin-top:12px"><b>Atualizar</b> mantém o que você já tem e renova os valores dos ativos do extrato (os novos são acrescentados). <b>Substituir</b> troca tudo das guias Investimentos e Ações pelo conteúdo do PDF.</p>
+      ${(() => {
+        // pela comparação com o que existe (renomeação das caixinhas antigas fica de fora desta prévia)
+        const sai = foraDoExtrato(r, dataRef);
+        const nomes = sai.investimentos.map((x) => esc(x.nome)).concat(sai.acoes.map((x) => esc(x.ticker)));
+        return nomes.length ? `<p class="campo ajuda" style="margin-top:12px">Saem por não estarem mais no extrato: <b>${nomes.join(", ")}</b>.</p>` : "";
+      })()}
+      <p class="campo ajuda" style="margin-top:12px"><b>Atualizar</b> deixa os ativos do Nubank iguais ao extrato: renova os valores, acrescenta os novos e tira os que não aparecem mais (o que você cadastrou de outros bancos continua). <b>Substituir</b> troca tudo das guias Investimentos e Ações pelo conteúdo do PDF.</p>
       <div class="modal-acoes">
         <button class="btn primario salvar" id="btnAtualizarPdf">Atualizar</button>
         <button class="btn perigo" id="btnSubstituirPdf">Substituir</button>
@@ -1457,8 +1475,17 @@
       }
     });
 
+    // ficam só os ativos do Nubank que estão no extrato (os resgatados/vendidos saem)
+    let removidos = 0;
+    if (!substituir) {
+      const sai = foraDoExtrato(r, dataRef);
+      const idsInv = new Set(sai.investimentos.map((x) => x.id)), idsAc = new Set(sai.acoes.map((x) => x.id));
+      removidos = idsInv.size + idsAc.size;
+      DADOS.investimentos = DADOS.investimentos.filter((x) => !idsInv.has(x.id));
+      DADOS.acoes = DADOS.acoes.filter((x) => !idsAc.has(x.id));
+    }
     fecharModal();
-    salvarEAtualizar(`Extrato importado: ${plural(atualizados, "ativo atualizado", "ativos atualizados")} e ${plural(novos, "novo", "novos")}.`);
+    salvarEAtualizar(`Extrato importado: ${plural(atualizados, "ativo atualizado", "ativos atualizados")}, ${plural(novos, "novo", "novos")}${removidos ? ` e ${plural(removidos, "removido", "removidos")}` : ""}.`);
   }
 
 
@@ -6698,6 +6725,8 @@
 
   // nome na tabela sem os detalhes entre parênteses que vêm do extrato importado
   // (ex.: "RDB Resgate Imediato (Caixinha Turbo Croma)" → "RDB Resgate Imediato")
+  // nome da caixinha do Nubank que vem no nome importado ("… (Caixinha Reserva)" → "Reserva")
+  const caixinhaDe = (nome) => { const m = /\(Caixinha\s+["“”]?([^)"“”]+)["“”]?\)/i.exec(String(nome || "")); return m ? m[1].trim() : ""; };
   const nomeCurtoInvestimento = (nome) => String(nome || "").replace(/\s*\([^)]*\)/g, "").replace(/\s{2,}/g, " ").trim() || String(nome || "");
   function renderInvestimentos(d) {
     const lista = I.listaInvestimentosComCalculo(d);
@@ -6713,7 +6742,7 @@
     } else {
       const linhas = lista.map((inv) => `
         <tr data-acao="ir" data-secao="detalhe-investimento" data-id="${inv.id}">
-          <td class="papel" title="${esc(inv.nome)}">${esc(nomeCurtoInvestimento(inv.nome))}<small>${esc([inv.tipoAtivo || inv.categoria, inv.banco || inv.emissor].filter(Boolean).join(" · "))}</small></td>
+          <td class="papel" title="${esc(inv.nome)}">${esc(nomeCurtoInvestimento(inv.nome))}${caixinhaDe(inv.nome) ? `<span class="chip-caixinha" title="Caixinha ${esc(caixinhaDe(inv.nome))}">${esc(caixinhaDe(inv.nome))}</span>` : ""}<small>${esc([inv.tipoAtivo || inv.categoria, inv.banco || inv.emissor].filter(Boolean).join(" · "))}</small></td>
           <td class="col-contratada">${esc(inv.indexador || "—")}${inv.taxaContratada ? " " + f2(inv.taxaContratada) + "%" : ""}</td>
           <td class="r">${fmtData(inv.dataAplicacao)}</td>
           <td class="r">${inv.quantidade ? f2(inv.quantidade) : "—"}</td>
@@ -8566,6 +8595,40 @@
     }).catch(() => { const el = document.getElementById("pdmNoticias"); if (el) el.innerHTML = '<span class="dim">Não foi possível buscar as notícias agora.</span>'; });
   }
 
+  // bolinha com o logo da empresa (ícones públicos da brapi, a mesma fonte das
+  // cotações); sem logo (ex.: alguns BDRs) ou sem internet, ficam as iniciais
+  // nomes de BDRs que o extrato do Nubank traz só com o código ("ANTH34 (ANTH34)")
+  const NOMES_BDR = { ANTH34: "Anthropic" };
+  function nomeEmpresaAcao(a) {
+    const t = String(a.ticker || "").toUpperCase(), e = String(a.empresa || "").trim();
+    if (e && e.toUpperCase() !== t) return e;
+    return NOMES_BDR[t] || "";
+  }
+  // site de cada empresa: se a brapi não tiver o logo, usa o ícone do site (Google)
+  const SITE_ACAO = {
+    ANTH34: "anthropic.com", SBSP3: "sabesp.com.br", BEEF3: "minervafoods.com", PETR4: "petrobras.com.br", PETR3: "petrobras.com.br",
+    VALE3: "vale.com", ITUB4: "itau.com.br", ITUB3: "itau.com.br", BBAS3: "bb.com.br", BBDC4: "bradesco.com.br", BBDC3: "bradesco.com.br",
+    ITSA4: "itausa.com.br", WEGE3: "weg.net", ABEV3: "ambev.com.br", B3SA3: "b3.com.br", MGLU3: "magazineluiza.com.br",
+    BPAC11: "btgpactual.com", SUZB3: "suzano.com.br", ELET3: "eletrobras.com", RENT3: "localiza.com", LREN3: "lojasrenner.com.br",
+    RADL3: "raiadrogasil.com.br", PRIO3: "prio3.com.br", GGBR4: "gerdau.com", CSAN3: "cosan.com.br", VIVT3: "vivo.com.br",
+    TIMS3: "tim.com.br", EMBJ3: "embraer.com", EMBR3: "embraer.com", HAPV3: "hapvida.com.br", BBSE3: "bbseguros.com.br",
+    CMIG4: "cemig.com.br", UGPA3: "ultra.com.br", KLBN11: "klabin.com.br", TOTS3: "totvs.com", TAEE11: "taesa.com.br",
+    AAPL34: "apple.com", MSFT34: "microsoft.com", NVDC34: "nvidia.com", GOGL34: "google.com", AMZO34: "amazon.com", TSLA34: "tesla.com", M1TA34: "meta.com"
+  };
+  // bolinha com o logo da empresa: 1º ícone da brapi (a fonte das cotações), 2º o
+  // ícone do site da empresa; sem nenhum dos dois (ou sem internet), as iniciais
+  function logoAcao(ticker) {
+    const t = String(ticker || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+    let h = 0; for (const ch of t) h = (h * 31 + ch.charCodeAt(0)) % 360;
+    const site = SITE_ACAO[t];
+    const brapi = `https://icons.brapi.dev/icons/${encodeURIComponent(t)}.svg`;
+    const favicon = site ? `https://www.google.com/s2/favicons?sz=128&domain=${site}` : "";
+    // BDRs (…34/…35/…39): a brapi costuma não ter o logo da empresa de fora — vai direto ao site
+    const bdr = /3[459]$/.test(t) && t.length === 6;
+    const [primeiro, segundo] = favicon && bdr ? [favicon, brapi] : [brapi, favicon];
+    const erro = segundo ? `this.onerror=function(){this.remove()};this.src='${segundo}'` : "this.remove()";
+    return `<span class="logo-acao" style="--matiz:${h}" aria-hidden="true"><b>${esc(t.slice(0, 2))}</b><img src="${primeiro}" alt="" loading="lazy" onerror="${erro}"></span>`;
+  }
   function renderAcoes(d) {
     const lista = I.listaAcoesComCalculo(d);
     const f2 = (v) => Number(v || 0).toFixed(2).replace(".", ",");
@@ -8587,7 +8650,7 @@
           ? `<input class="campo-preco moeda" data-id="${a.id}" type="text" inputmode="decimal" value="${valorCampoMoeda(a.precoAtual)}" onclick="event.stopPropagation()">`
           : `<span class="${forte}">${brl(a.precoAtual)}</span>`;
         return `<tr data-acao="ir" data-secao="detalhe-acao" data-id="${a.id}">
-          <td class="papel">${esc(a.ticker)}<small>${esc([a.categoria, a.banco].filter(Boolean).join(" · "))}</small></td>
+          <td class="papel">${logoAcao(a.ticker)}${esc(a.ticker)}${nomeEmpresaAcao(a) ? `<span class="papel-empresa">${esc(nomeEmpresaAcao(a))}</span>` : ""}<small>${esc([a.categoria, a.banco].filter(Boolean).join(" · "))}</small></td>
           <td class="r">${brl(a.valorInvestido)}</td>
           <td class="r">${ultima}</td>
           <td class="r"><span class="${v.valor >= 0 ? "cel-up" : "cel-down"}">${v.valor >= 0 ? "+" : "−"}${brl(Math.abs(v.valor))}</span></td>

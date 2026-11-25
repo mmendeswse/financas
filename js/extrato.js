@@ -69,7 +69,8 @@
   var RX_CAIXINHA = new RegExp("^(RDB .+?) " + N + " " + N + " " + N + " " + N + "(?: (.*))?$");
   var RX_RENDA_FIXA = new RegExp("^(.+?) " + D + " (.+?) " + N + " " + D + " " + N + " " + N + " " + N + " " + N);
   var RX_TESOURO = new RegExp("^(Tesouro .+?) " + D + " " + N + " " + N + " " + N + " " + N + " " + N + " " + N + " " + N);
-  var RX_BOLSA = /^(Ação brasileira|FII|Fundo imobiliário|ETF|BDR)\s+(.+?)\s*\(([A-Z0-9]{4,7})\)\s+([\d.]+,\d+)\s+([\d.]+,\d+)/i;
+  // "Ação global (BDR) ANTH34 (ANTH34) 1,00 60,00": os BDRs vêm como "Ação global"
+  var RX_BOLSA = /^(Ação brasileira|Ação global(?:\s*\(BDR\))?|FII|Fundo imobiliário|ETF|BDR)\s+(.+?)\s*\(([A-Z0-9]{4,7})\)\s+([\d.]+,\d+)\s+([\d.]+,\d+)/i;
 
   function interpretar(paginas) {
     var resultado = { banco: "Nubank", data: "", investimentos: [], acoes: [], avisos: [] };
@@ -136,7 +137,7 @@
       } else if (secao === "Bolsa de Valores" && (m = RX_BOLSA.exec(l))) {
         var qtd = numero(m[4]), bruto = numero(m[5]);
         resultado.acoes.push({
-          ticker: m[3].toUpperCase(), empresa: m[2].trim(),
+          ticker: m[3].toUpperCase(), empresa: ({ ANTH34: "Anthropic" })[m[3].toUpperCase()] || m[2].trim(),
           categoria: /FII|imobili/i.test(m[1]) ? "FII" : (/ETF/i.test(m[1]) ? "ETF" : "Ação"),
           quantidade: qtd, precoAtual: qtd > 0 ? Math.round((bruto / qtd) * 100) / 100 : 0, valorAtual: bruto
         });
