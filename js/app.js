@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.590";
+  const VERSAO_APP = "3.6.591";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -1696,6 +1696,9 @@
     window.addEventListener("orientationchange", () => setTimeout(ajustarBarraGuias, 300));
 
     navegarPara("dashboard");
+    // o app abriu: desliga a proteção de tela vazia do index.html
+    window.__mmIniciado = true;
+    try { sessionStorage.removeItem("mm-boot-tentou"); } catch (e) { /* sem acesso */ }
     // depois de buscar as cotações (histórico atualizado), procura as
     // notícias em segundo plano; e de novo a cada 30 minutos
     atualizarCotacoesAutomaticas(true).then(() => setTimeout(buscarNoticiasEmSegundoPlano, 3000));
