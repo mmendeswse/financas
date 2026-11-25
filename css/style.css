@@ -3479,3 +3479,5 @@ select.sel-banco-nativo { display: none !important; }
 .logo-acao.logo-espaco { visibility: hidden; width: 0; margin-right: 0; border: 0; }
 /* enquanto o logo carrega, a bolinha fica lisa (sem piscar as iniciais) */
 .logo-acao:has(img) b { visibility: hidden; }
+/* nenhum link ou texto clicável sublinhado (no iPad o sublinhado do toque ficava preso) */
+a, a:hover, a:focus, button, button:hover, button:focus, .link-acao, .av-link, .ag-link, .av-credito a, .popover-noticias a, .sy-erro a, .campo a { text-decoration: none !important; }
