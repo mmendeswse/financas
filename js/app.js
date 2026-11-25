@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.585";
+  const VERSAO_APP = "3.6.586";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -8604,10 +8604,30 @@
     if (e && e.toUpperCase() !== t) return e;
     return NOMES_BDR[t] || "";
   }
+  // site de cada empresa: se a brapi não tiver o logo, usa o ícone do site (Google)
+  const SITE_ACAO = {
+    ANTH34: "anthropic.com", SBSP3: "sabesp.com.br", BEEF3: "minervafoods.com", PETR4: "petrobras.com.br", PETR3: "petrobras.com.br",
+    VALE3: "vale.com", ITUB4: "itau.com.br", ITUB3: "itau.com.br", BBAS3: "bb.com.br", BBDC4: "bradesco.com.br", BBDC3: "bradesco.com.br",
+    ITSA4: "itausa.com.br", WEGE3: "weg.net", ABEV3: "ambev.com.br", B3SA3: "b3.com.br", MGLU3: "magazineluiza.com.br",
+    BPAC11: "btgpactual.com", SUZB3: "suzano.com.br", ELET3: "eletrobras.com", RENT3: "localiza.com", LREN3: "lojasrenner.com.br",
+    RADL3: "raiadrogasil.com.br", PRIO3: "prio3.com.br", GGBR4: "gerdau.com", CSAN3: "cosan.com.br", VIVT3: "vivo.com.br",
+    TIMS3: "tim.com.br", EMBJ3: "embraer.com", EMBR3: "embraer.com", HAPV3: "hapvida.com.br", BBSE3: "bbseguros.com.br",
+    CMIG4: "cemig.com.br", UGPA3: "ultra.com.br", KLBN11: "klabin.com.br", TOTS3: "totvs.com", TAEE11: "taesa.com.br",
+    AAPL34: "apple.com", MSFT34: "microsoft.com", NVDC34: "nvidia.com", GOGL34: "google.com", AMZO34: "amazon.com", TSLA34: "tesla.com", M1TA34: "meta.com"
+  };
+  // bolinha com o logo da empresa: 1º ícone da brapi (a fonte das cotações), 2º o
+  // ícone do site da empresa; sem nenhum dos dois (ou sem internet), as iniciais
   function logoAcao(ticker) {
     const t = String(ticker || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
     let h = 0; for (const ch of t) h = (h * 31 + ch.charCodeAt(0)) % 360;
-    return `<span class="logo-acao" style="--matiz:${h}" aria-hidden="true"><b>${esc(t.slice(0, 2))}</b><img src="https://icons.brapi.dev/icons/${encodeURIComponent(t)}.svg" alt="" loading="lazy" onerror="this.remove()"></span>`;
+    const site = SITE_ACAO[t];
+    const brapi = `https://icons.brapi.dev/icons/${encodeURIComponent(t)}.svg`;
+    const favicon = site ? `https://www.google.com/s2/favicons?sz=128&domain=${site}` : "";
+    // BDRs (…34/…35/…39): a brapi costuma não ter o logo da empresa de fora — vai direto ao site
+    const bdr = /3[459]$/.test(t) && t.length === 6;
+    const [primeiro, segundo] = favicon && bdr ? [favicon, brapi] : [brapi, favicon];
+    const erro = segundo ? `this.onerror=function(){this.remove()};this.src='${segundo}'` : "this.remove()";
+    return `<span class="logo-acao" style="--matiz:${h}" aria-hidden="true"><b>${esc(t.slice(0, 2))}</b><img src="${primeiro}" alt="" loading="lazy" onerror="${erro}"></span>`;
   }
   function renderAcoes(d) {
     const lista = I.listaAcoesComCalculo(d);
