@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.596";
+  const VERSAO_APP = "3.6.597";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -6735,11 +6735,17 @@
   let logosOk = {};
   try { logosOk = JSON.parse(localStorage.getItem(CHAVE_LOGOS) || "{}") || {}; } catch (e) { logosOk = {}; }
   const logosFalhos = new Set();   // só nesta sessão (sem internet agora não marca para sempre)
+  // as imagens que já carregaram ficam vivas na memória: ao voltar para a guia,
+  // o navegador reaproveita a imagem pronta (sem buscar nem decodificar de novo)
+  const logosVivos = new Map();
   window.mmLogoOk = (chave, img) => {
+    if (!logosVivos.has(img.src)) { const im = new Image(); im.src = img.src; logosVivos.set(img.src, im); }
     if (logosOk[chave] === img.src) return;
     logosOk[chave] = img.src;
     try { localStorage.setItem(CHAVE_LOGOS, JSON.stringify(logosOk)); } catch (e) { /* sem espaço */ }
   };
+  // ao abrir o app, já deixa os logos conhecidos carregados (a guia abre com eles prontos)
+  setTimeout(() => Object.values(logosOk).forEach((u) => { if (u && !logosVivos.has(u)) { const im = new Image(); im.src = u; logosVivos.set(u, im); } }), 1500);
   window.mmLogoErro = (chave, img) => {
     const resto = (img.dataset.prox || "").split("|").filter(Boolean);
     if (logosOk[chave] === img.src) { delete logosOk[chave]; try { localStorage.setItem(CHAVE_LOGOS, JSON.stringify(logosOk)); } catch (e) { /* */ } }
