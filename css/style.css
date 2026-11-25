@@ -3239,7 +3239,7 @@ body.av-aberta { overflow: hidden; }
 .meta-item .meta-rodape.meta-rodape-3 { font-size: calc(13px * var(--esc-rod, 1)) !important; column-gap: .6em !important; }
 /* texto de baixo dos quadros do topo do Dashboard: toca e abre o quadro com os detalhes */
 button.kpi-sub { display: block; width: 100%; background: none; border: 0; padding: 0; font: inherit; font-size: 11px; color: var(--dim); text-align: left; cursor: pointer; }
-button.kpi-sub:hover, button.kpi-sub:focus-visible { color: var(--cy); text-decoration: underline; text-underline-offset: 2px; }
+button.kpi-sub:hover, button.kpi-sub:focus-visible { color: var(--cy); text-decoration: none; }
 /* quadros do topo do Dashboard em telas médias (5 lado a lado): anel menor e
    menos espaço entre as letras, para a % e o texto ao lado ("VS MÊS ANTERIOR")
    caberem inteiros numa linha, com a letra no tamanho normal */
@@ -3479,3 +3479,5 @@ select.sel-banco-nativo { display: none !important; }
 .logo-acao.logo-espaco { visibility: hidden; width: 0; margin-right: 0; border: 0; }
 /* enquanto o logo carrega, a bolinha fica lisa (sem piscar as iniciais) */
 .logo-acao:has(img) b { visibility: hidden; }
+/* nenhum link ou texto clicável sublinhado (no iPad o sublinhado do toque ficava preso) */
+a, a:hover, a:focus, button, button:hover, button:focus, .link-acao, .av-link, .ag-link, .av-credito a, .popover-noticias a, .sy-erro a, .campo a { text-decoration: none !important; }
