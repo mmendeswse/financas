@@ -13,6 +13,33 @@
     if (vp) vp.setAttribute("content", vp.getAttribute("content").replace(/,\s*viewport-fit=cover/, ""));
   }
 </script>
+<script>
+  // proteção: se o app não terminar de abrir (tela vazia, relógio "--:--:--"),
+  // por exemplo logo depois de uma atualização, recarrega limpando o cache do
+  // modo offline; se mesmo assim não abrir, mostra um botão para tentar de novo
+  (function () {
+    function limparERecarregar() {
+      var feito = function () { location.reload(); };
+      try {
+        var p1 = navigator.serviceWorker && navigator.serviceWorker.getRegistrations ? navigator.serviceWorker.getRegistrations().then(function (rs) { return Promise.all(rs.map(function (r) { return r.unregister(); })); }) : Promise.resolve();
+        var p2 = window.caches && caches.keys ? caches.keys().then(function (ks) { return Promise.all(ks.map(function (k) { return caches.delete(k); })); }) : Promise.resolve();
+        Promise.all([p1, p2]).then(feito, feito);
+      } catch (e) { feito(); }
+    }
+    window.mmLimparERecarregar = limparERecarregar;
+    setTimeout(function () {
+      if (window.__mmIniciado) return;
+      var tentou = false;
+      try { tentou = sessionStorage.getItem("mm-boot-tentou") === "1"; sessionStorage.setItem("mm-boot-tentou", "1"); } catch (e) {}
+      if (!tentou) { limparERecarregar(); return; }
+      var d = document.createElement("div");
+      d.setAttribute("style", "position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:#070D14;color:#E6EDF6;font:600 15px -apple-system,system-ui,sans-serif;text-align:center;padding:24px");
+      d.innerHTML = '<div>O app não terminou de abrir.</div><button style="font:700 15px -apple-system,system-ui,sans-serif;color:#00E5FF;background:rgba(0,229,255,.1);border:1px solid #00E5FF;border-radius:10px;padding:12px 22px">Tentar de novo</button>';
+      d.querySelector("button").onclick = limparERecarregar;
+      (document.body || document.documentElement).appendChild(d);
+    }, 12000);
+  })();
+</script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -29,7 +56,7 @@
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=9">
 <meta name="color-scheme" content="dark">
 <title>Muller Mendes</title>
-<link rel="stylesheet" href="css/style.css?v=3.6.590">
+<link rel="stylesheet" href="css/style.css?v=3.6.591">
 </head>
 <body>
 
@@ -97,30 +124,27 @@
 <script src="js/vendor/chart.umd.min.js"></script>
 
 <!-- módulos do sistema — ordem importa: cada um usa o anterior -->
-<script src="js/bloqueio.js?v=3.6.590"></script>
-<script src="js/armazenamento.js?v=3.6.590"></script>
-<script src="js/financeiro.js?v=3.6.590"></script>
-<script src="js/investimentos.js?v=3.6.590"></script>
-<script src="js/graficos.js?v=3.6.590"></script>
-<script src="js/extrato.js?v=3.6.590"></script>
-<script src="js/relatorio.js?v=3.6.590"></script>
-<script src="js/cotacoes.js?v=3.6.590"></script>
-<script src="js/sincronizacao.js?v=3.6.590"></script>
-<script src="js/avatar.js?v=3.6.590"></script>
-<script src="js/agenda.js?v=3.6.590"></script>
-<script src="js/drive.js?v=3.6.590"></script>
-<script src="js/emojis.js?v=3.6.590"></script>
-<script src="js/app.js?v=3.6.590"></script>
+<script src="js/bloqueio.js?v=3.6.591"></script>
+<script src="js/armazenamento.js?v=3.6.591"></script>
+<script src="js/financeiro.js?v=3.6.591"></script>
+<script src="js/investimentos.js?v=3.6.591"></script>
+<script src="js/graficos.js?v=3.6.591"></script>
+<script src="js/extrato.js?v=3.6.591"></script>
+<script src="js/relatorio.js?v=3.6.591"></script>
+<script src="js/cotacoes.js?v=3.6.591"></script>
+<script src="js/sincronizacao.js?v=3.6.591"></script>
+<script src="js/avatar.js?v=3.6.591"></script>
+<script src="js/agenda.js?v=3.6.591"></script>
+<script src="js/drive.js?v=3.6.591"></script>
+<script src="js/emojis.js?v=3.6.591"></script>
+<script src="js/app.js?v=3.6.591"></script>
 <script>
   // registra o service worker (só funciona via http/https — no iPad, depois de publicado)
   if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
     window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).catch(function () {}); });
-    // quando uma versão nova do app assume, recarrega uma vez para já usar os arquivos novos
-    var tinhaControle = !!navigator.serviceWorker.controller, recarregou = false;
-    navigator.serviceWorker.addEventListener("controllerchange", function () {
-      if (!tinhaControle || recarregou) { tinhaControle = true; return; }
-      recarregou = true; location.reload();
-    });
+    // (antes, a troca do service worker recarregava a página de novo; com a
+    // checagem de versão do app isso dava DUAS recargas seguidas e, no iPad, a
+    // segunda podia cair no meio do carregamento e deixar a tela vazia)
   }
 </script>
 </body>
