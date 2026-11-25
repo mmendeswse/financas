@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.593";
+  const VERSAO_APP = "3.6.594";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -6780,8 +6780,8 @@
   }
   // nome da caixinha do Nubank que vem no nome importado ("… (Caixinha Reserva)" → "Reserva")
   const caixinhaDe = (nome) => { const m = /\(Caixinha\s+["“”]?([^)"“”]+)["“”]?\)/i.exec(String(nome || "")); return m ? m[1].trim() : ""; };
-  // "RDB Resgate Imediato (Caixinha X)" → "RDB.Imediato"; "RDB Resgate Planejado …" → "RDB.Planejado"
-  const tipoRdbCurto = (nome) => { const n = nomeCurtoInvestimento(nome); const m = /^(\w+)\s+(?:Resgate\s+)?(.+)$/i.exec(n); return m ? `${m[1]}.${m[2]}` : n; };
+  // "RDB Resgate Imediato (Caixinha X)" → "RDB · Imediato" (mesmo separador de Ações)
+  const tipoRdbCurto = (nome) => { const n = nomeCurtoInvestimento(nome); const m = /^(\w+)\s+(?:Resgate\s+)?(.+)$/i.exec(n); return m ? `${m[1]} · ${m[2]}` : n; };
   const nomeCurtoInvestimento = (nome) => String(nome || "").replace(/\s*\([^)]*\)/g, "").replace(/\s{2,}/g, " ").trim() || String(nome || "");
   function renderInvestimentos(d) {
     const lista = I.listaInvestimentosComCalculo(d);
@@ -6798,7 +6798,7 @@
       const linhas = lista.map((inv) => `
         <tr data-acao="ir" data-secao="detalhe-investimento" data-id="${inv.id}">
           <td class="papel" title="${esc(inv.nome)}">${logoInvestimento(inv)}${caixinhaDe(inv.nome)
-            // caixinha do Nubank: "Caixinha Turbo Croma" no nome e "RDB.Imediato"/"RDB.Planejado" embaixo
+            // caixinha do Nubank: "Caixinha Turbo Croma" no nome e "RDB · Imediato"/"RDB · Planejado" embaixo
             ? `${esc("Caixinha " + caixinhaDe(inv.nome))}<small>${esc(tipoRdbCurto(inv.nome))}</small>`
             : `${esc(nomeCurtoInvestimento(inv.nome))}<small>${esc(inv.tipoAtivo || inv.categoria || "")}</small>`}</td>
           <td class="col-contratada">${esc(inv.indexador || "—")}${inv.taxaContratada ? " " + f2(inv.taxaContratada) + "%" : ""}</td>
