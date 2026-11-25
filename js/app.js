@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.588";
+  const VERSAO_APP = "3.6.589";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -6737,8 +6737,9 @@
     "binance": "binance.com", "nu invest": "nuinvest.com.br", "rico": "rico.com.vc", "clear": "clear.com.br"
   };
   function logoInvestimento(inv) {
-    const ehTesouro = /tesouro/i.test(inv.categoria || "") || /^tesouro/i.test(inv.tipoAtivo || "") || /tesouro nacional/i.test(inv.emissor || "");
-    const quem = ehTesouro ? "tesouro nacional" : String(inv.emissor || inv.banco || "").trim().toLowerCase();
+    // o banco/corretora onde o investimento está (ex.: Nubank); sem banco informado, o emissor
+    const ehTesouro = !inv.banco && (/tesouro/i.test(inv.categoria || "") || /^tesouro/i.test(inv.tipoAtivo || "") || /tesouro nacional/i.test(inv.emissor || ""));
+    const quem = ehTesouro ? "tesouro nacional" : String(inv.banco || inv.emissor || "").trim().toLowerCase();
     const marca = MARCAS_BANCO[quem];
     const site = SITE_EMISSOR[quem];
     const t = (ehTesouro ? "TN" : (quem.replace(/^banco\s+/, "").split(/\s+/).map((w) => w[0] || "").join("").slice(0, 2) || "?")).toUpperCase();
@@ -6747,7 +6748,7 @@
     const primeiro = marca && marca.arquivo ? `assets/icons/bancos/${marca.arquivo}?v=3.6.280` : site ? `https://www.google.com/s2/favicons?sz=128&domain=${site}` : "";
     const segundo = marca && marca.arquivo && site ? `https://www.google.com/s2/favicons?sz=128&domain=${site}` : "";
     const erro = segundo ? `this.onerror=function(){this.remove()};this.src='${segundo}'` : "this.remove()";
-    return `<span class="logo-acao" style="--matiz:${h}" title="${esc(ehTesouro ? "Tesouro Nacional" : (inv.emissor || inv.banco || ""))}" aria-hidden="true"><b>${esc(t)}</b>${primeiro ? `<img src="${primeiro}" alt="" loading="lazy" onerror="${erro}">` : ""}</span>`;
+    return `<span class="logo-acao" style="--matiz:${h}" title="${esc(ehTesouro ? "Tesouro Nacional" : (inv.banco || inv.emissor || ""))}" aria-hidden="true"><b>${esc(t)}</b>${primeiro ? `<img src="${primeiro}" alt="" loading="lazy" onerror="${erro}">` : ""}</span>`;
   }
   // nome da caixinha do Nubank que vem no nome importado ("… (Caixinha Reserva)" → "Reserva")
   const caixinhaDe = (nome) => { const m = /\(Caixinha\s+["“”]?([^)"“”]+)["“”]?\)/i.exec(String(nome || "")); return m ? m[1].trim() : ""; };
@@ -6766,7 +6767,7 @@
     } else {
       const linhas = lista.map((inv) => `
         <tr data-acao="ir" data-secao="detalhe-investimento" data-id="${inv.id}">
-          <td class="papel" title="${esc(inv.nome)}">${logoInvestimento(inv)}${esc(nomeCurtoInvestimento(inv.nome))}${caixinhaDe(inv.nome) ? `<span class="chip-caixinha" title="Caixinha ${esc(caixinhaDe(inv.nome))}">${esc(caixinhaDe(inv.nome))}</span>` : ""}<small>${esc([inv.tipoAtivo || inv.categoria, inv.banco || inv.emissor].filter(Boolean).join(" · "))}</small></td>
+          <td class="papel" title="${esc(inv.nome)}">${logoInvestimento(inv)}${esc(nomeCurtoInvestimento(inv.nome))}${caixinhaDe(inv.nome) ? `<span class="chip-caixinha" title="Caixinha ${esc(caixinhaDe(inv.nome))}">${esc(caixinhaDe(inv.nome))}</span>` : ""}<small>${esc(inv.tipoAtivo || inv.categoria || "")}</small></td>
           <td class="col-contratada">${esc(inv.indexador || "—")}${inv.taxaContratada ? " " + f2(inv.taxaContratada) + "%" : ""}</td>
           <td class="r">${fmtData(inv.dataAplicacao)}</td>
           <td class="r">${inv.quantidade ? f2(inv.quantidade) : "—"}</td>
