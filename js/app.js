@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.594";
+  const VERSAO_APP = "3.6.596";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -6780,6 +6780,16 @@
   }
   // nome da caixinha do Nubank que vem no nome importado ("… (Caixinha Reserva)" → "Reserva")
   const caixinhaDe = (nome) => { const m = /\(Caixinha\s+["“”]?([^)"“”]+)["“”]?\)/i.exec(String(nome || "")); return m ? m[1].trim() : ""; };
+  // separa a taxa que vem no fim do nome importado ("113% CDI", "IPCA + 6,5%", "12,5% a.a.")
+  function separarTaxaNome(nome) {
+    const m = /^(.*?)\s+((?:IPCA\s*\+\s*|CDI\s*\+\s*)?[\d.,]+\s*%(?:\s*(?:do\s+)?(?:CDI|IPCA|Selic|a\.?\s*a\.?|ao ano))?)$/i.exec(String(nome || "").trim());
+    let titulo = (m ? m[1] : String(nome || "")).replace(/-([a-zà-ú])/g, (_, l) => "-" + l.toUpperCase());   // Pós-fixado → Pós-Fixado
+    let taxa = m ? m[2].replace(/\s+/g, " ") : "";
+    // ano no fim do nome (Tesouro Selic 2031) também vai para baixo: "Tesouro Selic · 2031"
+    const ano = /^(.*\S)\s+((?:19|20)\d{2})$/.exec(titulo);
+    if (ano) { titulo = ano[1]; taxa = [ano[2], taxa].filter(Boolean).join(" · "); }
+    return { titulo, taxa };
+  }
   // "RDB Resgate Imediato (Caixinha X)" → "RDB · Imediato" (mesmo separador de Ações)
   const tipoRdbCurto = (nome) => { const n = nomeCurtoInvestimento(nome); const m = /^(\w+)\s+(?:Resgate\s+)?(.+)$/i.exec(n); return m ? `${m[1]} · ${m[2]}` : n; };
   const nomeCurtoInvestimento = (nome) => String(nome || "").replace(/\s*\([^)]*\)/g, "").replace(/\s{2,}/g, " ").trim() || String(nome || "");
@@ -6800,7 +6810,11 @@
           <td class="papel" title="${esc(inv.nome)}">${logoInvestimento(inv)}${caixinhaDe(inv.nome)
             // caixinha do Nubank: "Caixinha Turbo Croma" no nome e "RDB · Imediato"/"RDB · Planejado" embaixo
             ? `${esc("Caixinha " + caixinhaDe(inv.nome))}<small>${esc(tipoRdbCurto(inv.nome))}</small>`
-            : `${esc(nomeCurtoInvestimento(inv.nome))}<small>${esc(inv.tipoAtivo || inv.categoria || "")}</small>`}</td>
+            : (() => {
+              // "CDB Pós-fixado 113% CDI" → "CDB Pós-Fixado" no nome e "CDB · 113% CDI" embaixo
+              const { titulo, taxa } = separarTaxaNome(nomeCurtoInvestimento(inv.nome));
+              return `${esc(titulo)}<small>${esc([inv.tipoAtivo || inv.categoria, taxa].filter(Boolean).join(" · "))}</small>`;
+            })()}</td>
           <td class="col-contratada">${esc(inv.indexador || "—")}${inv.taxaContratada ? " " + f2(inv.taxaContratada) + "%" : ""}</td>
           <td class="r">${fmtData(inv.dataAplicacao)}</td>
           <td class="r">${inv.quantidade ? f2(inv.quantidade) : "—"}</td>
