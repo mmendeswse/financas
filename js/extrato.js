@@ -69,7 +69,8 @@
   var RX_CAIXINHA = new RegExp("^(RDB .+?) " + N + " " + N + " " + N + " " + N + "(?: (.*))?$");
   var RX_RENDA_FIXA = new RegExp("^(.+?) " + D + " (.+?) " + N + " " + D + " " + N + " " + N + " " + N + " " + N);
   var RX_TESOURO = new RegExp("^(Tesouro .+?) " + D + " " + N + " " + N + " " + N + " " + N + " " + N + " " + N + " " + N);
-  var RX_BOLSA = /^(Ação brasileira|FII|Fundo imobiliário|ETF|BDR)\s+(.+?)\s*\(([A-Z0-9]{4,7})\)\s+([\d.]+,\d+)\s+([\d.]+,\d+)/i;
+  // "Ação global (BDR) ANTH34 (ANTH34) 1,00 60,00": os BDRs vêm como "Ação global"
+  var RX_BOLSA = /^(Ação brasileira|Ação global(?:\s*\(BDR\))?|FII|Fundo imobiliário|ETF|BDR)\s+(.+?)\s*\(([A-Z0-9]{4,7})\)\s+([\d.]+,\d+)\s+([\d.]+,\d+)/i;
 
   function interpretar(paginas) {
     var resultado = { banco: "Nubank", data: "", investimentos: [], acoes: [], avisos: [] };

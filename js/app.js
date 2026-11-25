@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.581";
+  const VERSAO_APP = "3.6.582";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -1349,6 +1349,18 @@
       .catch((e) => toast("Não consegui ler o PDF: " + (e && e.message ? e.message : e)));
   }
 
+  // investimentos/ações que vieram do Nubank (banco ou importação de extrato)
+  const doNubank = (x) => /nubank/i.test(x.banco || "") || /^Importado do extrato/.test(x.obs || "");
+  // o que é do Nubank e não aparece mais no extrato (resgatado/vendido): sai na atualização
+  function foraDoExtrato(r, dataRef) {
+    const nomes = new Set(r.investimentos.map((i) => i.nome.toLowerCase()));
+    const tickers = new Set(r.acoes.map((a) => a.ticker.toUpperCase()));
+    const ultima = (h, campo) => (h || []).reduce((m, p) => (p.data > m ? p.data : m), "");
+    return {
+      investimentos: (DADOS.investimentos || []).filter((x) => doNubank(x) && !nomes.has(String(x.nome).toLowerCase()) && ultima(x.historicoValores) <= dataRef),
+      acoes: (DADOS.acoes || []).filter((x) => doNubank(x) && !tickers.has(String(x.ticker).toUpperCase()) && ultima(x.historicoPrecos) <= dataRef)
+    };
+  }
   function mostrarPreviaExtrato(r) {
     if (r.avisos.length && !r.investimentos.length && !r.acoes.length) { toast(r.avisos[0]); return; }
     const dataRef = r.data || hojeISO();
@@ -1361,7 +1373,13 @@
         ${r.acoes.map((a) => linha(`${esc(a.ticker)} · ${a.quantidade} un.`, brlSinal(a.valorAtual))).join("")}
         ${linha("Total do extrato", brlSinal(total), corSinal(total))}
       </div>
-      <p class="campo ajuda" style="margin-top:12px"><b>Atualizar</b> mantém o que você já tem e renova os valores dos ativos do extrato (os novos são acrescentados). <b>Substituir</b> troca tudo das guias Investimentos e Ações pelo conteúdo do PDF.</p>
+      ${(() => {
+        // pela comparação com o que existe (renomeação das caixinhas antigas fica de fora desta prévia)
+        const sai = foraDoExtrato(r, dataRef);
+        const nomes = sai.investimentos.map((x) => esc(x.nome)).concat(sai.acoes.map((x) => esc(x.ticker)));
+        return nomes.length ? `<p class="campo ajuda" style="margin-top:12px">Saem por não estarem mais no extrato: <b>${nomes.join(", ")}</b>.</p>` : "";
+      })()}
+      <p class="campo ajuda" style="margin-top:12px"><b>Atualizar</b> deixa os ativos do Nubank iguais ao extrato: renova os valores, acrescenta os novos e tira os que não aparecem mais (o que você cadastrou de outros bancos continua). <b>Substituir</b> troca tudo das guias Investimentos e Ações pelo conteúdo do PDF.</p>
       <div class="modal-acoes">
         <button class="btn primario salvar" id="btnAtualizarPdf">Atualizar</button>
         <button class="btn perigo" id="btnSubstituirPdf">Substituir</button>
@@ -1457,8 +1475,17 @@
       }
     });
 
+    // ficam só os ativos do Nubank que estão no extrato (os resgatados/vendidos saem)
+    let removidos = 0;
+    if (!substituir) {
+      const sai = foraDoExtrato(r, dataRef);
+      const idsInv = new Set(sai.investimentos.map((x) => x.id)), idsAc = new Set(sai.acoes.map((x) => x.id));
+      removidos = idsInv.size + idsAc.size;
+      DADOS.investimentos = DADOS.investimentos.filter((x) => !idsInv.has(x.id));
+      DADOS.acoes = DADOS.acoes.filter((x) => !idsAc.has(x.id));
+    }
     fecharModal();
-    salvarEAtualizar(`Extrato importado: ${plural(atualizados, "ativo atualizado", "ativos atualizados")} e ${plural(novos, "novo", "novos")}.`);
+    salvarEAtualizar(`Extrato importado: ${plural(atualizados, "ativo atualizado", "ativos atualizados")}, ${plural(novos, "novo", "novos")}${removidos ? ` e ${plural(removidos, "removido", "removidos")}` : ""}.`);
   }
 
 
