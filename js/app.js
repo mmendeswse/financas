@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.600";
+  const VERSAO_APP = "3.6.601";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -6825,8 +6825,8 @@
           <td class="r">${fmtData(inv.dataAplicacao)}</td>
           <td class="r">${inv.quantidade ? f2(inv.quantidade) : "—"}</td>
           <td class="r creme">${brl(inv.valorInvestido)}</td>
-          <td class="r ${corSinal(inv.resultado)}">${brlSinal(inv.resultado)}</td>
-          <td class="r creme">${brl(inv.valorAtual)}</td>
+          <td class="r"><span class="${inv.resultado > 0 ? "cel-up" : inv.resultado < 0 ? "cel-down" : "cel-neutra"}">${brlSinal(inv.resultado)}</span></td>
+          <td class="r"><span class="cel-neutra">${brl(inv.valorAtual)}</span></td>
           <td class="r dim col-ir">${inv.aliquota === 0 ? "isento" : f2(inv.aliquota) + "%"}</td>
           <td class="r down">${inv.imposto > 0 ? "−" + brl(inv.imposto) : "—"}</td>
           <td class="r up">${brl(inv.liquido)}</td>
