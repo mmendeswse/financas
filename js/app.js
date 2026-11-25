@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.584";
+  const VERSAO_APP = "3.6.585";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -8595,6 +8595,20 @@
     }).catch(() => { const el = document.getElementById("pdmNoticias"); if (el) el.innerHTML = '<span class="dim">Não foi possível buscar as notícias agora.</span>'; });
   }
 
+  // bolinha com o logo da empresa (ícones públicos da brapi, a mesma fonte das
+  // cotações); sem logo (ex.: alguns BDRs) ou sem internet, ficam as iniciais
+  // nomes de BDRs que o extrato do Nubank traz só com o código ("ANTH34 (ANTH34)")
+  const NOMES_BDR = { ANTH34: "Anthropic" };
+  function nomeEmpresaAcao(a) {
+    const t = String(a.ticker || "").toUpperCase(), e = String(a.empresa || "").trim();
+    if (e && e.toUpperCase() !== t) return e;
+    return NOMES_BDR[t] || "";
+  }
+  function logoAcao(ticker) {
+    const t = String(ticker || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+    let h = 0; for (const ch of t) h = (h * 31 + ch.charCodeAt(0)) % 360;
+    return `<span class="logo-acao" style="--matiz:${h}" aria-hidden="true"><b>${esc(t.slice(0, 2))}</b><img src="https://icons.brapi.dev/icons/${encodeURIComponent(t)}.svg" alt="" loading="lazy" onerror="this.remove()"></span>`;
+  }
   function renderAcoes(d) {
     const lista = I.listaAcoesComCalculo(d);
     const f2 = (v) => Number(v || 0).toFixed(2).replace(".", ",");
@@ -8616,7 +8630,7 @@
           ? `<input class="campo-preco moeda" data-id="${a.id}" type="text" inputmode="decimal" value="${valorCampoMoeda(a.precoAtual)}" onclick="event.stopPropagation()">`
           : `<span class="${forte}">${brl(a.precoAtual)}</span>`;
         return `<tr data-acao="ir" data-secao="detalhe-acao" data-id="${a.id}">
-          <td class="papel">${esc(a.ticker)}${a.empresa && String(a.empresa).toUpperCase() !== String(a.ticker).toUpperCase() ? `<span class="papel-empresa">${esc(a.empresa)}</span>` : ""}<small>${esc([a.categoria, a.banco].filter(Boolean).join(" · "))}</small></td>
+          <td class="papel">${logoAcao(a.ticker)}${esc(a.ticker)}${nomeEmpresaAcao(a) ? `<span class="papel-empresa">${esc(nomeEmpresaAcao(a))}</span>` : ""}<small>${esc([a.categoria, a.banco].filter(Boolean).join(" · "))}</small></td>
           <td class="r">${brl(a.valorInvestido)}</td>
           <td class="r">${ultima}</td>
           <td class="r"><span class="${v.valor >= 0 ? "cel-up" : "cel-down"}">${v.valor >= 0 ? "+" : "−"}${brl(Math.abs(v.valor))}</span></td>

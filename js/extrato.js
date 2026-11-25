@@ -137,7 +137,7 @@
       } else if (secao === "Bolsa de Valores" && (m = RX_BOLSA.exec(l))) {
         var qtd = numero(m[4]), bruto = numero(m[5]);
         resultado.acoes.push({
-          ticker: m[3].toUpperCase(), empresa: m[2].trim(),
+          ticker: m[3].toUpperCase(), empresa: ({ ANTH34: "Anthropic" })[m[3].toUpperCase()] || m[2].trim(),
           categoria: /FII|imobili/i.test(m[1]) ? "FII" : (/ETF/i.test(m[1]) ? "ETF" : "Ação"),
           quantidade: qtd, precoAtual: qtd > 0 ? Math.round((bruto / qtd) * 100) / 100 : 0, valorAtual: bruto
         });

@@ -3465,3 +3465,7 @@ select.sel-banco-nativo { display: none !important; }
 .chip-caixinha { display: inline-block; margin-left: 8px; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; color: #C9A7FF; background: rgba(138, 5, 190, .18); border: 1px solid rgba(170, 90, 230, .45); vertical-align: 1px; white-space: nowrap; }
 /* guia Ações: nome da empresa logo depois do código */
 .papel-empresa { margin-left: 7px; font-weight: 600; color: var(--texto); opacity: .85; }
+/* bolinha com o logo da ação antes do código (iniciais quando não há logo) */
+.logo-acao { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; margin-right: 8px; border-radius: 50%; overflow: hidden; vertical-align: middle; background: hsl(var(--matiz, 200) 55% 32%); border: 1px solid rgba(255,255,255,.18); flex: none; }
+.logo-acao b { font-size: 8.5px; font-weight: 800; color: #fff; letter-spacing: 0; }
+.logo-acao img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #fff; }
