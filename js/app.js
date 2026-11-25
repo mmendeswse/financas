@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.597";
+  const VERSAO_APP = "3.6.598";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -6815,7 +6815,7 @@
         <tr data-acao="ir" data-secao="detalhe-investimento" data-id="${inv.id}">
           <td class="papel" title="${esc(inv.nome)}">${logoInvestimento(inv)}${caixinhaDe(inv.nome)
             // caixinha do Nubank: "Caixinha Turbo Croma" no nome e "RDB · Imediato"/"RDB · Planejado" embaixo
-            ? `${esc("Caixinha " + caixinhaDe(inv.nome))}<small>${esc(tipoRdbCurto(inv.nome))}</small>`
+            ? `Caixinha<span class="chip-caixinha" title="Caixinha ${esc(caixinhaDe(inv.nome))}">${esc(caixinhaDe(inv.nome))}</span><small>${esc(tipoRdbCurto(inv.nome))}</small>`
             : (() => {
               // "CDB Pós-fixado 113% CDI" → "CDB Pós-Fixado" no nome e "CDB · 113% CDI" embaixo
               const { titulo, taxa } = separarTaxaNome(nomeCurtoInvestimento(inv.nome));
