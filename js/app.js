@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.595";
+  const VERSAO_APP = "3.6.596";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -6783,8 +6783,12 @@
   // separa a taxa que vem no fim do nome importado ("113% CDI", "IPCA + 6,5%", "12,5% a.a.")
   function separarTaxaNome(nome) {
     const m = /^(.*?)\s+((?:IPCA\s*\+\s*|CDI\s*\+\s*)?[\d.,]+\s*%(?:\s*(?:do\s+)?(?:CDI|IPCA|Selic|a\.?\s*a\.?|ao ano))?)$/i.exec(String(nome || "").trim());
-    const titulo = (m ? m[1] : String(nome || "")).replace(/-([a-zà-ú])/g, (_, l) => "-" + l.toUpperCase());   // Pós-fixado → Pós-Fixado
-    return { titulo, taxa: m ? m[2].replace(/\s+/g, " ") : "" };
+    let titulo = (m ? m[1] : String(nome || "")).replace(/-([a-zà-ú])/g, (_, l) => "-" + l.toUpperCase());   // Pós-fixado → Pós-Fixado
+    let taxa = m ? m[2].replace(/\s+/g, " ") : "";
+    // ano no fim do nome (Tesouro Selic 2031) também vai para baixo: "Tesouro Selic · 2031"
+    const ano = /^(.*\S)\s+((?:19|20)\d{2})$/.exec(titulo);
+    if (ano) { titulo = ano[1]; taxa = [ano[2], taxa].filter(Boolean).join(" · "); }
+    return { titulo, taxa };
   }
   // "RDB Resgate Imediato (Caixinha X)" → "RDB · Imediato" (mesmo separador de Ações)
   const tipoRdbCurto = (nome) => { const n = nomeCurtoInvestimento(nome); const m = /^(\w+)\s+(?:Resgate\s+)?(.+)$/i.exec(n); return m ? `${m[1]} · ${m[2]}` : n; };
