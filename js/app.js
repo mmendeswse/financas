@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.591";
+  const VERSAO_APP = "3.6.592";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -6728,6 +6728,32 @@
 
   // nome na tabela sem os detalhes entre parênteses que vêm do extrato importado
   // (ex.: "RDB Resgate Imediato (Caixinha Turbo Croma)" → "RDB Resgate Imediato")
+  // logos das bolinhas (Ações e Investimentos): o endereço que deu certo fica
+  // guardado no aparelho. Nas próximas vezes a imagem vem direto (do cache do
+  // navegador), sem tentar de novo as fontes que falharam e sem piscar.
+  const CHAVE_LOGOS = "mm-logos-1";
+  let logosOk = {};
+  try { logosOk = JSON.parse(localStorage.getItem(CHAVE_LOGOS) || "{}") || {}; } catch (e) { logosOk = {}; }
+  const logosFalhos = new Set();   // só nesta sessão (sem internet agora não marca para sempre)
+  window.mmLogoOk = (chave, img) => {
+    if (logosOk[chave] === img.src) return;
+    logosOk[chave] = img.src;
+    try { localStorage.setItem(CHAVE_LOGOS, JSON.stringify(logosOk)); } catch (e) { /* sem espaço */ }
+  };
+  window.mmLogoErro = (chave, img) => {
+    const resto = (img.dataset.prox || "").split("|").filter(Boolean);
+    if (logosOk[chave] === img.src) { delete logosOk[chave]; try { localStorage.setItem(CHAVE_LOGOS, JSON.stringify(logosOk)); } catch (e) { /* */ } }
+    if (resto.length) { img.dataset.prox = resto.slice(1).join("|"); img.src = resto[0]; return; }
+    logosFalhos.add(chave); img.remove();
+  };
+  function imgLogo(chave, candidatos) {
+    const k = String(chave).replace(/[^A-Za-z0-9:_-]/g, "");
+    const lista = candidatos.filter(Boolean);
+    const salvo = logosOk[k];
+    const fila = salvo ? [salvo].concat(lista.filter((u) => u !== salvo)) : lista;
+    if (!fila.length || (!salvo && logosFalhos.has(k))) return "";
+    return `<img src="${fila[0]}" data-prox="${esc(fila.slice(1).join("|"))}" alt="" decoding="async" onload="mmLogoOk('${k}',this)" onerror="mmLogoErro('${k}',this)">`;
+  }
   // bolinha com o logo de quem emitiu o investimento (como nas Ações): o banco
   // emissor (Nubank, Banco Digimais…) ou o Tesouro Nacional; sem logo, as iniciais
   const SITE_EMISSOR = {
@@ -6750,8 +6776,7 @@
     // 1º o logo que já vem com o app (assets/icons/bancos); 2º o ícone do site; sem nenhum, as iniciais
     const primeiro = marca && marca.arquivo ? `assets/icons/bancos/${marca.arquivo}?v=3.6.280` : site ? `https://www.google.com/s2/favicons?sz=128&domain=${site}` : "";
     const segundo = marca && marca.arquivo && site ? `https://www.google.com/s2/favicons?sz=128&domain=${site}` : "";
-    const erro = segundo ? `this.onerror=function(){this.remove()};this.src='${segundo}'` : "this.remove()";
-    return `<span class="logo-acao" style="--matiz:${h}" title="${esc(ehTesouro ? "Tesouro Nacional" : (inv.banco || inv.emissor || ""))}" aria-hidden="true"><b>${esc(t)}</b>${primeiro ? `<img src="${primeiro}" alt="" loading="lazy" onerror="${erro}">` : ""}</span>`;
+    return `<span class="logo-acao" style="--matiz:${h}" title="${esc(ehTesouro ? "Tesouro Nacional" : (inv.banco || inv.emissor || ""))}" aria-hidden="true"><b>${esc(t)}</b>${imgLogo("inv:" + quem.replace(/\s+/g, "_"), [primeiro, segundo])}</span>`;
   }
   // nome da caixinha do Nubank que vem no nome importado ("… (Caixinha Reserva)" → "Reserva")
   const caixinhaDe = (nome) => { const m = /\(Caixinha\s+["“”]?([^)"“”]+)["“”]?\)/i.exec(String(nome || "")); return m ? m[1].trim() : ""; };
@@ -8654,8 +8679,7 @@
     // BDRs (…34/…35/…39): a brapi costuma não ter o logo da empresa de fora — vai direto ao site
     const bdr = /3[459]$/.test(t) && t.length === 6;
     const [primeiro, segundo] = favicon && bdr ? [favicon, brapi] : [brapi, favicon];
-    const erro = segundo ? `this.onerror=function(){this.remove()};this.src='${segundo}'` : "this.remove()";
-    return `<span class="logo-acao" style="--matiz:${h}" aria-hidden="true"><b>${esc(t.slice(0, 2))}</b><img src="${primeiro}" alt="" loading="lazy" onerror="${erro}"></span>`;
+    return `<span class="logo-acao" style="--matiz:${h}" aria-hidden="true"><b>${esc(t.slice(0, 2))}</b>${imgLogo("acao:" + t, [primeiro, segundo])}</span>`;
   }
   function renderAcoes(d) {
     const lista = I.listaAcoesComCalculo(d);
