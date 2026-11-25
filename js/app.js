@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.583";
+  const VERSAO_APP = "3.6.584";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -8616,7 +8616,7 @@
           ? `<input class="campo-preco moeda" data-id="${a.id}" type="text" inputmode="decimal" value="${valorCampoMoeda(a.precoAtual)}" onclick="event.stopPropagation()">`
           : `<span class="${forte}">${brl(a.precoAtual)}</span>`;
         return `<tr data-acao="ir" data-secao="detalhe-acao" data-id="${a.id}">
-          <td class="papel">${esc(a.ticker)}<small>${esc([a.categoria, a.banco].filter(Boolean).join(" · "))}</small></td>
+          <td class="papel">${esc(a.ticker)}${a.empresa && String(a.empresa).toUpperCase() !== String(a.ticker).toUpperCase() ? `<span class="papel-empresa">${esc(a.empresa)}</span>` : ""}<small>${esc([a.categoria, a.banco].filter(Boolean).join(" · "))}</small></td>
           <td class="r">${brl(a.valorInvestido)}</td>
           <td class="r">${ultima}</td>
           <td class="r"><span class="${v.valor >= 0 ? "cel-up" : "cel-down"}">${v.valor >= 0 ? "+" : "−"}${brl(Math.abs(v.valor))}</span></td>
