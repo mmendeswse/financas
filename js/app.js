@@ -23,7 +23,7 @@
   // Categorias fixas usadas nos formulários (conforme especificação)
   // a cada atualização, suba este número junto com o ?v= do index.html e do sw.js:
   // é a mudança dele que faz o iPad baixar a versão nova
-  const VERSAO_APP = "3.6.602";
+  const VERSAO_APP = "3.6.603";
   // nome do programa (título, logotipo e rodapé): o nome do perfil (avatar no
   // topo › Editar avatar). Sem nome no perfil, vale o nome escolhido antes neste
   // aparelho (a antiga lista em Configurações › Senha Acesso) ou "Muller Mendes".
@@ -1036,7 +1036,7 @@
       add({ chave: `pg:${x.id}:${x.data}`, titulo: `💸 ${x.descricao || "Conta"}${parcela(x.id, x.data)} — ${brl(x.valor)}`, data: x.data, hora: "09:00", duracao: 30, alertas: [0, 1440],
         descricao: ["Conta a pagar", x.categoria, x.banco && x.banco !== "—" ? x.banco : ""].filter(Boolean).join(" · "), cor: "11" });
     }));
-    // Bonificação no mesmo dia de um Pagamento: um evento só, "Pagamento",
+    // Bonificação no mesmo dia de um Pagamento: um evento só, "Pag+Boni",
     // com a soma dos dois como total
     const nomeNorm = (t) => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
     const ehPagamento = (x) => nomeNorm(x.descricao) === "pagamento", ehBonificacao = (x) => nomeNorm(x.descricao) === "bonificacao";
@@ -1048,7 +1048,7 @@
         const total = Number(x.valor || 0) + bonus.reduce((t, b) => t + Number(b.valor || 0), 0);
         // ⚠️ quando o dinheiro já pode ser resgatado no sábado (o mesmo aviso da guia Entradas)
         const sab = sabadoDaEntrada(x, d.entradas);
-        add({ chave: `rc:${x.id}:${x.data}`, titulo: `${sab ? "⚠️ " : ""}💰 ${x.descricao || "Receita"}${parcela(x.id, x.data)} — ${brl(total)}`, data: x.data, hora: "09:00", duracao: 30, alertas: [0],
+        add({ chave: `rc:${x.id}:${x.data}`, titulo: `${sab ? "⚠️ " : ""}💰 ${bonus.length ? "Pag+Boni" : (x.descricao || "Receita")}${parcela(x.id, x.data)} — ${brl(total)}`, data: x.data, hora: "09:00", duracao: 30, alertas: [0],
           descricao: [sab ? `⚠️ Sábado: é possível resgatar o dinheiro no sábado (${sab.slice(8, 10)}/${sab.slice(5, 7)})` : "", "Receita prevista", bonus.length ? `pagamento ${brl(x.valor)} + bonificação ${brl(total - Number(x.valor || 0))}` : "", x.categoria, x.banco && x.banco !== "—" ? x.banco : ""].filter(Boolean).join(" · "), cor: "10" });
       });
     });
@@ -1079,7 +1079,7 @@
       const rotulo = tipo === "pg" ? "Conta a pagar" : "Receita prevista";
       if (extra && extra.pular && extra.pular(r, data)) return;
       const somar = extra && extra.somar ? extra.somar(r, data) : 0;
-      add({ chave: `${tipo}s:${reg.id}`, titulo: `${tipo === "pg" ? "💸" : "💰"} ${reg.descricao || (tipo === "pg" ? "Conta" : "Receita")} — ${brl(valorDoMes(reg, data.slice(0, 7)) + somar)}`,
+      add({ chave: `${tipo}s:${reg.id}`, titulo: `${tipo === "pg" ? "💸" : "💰"} ${somar ? "Pag+Boni" : (reg.descricao || (tipo === "pg" ? "Conta" : "Receita"))} — ${brl(valorDoMes(reg, data.slice(0, 7)) + somar)}`,
         data, hora: "09:00", duracao: 30, alertas: tipo === "pg" ? [0, 1440] : [0], rrule: r,
         descricao: [rotulo, reg.categoria, "repete " + (ROTULO_FREQ[freq] || freq).toLowerCase()].filter(Boolean).join(" · "), cor: tipo === "pg" ? "11" : "10" });
     };
